@@ -825,6 +825,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
 
+
+    // Initialize Vector Memory system and background workers
+    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let vector_store: std::sync::Arc<dyn crate::agents::memory::VectorStore> = if is_standalone {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(std::env::var("SQLITE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string()).as_str())
+            .await
+            .expect("Failed to create memory sqlite pool");
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&pool).await.expect("Failed to create memory sqlite table");
+
+        std::sync::Arc::new(crate::agents::memory::SqliteVectorRepository::new(pool))
+    } else {
+        std::sync::Arc::new(crate::agents::memory::PgVectorRepository::new(db.pool.clone()))
+    };
+
+    let prune_worker = crate::agents::memory::PruneWorker::new(vector_store.clone());
+    let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+    tokio::spawn(async move {
+        prune_worker.start(shutdown_rx).await;
+    });
+
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));

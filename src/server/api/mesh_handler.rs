@@ -4,7 +4,8 @@ use axum::{
 };
 use std::sync::Arc;
 use crate::mesh::transport::{MeshTransport, Message as MeshMessage};
-use futures::{sink::SinkExt, stream::StreamExt};
+use futures_util::StreamExt;
+use futures_util::SinkExt;
 use tokio::sync::mpsc;
 use serde::Deserialize;
 
