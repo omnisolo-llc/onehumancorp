@@ -614,6 +614,16 @@ mod tests {
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
+
+        let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let signup_opened_clone = signup_opened.clone();
+
+        ui.on_open_ohc_signup(move || {
+            *signup_opened_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_open_ohc_signup();
+        assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
     }
 
 
