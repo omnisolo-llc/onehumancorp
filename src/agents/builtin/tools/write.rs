@@ -5,7 +5,9 @@ use tokio::fs;
 
 use super::{Tool, ToolExecutor};
 
-struct WriteExecutor;
+struct WriteExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for WriteExecutor {
@@ -18,22 +20,25 @@ impl ToolExecutor for WriteExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("write: content is required".to_string()))?;
 
+        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+
         // Create parent directories if needed.
-        if let Some(parent) = std::path::Path::new(path).parent() {
+        if let Some(parent) = actual_path.parent() {
             fs::create_dir_all(parent)
                 .await
                 .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
-        fs::write(path, content)
+        fs::write(&actual_path, content)
             .await
-            .map_err(|e| format!("write: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         Ok(format!("File written: {}", path))
     }
 }
 
-pub fn write_tool() -> Tool {
+pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Write".to_string(),
         description: "Write content to a file. Creates parent directories as needed. Overwrites any existing content.".to_string(),
@@ -52,6 +57,6 @@ pub fn write_tool() -> Tool {
             },
             "required": ["path", "content"]
         }),
-        execute: Arc::new(WriteExecutor),
+        execute: Arc::new(WriteExecutor { working_dir }),
     }
 }
