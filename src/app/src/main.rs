@@ -282,6 +282,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_go_to_dashboard({
+        let setup_ui_handle = setup_wizard_handle.clone();
+        move || {
+            let setup_ui = setup_ui_handle.unwrap();
+            let _ = setup_ui.hide();
+
+            let dashboard_ui = app::Dashboard::new().unwrap();
+            let dashboard_handle = dashboard_ui.as_weak();
+
+            dashboard_ui.on_open_billing({
+                let _dh = dashboard_handle.clone();
+                move || {
+                    let billing_ui = app::Billing::new().unwrap();
+
+                    // In a real application, you might want to hide the dashboard,
+                    // but for overlapping windows/dialogs, just showing is fine.
+                    // We must prevent `billing_ui` from being dropped immediately,
+                    // so we leak it or keep it alive. A simple way for global popups:
+                    let billing_ui_clone = billing_ui.clone_strong();
+                    let _ = billing_ui.show();
+
+                    // We prevent it from dropping. Ideally we keep it in a global state
+                    // or let it manage its own lifecycle, but `into_dyn` leak works for now
+                    // if it's meant to stay open until manually closed.
+                    // Instead of leaking, typically we attach it to the parent, but Slint
+                    // handles multiple top-level windows. We must just ensure it lives.
+                    // `std::mem::forget(billing_ui_clone)` would work to keep the window alive
+                    // without needing a complex state manager.
+                    std::mem::forget(billing_ui_clone);
+                }
+            });
+
+            let _ = dashboard_ui.show();
+            // Same here, we need to ensure the dashboard lives as long as the app runs
+            std::mem::forget(dashboard_ui);
+        }
+    });
+
     setup_wizard_ui.run()?;
     
     Ok(())
@@ -1116,7 +1154,18 @@ mod dashboard_docs_tests {
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
-        // 5. Test Interactive Walkthrough
+        // 5. Test opening Billing from Dashboard
+        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let billing_opened_clone = billing_opened.clone();
+        dashboard_ui.on_open_billing(move || {
+            *billing_opened_clone.borrow_mut() = true;
+            // Verify Billing component can be instantiated
+            let _billing = app::Billing::new().unwrap();
+        });
+        dashboard_ui.invoke_open_billing();
+        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+
+        // 6. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
     }
 }
@@ -1154,6 +1203,19 @@ mod cost_transparency_e2e_tests {
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
+
+        // Also test the billing button from the dashboard
+        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let billing_opened_clone = billing_opened.clone();
+        dashboard_ui.on_open_billing(move || {
+            *billing_opened_clone.borrow_mut() = true;
+            // E2E test requirement: verify we can actually instantiate the component this would navigate to
+            let _billing = app::Billing::new().unwrap();
+        });
+
+        // Simulate a user clicking the billing button
+        dashboard_ui.invoke_open_billing();
+        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard via user click");
     }
 
     #[test]
