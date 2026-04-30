@@ -171,6 +171,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskCreate".to_string(),
         description: "Create a new task in the task tracker.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -188,6 +189,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskGet".to_string(),
         description: "Get details of a specific task by ID.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -203,6 +205,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskList".to_string(),
         description: "List all tasks in the task tracker.".to_string(),
+        is_read_only: true,
         parameters: json!({"type": "object", "properties": {}}),
         execute: Arc::new(TaskListExecutor { store }),
     }
@@ -212,6 +215,7 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskUpdate".to_string(),
         description: "Update a task's status or result.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
