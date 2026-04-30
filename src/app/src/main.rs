@@ -266,9 +266,38 @@ mod tests {
         app::Logs::new().unwrap();
     }
     #[test]
+    #[test]
     fn test_pricing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Pricing::new().unwrap();
+    }
+    #[test]
+    fn test_pricing_select_plan() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Pricing::new().unwrap();
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        ui.on_select_plan(move |plan| {
+            *plan_selected_clone.borrow_mut() = plan.to_string();
+        });
+        ui.invoke_select_plan("Pro".into());
+        assert_eq!(*plan_selected.borrow(), "Pro");
+    }
+    #[test]
+    fn test_my_plan_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::MyPlan::new().unwrap();
+        ui.set_tier("Starter".into());
+        ui.set_total_actions("500".into());
+        assert_eq!(ui.get_tier(), "Starter");
+        assert_eq!(ui.get_total_actions(), "500");
+    }
+    #[test]
+    fn test_cost_dashboard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        ui.set_total_spend("$50.00".into());
+        assert_eq!(ui.get_total_spend(), "$50.00");
     }
     #[test]
     fn test_scaling_creation() {
