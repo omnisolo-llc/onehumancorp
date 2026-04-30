@@ -1,8 +1,9 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, TextEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component WebsiteBuilder inherits Window {
-    width: 600px;
-    height: 600px;
+    width: 375px;
+    height: 800px;
     title: "Build My Website";
 
     callback publish_site(string, string, string, string);
@@ -11,116 +12,210 @@ export component WebsiteBuilder inherits Window {
     in-out property <string> selected_template: "";
     in-out property <string> primary_color: "#FF3B30";
     in-out property <string> product_name: "";
+    in-out property <string> product_price: "";
+    in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
+    in-out property <string> business_type: "Business"; // Needed for AI auto description
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
-        padding: 24px;
+        padding: 20px;
+        alignment: space-between;
 
-        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
-
-        // Step 0: Template
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Choose a template"; color: #1e293b; }
-            
-            HorizontalBox {
-                spacing: 10px;
-                Button { text: "E-commerce"; clicked => { selected_template = "E-commerce"; } }
-                Button { text: "Portfolio"; clicked => { selected_template = "Portfolio"; } }
-            }
-            Text { text: "Selected: " + selected_template; color: #a855f7; }
-        }
-
-        // Step 1: Colors
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Brand Colors & Logo"; color: #1e293b; }
-            Text { text: "Selected Color: " + primary_color; color: #64748b; }
-            HorizontalBox {
-                spacing: 10px;
-                Button { text: "Red"; clicked => { primary_color = "#FF3B30"; } }
-                Button { text: "Green"; clicked => { primary_color = "#34C759"; } }
-                Button { text: "Blue"; clicked => { primary_color = "#007AFF"; } }
+        // Header
+        HorizontalBox {
+            alignment: center;
+            Text {
+                text: "OneHumanCorp";
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
             }
         }
 
-        // Step 2: Product
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Add your first product or service"; color: #1e293b; }
-            LineEdit {
-                placeholder-text: "Product Name";
-                text: product_name;
-            }
-            LineEdit {
-                placeholder-text: "Price";
-            }
-            LineEdit {
-                placeholder-text: "Description";
-            }
-        }
+        ScrollView {
+            // Step 0: Template
+            if (step == 0) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Choose a template"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-        // Step 3: Domain
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Connect a domain"; color: #1e293b; }
-            Button { text: "Use free subdomain"; clicked => { domain_choice = "subdomain"; } }
-            Button { text: "Use my own domain"; clicked => { domain_choice = "custom"; } }
-            Text { text: "Choice: " + domain_choice; color: #a855f7; }
-        }
+                GlassCard {
+                    height: 100px;
+                    background: selected_template == "E-commerce" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🛍️ E-commerce"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Best for physical products"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { selected_template = "E-commerce"; } }
+                }
 
-        // Step 4: Review
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Go Live: Review your site"; color: #1e293b; }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+                GlassCard {
+                    height: 100px;
+                    background: selected_template == "Portfolio" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🎨 Portfolio"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Best for creatives and services"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { selected_template = "Portfolio"; } }
+                }
+
+                GlassCard {
+                    height: 100px;
+                    background: selected_template == "Restaurant" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🍔 Restaurant"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Best for food and delivery"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { selected_template = "Restaurant"; } }
+                }
+            }
+
+            // Step 1: Colors & Logo
+            if (step == 1) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Brand Colors & Logo"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "Selected Color: " + primary_color; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    alignment: center;
+                    Rectangle { width: 60px; height: 60px; border-radius: 30px; background: #FF3B30; border-width: primary_color == "#FF3B30" ? 3px : 0px; border-color: white; TouchArea { clicked => { primary_color = "#FF3B30"; } } }
+                    Rectangle { width: 60px; height: 60px; border-radius: 30px; background: #34C759; border-width: primary_color == "#34C759" ? 3px : 0px; border-color: white; TouchArea { clicked => { primary_color = "#34C759"; } } }
+                    Rectangle { width: 60px; height: 60px; border-radius: 30px; background: #007AFF; border-width: primary_color == "#007AFF" ? 3px : 0px; border-color: white; TouchArea { clicked => { primary_color = "#007AFF"; } } }
+                }
+
+                Rectangle { height: 10px; }
+
+                Button {
+                    text: "✨ Generate a logo for me";
+                    height: 44px;
+                }
+                Button {
+                    text: "Upload your logo";
+                    height: 44px;
+                }
+            }
+
+            // Step 2: Product
+            if (step == 2) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Add your first product or service"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+
+                Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { placeholder-text: "Product Name"; text <=> product_name; height: 44px; }
+
+                Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { placeholder-text: "e.g. 19.99"; text <=> product_price; height: 44px; }
+
+                Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                TextEdit { text <=> product_description; height: 100px; }
+                Button {
+                    text: "✨ Auto-suggest Description";
+                    height: 44px;
+                    clicked => { product_description = "The best " + product_name + " for your " + business_type + "."; }
+                }
+                Button {
+                    text: "📷 Add Photo";
+                    height: 44px;
+                }
+            }
+
+            // Step 3: Domain
+            if (step == 3) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Connect a domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+
+                GlassCard {
+                    height: 70px;
+                    background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Use a free OHC subdomain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "mybusiness.ohc.app (Instant)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { domain_choice = "subdomain"; } }
+                }
+                GlassCard {
+                    height: 70px;
+                    background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Use my own domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Connect an existing domain"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { domain_choice = "custom"; } }
+                }
+                GlassCard {
+                    height: 70px;
+                    background: domain_choice == "buy" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Buy a domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Get a new .com domain"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { domain_choice = "buy"; } }
+                }
+            }
+
+            // Step 4: Review
+            if (step == 4) : VerticalBox {
+                spacing: 24px;
+                Text { text: "Go Live: Review your site"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
                 
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Template: " + selected_template; color: #1e293b; }
-                    Text { text: "Color: " + primary_color; color: #1e293b; }
-                    Text { text: "Product: " + product_name; color: #1e293b; }
-                    Text { text: "Domain: " + domain_choice; color: #1e293b; }
-                    Rectangle { height: 16px; } // Spacer
-                    HorizontalBox {
-                        alignment: center;
-                        Text { text: "Built with OHC — "; color: #64748b; font-size: 12px; }
-                        Button {
-                            text: "Start your free business →";
-                            // In a real app, this would trigger an external link open callback
-                            clicked => { publish_site(selected_template, primary_color, product_name, domain_choice); }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "Template: " + selected_template; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Color: " + primary_color; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        Text { text: "Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+
+                        Rectangle { height: 16px; } // Spacer
+
+                        HorizontalBox {
+                            alignment: center;
+                            Text { text: "Built with OHC — "; color: #64748b; font-size: 12px; }
+                            TouchArea {
+                                clicked => { /* Link click action */ }
+                                Text { text: "Start your free business →"; color: #a855f7; font-size: 12px; font-weight: 700; }
+                            }
                         }
                     }
                 }
             }
         }
 
-        Rectangle {} // Spacer
-
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
+            alignment: space-between;
+            if (step > 0) : GlassCard {
+                width: 80px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = step - 1; } }
             }
-            Rectangle {} // Spacer
-            Button {
-                text: step == 4 ? "Publish" : "Next";
-                clicked => {
-                    if (step < 4) {
+            if (step == 0) : Rectangle { width: 80px; } // spacer
+
+            if (step < 4) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: selected_template != "" ? rgba(168, 85, 247, 0.8) : rgba(168, 85, 247, 0.4);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    clicked => {
+                        if (step == 0 && selected_template == "") { return; } // Prevent next if no template
                         step = step + 1;
-                    } else {
-                        // Handle publish
-                        publish_site(selected_template, primary_color, product_name, domain_choice);
                     }
                 }
+            }
+
+            if (step == 4) : GlassCard {
+                width: 200px;
+                height: 54px;
+                background: rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: "Publish →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { publish_site(selected_template, primary_color, product_name, domain_choice); } }
             }
         }
     }
