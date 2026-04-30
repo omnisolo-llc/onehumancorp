@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+- Scaling (Cloud): Implemented Hybrid Distributed MeshLock Implementation, abstracted SKIP LOCKED for sqlite and added chaos tests, implemented observability metrics for AutoDream and Task Claim Contention, and implemented OS-level SandboxManager using bwrap and sandbox-exec.
+- Privacy/Offline (Standalone): Added viral storefront link growth feature, added referral loop to User Management, implemented AI agent department draft-for-review approval workflow, hardened application for multi-tenant and local standalone, implemented high-fidelity 11-step onboarding wizard, and removed tooltips from the app to improve reliability.
+
 ## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
 - Privacy/Offline (Standalone): Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
 
