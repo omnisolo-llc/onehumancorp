@@ -57,7 +57,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
                 Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
                 Err(e) => {
                     println!("AutoDream API: failed to generate embedding: {}", e);
-                    "[0.0]".to_string()
+                    format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
             };
 
@@ -92,7 +92,7 @@ mod tests {
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy(database_url)
             .unwrap();
 
-        let db = Arc::new(crate::db::DB { pool });
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = Arc::new(AutoDreamWorker::new(db));
 
         let _app: Router<()> = router(worker);
