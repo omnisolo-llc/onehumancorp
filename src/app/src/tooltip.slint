@@ -7,11 +7,13 @@ export component Tooltip inherits Rectangle {
     border-radius: 6px;
     visible: show;
 
-    Text {
-        text: root.text;
-        color: white;
-        font-size: 12px;
+    HorizontalLayout {
         padding: 8px;
-        wrap: word-wrap;
+        Text {
+            text: root.text;
+            color: white;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
     }
 }

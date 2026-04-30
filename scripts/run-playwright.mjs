@@ -51,7 +51,7 @@ async function main() {
 
   // Build and start server
   console.log('[run-playwright] Building server...');
-  execSync('bazel build //src/server:server', { cwd: ROOT, stdio: 'inherit' });
+  execSync('bazelisk build //src/server:server', { cwd: ROOT, stdio: 'inherit' });
 
   const serverBin = path.join(ROOT, 'bazel-bin/src/server/server');
   console.log('[run-playwright] Starting server...');

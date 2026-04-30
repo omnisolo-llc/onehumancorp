@@ -48,7 +48,8 @@ test.describe('Login', () => {
   test('should allow password visibility toggle', async ({ page }) => {
     await page.goto('/login');
     const passwordInput = page.locator('input[type="password"]');
-    await expect(passwordInput).toBeVisible();
+    const toggleButton = page.locator('button:has-text("Show")');
+    await expect(toggleButton).toBeVisible();
   });
 });
 
