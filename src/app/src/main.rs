@@ -906,12 +906,12 @@ mod cost_transparency_e2e_tests {
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
                 name: "Customer Support Agent".into(),
-                cost: "$25.00".into(),
+                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
                 name: "Marketing Agent".into(),
-                cost: "$20.50".into(),
+                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
                 pct: 0.45,
             }
         ]));
@@ -925,6 +925,6 @@ mod cost_transparency_e2e_tests {
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00");
+        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
     }
 }
