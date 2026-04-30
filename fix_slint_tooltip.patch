@@ -1,0 +1,21 @@
+--- src/app/src/tooltip.slint
++++ src/app/src/tooltip.slint
+@@ -10,9 +10,11 @@
+     visible: show;
+
+-    Text {
+-        text: root.text;
+-        color: white;
+-        font-size: 12px;
+-        padding: 8px;
+-        wrap: word-wrap;
++    HorizontalLayout {
++        padding: 8px;
++        Text {
++            text: root.text;
++            color: white;
++            font-size: 12px;
++            wrap: word-wrap;
++        }
+     }
+ }

@@ -9,7 +9,6 @@ pub mod ohc {
 }
 
 pub mod tooltip_registry;
-use tooltip_registry::TooltipRegistry;
 use slint::ComponentHandle;
 
 pub mod app {
@@ -334,7 +333,6 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Logs::new().unwrap();
     }
-    #[test]
     #[test]
     fn test_pricing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
