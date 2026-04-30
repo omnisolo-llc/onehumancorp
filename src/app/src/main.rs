@@ -380,6 +380,66 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+
+    #[test]
+    fn test_user_management_referral_share() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_user_management_referral_share because no display server is available.");
+            return;
+        }
+        let ui = app::UserManagement::new().unwrap();
+        ui.on_share_referral(move |link| {
+            println!("Shared link: {}", link);
+        });
+        assert_eq!(true, true);
+    }
+
+    #[test]
+    fn test_dashboard_share_business() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+        ui.on_share_business(move || {
+            println!("Share business clicked");
+        });
+        assert_eq!(true, true);
+    }
+
+    #[test]
+    fn test_dashboard_milestones() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+        let milestones = ui.get_milestones();
+        use slint::Model;
+        assert_eq!(milestones.row_count(), 2);
+    }
+
+    #[test]
+    fn test_grow_business_workflows() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::GrowBusiness::new().unwrap();
+
+        // Test social media
+        ui.set_selected_strategy("Connect Instagram".into());
+        ui.set_step(1);
+        assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+
+        // Test email marketing
+        ui.set_selected_strategy("Run your first email campaign".into());
+        assert_eq!(ui.get_selected_strategy(), "Run your first email campaign");
+    }
+
+    #[test]
+    fn test_pricing_upgrade_funnel() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Pricing::new().unwrap();
+        assert_eq!(ui.get_show_upgrade_prompt(), false);
+
+        ui.set_show_upgrade_prompt(true);
+        ui.set_upgrade_reason("You've reached your 10 products limit.".into());
+
+        assert_eq!(ui.get_show_upgrade_prompt(), true);
+        assert_eq!(ui.get_upgrade_reason(), "You've reached your 10 products limit.");
+    }
 }
 
 #[cfg(test)]

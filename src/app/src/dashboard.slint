@@ -6,6 +6,12 @@ export struct UiRoleCount {
     count: int,
 }
 
+export struct UiMilestone {
+    icon: string,
+    message: string,
+    time: string,
+}
+
 export component Dashboard inherits Window {
     width: 800px;
     height: 800px;
@@ -20,6 +26,11 @@ export component Dashboard inherits Window {
 
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
+    in property <[UiMilestone]> milestones: [
+        { icon: "🎉", message: "You just got your 10th order!", time: "2m ago" },
+        { icon: "🚀", message: "Your store had 100 visitors today!", time: "1h ago" }
+    ];
+    callback share_business();
 
     VerticalBox {
         spacing: 20px;
@@ -29,7 +40,51 @@ export component Dashboard inherits Window {
         HorizontalBox {
             Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
             Rectangle {}
+            Button { text: "Share My Business"; clicked => { share_business(); } }
             Button { text: "Billing & Credits"; }
+        }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            padding: 16px;
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Share Your Storefront"; font-weight: 700; font-size: 16px; }
+                Text { text: "Copy this link to your Instagram bio or WhatsApp."; color: #64748b; }
+                HorizontalBox {
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 4px;
+                        padding: 8px;
+                        Text { text: "https://my-store.ohc.app"; color: #3b82f6; }
+                    }
+                    Button { text: "Copy Link"; clicked => { share_business(); } }
+                }
+            }
+        }
+
+        // Milestones
+        Text { text: "Success Milestones"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        VerticalBox {
+            spacing: 8px;
+            for m in milestones : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                HorizontalBox {
+                    padding: 12px;
+                    spacing: 12px;
+                    Text { text: m.icon; font-size: 20px; }
+                    VerticalBox {
+                        Text { text: m.message; font-weight: 700; color: #1e293b; }
+                        Text { text: m.time; color: #64748b; font-size: 12px; }
+                    }
+                }
+            }
         }
 
         // Stat Cards

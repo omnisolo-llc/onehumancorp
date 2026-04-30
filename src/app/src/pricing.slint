@@ -20,6 +20,8 @@ export component Pricing inherits Window {
         { name: "Business", price: "Custom", description: "Enterprise features and support." },
     ];
 
+    in property <bool> show_upgrade_prompt: false;
+    in property <string> upgrade_reason: "";
     callback select_plan(string);
 
     VerticalBox {
@@ -27,6 +29,20 @@ export component Pricing inherits Window {
         padding: 24px;
 
         Text { text: "Pricing & Billing"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        if (show_upgrade_prompt) : Rectangle {
+            background: #fffbeb;
+            border-color: #fbbf24;
+            border-width: 1px;
+            border-radius: 8px;
+            padding: 16px;
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Time to level up!"; font-weight: 700; color: #b45309; }
+                Text { text: upgrade_reason; color: #92400e; wrap: word-wrap; }
+                Text { text: "Upgrade to Starter or Pro to continue growing your business."; color: #92400e; wrap: word-wrap; }
+            }
+        }
 
         VerticalBox {
             spacing: 16px;

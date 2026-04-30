@@ -43,6 +43,27 @@ export component GrowBusiness inherits Window {
             spacing: 10px;
             Text { text: "Confirm Action"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Text { text: "You are about to start: " + selected_strategy; color: #1e293b; }
+
+            if (selected_strategy == "Connect Instagram") : VerticalBox {
+                spacing: 8px;
+                Text { text: "AI Agent Social Media Auto-Posting"; font-weight: 700; color: #a855f7; }
+                Text { text: "Your AI agent will automatically generate and schedule posts for new products, sales, or milestones. You can approve posts from your phone with one tap."; color: #64748b; wrap: word-wrap; }
+                Button { text: "Authorize Instagram Connect"; }
+            }
+
+            if (selected_strategy == "Run your first email campaign") : VerticalBox {
+                spacing: 8px;
+                Text { text: "AI Agent Email Marketing"; font-weight: 700; color: #a855f7; }
+                Text { text: "Select an AI-generated template below to engage your contacts."; color: #64748b; wrap: word-wrap; }
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "New Arrivals"; }
+                    Button { text: "Flash Sale"; }
+                    Button { text: "Thank You"; }
+                }
+                LineEdit { placeholder-text: "Customize Email Subject"; }
+            }
+
             Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #64748b; wrap: word-wrap; }
             
             if (is_advanced) : VerticalBox {
