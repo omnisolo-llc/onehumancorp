@@ -10,8 +10,6 @@ export component Login inherits Window {
     property <bool> loading: false;
     property <bool> is_sign_up: false;
     property <string> error_message: "";
-    in-out property <bool> show_verification: false;
-    in-out property <string> verification_message: "";
 
     in-out property <string> username: "";
     in-out property <string> password: "";
@@ -19,7 +17,6 @@ export component Login inherits Window {
     callback login(string, string);
     callback oauth_login(string);
     callback open_settings();
-    callback resend_verification(string);
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -105,7 +102,7 @@ export component Login inherits Window {
                     text: "Continue with SSO";
                     clicked => { oauth_login("SSO"); }
                 }
-                
+
                 Button {
                     text: "⚙ Connection Settings";
                     clicked => { open_settings(); }
@@ -114,4 +111,3 @@ export component Login inherits Window {
         }
     }
 }
-
