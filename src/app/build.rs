@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
     // SAFETY: This is only called at build time and does not concurrently access env
-    unsafe { std::env::set_var("PROTOC", protoc_path) };
+    // unsafe { std::env::set_var("PROTOC", protoc_path) };
 
     tonic_build::configure()
         .compile_protos(
