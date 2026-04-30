@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
@@ -11,33 +12,33 @@ impl ToolExecutor for LocalFSSyncExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let action = args["Action"].as_str().ok_or("local_fs_sync: Action is required")?;
-        let path = args["Path"].as_str().ok_or("local_fs_sync: Path is required")?;
+    ) -> Result<String, ToolError> {
+        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string()))?;
+        let path = args["Path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string()))?;
 
         let clean_path = Path::new(path);
         if !clean_path.starts_with(".agent-task/") || path.contains("..") {
-            return Err("sandbox violation: path must start with .agent-task/".into());
+            return Err(ToolError::LlmRecoverable("sandbox violation: path must start with .agent-task/".to_string()));
         }
 
         match action {
             "read" => {
-                let content = fs::read_to_string(clean_path).await?;
+                let content = fs::read_to_string(clean_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(content)
             }
             "write" => {
-                let content = args["Content"].as_str().ok_or("local_fs_sync: Content is required for write")?;
-                fs::write(clean_path, content).await?;
+                let content = args["Content"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
+                fs::write(clean_path, content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(json!({"status":"written"}).to_string())
             }
             "sync" => {
                 let exists = clean_path.exists();
                 if !exists {
-                    return Err("file not found".into());
+                    return Err(ToolError::LlmRecoverable("file not found".to_string()));
                 }
                 Ok(json!({"status":"synced"}).to_string())
             }
-            _ => Err("invalid action".into()),
+            _ => Err(ToolError::LlmRecoverable("invalid action".to_string())),
         }
     }
 }

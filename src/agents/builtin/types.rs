@@ -104,3 +104,31 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+
+/// 4-tier Error enum for Tool Execution (LangGraph mechanics).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ToolError {
+    /// Transient errors (e.g. network timeout). The orchestrator should retry with backoff.
+    Transient(String),
+    /// Errors the LLM can fix if it sees them (e.g. invalid arguments, missing required param).
+    /// Passed back to the LLM as a ToolMessage containing the raw error.
+    LlmRecoverable(String),
+    /// Errors requiring human intervention. Pauses execution and asks the user.
+    UserFixable(String),
+    /// Fatal errors. Bubbles up to debug/halt immediately.
+    Fatal(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Transient(msg) => write!(f, "Transient error: {}", msg),
+            Self::LlmRecoverable(msg) => write!(f, "Recoverable error: {}", msg),
+            Self::UserFixable(msg) => write!(f, "User intervention required: {}", msg),
+            Self::Fatal(msg) => write!(f, "Fatal error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}

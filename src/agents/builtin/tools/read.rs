@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
@@ -11,11 +12,11 @@ impl ToolExecutor for ReadExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("read: path is required")?;
+    ) -> Result<String, ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
         let content = fs::read_to_string(path)
             .await
-            .map_err(|e| format!("read: {}: {}", path, e))?;
+            .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Optional line range
         if let (Some(start), Some(end)) = (
@@ -26,7 +27,7 @@ impl ToolExecutor for ReadExecutor {
             let start = (start as usize).saturating_sub(1);
             let end = (end as usize).min(lines.len());
             if start >= end {
-                return Err(format!("read: invalid line range {}-{}", start + 1, end).into());
+                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", start + 1, end)));
             }
             return Ok(lines[start..end].join("\n"));
         }

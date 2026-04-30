@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
@@ -11,22 +12,22 @@ impl ToolExecutor for WriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("write: path is required")?;
+    ) -> Result<String, ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("write: path is required".to_string()))?;
         let content = args["content"]
             .as_str()
-            .ok_or("write: content is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("write: content is required".to_string()))?;
 
         // Create parent directories if needed.
         if let Some(parent) = std::path::Path::new(path).parent() {
             fs::create_dir_all(parent)
                 .await
-                .map_err(|e| format!("write: create dir {}: {}", parent.display(), e))?;
+                .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
         fs::write(path, content)
             .await
-            .map_err(|e| format!("write: {}: {}", path, e))?;
+            .map_err(|e| format!("write: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         Ok(format!("File written: {}", path))
     }
