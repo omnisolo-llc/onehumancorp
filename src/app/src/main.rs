@@ -573,3 +573,61 @@ mod dashboard_docs_tests {
         ui.on_open_ai_chat(move || {});
     }
 }
+
+#[cfg(test)]
+mod cost_transparency_e2e_tests {
+    use super::*;
+    use slint::Model;
+
+    #[test]
+    fn test_e2e_cost_transparency_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let my_plan_ui = app::MyPlan::new().unwrap();
+
+        assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
+
+        my_plan_ui.set_tier("Starter Tier".into());
+        my_plan_ui.set_total_actions("150".into());
+        my_plan_ui.set_action_limit("1000".into());
+        my_plan_ui.set_used_storage("150.5 MB".into());
+        my_plan_ui.set_limit_storage("5.0 GB".into());
+        my_plan_ui.set_estimated_bill("$29.00".into());
+
+        assert_eq!(my_plan_ui.get_tier(), "Starter Tier");
+        assert_eq!(my_plan_ui.get_total_actions(), "150");
+        assert_eq!(my_plan_ui.get_action_limit(), "1000");
+        assert_eq!(my_plan_ui.get_used_storage(), "150.5 MB");
+        assert_eq!(my_plan_ui.get_limit_storage(), "5.0 GB");
+        assert_eq!(my_plan_ui.get_estimated_bill(), "$29.00");
+
+        let cost_ui = app::CostDashboard::new().unwrap();
+
+        cost_ui.set_total_spend("$45.50".into());
+        cost_ui.set_total_tokens("1,500,000".into());
+
+        let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiAgentCost {
+                name: "Customer Support Agent".into(),
+                cost: "$25.00".into(),
+                pct: 0.55,
+            },
+            app::UiAgentCost {
+                name: "Marketing Agent".into(),
+                cost: "$20.50".into(),
+                pct: 0.45,
+            }
+        ]));
+
+        cost_ui.set_agent_costs(agent_costs.clone());
+
+        assert_eq!(cost_ui.get_total_spend(), "$45.50");
+        assert_eq!(cost_ui.get_total_tokens(), "1,500,000");
+
+        let retrieved_costs = cost_ui.get_agent_costs();
+        assert_eq!(retrieved_costs.row_count(), 2);
+        let first_agent = retrieved_costs.row_data(0).unwrap();
+        assert_eq!(first_agent.name, "Customer Support Agent");
+        assert_eq!(first_agent.cost, "$25.00");
+    }
+}
