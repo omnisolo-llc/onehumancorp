@@ -13,6 +13,7 @@ cargo_build_script(
     ],
     edition = "2024",
     deps = [
+        "@crates//:rayon",
         "@crates//:tonic-build",
     ],
 )
@@ -27,6 +28,7 @@ rust_binary(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:rayon",
         ":build_script",
         "@crates//:aes-gcm",
         "@crates//:axum",
@@ -76,6 +78,7 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "@crates//:rayon",
         ":build_script",
         "@crates//:aes-gcm",
         "@crates//:base64",
@@ -118,6 +121,7 @@ rust_test(
     crate_root = "crypto.rs",
     edition = "2024",
     deps = [
+        "@crates//:rayon",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:hmac",

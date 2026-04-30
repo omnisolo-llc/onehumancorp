@@ -21,12 +21,18 @@ impl MyAgentManagerService {
     }
 
     fn get_snapshot(&self) -> DashboardSnapshot {
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+        let (agents, meetings_and_summary) = rayon::join(
+            || self.hub.get_agents(),
+            || rayon::join(
+                || self.hub.get_meetings(),
+                || self.hub.tracker().summary("system")
+            )
+        );
+        let (meetings, summary) = meetings_and_summary;
         
         let costs = Summary {
-            total_cost_usd: 100.0,
-            total_tokens: 50000,
+            total_cost_usd: (summary.total_tokens as f64) * 0.000002,
+            total_tokens: summary.total_tokens,
         };
 
         let mut status_map = std::collections::HashMap::new();

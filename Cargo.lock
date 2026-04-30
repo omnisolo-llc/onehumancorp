@@ -178,7 +178,6 @@ dependencies = [
  "slint-build",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -4095,6 +4094,7 @@ dependencies = [
  "prost",
  "qrcode",
  "rand 0.8.6",
+ "rayon",
  "redis",
  "regex",
  "reqwest",
