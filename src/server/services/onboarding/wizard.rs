@@ -41,6 +41,17 @@ impl InteractiveWizard {
         )
     }
 
+
+    pub fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
+        // Here we would use sqlx to persist to the onboarding_state table
+        Ok(())
+    }
+
+    pub fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+        // Return dummy json for now
+        Ok(r#"{"step": 0}"#.to_string())
+    }
+
     pub fn reset_environment(&self, is_cloud: bool) -> Result<(), String> {
         provisioner::cleanup_environment(is_cloud)?;
         provisioner::provision_environment(is_cloud)?;
