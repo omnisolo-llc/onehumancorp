@@ -1,5 +1,20 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented Hybrid Distributed MeshLock Implementation
+- Abstracted SKIP LOCKED for sqlite and added chaos tests
+- Implemented observability metrics for AutoDream and Task Claim Contention
+- Implemented OS-level SandboxManager using bwrap and sandbox-exec
+
+### Privacy/Offline Improvements
+- Added viral storefront link growth feature
+- Added referral loop to User Management
+- Implemented AI agent department draft-for-review approval workflow
+- Hardened application for multi-tenant and local standalone
+- Implemented high-fidelity 11-step onboarding wizard
+- Removed tooltips from the app to improve reliability
+
 ## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
 ### Privacy/Offline Improvements
 - Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
