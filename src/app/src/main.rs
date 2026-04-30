@@ -664,7 +664,7 @@ mod dashboard_docs_tests {
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
 
         // 6. Test tooltips rendering logic with registry
-        let tooltip_registry = TooltipRegistry::new();
+        let tooltip_registry = crate::tooltip_registry::TooltipRegistry::new();
         dashboard_ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
         assert_eq!(dashboard_ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
     }

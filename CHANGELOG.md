@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.11 (Cloud) / v0.4.11+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented JSON minification and Gzip compression middleware to optimize server HTTP payloads.
+
+### Privacy/Offline Improvements
+- Fixed TooltipRegistry namespace issue in Slint UI and improved dashboard accessibility.
+
 ## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
 ### Cloud Scaling Improvements
 - Creates formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks` to prepare them for RLS.
