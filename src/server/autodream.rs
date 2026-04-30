@@ -42,6 +42,9 @@ impl AutoDreamWorker {
                 if let Err(e) = Self::process_fs_memories(&db).await {
                     println!("AutoDream: FS memories processing failed: {}", e);
                 }
+                if let Err(e) = Self::consolidate_agent_task_memories(&db).await {
+                    println!("AutoDream: agent-task memories consolidation failed: {}", e);
+                }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
                     println!("AutoDream: Mesh messages processing failed: {}", e);
                 }
@@ -184,6 +187,51 @@ impl AutoDreamWorker {
                     }
                     Err(e) => {
                         println!("AutoDreamWorker: failed to embed fs memory {:?}: {}", path, e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn consolidate_agent_task_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let memory_dir = std::path::Path::new(".agent-task/memory");
+
+        if !memory_dir.exists() {
+            return Ok(());
+        }
+
+        let mut entries = tokio::fs::read_dir(memory_dir).await?;
+
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        let client = crate::minimax::MinimaxClient::new(api_key);
+
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
+                let content = tokio::fs::read_to_string(&path).await?;
+
+                match client.generate_embedding(&content).await {
+                    Ok(embedding) => {
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let mem_id = uuid::Uuid::new_v4().to_string();
+
+                        sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
+                            .bind(&mem_id)
+                            .bind("system") // Placeholder since we don't have org_id in yml name
+                            .bind("system_agent")
+                            .bind(&content)
+                            .bind(&emb_str)
+                            .bind("TASK_SUMMARY")
+                            .execute(&db.pool)
+                            .await?;
+
+                        let path_clone = path.clone();
+                        tokio::fs::remove_file(path).await?;
+                        println!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
+                    }
+                    Err(e) => {
+                        println!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
                     }
                 }
             }
