@@ -945,6 +945,42 @@ mod docs_tests {
         assert!(*execute_success.borrow());
     }
 
+    #[test]
+    fn test_e2e_ai_config_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_provider_called_clone = add_provider_called.clone();
+
+        // Mock navigating to AiConfig from Dashboard
+        dashboard_ui.on_open_ai_chat(move || {
+            let ui = app::AiConfig::new().unwrap();
+            let provider_called = add_provider_called_clone.clone();
+            ui.on_add_provider(move || {
+                *provider_called.borrow_mut() = true;
+            });
+            ui.invoke_add_provider();
+        });
+
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*add_provider_called.borrow(), "Add provider callback should have been triggered after navigating from Dashboard");
+    }
+
 }
 
 #[cfg(test)]

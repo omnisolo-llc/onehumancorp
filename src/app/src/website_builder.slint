@@ -1,5 +1,5 @@
 import { GlassCard } from "glass_card.slint";
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window {
     width: 600px;
@@ -13,6 +13,7 @@ export component WebsiteBuilder inherits Window {
     in-out property <string> primary_color: "#FF3B30";
     in-out property <string> product_name: "";
     in-out property <string> domain_choice: "subdomain";
+    in-out property <bool> is_advanced: false;
 
     background: #f8fafc;
 
@@ -20,12 +21,23 @@ export component WebsiteBuilder inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
-
-
+        HorizontalBox {
+            Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            CheckBox {
+                text: "Expert Mode";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
+            }
+        }
 
         // Step 0: Template
         if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: Local CLI command"; font-family: "Inter"; font-size: 14px; color: #1e293b; }
+                Text { text: "ohc deploy --template " + (selected_template == "" ? "<template>" : selected_template); font-family: "Inter"; font-size: 12px; color: #64748b; }
+            }
             spacing: 10px;
             Text { text: "Choose a template"; color: #1e293b; }
             
