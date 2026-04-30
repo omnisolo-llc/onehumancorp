@@ -7,6 +7,7 @@ export component WebsiteBuilder inherits Window {
     title: "Build My Website";
 
     callback publish_site(string, string, string, string);
+    callback open_ohc_signup();
 
     in-out property <int> step: 0;
     in-out property <string> selected_template: "";
@@ -133,7 +134,7 @@ export component WebsiteBuilder inherits Window {
                         Button {
                             text: "Start your free business →";
                             // In a real app, this would trigger an external link open callback
-                            clicked => { publish_site(selected_template, primary_color, product_name, domain_choice); }
+                            clicked => { open_ohc_signup(); }
                         }
                     }
                 }
