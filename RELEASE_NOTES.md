@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+- Scaling (Cloud): Integrated division-by-zero safeguards within Cost metrics and ROI calculations for resilient scale-up behavior.
+- Privacy/Offline (Standalone): Propagated zero-cost division fallbacks to the offline Standalone Slint UI layer to ensure visual stability under missing metric conditions.
+
 ## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
 - Privacy/Offline (Standalone): Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
 
