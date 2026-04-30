@@ -106,6 +106,7 @@ bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 buildbuddy.gcc_toolchain()
 use_repo(buildbuddy, "buildbuddy_toolchain")
+register_toolchains("@buildbuddy_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
