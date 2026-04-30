@@ -235,6 +235,15 @@ mod tests {
         app::Chat::new().unwrap();
     }
     #[test]
+    fn test_dashboard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+        assert_eq!(ui.get_active_agents_count(), 0);
+        assert_eq!(ui.get_active_tasks_count(), 0);
+        assert_eq!(ui.get_scheduled_calls_count(), 0);
+        assert_eq!(ui.get_team_members_count(), 0);
+    }
+    #[test]
     fn test_channels_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Channels::new().unwrap();
