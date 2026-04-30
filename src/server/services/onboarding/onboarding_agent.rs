@@ -23,6 +23,8 @@ impl OnboardingAgent {
              self.generate_initial_products(&org_id, &business_type).await?;
         }
 
+        self.seed_default_agents(&org_id).await?;
+
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
@@ -101,6 +103,35 @@ impl OnboardingAgent {
 
         Ok(())
     }
+
+    async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
+        let default_agents = vec![
+            ("Operations", "The Manager", "Operations"),
+            ("Marketing & Advertising", "The Promoter", "Marketing"),
+            ("Sales & Acquisition", "The Salesperson", "Sales"),
+            ("Customer Success", "The Ambassador", "CustomerSuccess"),
+            ("Finance & Payments", "The Accountant", "Finance"),
+            ("Legal & Compliance", "The Protector", "Legal"),
+            ("Business Advisory", "The Advisor", "Advisory"),
+        ];
+
+        for (name, role, role_id) in default_agents {
+            let id = format!("{}-{}", org_id, role_id.to_lowercase());
+            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+                .bind(id)
+                .bind(name)
+                .bind(role)
+                .bind(org_id)
+                .bind("IDLE")
+                .bind("builtin")
+                .bind(true)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -143,5 +174,20 @@ mod tests {
         let resp = res.unwrap();
         assert!(resp.success);
         assert!(!resp.organization_id.is_empty());
+
+        let org_id = resp.organization_id;
+        use sqlx::Row;
+        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE organization_id = $1 AND is_default = TRUE")
+            .bind(&org_id)
+            .fetch_all(&agent.db.pool)
+            .await
+            .unwrap();
+
+        assert_eq!(agents.len(), 7);
+
+        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor"];
+        for role in expected_roles {
+            assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
+        }
     }
 }
