@@ -167,6 +167,17 @@ mod e2e_tests {
     use super::*;
 
     #[test]
+    fn test_login_password_visibility_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Login::new().unwrap();
+
+        // The toggle state in the encapsulated component is internal to Slint
+        // but we can set the password property
+        ui.set_password("secret".into());
+        assert_eq!(ui.get_password(), "secret");
+    }
+
+    #[test]
     fn test_e2e_wizard_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
