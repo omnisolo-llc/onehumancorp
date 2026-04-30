@@ -515,34 +515,149 @@ mod docs_tests {
     }
 
     #[test]
-    fn test_help_center_creation() {
+    fn test_e2e_help_center_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_help_center();
+        assert!(*help_center_opened.borrow());
+        let ui = app::HelpCenter::new().unwrap();
+        ui.set_search_query("Stripe".into());
+        assert_eq!(ui.get_search_query(), "Stripe");
     }
     #[test]
-    fn test_release_notes_creation() {
+    fn test_e2e_ai_help_chat_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow());
+        let ui = app::AiHelpChat::new().unwrap();
+        ui.set_user_input("How to add product".into());
+        assert_eq!(ui.get_user_input(), "How to add product");
     }
     #[test]
-    fn test_interactive_walkthrough_creation() {
+    fn test_e2e_release_notes_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::InteractiveWalkthrough::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard.on_open_release_notes(move || {
+            *opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_release_notes();
+        assert!(*opened.borrow());
+        let _hc = app::ReleaseNotes::new().unwrap();
     }
     #[test]
-    fn test_ai_help_chat_creation() {
+    fn test_e2e_interactive_walkthrough_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::AiHelpChat::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard.on_open_walkthrough(move || {
+            *opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_walkthrough();
+        assert!(*opened.borrow());
+        let ui = app::InteractiveWalkthrough::new().unwrap();
+        assert_eq!(ui.get_current_step(), 0);
+        ui.set_current_step(1);
+        assert_eq!(ui.get_current_step(), 1);
     }
     #[test]
-    fn test_video_tutorials_creation() {
+    fn test_e2e_video_tutorials_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::VideoTutorials::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard.on_open_video_tutorials(move || {
+            *opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_video_tutorials();
+        assert!(*opened.borrow());
+        let _ui = app::VideoTutorials::new().unwrap();
     }
     #[test]
-    fn test_api_docs_creation() {
+    fn test_e2e_api_docs_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
+        let login = app::Login::new().unwrap();
+        let login_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_success_clone = login_success.clone();
+        login.on_login(move |username, password| {
+            if username == "testuser" && password == "pass123" {
+                *login_success_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("testuser".into(), "pass123".into());
+        assert!(*login_success.borrow());
+        let dashboard = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard.on_open_api_docs(move || {
+            *opened_clone.borrow_mut() = true;
+        });
+        dashboard.invoke_open_api_docs();
+        assert!(*opened.borrow());
+        let _ui = app::ApiDocs::new().unwrap();
     }
 }
 

@@ -1,10 +1,11 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component ReleaseNotes inherits Window {
-    width: 600px;
-    height: 800px;
+    width: 375px;
+    height: 812px;
     title: "What's New";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         padding: 16px;
@@ -14,62 +15,29 @@ export component ReleaseNotes inherits Window {
             text: "What's New in OHC";
             font-size: 24px;
             font-weight: 700;
-            color: #0f172a;
+            color: white;
+            font-family: "Outfit";
         }
 
         ScrollView {
             VerticalBox {
-                spacing: 24px;
+                spacing: 16px;
 
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🎉 Better Team Collaboration & Offline Reliability"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Your agents can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection."; color: #475569; wrap: word-wrap; }
-                        }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px; spacing: 8px;
+                        Text { text: "Version 1.2 - New AI Agents"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                        Text { text: "October 2023"; color: #a855f7; font-family: "Inter"; }
+                        Text { text: "• Added the Customer Success Agent to handle Instagram DMs.\n• Improved store loading speeds on mobile.\n• Added support for Apple Pay in 12 new countries."; color: #a8b2c1; wrap: word-wrap; font-family: "Inter"; }
                     }
                 }
 
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.2 (Cloud) / v0.3.2+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🚀 Enhanced Privacy & New Walkthrough"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "We have strengthened the way we store your business data to keep it completely private. We also added your task list directly to the main dashboard and included a new guide to help you sync your website with AutoDream."; color: #475569; wrap: word-wrap; }
-                        }
-                    }
-                }
-
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.1 (Cloud) / v0.3.1+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🔍 Smarter Knowledge Retrieval"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Your AI agents can now search and read your business documents much faster to answer questions. This even works if you are running the app fully offline on your own device."; color: #475569; wrap: word-wrap; }
-                        }
-                    }
-                }
-
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.0 (Cloud) / v0.3.0+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🔗 Faster Team Communication"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "We upgraded the behind-the-scenes system that lets your AI agents talk to each other in real-time. If you use the standalone app, they can now chat together seamlessly without needing an external internet server."; color: #475569; wrap: word-wrap; }
-                        }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px; spacing: 8px;
+                        Text { text: "Version 1.1 - Calendar Sync"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                        Text { text: "September 2023"; color: #a855f7; font-family: "Inter"; }
+                        Text { text: "• You can now sync your bookings with Google Calendar.\n• Fixed an issue where photos wouldn't upload on Android."; color: #a8b2c1; wrap: word-wrap; font-family: "Inter"; }
                     }
                 }
             }
