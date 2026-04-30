@@ -17,7 +17,7 @@ export struct UiRoleCount {
 export component Dashboard inherits Window {
     width: 375px;
     height: 800px;
-    title: "Dashboard";
+    title: "My Business";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -42,11 +42,15 @@ export component Dashboard inherits Window {
         // Header
         VerticalBox {
             spacing: 16px;
-            Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
-            Button { text: "?"; clicked => { open_help_center(); } }
-            Button { text: "Billing & Credits"; }
+            HorizontalBox {
+                spacing: 10px;
+                alignment: start;
+                Button { text: "Chat with AI"; height: 44px; clicked => { open_ai_chat(); } }
+                Button { text: "Help"; height: 44px; clicked => { open_help_center(); } }
+                Button { text: "Billing & Credits"; height: 44px; }
+            }
         }
 
         // Stat Cards
@@ -64,7 +68,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Agents Working Now"; color: #94a3b8; }
+                        Text { text: "Agents Working Now"; color: #94a3b8; font-family: "Inter"; }
                         Text { text: active_agents_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                     }
                 }
@@ -80,7 +84,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Tasks in Progress"; color: #94a3b8; }
+                        Text { text: "Tasks in Progress"; color: #94a3b8; font-family: "Inter"; }
                         Text { text: active_tasks_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                     }
                 }
@@ -96,7 +100,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Upcoming Calls"; color: #94a3b8; }
+                        Text { text: "Upcoming Calls"; color: #94a3b8; font-family: "Inter"; }
                         Text { text: scheduled_calls_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                     }
                 }
@@ -112,7 +116,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "My Team"; color: #94a3b8; }
+                        Text { text: "My Team"; color: #94a3b8; font-family: "Inter"; }
                         Text { text: team_members_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                     }
                 }
@@ -122,27 +126,28 @@ export component Dashboard inherits Window {
 
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Action Required Flow (Drafts pending review)"; font-size: 20px; font-weight: 700; color: #b91c1c; }
+            Text { text: "Needs Your Review"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #f87171; }
 
-            for approval in pending_approvals : Rectangle {
-                background: #fef2f2;
+            for approval in pending_approvals : GlassCard {
                 border-color: #fca5a5;
                 border-width: 1px;
                 border-radius: 8px;
+                width: 100%;
 
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
 
-                    Text { text: approval.title; font-weight: 700; color: #991b1b; }
-                    Text { text: approval.proposed_content; color: #7f1d1d; wrap: word-wrap; }
+                    Text { text: approval.title; font-family: "Outfit"; font-weight: 700; color: #fca5a5; }
+                    Text { text: approval.proposed_content; font-family: "Inter"; color: #e2e8f0; wrap: word-wrap; }
 
                     HorizontalBox {
                         alignment: end;
                         spacing: 10px;
-                        Button { text: "Edit"; }
+                        Button { text: "Edit"; height: 44px; }
                         Button {
                             text: "Approve";
+                            height: 44px;
                             clicked => { approve_task(approval.task_id); }
                         }
                     }
@@ -155,7 +160,7 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Text { text: "Manage Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;
