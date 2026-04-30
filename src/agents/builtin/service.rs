@@ -223,6 +223,7 @@ impl AgentServiceImpl {
             confidence_threshold,
             enable_observation_masking: true,
             guardrails: None,
+            enable_llm_judge: false,
         }
     }
 }
@@ -372,6 +373,7 @@ impl AgentService for AgentServiceImpl {
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
                 guardrails: None,
+            enable_llm_judge: false,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

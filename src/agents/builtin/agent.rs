@@ -30,6 +30,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
 }
 
@@ -44,6 +45,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            enable_llm_judge: false,
             guardrails: None,
         }
     }
@@ -192,6 +194,36 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // Inferential/Sensors (LLM-as-judge subagent)
+                if cfg.enable_llm_judge {
+                    let judge_req = ChatRequest {
+                        model: cfg.model.clone(),
+                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
+                        messages: vec![Message::user(format!("Evaluate this output:
+{}", last_assistant_content))],
+                        tools: vec![],
+                        max_tokens: 500,
+                        temperature: 0.0,
+                    };
+
+                    match self.llm.chat(judge_req).await {
+                        Ok(judge_resp) => {
+                            let judge_text = judge_resp.message.content.trim();
+                            if judge_text.starts_with("REJECT:") {
+                                let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
+                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
+                                messages.push(Message::user(err_msg));
+                                continue;
+                            }
+                            // If APPROVE or anything else, we proceed to output guardrails.
+                        }
+                        Err(e) => {
+                            let err = format!("LLM Judge error: {}", e);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                    }
+                }
                 // In a production-grade agent, we might use a separate LLM pass
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
@@ -550,5 +582,46 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_rejects_and_approves() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Draft answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("REJECT: The answer is incomplete."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Better answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("APPROVE"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_llm_judge = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+        let content = result.unwrap();
+        assert_eq!(content, "Better answer");
     }
 }
