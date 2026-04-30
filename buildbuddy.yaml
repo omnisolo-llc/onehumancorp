@@ -25,9 +25,9 @@ actions:
 
   - name: "playwright e2e tests"
     resource_requests:
-      cpu: 4
-      memory: 8GB
-      disk: 20GB
+      cpu: 8
+      memory: 16GB
+      disk: 100GB
     triggers:
       push:
         branches:
@@ -37,12 +37,8 @@ actions:
           - "*"
     steps:
       - run: |
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends docker.io
       - run: |
-          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm install 18 && nvm use 18
-      - run: |
-          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && npm install --frozen-lockfile
-      - run: |
-          npx playwright install --with-deps chromium
-      - run: |
-          node scripts/run-playwright.mjs
+          sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/workspace -w /workspace \
+            mcr.microsoft.com/playwright:v1.58.0 \
+            /bin/bash -c "npm install --frozen-lockfile && node scripts/run-playwright.mjs"
