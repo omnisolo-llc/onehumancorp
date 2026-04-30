@@ -13,7 +13,17 @@ pub async fn bench_queue_latency() {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
-        if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url).await;
+
+        if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
             bench_queue("Postgres", pg_queue).await;
         } else {

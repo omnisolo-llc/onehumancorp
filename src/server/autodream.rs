@@ -65,7 +65,7 @@ impl AutoDreamWorker {
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
         
         for (id, data) in stale_sessions {
-             println!("AutoDream: pruned session {}: {}", id, data);
+             println!("AutoDream: pruned session {}", id);
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
@@ -83,7 +83,7 @@ impl AutoDreamWorker {
             let client = crate::minimax::MinimaxClient::new(api_key);
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
             let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
-                println!("AutoDream: failed to summarize logs: {}. Using raw payload.", e);
+                println!("AutoDream: failed to summarize logs: {}.", e);
                 format!("Summary of task: {}", payload)
             });
             
