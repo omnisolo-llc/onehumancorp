@@ -572,4 +572,60 @@ mod dashboard_docs_tests {
         ui.on_open_help_center(move || {});
         ui.on_open_ai_chat(move || {});
     }
+
+    #[test]
+    fn test_documentation_components_e2e_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
+            return;
+        }
+
+        // 1. Start from the home page after user login via the UI
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        // Simulate user login
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // 2. Load the main Dashboard
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // 3. Test opening Help Center from Dashboard
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+            // Verify HelpCenter component can be instantiated
+            let _help_center = app::HelpCenter::new().unwrap();
+        });
+        dashboard_ui.invoke_open_help_center();
+        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+
+        // 4. Test opening AI Help Chat from Dashboard
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+            // Verify AiHelpChat component can be instantiated
+            let _ai_chat = app::AiHelpChat::new().unwrap();
+        });
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+
+        // 5. Test Interactive Walkthrough
+        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+
+        // 6. Test tooltips rendering logic with registry
+        let tooltip_registry = TooltipRegistry::new();
+        dashboard_ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
+        assert_eq!(dashboard_ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
+    }
 }
