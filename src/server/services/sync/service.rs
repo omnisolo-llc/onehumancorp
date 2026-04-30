@@ -107,13 +107,14 @@ impl SyncService for MySyncService {
         let md = request.metadata().clone();
         let req = request.into_inner();
         let deltas = req.deltas;
-        let tenant_id = if req.tenant_id.is_empty() {
-            let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-            parsed.0
-        } else {
-            req.tenant_id
-        };
+
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = parsed.0;
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
 
         if deltas.is_empty() {
             return Ok(Response::new(SyncMcpDeltasResponse {
@@ -122,6 +123,9 @@ impl SyncService for MySyncService {
                 synced_count: 0,
             }));
         }
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut synced_count = 0;
 
@@ -141,7 +145,7 @@ impl SyncService for MySyncService {
                 .bind(&delta.entity_id)
                 .bind(&delta.data)
                 .bind(&delta.updated_at)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await
             {
                 Ok(_) => {
@@ -152,6 +156,8 @@ impl SyncService for MySyncService {
                 }
             }
         }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(SyncMcpDeltasResponse {
             status: "success".to_string(),
@@ -254,7 +260,7 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://example.org/org1/agent1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
