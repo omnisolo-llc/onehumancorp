@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+
 pub struct TooltipRegistry {
     tooltips: HashMap<String, String>,
 }
