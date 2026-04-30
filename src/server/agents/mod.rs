@@ -7,7 +7,6 @@ pub mod worker;
 pub mod checkpointer;
 pub mod harness;
 pub mod memory;
-pub mod mcp;
 pub mod legacy_mesh;
 pub mod sandbox;
 pub mod presence;

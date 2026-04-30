@@ -36,6 +36,7 @@ rust_binary(
         "@crates//:config",
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
+        "@crates//:futures",
         "@crates//:hex",
         "@crates//:hmac",
         "@crates//:jsonwebtoken",
