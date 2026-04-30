@@ -1,4 +1,5 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
 
@@ -45,6 +46,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+    let referrals_ui = app::Referrals::new()?;
+    let referrals_handle = referrals_ui.as_weak();
+
+    referrals_ui.on_refresh({
+        let ui_handle = referrals_handle.clone();
+        move || {
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(resp) = response {
+                            let referrals = resp.into_inner().referrals;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle.upgrade() {
+                                    let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
+                                        app::UiReferral {
+                                            referral_code: r.referral_code.into(),
+                                            user_id: r.user_id.into(),
+                                            clicks: r.clicks,
+                                            conversions: r.conversions,
+                                            created_at: "".into(), // Simplified
+                                        }
+                                    }).collect();
+                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => println!("Failed to connect for referrals: {:?}", e),
+                }
+            });
+        }
+    });
+
+    referrals_ui.on_generate_new_link({
+        let ui_handle = referrals_handle.clone();
+        move || {
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let req = ohc::orchestration::CreateReferralRequest {
+                            user_id: "current_user".to_string(), // In production, use actual user_id
+                            referral_code: "".to_string(),
+                        };
+                        let response = client.create_referral(tonic::Request::new(req)).await;
+                        if let Ok(resp) = response {
+                            let referral = resp.into_inner();
+                            let link = format!("ohc://join?ref={}", referral.referral_code);
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle.upgrade() {
+                                    ui.set_my_referral_link(link.into());
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => println!("Failed to create referral: {:?}", e),
+                }
+            });
+        }
+    });
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
@@ -144,6 +208,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.run()?;
     
     Ok(())
+}
+
+#[cfg(test)]
+mod growth_e2e_tests {
+    use super::*;
+    use slint::Model;
+
+    #[test]
+    fn test_e2e_referral_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::Referrals::new().unwrap();
+
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiReferral {
+                referral_code: "GROWTH2024".into(),
+                user_id: "user_123".into(),
+                clicks: 45,
+                conversions: 12,
+                created_at: "2024-01-01".into(),
+            }
+        ]));
+
+        ui.set_referrals(referral_data.clone());
+
+        assert_eq!(ui.get_referrals().row_count(), 1);
+        let r = ui.get_referrals().row_data(0).unwrap();
+        assert_eq!(r.referral_code, "GROWTH2024");
+        assert_eq!(r.clicks, 45);
+        assert_eq!(r.conversions, 12);
+    }
 }
 
 #[cfg(test)]
