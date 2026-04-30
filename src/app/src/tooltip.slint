@@ -1,0 +1,31 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+
+export component Tooltip {
+    in property <string> tooltip_id;
+    in property <string> text: TooltipRegistry.get_text(tooltip_id);
+    in property <bool> is_visible;
+
+    Rectangle {
+        y: - self.height - 8px;
+        x: 0px;
+        width: popup_text.width + 16px;
+        height: popup_text.height + 16px;
+        visible: root.is_visible;
+        background: #334155;
+        border-radius: 4px;
+        drop-shadow-color: #00000040;
+        drop-shadow-blur: 8px;
+        drop-shadow-offset-y: 4px;
+        z: 1000;
+
+        popup_text := Text {
+            x: 8px;
+            y: 8px;
+            text: root.text;
+            color: white;
+            font-size: 14px;
+            wrap: word-wrap;
+            max-width: 250px;
+        }
+    }
+}

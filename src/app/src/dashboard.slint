@@ -1,10 +1,25 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { Tooltip } from "tooltip.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
 export struct UiRoleCount {
     role: string,
     count: int,
+}
+
+
+export component TooltipButton {
+    in property <string> text;
+    in property <string> tooltip_id;
+    callback clicked();
+
+    // Instead of VerticalBox, use an implicit root layout (Rectangle).
+    Rectangle {
+        btn := Button { text: root.text; clicked => { root.clicked(); } }
+        btn_touch := TouchArea {}
+        Tooltip { tooltip_id: root.tooltip_id; is_visible: btn_touch.has-hover; }
+    }
 }
 
 export component Dashboard inherits Window {
@@ -35,9 +50,9 @@ export component Dashboard inherits Window {
             spacing: 16px;
             Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
-            Button { text: "?"; clicked => { open_help_center(); } }
-            Button { text: "Billing & Credits"; }
+            TooltipButton { text: "Ask anything"; tooltip_id: "dashboard_ask"; clicked => { open_ai_chat(); } }
+            TooltipButton { text: "?"; tooltip_id: "dashboard_help"; clicked => { open_help_center(); } }
+            TooltipButton { text: "Billing & Credits"; tooltip_id: "dashboard_billing"; }
         }
 
         // Stat Cards
@@ -55,7 +70,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Agents Working Now"; color: #94a3b8; }
+                        Rectangle { height: 20px; Text { text: "Agents Working Now"; color: #94a3b8; } Tooltip { tooltip_id: "stat_agents"; is_visible: ta1.has-hover; } ta1 := TouchArea { width: 100%; height: 100%; } Tooltip { tooltip_id: "stat_agents"; is_visible: ta1.has-hover; } }
                         Text { text: active_agents_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                     }
                 }
@@ -71,7 +86,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Tasks in Progress"; color: #94a3b8; }
+                        Rectangle { height: 20px; Text { text: "Tasks in Progress"; color: #94a3b8; } Tooltip { tooltip_id: "stat_tasks"; is_visible: ta2.has-hover; } ta2 := TouchArea { width: 100%; height: 100%; } Tooltip { tooltip_id: "stat_tasks"; is_visible: ta2.has-hover; } }
                         Text { text: active_tasks_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                     }
                 }
@@ -87,7 +102,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Upcoming Calls"; color: #94a3b8; }
+                        Rectangle { height: 20px; Text { text: "Upcoming Calls"; color: #94a3b8; } Tooltip { tooltip_id: "stat_calls"; is_visible: ta3.has-hover; } ta3 := TouchArea { width: 100%; height: 100%; } Tooltip { tooltip_id: "stat_calls"; is_visible: ta3.has-hover; } }
                         Text { text: scheduled_calls_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                     }
                 }
@@ -103,7 +118,7 @@ export component Dashboard inherits Window {
                     height: 100%;
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "My Team"; color: #94a3b8; }
+                        Rectangle { height: 20px; Text { text: "My Team"; color: #94a3b8; } Tooltip { tooltip_id: "stat_team"; is_visible: ta4.has-hover; } ta4 := TouchArea { width: 100%; height: 100%; } Tooltip { tooltip_id: "stat_team"; is_visible: ta4.has-hover; } }
                         Text { text: team_members_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                     }
                 }

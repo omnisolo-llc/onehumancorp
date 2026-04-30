@@ -1,0 +1,14 @@
+export global TooltipRegistry {
+    pure public function get_text(id: string) -> string {
+        if (id == "dashboard_ask") {
+            return "Chat with the AI Help Assistant for instant answers.";
+        }
+        if (id == "dashboard_help") {
+            return "Open the Help Center for guides and tutorials.";
+        }
+        if (id == "dashboard_billing") {
+            return "Manage your subscription, invoices, and AI credits.";
+        }
+        return "";
+    }
+}
