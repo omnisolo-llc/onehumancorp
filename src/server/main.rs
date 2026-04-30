@@ -907,6 +907,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    // Ensure local database permissions are secure in standalone mode
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let db_path = "ohc-standalone.db";
+        if std::path::Path::new(db_path).exists() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(db_path)?.permissions();
+                perms.set_mode(0o600);
+                std::fs::set_permissions(db_path, perms)?;
+            }
+        }
+    }
+
     // Start Mesh API server
     let mesh_transport = mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
