@@ -14,9 +14,11 @@ chrono = { workspace = true }
 serde_yaml = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
 futures = { workspace = true }
+copypasta = "0.10.2"
 
 [build-dependencies]
 slint-build = "1.8.0"
+tonic-build = "0.12"
 
 [dev-dependencies]
 mockito = "1.4.0"

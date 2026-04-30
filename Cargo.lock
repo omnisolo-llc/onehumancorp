@@ -167,6 +167,7 @@ name = "app-rust"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "copypasta",
  "futures",
  "mockito",
  "prost",
@@ -178,6 +179,7 @@ dependencies = [
  "slint-build",
  "tokio",
  "tonic",
+ "tonic-build",
 ]
 
 [[package]]

@@ -59,6 +59,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = app::BusinessSetup::new()?;
     let ui_handle = ui.as_weak();
 
+    ui.on_copy_link({
+        let ui_handle = ui_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let subdomain = ui.get_subdomain().to_string();
+            if !subdomain.is_empty() {
+                let url = format!("https://{}.ohc.app", subdomain);
+                if let Ok(mut ctx) = copypasta::ClipboardContext::new() {
+                    use copypasta::ClipboardProvider;
+                    let _ = ctx.set_contents(url);
+                }
+            }
+        }
+    });
+
     ui.on_launch({
         let ui_handle = ui_handle.clone();
         move || {
@@ -73,6 +88,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("selected_template".to_string(), ui.get_selected_template().to_string()),
+                ("first_product_name".to_string(), ui.get_first_product_name().to_string()),
+                ("first_product_price".to_string(), ui.get_first_product_price().to_string()),
+                ("first_product_desc".to_string(), ui.get_first_product_desc().to_string()),
+                ("subdomain".to_string(), ui.get_subdomain().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
             ]);
@@ -90,8 +110,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
                             println!("Wizard state saved to backend.");
                             slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    let _ = ui.hide();
+
+                                    let checklist = app::WelcomeChecklist::new().unwrap();
+                                    let checklist_handle = checklist.as_weak();
+
+                                    checklist.on_go_to_dashboard(move || {
+                                        if let Some(cl) = checklist_handle.upgrade() {
+                                            let _ = cl.hide();
+                                            let dashboard = app::Dashboard::new().unwrap();
+                                            let _ = dashboard.show();
+                                            // Leak dashboard to keep it alive
+                                            Box::leak(Box::new(dashboard));
+                                        }
+                                    });
+
+                                    let _ = checklist.show();
+                                    // Leak checklist to keep it alive
+                                    Box::leak(Box::new(checklist));
                                 }
                             }).unwrap();
                         }
