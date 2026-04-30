@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(cache.get("prompt2"), None);
         
         // Wait for expiration
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_millis(1500));
         assert_eq!(cache.get("prompt1"), None);
         
         // Prune
@@ -163,7 +163,7 @@ mod tests {
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         
         // Wait for expiration
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_millis(1500));
         assert_eq!(cache.get("prompt1"), None);
     }
 }
