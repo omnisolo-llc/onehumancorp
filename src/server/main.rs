@@ -854,6 +854,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     }
     // });
     
+
+    // Start AutoDream worker
+    let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
+    autodream_worker.start();
+
     // Start Mesh API server
     let mesh_transport = mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
@@ -862,6 +867,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+
+        .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
@@ -885,10 +893,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
-    // Start AutoDream worker
-    let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
-    autodream_worker.start();
-
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
