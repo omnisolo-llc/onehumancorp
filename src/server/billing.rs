@@ -1,12 +1,41 @@
 // Billing module stub - provides Tracker struct used by hub.rs
-// This is a stub implementation since the original was removed
 pub use crate::services::billing::auditor::CostAuditor;
+use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
+use redis::Client;
+use std::sync::Arc;
 
-pub struct Tracker;
+#[derive(Clone)]
+pub struct Tracker {
+    rate_limiter: Option<Arc<RedisRateLimiter>>,
+}
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker
+        // In a real scenario, this gets injected. For the stub, we leave it None if no client.
+        Tracker { rate_limiter: None }
+    }
+
+    pub fn new_with_redis(redis_url: &str) -> Self {
+        if let Ok(client) = Client::open(redis_url) {
+            Tracker {
+                rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
+            }
+        } else {
+            Tracker { rate_limiter: None }
+        }
+    }
+
+    pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.record_action(tenant_id, agent_id).await
+        } else {
+            // Default allow if Redis is not configured
+            Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
+        }
     }
 
     pub fn summary(&self, _scope: &str) -> TokenSummary {

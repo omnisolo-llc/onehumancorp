@@ -133,6 +133,18 @@ impl Hub {
         let subs = self.subs.read().unwrap();
         
         let to_agent = msg.to_agent.clone();
+
+        // Check rate limiting
+        let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
+        let agent_id = msg.to_agent.clone();
+        let tracker = self.tracker.clone();
+        tokio::spawn(async move {
+            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+                if limit_status.soft_limit_reached {
+                    println!("Rate limit warning: {:?}", limit_status.user_message);
+                }
+            }
+        });
         
         // Add to recipient's inbox
         let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
