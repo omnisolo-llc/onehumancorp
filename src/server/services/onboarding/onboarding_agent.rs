@@ -160,7 +160,7 @@ mod tests {
             business_type: "Online Store".to_string(),
             company_name: "Test Store".to_string(),
             company_description: "A test store".to_string(),
-            selling_categories: vec![],
+            selling_categories: vec!["physical".to_string(), "digital".to_string()],
             payment_pref: "online".to_string(),
             admin_email: "admin@test.com".to_string(),
             website_template: "Modern".to_string(),
@@ -168,6 +168,10 @@ mod tests {
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
         };
+
+        let req_categories = req.selling_categories.clone();
+        assert_eq!(req_categories.len(), 2);
+        assert_eq!(req_categories[0], "physical");
 
         let res = agent.start_onboarding(req).await;
         assert!(res.is_ok());
