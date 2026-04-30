@@ -46,13 +46,14 @@ export component SetupWizard inherits Window {
     callback select_payment_pref(string);
     callback select_template(string);
     callback select_domain(string);
+    callback save_state();
 
-    next_step => { step = step + 1; }
-    select_business_type(t) => { business_type = t; step = step + 1; }
-    toggle_sell_physical => { sell_physical = !sell_physical; }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; }
-    select_template(t) => { website_template = t; step = step + 1; }
-    select_domain(d) => { domain_choice = d; step = step + 1; }
+    next_step => { step = step + 1; save_state(); }
+    select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
+    toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
+    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
+    select_template(t) => { website_template = t; step = step + 1; save_state(); }
+    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
