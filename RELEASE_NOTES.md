@@ -1,6 +1,11 @@
 # Release Notes
 
 
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+- Scaling (Cloud): Enforce `ENABLE ROW LEVEL SECURITY` across 18 tenant data tables, harden the `SyncMcpDeltas` RPC handler, and create formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks`.
+- Privacy/Offline (Standalone): Remove an insecure `println!` from the `power_sync_push` service handler to prevent payload leakage into application logs.
+
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 - Scaling (Cloud): Implement Harness Upgrade (Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention), add hybrid latency benchmarks, implement Omni-Context Sub-agent Routing in Rust, restore MCP execution logic in server_old, fix RBAC for promtail, fix broken bazel targets, and configure cli_test with hermetic vitest runner.
 - Privacy/Offline (Standalone): Consolidate API Playbook, add architecture design for multi-tenant SaaS tier, add Business Journey Architecture research report, simplify language in Walkthrough, and redesign Dashboard and Business Setup with Mobile-first and glassmorphism.
