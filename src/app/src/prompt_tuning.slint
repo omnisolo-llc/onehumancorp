@@ -1,4 +1,5 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiPromptExample {
     q: string,
@@ -40,9 +41,28 @@ export component PromptTuning inherits Window {
             if (step == 0) : VerticalBox {
                 spacing: 10px;
                 Text { text: "Personality & tone"; color: #1e293b; }
-                Button { text: "Formal"; clicked => { tone = "Formal"; } }
-                Button { text: "Friendly"; clicked => { tone = "Friendly"; } }
-                Button { text: "Concise"; clicked => { tone = "Concise"; } }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    GlassCard {
+                        height: 50px;
+                        background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Formal"; } }
+                    }
+                    GlassCard {
+                        height: 50px;
+                        background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Friendly"; } }
+                    }
+                    GlassCard {
+                        height: 50px;
+                        background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "Concise"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Concise"; } }
+                    }
+                }
                 Text { text: "Selected: " + tone; color: #a855f7; }
             }
 
@@ -50,9 +70,25 @@ export component PromptTuning inherits Window {
             if (step == 1) : VerticalBox {
                 spacing: 10px;
                 Text { text: "Domain focus"; color: #1e293b; }
-                CheckBox { text: "Only discuss business"; checked: focus_only_business; toggled => { focus_only_business = !focus_only_business; } }
-                CheckBox { text: "Avoid competitors"; checked: focus_avoid_competitors; toggled => { focus_avoid_competitors = !focus_avoid_competitors; } }
-                CheckBox { text: "Always reply in Spanish"; checked: focus_reply_spanish; toggled => { focus_reply_spanish = !focus_reply_spanish; } }
+
+                GlassCard {
+                    height: 40px;
+                    background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                }
+                GlassCard {
+                    height: 40px;
+                    background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                }
+                GlassCard {
+                    height: 40px;
+                    background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
+                }
             }
 
             // Step 2: Examples
@@ -122,10 +158,29 @@ export component PromptTuning inherits Window {
                         color: #1e293b;
                         wrap: word-wrap;
                     }
-                    if (!show_raw) : Text {
-                        text: "Chat sandbox placeholder";
-                        color: #64748b;
-                        horizontal-alignment: center;
+                    if (!show_raw) : VerticalBox {
+                        spacing: 10px;
+                        Rectangle {
+                            background: #e2e8f0;
+                            border-radius: 8px;
+                            padding: 8px;
+                            HorizontalBox {
+                                Text { text: "User: Hello!"; color: #1e293b; }
+                            }
+                        }
+                        Rectangle {
+                            background: #a855f7;
+                            border-radius: 8px;
+                            padding: 8px;
+                            HorizontalBox {
+                                Text { text: "Agent: Hi there! How can I help you today?"; color: white; }
+                            }
+                        }
+                        HorizontalBox {
+                            spacing: 5px;
+                            LineEdit { placeholder-text: "Type a message..."; width: parent.width - 60px; }
+                            Button { text: "Send"; }
+                        }
                     }
                 }
             }
