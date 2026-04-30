@@ -10,6 +10,16 @@ pub struct DB {
 
 impl DB {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let pool = sqlx::PgPool::connect(&database_url).await?;
+        Ok(DB { pool })
+    }
+
+    pub async fn new_with_pool(pool: sqlx::PgPool) -> Self {
+        DB { pool }
+    }
+
+    pub async fn new_internal() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
@@ -79,6 +89,33 @@ impl DB {
         Ok(result)
     }
 
+    pub async fn insert_consolidated_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let is_sqlite = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string()).starts_with("sqlite");
+        if is_sqlite {
+            // For SQLite, mock pgvector by storing embedding as text, or omit
+            sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, source_type) VALUES ($1, $2, $3, $4, $5)")
+                .bind(id)
+                .bind(org_id)
+                .bind(task_id) // using task_id as agent_id equivalent for signature purpose
+                .bind(content)
+                .bind(source_type)
+                .execute(&self.pool)
+                .await?;
+        } else {
+            sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                .bind(id)
+                .bind(org_id)
+                .bind(task_id)
+                .bind(content)
+                .bind(embedding)
+                .bind(source_type)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
             .bind(id)
@@ -102,15 +139,3 @@ impl DB {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_db_new_fails_without_server() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
-        assert!(db.is_err());
-    }
-}

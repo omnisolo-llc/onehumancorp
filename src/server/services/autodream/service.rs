@@ -2,7 +2,7 @@ use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::auto_dream_service_server::AutoDreamService;
 use std::sync::Arc;
-use crate::autodream::AutoDreamWorker;
+use crate::orchestration::autodream::pipeline::AutoDreamWorker;
 
 pub struct MyAutoDreamService {
     worker: Arc<AutoDreamWorker>,

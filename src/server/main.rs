@@ -12,7 +12,7 @@ mod hub;
 mod minimax;
 mod billing;
 mod ultraplan;
-mod autodream;
+pub mod orchestration;
 mod tasks;
 mod settings;
 mod scheduler;
@@ -53,7 +53,6 @@ pub mod services {
     pub mod org;
     pub mod scheduler;
     pub mod agent;
-    pub mod autodream;
 }
 
 use tokio::sync::mpsc;
@@ -166,7 +165,7 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -177,7 +176,7 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -870,7 +869,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start AutoDream worker
-    let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
+    let autodream_worker = orchestration::autodream::pipeline::AutoDreamWorker::new(db.clone());
     autodream_worker.start();
 
     // Start Telemetry Sync Daemon (if in standalone mode)
