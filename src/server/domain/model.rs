@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum ProviderType {
+pub enum _ProviderType {
     Openai,
     Anthropic,
     Google,
@@ -19,7 +19,7 @@ pub enum ProviderType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum ModelStatus {
+pub enum _ModelStatus {
     Active,
     Beta,
     Deprecated,
@@ -28,7 +28,7 @@ pub enum ModelStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum Modality {
+pub enum _Modality {
     Text,
     AudioInput,
     AudioOutput,
@@ -38,7 +38,7 @@ pub enum Modality {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelCost {
+pub struct _ModelCost {
     pub input_per_token: f64,
     pub output_per_token: f64,
     pub cache_read_per_token: f64,
@@ -48,32 +48,32 @@ pub struct ModelCost {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelContextLimit {
+pub struct _ModelContextLimit {
     pub context_window: i32,
     pub max_input_tokens: i32,
     pub max_output_tokens: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelCapabilities {
+pub struct _ModelCapabilities {
     pub supports_reasoning: bool,
     pub supports_tool_calling: bool,
     pub supports_temperature: bool,
-    pub input_modalities: Vec<Modality>,
-    pub output_modalities: Vec<Modality>,
+    pub input_modalities: Vec<_Modality>,
+    pub output_modalities: Vec<_Modality>,
     pub supports_streaming: bool,
     pub supports_vision: bool,
     pub supports_function_calling: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelIcon {
+pub struct _ModelIcon {
     pub url: String,
     pub color: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelVariant {
+pub struct _ModelVariant {
     pub id: String,
     pub name: String,
     pub disabled: bool,
@@ -81,9 +81,9 @@ pub struct ModelVariant {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelProvider {
+pub struct _ModelProvider {
     pub id: String,
-    pub r#type: ProviderType,
+    pub r#type: _ProviderType,
     pub name: String,
     pub organization_id: String,
     pub api_key_env_var: String,
@@ -98,42 +98,42 @@ pub struct ModelProvider {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelInstance {
+pub struct _ModelInstance {
     pub id: String,
     pub name: String,
     pub organization_id: String,
-    pub provider_type: ProviderType,
+    pub provider_type: _ProviderType,
     pub provider_id: String,
     pub model_id: String,
     pub display_name: String,
     pub description: String,
-    pub icon: ModelIcon,
-    pub cost: ModelCost,
-    pub context_limit: ModelContextLimit,
-    pub capabilities: ModelCapabilities,
-    pub status: ModelStatus,
+    pub icon: _ModelIcon,
+    pub cost: _ModelCost,
+    pub context_limit: _ModelContextLimit,
+    pub capabilities: _ModelCapabilities,
+    pub status: _ModelStatus,
     pub recommended_index: i32,
     pub is_free: bool,
     pub release_date: String,
     pub family: String,
     pub metadata: HashMap<String, String>,
-    pub variants: Vec<ModelVariant>,
+    pub variants: Vec<_ModelVariant>,
     pub created_at_unix: i64,
     pub updated_at_unix: i64,
 }
 
-impl ModelInstance {
-    pub fn created_at(&self) -> DateTime<Utc> {
+impl _ModelInstance {
+    pub fn _created_at(&self) -> DateTime<Utc> {
         DateTime::from_timestamp(self.created_at_unix, 0).unwrap_or_default()
     }
 
-    pub fn updated_at(&self) -> DateTime<Utc> {
+    pub fn _updated_at(&self) -> DateTime<Utc> {
         DateTime::from_timestamp(self.updated_at_unix, 0).unwrap_or_default()
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelBinding {
+pub struct _ModelBinding {
     pub id: String,
     pub organization_id: String,
     pub agent_id: String,
@@ -144,26 +144,26 @@ pub struct ModelBinding {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationModelConfig {
+pub struct _OrganizationModelConfig {
     pub organization_id: String,
-    pub providers: Vec<ModelProvider>,
-    pub model_instances: Vec<ModelInstance>,
-    pub bindings: Vec<ModelBinding>,
+    pub providers: Vec<_ModelProvider>,
+    pub model_instances: Vec<_ModelInstance>,
+    pub bindings: Vec<_ModelBinding>,
     pub enabled_provider_types: Vec<String>,
     pub disabled_model_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalModelConfig {
-    pub default_providers: Vec<ModelProvider>,
-    pub default_models: Vec<ModelInstance>,
+pub struct _GlobalModelConfig {
+    pub default_providers: Vec<_ModelProvider>,
+    pub default_models: Vec<_ModelInstance>,
     pub provider_api_env_vars: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResolvedModel {
-    pub model: ModelInstance,
-    pub provider: ModelProvider,
+pub struct _ResolvedModel {
+    pub model: _ModelInstance,
+    pub provider: _ModelProvider,
     pub endpoint: String,
     pub headers: HashMap<String, String>,
 }
