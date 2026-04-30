@@ -20,6 +20,7 @@ export component Login inherits Window {
     callback oauth_login(string);
     callback open_settings();
     callback resend_verification(string);
+    callback start_setup_wizard();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -109,6 +110,15 @@ export component Login inherits Window {
                 Button {
                     text: "⚙ Connection Settings";
                     clicked => { open_settings(); }
+                }
+
+                if (is_sign_up) : VerticalBox {
+                    spacing: 8px;
+                    alignment: center;
+                    Button {
+                        text: "Launch Setup Wizard (New User)";
+                        clicked => { start_setup_wizard(); }
+                    }
                 }
             }
         }
