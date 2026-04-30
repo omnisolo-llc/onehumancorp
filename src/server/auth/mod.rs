@@ -423,6 +423,19 @@ impl Store {
                 if self.is_revoked(&data.claims.jti) {
                     return Err("token revoked".to_string());
                 }
+
+                // Ensure the user actually still exists and is active (prevents ghost access via Thin Client)
+                // If using the database store, `users` might be empty while the db has the user.
+                // Actually `self.get_user` queries the repo!
+                let is_active = match self.get_user(&data.claims.sub, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    Some(u) => u.active,
+                    None => false,
+                };
+
+                if !is_active {
+                    return Err("user deleted or inactive".to_string());
+                }
+
                 Ok(data.claims)
             }
             Err(e) => {

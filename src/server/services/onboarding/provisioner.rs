@@ -11,7 +11,35 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     ];
 
     for dir in dirs {
-        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&dir, fs::Permissions::from_mode(0o700)).map_err(|e| e.to_string())?;
+        }
+    }
+
+
+
+
+
+    if !is_cloud {
+        let db_path = format!("{}/db/ohc-standalone.db", base_dir);
+        // Load encryption key from config or env, fallback to secure generation but since we don't persist it,
+        // fallback to env var or config
+        let enc_key = crate::config::get().sqlite_encryption_key.clone().unwrap_or_else(|| std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "default_secure_key".to_string()));
+
+        let opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db_path)
+            .create_if_missing(true)
+            .pragma("key", enc_key);
+
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _ = rt.block_on(
+                sqlx::sqlite::SqlitePoolOptions::new().connect_with(opts)
+            );
+        }).join().unwrap();
     }
 
     // TODO: Increment metrics
@@ -44,6 +72,9 @@ pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
         fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
     }
     
+
+
+
     // TODO: Increment metrics
     
     Ok(())
