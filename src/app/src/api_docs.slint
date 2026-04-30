@@ -1,8 +1,8 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export component ApiDocs inherits Window {
-    width: 800px;
-    height: 600px;
+    width: 375px;
+    height: 800px;
     title: "API Reference (Advanced)";
     background: #f8fafc;
 
@@ -15,27 +15,81 @@ export component ApiDocs inherits Window {
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
+            horizontal-alignment: center;
         }
 
-        Text {
-            text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
-            color: #ef4444; // red warning
-            wrap: word-wrap;
+        Rectangle {
+            background: #fef2f2;
+            border-radius: 8px;
+            border-color: #fecaca;
+            border-width: 1px;
+            VerticalBox {
+                padding: 12px;
+                Text {
+                    text: "⚠️ Advanced Section: This is for developers. If you don't write code, you don't need to use this page!";
+                    color: #991b1b;
+                    wrap: word-wrap;
+                    font-size: 14px;
+                }
+            }
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 24px;
 
+                // Products API
                 VerticalBox {
                     spacing: 8px;
                     Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #334155; }
                     Rectangle {
-                        background: #1e293b; border-radius: 8px; // dark theme for code
+                        background: #1e293b; border-radius: 8px;
                         VerticalBox {
                             padding: 16px; spacing: 8px;
-                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
-                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; font-family: "monospace"; }
+                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                        }
+                    }
+                }
+
+                // Orders API
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Orders API"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: #1e293b; border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px; spacing: 8px;
+                            Text { text: "POST /v1/orders"; font-weight: 700; color: #0ea5e9; font-family: "monospace"; }
+                            Text { text: "Create a new order programmatically."; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                        }
+                    }
+                }
+
+                // Customers API
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Customers API"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: #1e293b; border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px; spacing: 8px;
+                            Text { text: "GET /v1/customers"; font-weight: 700; color: #10b981; font-family: "monospace"; }
+                            Text { text: "Fetch your customer list for CRM integration."; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                        }
+                    }
+                }
+
+                // Payments API
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Payments API"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: #1e293b; border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px; spacing: 8px;
+                            Text { text: "GET /v1/payouts"; font-weight: 700; color: #10b981; font-family: "monospace"; }
+                            Text { text: "View scheduled bank payouts."; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
                         }
                     }
                 }

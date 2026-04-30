@@ -47,6 +47,34 @@ impl TooltipRegistry {
             "dashboard_team_members".to_string(),
             "Human teammates who have access to manage this business.".to_string(),
         );
+
+        // Setup Wizard Tooltips
+        self.tooltips.insert(
+            "wizard_business_type".to_string(),
+            "Choose the category that best describes what your business does.".to_string(),
+        );
+        self.tooltips.insert(
+            "wizard_payment_pref".to_string(),
+            "Decide if you want to accept payments online, in-person, or both.".to_string(),
+        );
+        self.tooltips.insert(
+            "wizard_admin_email".to_string(),
+            "We will use this email for important notifications about your store.".to_string(),
+        );
+
+        // Website Builder Tooltips
+        self.tooltips.insert(
+            "website_template_modern".to_string(),
+            "A clean, professional look that works for almost any business.".to_string(),
+        );
+        self.tooltips.insert(
+            "website_primary_color".to_string(),
+            "This color will be used for buttons and main accents on your site.".to_string(),
+        );
+        self.tooltips.insert(
+            "website_domain_custom".to_string(),
+            "Connect a domain you already own or buy a new one through OHC.".to_string(),
+        );
     }
 
     pub fn get_tooltip(&self, key: &str) -> Option<String> {

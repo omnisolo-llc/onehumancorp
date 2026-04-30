@@ -1,37 +1,63 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component InteractiveWalkthrough inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     background: transparent;
     always-on-top: true;
 
     in-out property <int> current_step: 0;
 
+    // Dark semi-transparent overlay
     Rectangle {
         background: #000000;
-        opacity: 0.5;
+        opacity: 0.6;
         width: parent.width;
         height: parent.height;
     }
 
+    // Centered walkthrough card
     Rectangle {
         x: 20px;
-        y: 100px;
+        y: 200px;
         width: 335px;
         background: white;
-        border-radius: 12px;
+        border-radius: 16px;
+        drop-shadow-blur: 20px;
+        drop-shadow-color: rgba(0,0,0,0.2);
 
         VerticalBox {
-            padding: 20px;
+            padding: 24px;
             spacing: 16px;
+
+            // Highlight circle (visual only)
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 30px;
+                    background: #f0f9ff;
+                    border-color: #0ea5e9;
+                    border-width: 2px;
+                    Text {
+                        text: current_step + 1;
+                        color: #0ea5e9;
+                        font-size: 20px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
 
             Text {
                 text: current_step == 0 ? "Welcome to your store!" :
                       current_step == 1 ? "Add your first product" :
                       current_step == 2 ? "Set up payments" :
+                      current_step == 3 ? "Activate AI Support" :
                       "You're all set!";
-                font-size: 20px;
+                font-size: 22px;
                 font-weight: 700;
                 color: #0f172a;
             }
@@ -40,14 +66,17 @@ export component InteractiveWalkthrough inherits Window {
                 text: current_step == 0 ? "Let's take a quick tour to get you set up." :
                       current_step == 1 ? "Click here to add photos and prices for what you sell." :
                       current_step == 2 ? "Connect your bank so you can get paid by customers." :
+                      current_step == 3 ? "Enable your AI agent to handle customer questions 24/7." :
                       "Your store is ready. You can always find more help in the Help Center.";
                 color: #475569;
                 wrap: word-wrap;
+                font-size: 16px;
             }
 
             HorizontalBox {
                 alignment: end;
                 spacing: 12px;
+                padding-top: 12px;
 
                 Button {
                     text: "Skip tour";
@@ -55,9 +84,10 @@ export component InteractiveWalkthrough inherits Window {
                 }
 
                 Button {
-                    text: current_step < 3 ? "Next" : "Done";
+                    text: current_step < 4 ? "Next" : "Done";
+                    primary: true;
                     clicked => {
-                        if (current_step < 3) {
+                        if (current_step < 4) {
                             current_step += 1;
                         } else {
                             root.visible = false;

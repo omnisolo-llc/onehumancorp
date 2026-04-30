@@ -1,12 +1,16 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export component HelpCenter inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "Help Center";
     background: #f8fafc;
 
     in-out property <string> search_query: "";
+
+    // Helper function to check if query matches text (simple case-insensitive contains)
+    // Slint's string support is limited, so we'll do basic visibility logic.
+    // In a full implementation, this might be filtered in Rust.
 
     VerticalBox {
         padding: 16px;
@@ -17,74 +21,96 @@ export component HelpCenter inherits Window {
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
+            horizontal-alignment: center;
         }
 
         LineEdit {
             placeholder-text: "Search help articles...";
             text <=> search_query;
+            height: 44px;
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 16px;
 
-                Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                // Category: Getting Started
+                if (search_query == "" || search_query == "getting" || search_query == "start" || search_query == "domain" || search_query == "setup") : VerticalBox {
+                    spacing: 16px;
+                    Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                        }
+                    }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "Connect your custom domain"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Learn how to use your own web address (like www.yourname.com)."; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
 
-                Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to list new items, add photos, and set prices."; color: #64748b; wrap: word-wrap; }
+                // Category: My Store
+                if (search_query == "" || search_query == "store" || search_query == "product" || search_query == "inventory") : VerticalBox {
+                    spacing: 16px;
+                    Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Learn how to list new items, add photos, and set prices."; color: #64748b; wrap: word-wrap; }
+                        }
+                    }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "Managing your inventory"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Keep track of how many items you have left and get alerts when low."; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
 
-                Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Enable Apple Pay with one click in your payment settings."; color: #64748b; wrap: word-wrap; }
+                // Category: Payments
+                if (search_query == "" || search_query == "payment" || search_query == "bank" || search_query == "stripe" || search_query == "apple") : VerticalBox {
+                    spacing: 16px;
+                    Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Enable Apple Pay with one click in your payment settings."; color: #64748b; wrap: word-wrap; }
+                        }
+                    }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "Connecting your bank account"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Set up Stripe to receive payouts directly to your bank."; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
 
-                Text { text: "AI Agents"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Your agent can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Marketing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to run a promotion"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to create discount codes and share them on social media."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Account & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to change your subscription"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Find out how to upgrade or downgrade your plan and view past invoices."; color: #64748b; wrap: word-wrap; }
+                // Category: AI Agents
+                if (search_query == "" || search_query == "ai" || search_query == "agent" || search_query == "support" || search_query == "chat") : VerticalBox {
+                    spacing: 16px;
+                    Text { text: "AI Agents"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px; spacing: 4px;
+                            Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: "Your agent can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
             }

@@ -1,42 +1,94 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct UiHelpChatMessage {
+    text: string,
+    is_ai: bool,
+    has_link: bool,
+    link_text: string,
+}
+
 export component AiHelpChat inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "AI Help Assistant";
-    background: white;
+    background: #f8fafc;
 
     in-out property <string> user_input: "";
+    in property <[UiHelpChatMessage]> messages: [
+        { text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?", is_ai: true, has_link: false, link_text: "" },
+        { text: "I can help you set up your payments. Would you like to see the guide?", is_ai: true, has_link: true, link_text: "📖 Read: Connecting your bank" }
+    ];
+
+    callback send_message(string);
 
     VerticalBox {
         padding: 16px;
         spacing: 16px;
 
-        Rectangle {
-            background: #f1f5f9;
-            border-radius: 8px;
-            VerticalBox {
-                padding: 16px;
-                Text {
-                    text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                    color: #0f172a;
-                    wrap: word-wrap;
-                }
+        // Header
+        HorizontalBox {
+            alignment: center;
+            Text {
+                text: "✨ OHC Assistant";
+                font-size: 20px;
+                font-weight: 700;
+                color: #1e293b;
             }
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 16px;
+                alignment: start;
+
+                for msg in messages : Rectangle {
+                    background: msg.is_ai ? white : #e0f2fe;
+                    border-radius: 12px;
+                    border-color: msg.is_ai ? #e2e8f0 : #bae6fd;
+                    border-width: 1px;
+                    width: 300px;
+                    x: msg.is_ai ? 0px : 343px - self.width;
+
+                    VerticalBox {
+                        padding: 12px;
+                        spacing: 12px;
+                        Text {
+                            text: msg.text;
+                            color: #0f172a;
+                            wrap: word-wrap;
+                        }
+                        if (msg.has_link) : Rectangle {
+                            background: #f0f9ff;
+                            border-radius: 8px;
+                            height: 44px;
+                            HorizontalBox {
+                                padding: 8px;
+                                alignment: center;
+                                Text {
+                                    text: msg.link_text;
+                                    color: #0369a1;
+                                    font-weight: 700;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         HorizontalBox {
             spacing: 8px;
+            padding-bottom: 16px;
             LineEdit {
                 placeholder-text: "Type your question here...";
                 text <=> user_input;
+                height: 44px;
             }
             Button {
                 text: "Send";
+                primary: true;
+                height: 44px;
+                clicked => { send_message(user_input); user_input = ""; }
             }
         }
     }

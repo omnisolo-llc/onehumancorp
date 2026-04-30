@@ -1,10 +1,23 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+export struct UiVideoTutorial {
+    title: string,
+    description: string,
+    duration: string,
+}
+
 export component VideoTutorials inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "Video Tutorials";
     background: #f8fafc;
+
+    in property <[UiVideoTutorial]> tutorials: [
+        { title: "How to add your first product", description: "A quick 60-second guide to listing items in your store.", duration: "1:00" },
+        { title: "Setting up AI Agents", description: "Learn how to let AI handle your customer emails and social media.", duration: "1:30" },
+        { title: "Accepting Payments", description: "Connect your bank and start receiving money safely.", duration: "2:00" },
+        { title: "Marketing your Store", description: "Use AI to post to social media and reach more customers.", duration: "1:45" }
+    ];
 
     VerticalBox {
         padding: 16px;
@@ -15,39 +28,26 @@ export component VideoTutorials inherits Window {
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
+            horizontal-alignment: center;
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 24px;
 
-                Rectangle {
+                for tutorial in tutorials : Rectangle {
                     background: white; border-radius: 12px;
                     VerticalBox {
                         padding: 16px; spacing: 12px;
                         Rectangle {
-                            height: 200px;
+                            height: 180px;
                             background: #e2e8f0;
                             border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
-                        }
-                        Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
-                    }
-                }
 
-                Rectangle {
-                    background: white; border-radius: 12px;
-                    VerticalBox {
-                        padding: 16px; spacing: 12px;
-                        Rectangle {
-                            height: 200px;
-                            background: #e2e8f0;
-                            border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            Text { text: "▶ Play Video (" + tutorial.duration + ")"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
                         }
-                        Text { text: "Setting up AI Agents"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                        Text { text: tutorial.title; font-weight: 700; font-size: 18px; color: #0f172a; }
+                        Text { text: tutorial.description; color: #475569; wrap: word-wrap; }
                     }
                 }
             }

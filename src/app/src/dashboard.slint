@@ -27,13 +27,10 @@ export component Dashboard inherits Window {
     in property <string> tt_scheduled_calls: "";
     in property <string> tt_team_members: "";
 
-
-
-
-
-
     callback open_help_center();
     callback open_ai_chat();
+    callback open_release_notes();
+    callback start_walkthrough();
 
     Flickable {
     VerticalBox {
@@ -43,10 +40,15 @@ export component Dashboard inherits Window {
         // Header
         VerticalBox {
             spacing: 16px;
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            HorizontalBox {
+                alignment: space-between;
+                Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+                Button { text: "✨ What's New"; clicked => { open_release_notes(); } }
+            }
             Rectangle {}
             Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
             Button { text: "?"; clicked => { open_help_center(); } }
+            Button { text: "Take a Tour 🏁"; clicked => { start_walkthrough(); } }
             Button { text: "Billing & Credits"; }
         }
 
