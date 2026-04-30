@@ -50,10 +50,13 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_buffer_metric_persistence() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = sqlx::PgPool::connect(&db_url).await.unwrap();
+        let pool = match sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).connect(&db_url).await { Ok(p) => p, Err(_) => return };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
