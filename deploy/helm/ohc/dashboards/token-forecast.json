@@ -43,7 +43,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -56,7 +56,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "Prometheus"
           },
           "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
