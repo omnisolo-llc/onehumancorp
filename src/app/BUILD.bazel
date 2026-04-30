@@ -50,7 +50,6 @@ cargo_build_script(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/task_list.slint",
-        "src/tooltip.slint",
         "src/user_management.slint",
         "src/vector_memory_visualizer.slint",
         "src/video_tutorials.slint",
@@ -70,7 +69,6 @@ rust_binary(
     name = "app",
     srcs = [
         "src/main.rs",
-        "src/tooltip_registry.rs",
     ],
     data = [
         "src/agent_config.slint",
@@ -118,7 +116,6 @@ rust_binary(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/task_list.slint",
-        "src/tooltip.slint",
         "src/user_management.slint",
         "src/vector_memory_visualizer.slint",
         "src/video_tutorials.slint",
@@ -151,7 +148,6 @@ rust_test(
     name = "app_test",
     srcs = [
         "src/main.rs",
-        "src/tooltip_registry.rs",
     ],
     crate_root = "src/main.rs",
     data = [
@@ -200,7 +196,6 @@ rust_test(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/task_list.slint",
-        "src/tooltip.slint",
         "src/user_management.slint",
         "src/vector_memory_visualizer.slint",
         "src/video_tutorials.slint",
