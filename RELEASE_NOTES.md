@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
+- Scaling (Cloud): Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
+- Privacy/Offline (Standalone): Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
+
 ## v0.4.14 (Cloud) / v0.4.14+1 (Standalone)
 - Scaling (Cloud): Refactored Teammate Mesh transport to use Protobuf serialization for interop improvements.
 
