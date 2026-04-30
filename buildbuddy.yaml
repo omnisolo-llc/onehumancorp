@@ -39,7 +39,7 @@ actions:
       - run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
       - run: |
-          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm install 24 && nvm use 24
+          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm install 18 && nvm use 18
       - run: |
           export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && npm install --frozen-lockfile
       - run: |
