@@ -79,6 +79,7 @@ pub fn agent_tool() -> Tool {
             The sub-agent runs its own ReAct loop with access to all tools. \
             Use for parallelizable or delegatable work."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -110,6 +111,7 @@ pub fn agent_stop_tool() -> Tool {
     Tool {
         name: "TaskStop".to_string(),
         description: "Stop a running sub-agent task by task ID.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -128,6 +130,7 @@ pub fn agent_status_tool() -> Tool {
     Tool {
         name: "TaskStatus".to_string(),
         description: "Get the status of a running sub-agent task by task ID.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

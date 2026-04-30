@@ -40,6 +40,7 @@ pub fn read_tool() -> Tool {
     Tool {
         name: "Read".to_string(),
         description: "Read the contents of a file. Optionally specify start_line and end_line for partial reads.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
