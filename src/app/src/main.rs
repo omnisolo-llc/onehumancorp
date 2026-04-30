@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         role: "Worker".into(),
                         organization_id: "org_1".into(),
                         status: "Running".into(),
-                        provider_type: "Mock".into(),
+                        provider_type: "Standard".into(),
                     }),
                 });
                 match client.register_agent(request).await {
@@ -210,22 +210,27 @@ mod e2e_tests {
         // Step 1: Type -> Step 2
         ui.set_business_type("Online Store".into());
         ui.set_step(2);
+        assert_eq!(ui.get_step(), 2);
 
         // Step 2: Name -> Step 3
         ui.set_company_name("My E2E Store".into());
         ui.set_step(3);
+        assert_eq!(ui.get_step(), 3);
 
         // Step 3: What do you sell -> Step 4
         ui.set_sell_physical(true);
         ui.set_step(4);
+        assert_eq!(ui.get_step(), 4);
 
         // Step 4: Payments -> Step 5
         ui.set_payment_pref("online".into());
         ui.set_step(5);
+        assert_eq!(ui.get_step(), 5);
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
         ui.set_step(6);
+        assert_eq!(ui.get_step(), 6);
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
