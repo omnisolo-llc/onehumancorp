@@ -13,11 +13,12 @@ pub trait TaskOrchestrator: Send + Sync {
 
 pub struct DefaultTaskOrchestrator {
     hub: Arc<Hub>,
+    db: Arc<crate::db::DB>,
 }
 
 impl DefaultTaskOrchestrator {
-    pub fn new(hub: Arc<Hub>) -> Self {
-        DefaultTaskOrchestrator { hub }
+    pub fn new(hub: Arc<Hub>, db: Arc<crate::db::DB>) -> Self {
+        DefaultTaskOrchestrator { hub, db }
     }
 }
 
@@ -40,6 +41,16 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
         task.dependencies = depends_on;
         
         self.hub.task_manager().insert_task(task.clone());
+
+        let _ = self.db.record_state_transition(
+            &task.id,
+            "task",
+            "CREATED",
+            &task.status,
+            None,
+            Some("Task enqueued"),
+        ).await;
+
         Ok(task)
     }
 
@@ -51,6 +62,15 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
     async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String> {
         self.hub.task_manager().complete_task(task_id, agent_id, result.to_string())?;
         
+        let _ = self.db.record_state_transition(
+            task_id,
+            "task",
+            "IN_PROGRESS",
+            "COMPLETED",
+            Some(agent_id),
+            Some("Task completed successfully"),
+        ).await;
+
         // Trigger AutoDream embedding in background
         let task_id = task_id.to_string();
         let result = result.to_string();

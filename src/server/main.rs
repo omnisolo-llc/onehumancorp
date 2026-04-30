@@ -1017,7 +1017,7 @@ mod tests {
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
-        Some(MyHubService::new(hub, db.pool.clone(), db))
+        Some(MyHubService::new(hub.clone(), db.pool.clone(), db.clone()))
     }
 
     #[tokio::test]

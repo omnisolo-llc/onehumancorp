@@ -44,6 +44,34 @@ impl TaskManager {
         self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
     }
 
+    pub fn decompose_task(&self, parent_id: &str, subtasks: Vec<(String, String)>) -> Result<Vec<SharedTask>, String> {
+        let parent = self.get_task(parent_id)?;
+        let mut created = Vec::new();
+
+        let mut previous_id = String::new();
+        for (idx, (title, description)) in subtasks.into_iter().enumerate() {
+            let mut deps = Vec::new();
+            if idx > 0 {
+                deps.push(previous_id.clone());
+            }
+
+            let subtask = self.create_task_with_plan(
+                parent.organization_id.clone(),
+                parent.mission_id.clone(),
+                parent_id.to_string(),
+                deps,
+                title,
+                description,
+                parent.priority.clone(),
+            )?;
+
+            previous_id = subtask.id.clone();
+            created.push(subtask);
+        }
+
+        Ok(created)
+    }
+
     pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
@@ -239,6 +267,37 @@ mod tests {
         
         // Try to review with wrong agent
         assert!(tm.review_task(&task.id, "agent2").is_err());
+    }
+
+    #[test]
+    fn test_decompose_task() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
+        let parent = tm.create_task("org1".to_string(), "mission1".to_string(), "Parent Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+
+        let subtasks = vec![
+            ("Sub 1".to_string(), "Desc 1".to_string()),
+            ("Sub 2".to_string(), "Desc 2".to_string()),
+            ("Sub 3".to_string(), "Desc 3".to_string()),
+        ];
+
+        let created = tm.decompose_task(&parent.id, subtasks).unwrap();
+
+        assert_eq!(created.len(), 3);
+
+        assert_eq!(created[0].title, "Sub 1");
+        assert_eq!(created[0].parent_plan_id, parent.id);
+        assert!(created[0].dependencies.is_empty());
+
+        assert_eq!(created[1].title, "Sub 2");
+        assert_eq!(created[1].parent_plan_id, parent.id);
+        assert_eq!(created[1].dependencies.len(), 1);
+        assert_eq!(created[1].dependencies[0], created[0].id);
+
+        assert_eq!(created[2].title, "Sub 3");
+        assert_eq!(created[2].parent_plan_id, parent.id);
+        assert_eq!(created[2].dependencies.len(), 1);
+        assert_eq!(created[2].dependencies[0], created[1].id);
     }
 
     #[test]

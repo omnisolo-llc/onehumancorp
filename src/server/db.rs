@@ -9,6 +9,14 @@ pub struct DB {
 }
 
 impl DB {
+    pub async fn new_sqlite_provider(_url: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        DB::new().await
+    }
+
+    pub async fn new_test_provider() -> Result<Self, Box<dyn std::error::Error>> {
+        DB::new().await
+    }
+
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
@@ -37,6 +45,30 @@ impl DB {
 
         let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
         migrator.run(&self.pool).await?;
+
+        Ok(())
+    }
+
+    pub async fn record_state_transition(
+        &self,
+        entity_id: &str,
+        entity_type: &str,
+        from_state: &str,
+        to_state: &str,
+        agent_id: Option<&str>,
+        reason: Option<&str>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(id)
+            .bind(entity_id)
+            .bind(entity_type)
+            .bind(from_state)
+            .bind(to_state)
+            .bind(agent_id)
+            .bind(reason)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }

@@ -105,6 +105,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_teammate_mesh_fallback_publishing() {
+        // Test fallback behavior with an invalid Redis URL explicitly verifying publishing and subscribing on MemoryTransport
+        let mesh = create_teammate_mesh(Some("redis://invalid-host:9999")).await;
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = mesh.subscribe_tasks(Box::new(move |msg| {
+            if msg.payload == b"fallback_test" {
+                received_clone.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        mesh.publish_task(b"fallback_test".to_vec()).await.unwrap();
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
+    }
+
+    #[tokio::test]
     async fn test_create_teammate_mesh_fallback() {
         // Test fallback behavior with an invalid Redis URL
         let mesh = create_teammate_mesh(Some("redis://invalid-host:9999")).await;
