@@ -1,11 +1,20 @@
 use sqlx::PgPool;
+use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+use sqlx::SqlitePool;
+use std::str::FromStr;
 use std::env;
 use sqlx::Row;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 
+pub enum DbStore {
+    Postgres,
+    Sqlite(SqlitePool),
+}
+
 pub struct DB {
     pub pool: PgPool,
+    pub store: DbStore,
 }
 
 impl DB {
@@ -13,19 +22,34 @@ impl DB {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url)
-            .await?;
+        if database_url.starts_with("sqlite") {
+            let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-        Ok(DB { pool })
+            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
+                .create_if_missing(true)
+                .extension("sqlite_vec");
+
+            let sqlite_pool = SqlitePoolOptions::new()
+                .connect_with(conn_opts)
+                .await?;
+
+            Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
+        } else {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(500))
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        Ok(true)
+                    })
+                })
+                .connect(&database_url)
+                .await?;
+
+            Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
+        }
     }
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -127,31 +151,31 @@ pub async fn insert_autodream_memory(
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Fallback for SQLite
-        let is_sqlite = std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite");
-
-        if is_sqlite {
-            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                .bind(id)
-                .bind(org_id)
-                .bind(agent_id)
-                .bind(task_id)
-                .bind(content)
-                .bind(embedding)
-                .bind(source_type)
-                .execute(&self.pool)
-                .await?;
-        } else {
-            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                .bind(id)
-                .bind(org_id)
-                .bind(agent_id)
-                .bind(task_id)
-                .bind(content)
-                .bind(embedding)
-                .bind(source_type)
-                .execute(&self.pool)
-                .await?;
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(&self.pool)
+                    .await?;
+            }
         }
         Ok(())
     }
@@ -210,7 +234,7 @@ mod autodream_db_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = DB { pool };
+        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
 
         // This is primarily to ensure the code compiles and syntax is fundamentally sound
         // Real tests would run migrations and populate data first.
