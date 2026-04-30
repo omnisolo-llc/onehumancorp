@@ -38,6 +38,27 @@ message OrganizationChart {
   repeated TeamMember members = 2;
 }
 
+message Product {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  int64 price_cents = 5;
+  string currency = 6;
+  string fulfillment_strategy = 7;
+  string metadata_json = 8;
+}
+
+message OnboardingRequest {
+  string organization_id = 1;
+  string business_type = 2;
+  string company_name = 3;
+  string company_description = 4;
+  repeated string selling_categories = 5;
+  string payment_pref = 6;
+  string admin_email = 7;
+}
+
 service OrganizationService {
   rpc CreateOrganization(Organization) returns (Organization);
   rpc GetOrganizationChart(Organization) returns (OrganizationChart);
