@@ -47,6 +47,7 @@ mod tests {
     // Test ChaosEngine CorruptAgentLock failure mode injection target.
     #[tokio::test]
     async fn test_corrupt_agent_lock_failure() {
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/test") };
         // Using an invalid redis URL will prevent acquire from succeeding and should fail safe instead of panic.
         let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
         let lock = DistributedLock::new(client, "test_chaos_lock");
