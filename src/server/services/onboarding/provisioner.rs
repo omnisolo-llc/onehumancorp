@@ -14,7 +14,9 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
         fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
 
-    // TODO: Increment metrics
+    crate::record_telemetry(move || {
+        println!("Telemetry: environment provisioned. is_cloud={}", is_cloud);
+    });
     
     Ok(())
 }
@@ -44,7 +46,9 @@ pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
         fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
     }
     
-    // TODO: Increment metrics
+    crate::record_telemetry(move || {
+        println!("Telemetry: environment cleaned up. is_cloud={}", is_cloud);
+    });
     
     Ok(())
 }

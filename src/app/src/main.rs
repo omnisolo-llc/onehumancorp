@@ -1,5 +1,6 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::b2b_service_client::B2bServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
 
@@ -47,8 +48,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
+    let dashboard_ui = app::Dashboard::new()?;
+    let dashboard_handle = dashboard_ui.as_weak();
+
+    // Set some initial dashboard state
+    dashboard_ui.set_active_agents_count(7);
+    dashboard_ui.set_active_tasks_count(3);
+    dashboard_ui.set_team_members_count(1);
+
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
+
+    dashboard_ui.on_approve_task({
+        let _ui_handle = dashboard_handle.clone();
+        move |task_id| {
+            let t_id = task_id.to_string();
+            tokio::spawn(async move {
+                match B2bServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let req = ohc::orchestration::DecideApprovalRequest {
+                            approval_id: t_id,
+                            decision: "approve".to_string(),
+                            decided_by: "CEO".to_string(),
+                        };
+                        if let Err(e) = client.decide_approval(tonic::Request::new(req)).await {
+                            println!("Failed to approve task: {:?}", e);
+                        }
+                    }
+                    Err(e) => println!("Failed to connect for approval: {:?}", e),
+                }
+            });
+        }
+    });
+
+    let dashboard_update_handle = dashboard_handle.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            let handle = dashboard_update_handle.clone();
+            tokio::spawn(async move {
+                match B2bServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let response = client.get_approvals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(resp) = response {
+                            let approvals = resp.into_inner().approvals;
+                            let pending_approvals: Vec<app::UiPendingApproval> = approvals.into_iter()
+                                .filter(|a| a.status == "PENDING")
+                                .map(|a| {
+                                    app::UiPendingApproval {
+                                        task_id: a.id.into(),
+                                        title: a.action.into(),
+                                        proposed_content: a.reason.into(),
+                                    }
+                                }).collect();
+
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle.upgrade() {
+                                    ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(pending_approvals)));
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(_e) => {
+                        // Silently fail if server is not up yet
+                    }
+                }
+            });
+        }
+    });
 
     referrals_ui.on_refresh({
         let ui_handle = referrals_handle.clone();
@@ -107,6 +175,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(e) => println!("Failed to create referral: {:?}", e),
                 }
             });
+        }
+    });
+
+    setup_wizard_ui.on_go_to_dashboard({
+        let setup_handle = setup_wizard_handle.clone();
+        let dashboard_handle = dashboard_handle.clone();
+        move || {
+            if let Some(setup) = setup_handle.upgrade() {
+                setup.hide().unwrap();
+            }
+            if let Some(dashboard) = dashboard_handle.upgrade() {
+                dashboard.show().unwrap();
+            }
         }
     });
 
@@ -344,6 +425,11 @@ mod e2e_tests {
         // Step 8: Domain -> Step 9
         ui.invoke_select_domain("subdomain".into());
         assert_eq!(ui.get_step(), 9);
+
+        // Step 9: Launch
+        ui.set_launching(true);
+        ui.set_step(10);
+        assert_eq!(ui.get_step(), 10);
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -637,6 +723,11 @@ mod docs_tests {
 
         // Step 8: Domain -> Step 9
         ui.invoke_select_domain("subdomain".into());
+
+        // Step 9: Launch
+        ui.set_launching(true);
+        ui.set_step(10);
+        assert_eq!(ui.get_step(), 10);
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");

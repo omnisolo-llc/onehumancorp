@@ -133,6 +133,7 @@ pub mod ohc {
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
+use ohc::orchestration::b2b_service_server::B2bServiceServer;
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -894,14 +895,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
-    // let http_addr = "[::1]:8080".parse()?;
-    // let hub_for_http = hub.clone();
-    // tokio::spawn(async move {
-    //     if let Err(e) = http::run(http_addr, hub_for_http).await {
-    //         eprintln!("HTTP server error: {}", e);
-    //     }
-    // });
-    
 
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
@@ -940,6 +933,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
+    let b2b_service = crate::services::b2b::service::MyB2BService::new();
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if in standalone mode)
@@ -995,6 +989,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(B2bServiceServer::with_interceptor(b2b_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
