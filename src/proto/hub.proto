@@ -190,6 +190,26 @@ message SharedTask {
   string proposed_content = 16;
 }
 
+
+message ApproveTaskRequest {
+  string task_id = 1;
+  bool is_approved = 2;
+}
+
+message ApproveTaskResponse {
+  bool success = 1;
+}
+
+message TriggerCustomOrderRequest {
+  string organization_id = 1;
+  string customer_name = 2;
+  string details = 3;
+}
+
+message TriggerCustomOrderResponse {
+  bool success = 1;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -207,6 +227,8 @@ service HubService {
   rpc CreateTask(CreateTaskRequest) returns (SharedTask);
   rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+  rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
+  rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
   rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
   rpc HandlePromptTuning(PromptTuningConfig) returns (WizardResponse);

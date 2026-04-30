@@ -150,6 +150,23 @@ impl TaskManager {
         Err("task not found".to_string())
     }
 
+
+    pub fn approve_task(&self, task_id: &str, is_approved: bool) -> Result<(), String> {
+        let mut tasks = self.tasks.write().unwrap();
+        if let Some(task) = tasks.get_mut(task_id) {
+            task.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
+            if is_approved {
+                task.status = "APPROVED".to_string();
+            } else {
+                task.status = "REJECTED".to_string();
+            }
+            task.updated_at = Utc::now();
+            Ok(())
+        } else {
+            Err("task not found".to_string())
+        }
+    }
+
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
         let mut tasks = self.tasks.write().unwrap();
         let mut claimed_tasks = Vec::new();

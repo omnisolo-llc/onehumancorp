@@ -2,6 +2,13 @@ import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
+
+export struct UiPendingApproval {
+    task_id: string,
+    title: string,
+    proposed_content: string,
+}
+
 export struct UiRoleCount {
     role: string,
     count: int,
@@ -19,11 +26,13 @@ export component Dashboard inherits Window {
     in property <int> scheduled_calls_count: 0;
     in property <int> team_members_count: 0;
 
+    in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
     callback open_help_center();
     callback open_ai_chat();
+    callback approve_task(string);
 
     Flickable {
     VerticalBox {
@@ -105,6 +114,37 @@ export component Dashboard inherits Window {
                         padding: 16px;
                         Text { text: "My Team"; color: #94a3b8; }
                         Text { text: team_members_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                    }
+                }
+            }
+        }
+
+
+        if (pending_approvals.length > 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Action Required Flow (Drafts pending review)"; font-size: 20px; font-weight: 700; color: #b91c1c; }
+
+            for approval in pending_approvals : Rectangle {
+                background: #fef2f2;
+                border-color: #fca5a5;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+
+                    Text { text: approval.title; font-weight: 700; color: #991b1b; }
+                    Text { text: approval.proposed_content; color: #7f1d1d; wrap: word-wrap; }
+
+                    HorizontalBox {
+                        alignment: end;
+                        spacing: 10px;
+                        Button { text: "Edit"; }
+                        Button {
+                            text: "Approve";
+                            clicked => { approve_task(approval.task_id); }
+                        }
                     }
                 }
             }
