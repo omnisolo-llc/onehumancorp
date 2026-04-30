@@ -9,6 +9,7 @@ pub mod ohc {
 }
 
 pub mod tooltip_registry;
+use tooltip_registry::TooltipRegistry;
 
 use slint::ComponentHandle;
 
