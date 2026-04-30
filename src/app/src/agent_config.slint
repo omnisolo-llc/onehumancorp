@@ -7,11 +7,11 @@ export component AgentConfig inherits Window {
 
     callback activate_agent(string, bool, bool, string);
 
-    property <int> step: 0;
-    property <string> selected_agent: "";
-    property <bool> can_reply: false;
-    property <bool> can_social: false;
-    property <string> frequency: "Daily";
+    in-out property <int> step: 0;
+    in-out property <string> selected_agent: "";
+    in-out property <bool> can_reply: false;
+    in-out property <bool> can_social: false;
+    in-out property <string> frequency: "Daily";
 
     background: #f8fafc;
 
