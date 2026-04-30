@@ -176,7 +176,7 @@ impl AgentServiceImpl {
             vec![]
         };
 
-        let system = if req.system_prompt.is_empty() {
+        let server_system_message = if req.system_prompt.is_empty() {
             let base_prompt = if !department.is_empty() {
                 if let Ok(dep) = Department::from_str(department) {
                     get_department_config(dep).system_prompt
@@ -190,6 +190,10 @@ impl AgentServiceImpl {
         } else {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
+
+        // Attempt to load AGENTS.md for user instructions
+        let user_instructions = tokio::fs::read_to_string("AGENTS.md").await.unwrap_or_default();
+        let developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
 
         let max_tokens = if req.max_tokens == 0 {
             if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
@@ -215,7 +219,9 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             model,
-            system,
+            server_system_message,
+            developer_instructions,
+            user_instructions,
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
@@ -365,7 +371,9 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
-                system: self.cfg.system_prompt.clone(),
+                server_system_message: self.cfg.system_prompt.clone(),
+                developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
+                user_instructions: tokio::fs::read_to_string("AGENTS.md").await.unwrap_or_default(),
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,

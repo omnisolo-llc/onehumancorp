@@ -23,7 +23,9 @@ pub enum AgentEvent {
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub model: String,
-    pub system: String,
+    pub server_system_message: String,
+    pub developer_instructions: String,
+    pub user_instructions: String,
     pub max_tokens: i32,
     pub temperature: f32,
     pub max_iterations: i32,
@@ -38,7 +40,9 @@ impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
             model: String::new(),
-            system: String::new(),
+            server_system_message: String::new(),
+            developer_instructions: String::new(),
+            user_instructions: String::new(),
             max_tokens: 2048,
             temperature: 0.0,
             max_iterations: 100,
@@ -74,6 +78,38 @@ impl AgentProgress {
     pub fn token_count(&self) -> i64 {
         self.token_count.load(Ordering::Relaxed)
     }
+}
+
+pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+    let mut end_idx = 32768;
+    if cfg.user_instructions.len() > 32768 {
+        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+            end_idx -= 1;
+        }
+    } else {
+        end_idx = cfg.user_instructions.len();
+    }
+    let user_instr = &cfg.user_instructions[..end_idx];
+
+    let mut combined_system = String::new();
+    if !cfg.server_system_message.is_empty() {
+        combined_system.push_str(&cfg.server_system_message);
+    }
+    if !cfg.developer_instructions.is_empty() {
+        if !combined_system.is_empty() {
+            combined_system.push_str("\n\n");
+        }
+        combined_system.push_str("[Developer Instructions]\n");
+        combined_system.push_str(&cfg.developer_instructions);
+    }
+    if !user_instr.is_empty() {
+        if !combined_system.is_empty() {
+            combined_system.push_str("\n\n");
+        }
+        combined_system.push_str("[User Instructions]\n");
+        combined_system.push_str(user_instr);
+    }
+    combined_system
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -130,6 +166,8 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
+        let combined_system = build_hierarchical_system_prompt(cfg);
+
         for iteration in 0..max_iterations {
             on_event(AgentEvent::IterationStarted {
                 iteration,
@@ -138,7 +176,7 @@ impl Agent {
 
             let req = ChatRequest {
                 model: cfg.model.clone(),
-                system: cfg.system.clone(),
+                system: combined_system.clone(),
                 messages: messages.clone(),
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
@@ -582,6 +620,77 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
+    }
+
+    #[test]
+    fn test_hierarchical_system_prompt() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "Server System Message".to_string();
+        cfg.developer_instructions = "Developer Instructions".to_string();
+        cfg.user_instructions = "User Instructions".to_string();
+
+        let prompt = build_hierarchical_system_prompt(&cfg);
+        assert_eq!(
+            prompt,
+            "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+        );
+    }
+
+    #[test]
+    fn test_hierarchical_system_prompt_missing_sections() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "Server System Message".to_string();
+        cfg.developer_instructions = "".to_string();
+        cfg.user_instructions = "User Instructions".to_string();
+
+        let prompt = build_hierarchical_system_prompt(&cfg);
+        assert_eq!(
+            prompt,
+            "Server System Message\n\n[User Instructions]\nUser Instructions"
+        );
+
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.server_system_message = "".to_string();
+        cfg2.developer_instructions = "Dev".to_string();
+        cfg2.user_instructions = "User".to_string();
+        let prompt2 = build_hierarchical_system_prompt(&cfg2);
+        assert_eq!(
+            prompt2,
+            "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
+        );
+    }
+
+    #[test]
+    fn test_hierarchical_system_prompt_truncation_safe() {
+        let mut cfg = AgentRunConfig::default();
+        // A single emoji is 4 bytes.
+        let emoji = "🚀"; // 4 bytes
+        // 8192 emojis = 32768 bytes
+        cfg.user_instructions = emoji.repeat(8192);
+        // Add one more emoji to exceed the limit
+        cfg.user_instructions.push_str(emoji); // 32772 bytes
+
+        // This should safely truncate without panicking
+        let prompt = build_hierarchical_system_prompt(&cfg);
+        assert!(prompt.contains("[User Instructions]\n"));
+        // Check that the user instructions part is exactly 32768 bytes long
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
+    }
+
+    #[test]
+    fn test_hierarchical_system_prompt_truncation_safe_boundary() {
+        let mut cfg = AgentRunConfig::default();
+        // Construct a string where the 32768th byte is in the middle of a multibyte character.
+        // Let's use 1-byte chars until 32766, then a 3-byte char.
+        cfg.user_instructions = "a".repeat(32766);
+        cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
+
+        // Truncating at 32768 would split the '€' character.
+        let prompt = build_hierarchical_system_prompt(&cfg);
+
+        let user_part = prompt.trim_start_matches("[User Instructions]\n");
+        // The truncation should back up to 32766 to avoid splitting the character.
+        assert_eq!(user_part.len(), 32766);
     }
 
     #[tokio::test]
