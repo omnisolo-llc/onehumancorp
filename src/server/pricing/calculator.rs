@@ -98,6 +98,20 @@ pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
     (cost * 10000.0).round() / 10000.0
 }
 
+pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
+    if cost == 0.0 {
+        return 0.0;
+    }
+    (revenue - cost) / cost * 100.0
+}
+
+pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
+    if cost == 0.0 {
+        return 0.0;
+    }
+    (output_tokens as f64) / cost
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +129,32 @@ mod tests {
         // Test with unknown model (fallback)
         let cost = calculate_cost("unknown-model", 1000000, 1000000, 1000000);
         assert_eq!(cost, 3.00 + 15.00 + 1.50);
+    }
+
+    #[test]
+    fn test_calculate_roi_and_efficiency_zero_cost() {
+        // Test to explicitly verify division-by-zero errors do not occur
+        let cost = 0.0;
+        let revenue = 100.0;
+        let output_tokens = 1000;
+
+        let roi = calculate_roi(cost, revenue);
+        assert_eq!(roi, 0.0);
+
+        let efficiency = calculate_efficiency(cost, output_tokens);
+        assert_eq!(efficiency, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_roi_and_efficiency_normal() {
+        let cost = 10.0;
+        let revenue = 15.0;
+        let output_tokens = 250;
+
+        let roi = calculate_roi(cost, revenue);
+        assert_eq!(roi, 50.0); // (15 - 10) / 10 * 100
+
+        let efficiency = calculate_efficiency(cost, output_tokens);
+        assert_eq!(efficiency, 25.0); // 250 / 10
     }
 }
