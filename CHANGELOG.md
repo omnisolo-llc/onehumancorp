@@ -1,5 +1,9 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.14 (Cloud) / v0.4.14+1 (Standalone)
+### Cloud Scaling Improvements
+- Refactored Teammate Mesh transport to use Protobuf serialization for interop improvements.
+
 ## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented Hybrid Distributed MeshLock Implementation
