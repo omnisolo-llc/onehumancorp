@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.11 (Cloud) / v0.4.11+1 (Standalone)
+- Scaling (Cloud): Implemented JSON minification and Gzip compression middleware to optimize server HTTP payloads.
+- Privacy/Offline (Standalone): Fixed TooltipRegistry namespace issue in Slint UI and improved dashboard accessibility.
+
+
 
 ## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
 - Scaling (Cloud): Enforce `ENABLE ROW LEVEL SECURITY` across 18 tenant data tables, harden the `SyncMcpDeltas` RPC handler, and create formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks`.
