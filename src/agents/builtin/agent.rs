@@ -192,9 +192,90 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // In a production-grade agent, we might use a separate LLM pass
-                // to evaluate confidence in the final answer if threshold > 0.
-                // For now, we'll assume the model is confident if it didn't use more tools.
+                // Verification Loops: Inferential/Sensors
+                if cfg.confidence_threshold > 0.0 {
+                    let sensor_system = "You are an expert LLM-as-judge evaluator.                         Evaluate the agent's proposed final result against the original user request.                         Return ONLY valid JSON with two fields:                         `confidence_score` (a float from 0.0 to 1.0) and                         `feedback` (a string explaining the score and any missing details).";
+
+                    let sensor_req = ChatRequest {
+                        model: cfg.model.clone(),
+                        system: sensor_system.to_string(),
+                        messages: vec![
+                            Message::user(format!(
+                                "Original Request:
+{}
+
+Proposed Result:
+{}",
+                                initial_message, last_assistant_content
+                            )),
+                        ],
+                        tools: vec![],
+                        max_tokens: 500,
+                        temperature: 0.0,
+                    };
+
+                    if let Ok(sensor_resp) = self.llm.chat(sensor_req).await {
+                        #[derive(serde::Deserialize)]
+                        struct SensorResult {
+                            confidence_score: f32,
+                            feedback: String,
+                        }
+
+                        // Extract JSON from potential markdown blocks
+                        let text = sensor_resp.message.content.as_str();
+                        let json_str = if let Some(start) = text.find('{') {
+                            if let Some(end) = text.rfind('}') {
+                                &text[start..=end]
+                            } else {
+                                text
+                            }
+                        } else {
+                            text
+                        };
+
+                        if let Ok(eval) = serde_json::from_str::<SensorResult>(json_str) {
+                            if eval.confidence_score < cfg.confidence_threshold {
+                                let nudge = format!(
+                                    "Your previous result was evaluated by a sensor and rejected (Score: {:.2}/{}).                                     Feedback: {}
+
+Please correct the issues and try again using appropriate tools if necessary.",
+                                    eval.confidence_score, cfg.confidence_threshold, eval.feedback
+                                );
+
+                                // Append feedback as a user message to continue the loop
+                                messages.push(Message::user(nudge));
+
+                                on_event(AgentEvent::ToolCall {
+                                    name: "VerificationSensor".to_string(),
+                                    args_json: "{}".to_string(),
+                                    result: format!("Rejected (Score: {:.2}). Feedback: {}", eval.confidence_score, eval.feedback),
+                                    iteration,
+                                });
+                                continue;
+                            }
+                        } else {
+                            let nudge = "The VerificationSensor failed to return a valid JSON object. Please rewrite your answer and ensure the sensor evaluates it properly.";
+                            messages.push(Message::user(nudge));
+                            on_event(AgentEvent::ToolCall {
+                                name: "VerificationSensor".to_string(),
+                                args_json: "{}".to_string(),
+                                result: "Rejected: Invalid JSON formatting from sensor.".to_string(),
+                                iteration,
+                            });
+                            continue;
+                        }
+                    } else {
+                        let nudge = "The VerificationSensor encountered an error. Please retry generating your answer.";
+                        messages.push(Message::user(nudge));
+                        on_event(AgentEvent::ToolCall {
+                            name: "VerificationSensor".to_string(),
+                            args_json: "{}".to_string(),
+                            result: "Rejected: Sensor connection error.".to_string(),
+                            iteration,
+                        });
+                        continue;
+                    }
+                }
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &cfg.guardrails {
@@ -550,5 +631,45 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
+    }
+
+    #[tokio::test]
+    async fn test_verification_sensor_loop() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Draft answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("{\"confidence_score\": 0.5, \"feedback\": \"Needs more detail\"}"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer with detail"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("{\"confidence_score\": 0.9, \"feedback\": \"Good\"}"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.confidence_threshold = 0.8;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Final answer with detail");
     }
 }
