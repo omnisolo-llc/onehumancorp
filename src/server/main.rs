@@ -566,6 +566,53 @@ impl HubService for MyHubService {
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
+
+    async fn approve_task(
+        &self,
+        request: Request<ApproveTaskRequest>,
+    ) -> Result<Response<ApproveTaskResponse>, Status> {
+        let req = request.into_inner();
+        self.hub.task_manager().approve_task(&req.task_id, req.is_approved)
+            .map_err(|e| Status::internal(e))?;
+
+        Ok(Response::new(ApproveTaskResponse {
+            success: true,
+        }))
+    }
+
+    async fn trigger_custom_order(
+        &self,
+        request: Request<TriggerCustomOrderRequest>,
+    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        let req = request.into_inner();
+
+        let mut ops_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-ops-{}", uuid::Uuid::new_v4()),
+            format!("Process Custom Order for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        ops_task.action_risk = Some("low".to_string());
+        self.hub.task_manager().insert_task(ops_task);
+
+        let mut cs_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-cs-{}", uuid::Uuid::new_v4()),
+            format!("Draft Confirmation for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        cs_task.action_risk = Some("high".to_string());
+        cs_task.approval_status = Some("PENDING".to_string());
+        cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
+        self.hub.task_manager().insert_task(cs_task);
+
+        Ok(Response::new(TriggerCustomOrderResponse {
+            success: true,
+        }))
+    }
+
     async fn decompose_task(
         &self,
         request: Request<DecomposeTaskRequest>,

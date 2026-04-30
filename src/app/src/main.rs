@@ -148,7 +148,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod e2e_tests {
+    use slint::Model;
     use super::*;
+
+    #[test]
+    fn test_cuj_draft_for_review_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping E2E test_cuj_draft_for_review_flow because no display server is available.");
+            return;
+        }
+
+        let ui = app::Dashboard::new().unwrap();
+
+        let pending_tasks = vec![
+            app::UiPendingApproval {
+                task_id: "test-task-123".into(),
+                title: "Draft Confirmation for Maya".into(),
+                proposed_content: "Hi Maya, thank you for your custom order!".into(),
+            }
+        ];
+
+        let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
+        ui.set_pending_approvals(pending_model.into());
+
+        assert_eq!(ui.get_pending_approvals().row_count(), 1);
+
+        // Use a shared state to verify the callback was called
+        let was_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let was_approved_clone = was_approved.clone();
+
+        ui.on_approve_task(move |task_id| {
+            if task_id == "test-task-123" {
+                *was_approved_clone.borrow_mut() = true;
+            }
+        });
+
+        // Programmatically invoke the callback as if the user clicked the button
+        ui.invoke_approve_task("test-task-123".into());
+
+        assert_eq!(*was_approved.borrow(), true);
+    }
 
     #[test]
     fn test_login_password_visibility_toggle() {
