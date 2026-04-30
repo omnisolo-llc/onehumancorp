@@ -30,6 +30,22 @@ impl TooltipRegistry {
             "payment_stripe".to_string(),
             "We use Stripe to securely process all your payments.".to_string(),
         );
+        self.tooltips.insert(
+            "dashboard_active_agents".to_string(),
+            "The number of AI agents currently working on tasks for your business.".to_string(),
+        );
+        self.tooltips.insert(
+            "dashboard_active_tasks".to_string(),
+            "Tasks that your agents are actively processing right now.".to_string(),
+        );
+        self.tooltips.insert(
+            "dashboard_scheduled_calls".to_string(),
+            "Upcoming phone calls or meetings your agents will handle.".to_string(),
+        );
+        self.tooltips.insert(
+            "dashboard_team_members".to_string(),
+            "Human teammates who have access to manage this business.".to_string(),
+        );
     }
 
     pub fn get_tooltip(&self, key: &str) -> Option<String> {
