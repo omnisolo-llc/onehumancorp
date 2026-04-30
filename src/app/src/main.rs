@@ -1157,6 +1157,42 @@ mod cost_transparency_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_swarm_observability_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "Login should be successful");
+
+        // Navigate to Dashboard
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Populate mock agent activity messages
+        let mock_messages = vec![
+            app::UiMeshMessage {
+                id: "msg-1".into(),
+                content: "✅ Your Support Agent replied to 3 customers".into(),
+            },
+            app::UiMeshMessage {
+                id: "msg-2".into(),
+                content: "📦 Order Manager updated stock for 12 items".into(),
+            }
+        ];
+
+        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
+        dashboard_ui.set_mesh_messages(messages_model.into());
+    }
+
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
