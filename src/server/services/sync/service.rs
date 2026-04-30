@@ -123,6 +123,19 @@ impl SyncService for MySyncService {
             }));
         }
 
+        let mut tx = match self.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                eprintln!("failed to begin transaction: {}", e);
+                return Err(Status::internal("database error"));
+            }
+        };
+
+        if let Err(e) = crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+            eprintln!("failed to set org context: {}", e);
+            return Err(Status::internal("database error"));
+        }
+
         let mut synced_count = 0;
 
         for delta in deltas {
@@ -141,7 +154,7 @@ impl SyncService for MySyncService {
                 .bind(&delta.entity_id)
                 .bind(&delta.data)
                 .bind(&delta.updated_at)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await
             {
                 Ok(_) => {
@@ -151,6 +164,11 @@ impl SyncService for MySyncService {
                     eprintln!("failed to upsert CRDT delta: id={}, error={}", delta.id, e);
                 }
             }
+        }
+
+        if let Err(e) = tx.commit().await {
+            eprintln!("failed to commit transaction: {}", e);
+            return Err(Status::internal("database error"));
         }
 
         Ok(Response::new(SyncMcpDeltasResponse {

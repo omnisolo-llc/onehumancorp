@@ -24,12 +24,15 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) ->
     
     let tmp_name = dir.join(format!("{}.{}.tmp", base_name_str, random_suffix));
     
-    let mut file = fs::File::create(&tmp_name)?;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(mode)
+        .open(&tmp_name)?;
     file.write_all(data)?;
     file.sync_all()?;
     drop(file); // Close file
-
-    fs::set_permissions(&tmp_name, fs::Permissions::from_mode(mode))?;
 
     if let Err(e) = fs::rename(&tmp_name, filename) {
         let _ = fs::remove_file(&tmp_name); // Try to clean up
