@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+### Cloud Scaling Improvements
+- Creates formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks` to prepare them for RLS.
+- Enforces `ENABLE ROW LEVEL SECURITY` across 18 tenant data tables and provisions them with default `CREATE POLICY` statements binding queries to the current authenticated database context.
+- Hardens the `SyncMcpDeltas` RPC handler to extract its `tenant_id` securely from the authenticated SPIFFE ID metadata.
+
+### Privacy/Offline Improvements
+- Removes an insecure `println!` from the `power_sync_push` service handler to prevent request payload leakage into application logs.
+
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade: Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention.
