@@ -2,6 +2,7 @@ export { ApiDocs } from "./api_docs.slint";
 export { VideoTutorials } from "./video_tutorials.slint";
 export { AiHelpChat } from "./ai_help_chat.slint";
 export { InteractiveWalkthrough } from "./interactive_walkthrough.slint";
+import { Tooltip } from "./tooltip.slint";
 export { Tooltip } from "./tooltip.slint";
 export { ReleaseNotes } from "./release_notes.slint";
 export { HelpCenter } from "./help_center.slint";
@@ -98,4 +99,12 @@ export component AppWindow inherits Window {
             text: "Click me";
         }
     }
+}
+
+export component TooltipWindow inherits Window {
+    width: 200px;
+    height: 100px;
+    in-out property <string> text <=> t.text;
+    in-out property <bool> show <=> t.show;
+    t := Tooltip {}
 }

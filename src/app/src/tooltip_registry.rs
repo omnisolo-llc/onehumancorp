@@ -36,3 +36,36 @@ impl TooltipRegistry {
         self.tooltips.get(key).cloned()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tooltip_registry_new() {
+        let registry = TooltipRegistry::new();
+        assert!(registry.get_tooltip("dashboard_revenue").is_some());
+        assert!(registry.get_tooltip("non_existent").is_none());
+    }
+
+    #[test]
+    fn test_register_default_tooltips() {
+        let registry = TooltipRegistry::new();
+        assert_eq!(
+            registry.get_tooltip("dashboard_revenue"),
+            Some("Total money earned before any fees or taxes.".to_string())
+        );
+        assert_eq!(
+            registry.get_tooltip("agent_status_active"),
+            Some("This AI agent is currently working for your business.".to_string())
+        );
+        assert_eq!(
+            registry.get_tooltip("settings_domain"),
+            Some("The web address where customers can find your business online.".to_string())
+        );
+        assert_eq!(
+            registry.get_tooltip("payment_stripe"),
+            Some("We use Stripe to securely process all your payments.".to_string())
+        );
+    }
+}

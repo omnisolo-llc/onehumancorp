@@ -306,6 +306,46 @@ mod docs_tests {
     use super::*;
 
     #[test]
+    fn test_help_center_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::HelpCenter::new().unwrap();
+        assert_eq!(ui.get_search_query(), "");
+        ui.set_search_query("how to setup".into());
+        assert_eq!(ui.get_search_query(), "how to setup");
+    }
+
+    #[test]
+    fn test_interactive_walkthrough_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::InteractiveWalkthrough::new().unwrap();
+        assert_eq!(ui.get_current_step(), 0);
+        ui.set_current_step(1);
+        assert_eq!(ui.get_current_step(), 1);
+        ui.set_current_step(3);
+        assert_eq!(ui.get_current_step(), 3);
+    }
+
+    #[test]
+    fn test_ai_help_chat_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::AiHelpChat::new().unwrap();
+        assert_eq!(ui.get_user_input(), "");
+        ui.set_user_input("hello agent".into());
+        assert_eq!(ui.get_user_input(), "hello agent");
+    }
+
+    #[test]
+    fn test_tooltip_properties() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::TooltipWindow::new().unwrap();
+        assert_eq!(ui.get_show(), false);
+        ui.set_text("test tooltip".into());
+        ui.set_show(true);
+        assert_eq!(ui.get_text(), "test tooltip");
+        assert_eq!(ui.get_show(), true);
+    }
+
+    #[test]
     fn test_help_center_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::HelpCenter::new().unwrap();

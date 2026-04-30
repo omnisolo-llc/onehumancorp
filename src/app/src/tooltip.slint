@@ -1,7 +1,7 @@
 
 export component Tooltip inherits Rectangle {
-    in property <string> text;
-    in property <bool> show: false;
+    in-out property <string> text;
+    in-out property <bool> show: false;
 
     background: #1e293b;
     border-radius: 6px;
