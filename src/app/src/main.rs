@@ -1,6 +1,8 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
+use ohc::orchestration::GetWizardStateRequest;
+use ohc::orchestration::SaveWizardStateRequest;
 
 pub mod ohc {
     pub mod orchestration {
@@ -16,26 +18,54 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+    // 1. Initial connection and Resume State logic
+    let startup_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
         match HubServiceClient::connect("http://127.0.0.1:18789").await {
             Ok(mut client) => {
                 println!("Connected to server!");
+
+                // Resume Wizard State
+                match client.get_wizard_state(tonic::Request::new(GetWizardStateRequest {})).await {
+                    Ok(resp) => {
+                        let state = resp.into_inner().state;
+                        let ui_handle = startup_handle.clone();
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                if let Some(val) = state.get("business_type") { ui.set_business_type(val.clone().into()); }
+                                if let Some(val) = state.get("company_name") { ui.set_company_name(val.clone().into()); }
+                                if let Some(val) = state.get("company_description") { ui.set_company_description(val.clone().into()); }
+                                if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.clone().into()); }
+                                if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.clone().into()); }
+                                if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.clone().into()); }
+                                if let Some(val) = state.get("website_template") { ui.set_website_template(val.clone().into()); }
+                                if let Some(val) = state.get("product_name") { ui.set_product_name(val.clone().into()); }
+                                if let Some(val) = state.get("product_price") { ui.set_product_price(val.clone().into()); }
+                                if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.clone().into()); }
+                                if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                                if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                                if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                                if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                                if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+
+                                if let Some(val) = state.get("step") {
+                                    if let Ok(step) = val.parse::<i32>() {
+                                        ui.set_step(step);
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                    }
+                    Err(e) => println!("Failed to fetch wizard state: {:?}", e),
+                }
+
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
                         id: "agent_1".into(),
@@ -57,34 +87,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let setup_wizard_ui = app::SetupWizard::new()?;
-    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    // 2. Wire State Changed Callback for Persistence
+    setup_wizard_ui.on_state_changed({
+        move |key, value| {
+            let k = key.to_string();
+            let v = value.to_string();
+            tokio::spawn(async move {
+                match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let state = std::collections::HashMap::from([(k, v)]);
+                        let request = tonic::Request::new(SaveWizardStateRequest { state });
+                        if let Err(e) = client.save_wizard_state(request).await {
+                            println!("Failed to save wizard state: {:?}", e);
+                        }
+                    }
+                    Err(e) => println!("Could not connect to server to save state: {:?}", e),
+                }
+            });
+        }
+    });
 
+    let launch_handle = setup_wizard_handle.clone();
     setup_wizard_ui.on_launch({
-        let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email| {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), business_type.to_string()),
-                ("company_name".to_string(), company_name.to_string()),
-                ("company_description".to_string(), company_description.to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), payment_pref.to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), admin_email.to_string()),
-            ]);
-
+        let ui_handle = launch_handle.clone();
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let handle_clone = ui_handle.clone();
+            let ui = ui_handle.upgrade().unwrap();
+
+            // Map selling categories from checkboxes
+            let mut selling_categories = Vec::new();
+            if ui.get_sell_physical() { selling_categories.push("physical".to_string()); }
+            if ui.get_sell_digital() { selling_categories.push("digital".to_string()); }
+            if ui.get_sell_services() { selling_categories.push("services".to_string()); }
+            if ui.get_sell_food() { selling_categories.push("food".to_string()); }
+            if ui.get_sell_subscriptions() { selling_categories.push("subscriptions".to_string()); }
 
             let req_business_type = business_type.to_string();
             let req_company_name = company_name.to_string();
             let req_company_description = company_description.to_string();
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
+            let req_website_template = website_template.to_string();
+            let req_product_name = product_name.to_string();
+            let req_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
@@ -95,7 +141,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
-                            selling_categories: vec![], // Populated in full implementation
+                            website_template: req_website_template,
+                            first_product_name: req_product_name,
+                            first_product_price: req_product_price,
+                            domain_choice: req_domain_choice,
+                            selling_categories,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -106,6 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
+                                        ui.set_step(10); // Go to Welcome Checklist
                                     }
                                 }).unwrap();
                             }
@@ -119,13 +170,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }).unwrap();
                             }
                         }
-
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        }
                     }
                     Err(e) => {
                         println!("Could not connect to server: {:?}", e);
@@ -135,59 +179,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::BusinessSetup::new()?;
-    let ui_handle = ui.as_weak();
-
-    ui.on_launch({
-        let ui_handle = ui_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-            ]);
-
-            let handle_clone = ui_handle.clone();
-
-            tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
-                    Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
-                    }
-                }
-            });
-        }
-    });
-
-    ui.run()?;
+    setup_wizard_ui.run()?;
     
     Ok(())
 }
@@ -201,8 +193,6 @@ mod e2e_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::Login::new().unwrap();
 
-        // The toggle state in the encapsulated component is internal to Slint
-        // but we can set the password property
         ui.set_password("secret".into());
         assert_eq!(ui.get_password(), "secret");
     }
@@ -214,7 +204,7 @@ mod e2e_tests {
             return;
         }
 
-        let ui = app::BusinessSetup::new().unwrap();
+        let ui = app::SetupWizard::new().unwrap();
 
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
@@ -250,13 +240,17 @@ mod e2e_tests {
         ui.set_step(7);
 
         // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
+        ui.set_product_name("Cake".into());
         ui.set_product_price("10.00".into());
         ui.set_step(8);
 
         // Step 8: Domain -> Step 9
         ui.set_domain_choice("subdomain".into());
         ui.set_step(9);
+
+        // Step 9: Launch -> Step 10
+        ui.set_launching(true);
+        ui.set_step(10);
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -265,9 +259,10 @@ mod e2e_tests {
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
+        assert_eq!(ui.get_product_name(), "Cake");
         assert_eq!(ui.get_product_price(), "10.00");
         assert_eq!(ui.get_domain_choice(), "subdomain");
+        assert_eq!(ui.get_step(), 10);
     }
 }
 
@@ -521,12 +516,29 @@ mod docs_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
+        // Step 6: Template -> Step 7
+        ui.invoke_select_template("Modern".into());
+
+        // Step 7: Product -> Step 8
+        ui.set_product_name("Cake".into());
+        ui.invoke_next_step();
+
+        // Step 8: Domain -> Step 9
+        ui.invoke_select_domain("subdomain".into());
+
+        // Step 9: Launch -> Step 10
+        ui.set_step(10);
+
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Cake");
+        assert_eq!(ui.get_domain_choice(), "subdomain");
+        assert_eq!(ui.get_step(), 10);
     }
 
     #[test]
@@ -608,19 +620,18 @@ mod dashboard_docs_tests {
         assert_eq!(ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
         assert_eq!(ui.get_tt_active_tasks(), "Tasks that your agents are actively processing right now.");
 
-        // Ensure callbacks can be set
         ui.on_open_help_center(move || {});
         ui.on_open_ai_chat(move || {});
     }
 
     #[test]
     fn test_documentation_components_e2e_flow() {
+        use crate::tooltip_registry::TooltipRegistry;
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
             return;
         }
 
-        // 1. Start from the home page after user login via the UI
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -631,39 +642,31 @@ mod dashboard_docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
 
-        // Simulate user login
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
 
-        // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
-            // Verify HelpCenter component can be instantiated
             let _help_center = app::HelpCenter::new().unwrap();
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
 
-        // 4. Test opening AI Help Chat from Dashboard
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
-            // Verify AiHelpChat component can be instantiated
             let _ai_chat = app::AiHelpChat::new().unwrap();
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
-        // 5. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
 
-        // 6. Test tooltips rendering logic with registry
         let tooltip_registry = TooltipRegistry::new();
         dashboard_ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
         assert_eq!(dashboard_ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
