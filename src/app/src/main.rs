@@ -17,18 +17,6 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -63,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -77,6 +65,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -86,6 +78,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_company_description = company_description.to_string();
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
+            let req_website_template = website_template.to_string();
+            let req_product_name = product_name.to_string();
+            let req_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
@@ -97,6 +93,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
                             selling_categories: vec![], // Populated in full implementation
+                            website_template: req_website_template,
+                            first_product_name: req_product_name,
+                            first_product_price: req_product_price,
+                            domain_choice: req_domain_choice,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -107,6 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
+                                        ui.set_step(10); // Go to checklist
                                     }
                                 }).unwrap();
                             }
@@ -136,59 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::BusinessSetup::new()?;
-    let ui_handle = ui.as_weak();
-
-    ui.on_launch({
-        let ui_handle = ui_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-            ]);
-
-            let handle_clone = ui_handle.clone();
-
-            tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
-                    Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
-                    }
-                }
-            });
-        }
-    });
-
-    ui.run()?;
+    setup_wizard_ui.run()?;
     
     Ok(())
 }
@@ -215,49 +164,48 @@ mod e2e_tests {
             return;
         }
 
-        let ui = app::BusinessSetup::new().unwrap();
+        let ui = app::SetupWizard::new().unwrap();
 
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
+        ui.invoke_next_step();
 
         // Step 1: Type -> Step 2
-        ui.set_business_type("Online Store".into());
-        ui.set_step(2);
+        ui.invoke_select_business_type("Online Store".into());
         assert_eq!(ui.get_step(), 2);
 
         // Step 2: Name -> Step 3
         ui.set_company_name("My E2E Store".into());
-        ui.set_step(3);
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 3);
 
         // Step 3: What do you sell -> Step 4
-        ui.set_sell_physical(true);
-        ui.set_step(4);
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 4);
 
         // Step 4: Payments -> Step 5
-        ui.set_payment_pref("online".into());
-        ui.set_step(5);
+        ui.invoke_select_payment_pref("online".into());
         assert_eq!(ui.get_step(), 5);
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
-        ui.set_step(6);
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
         // Step 6: Template -> Step 7
-        ui.set_website_template("Modern".into());
-        ui.set_step(7);
+        ui.invoke_select_template("Modern".into());
+        assert_eq!(ui.get_step(), 7);
 
         // Step 7: Product -> Step 8
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.00".into());
-        ui.set_step(8);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 8);
 
         // Step 8: Domain -> Step 9
-        ui.set_domain_choice("subdomain".into());
-        ui.set_step(9);
+        ui.invoke_select_domain("subdomain".into());
+        assert_eq!(ui.get_step(), 9);
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -294,17 +242,6 @@ mod tests {
         let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
-    }
-
-    #[test]
-    fn test_business_setup_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_business_setup_creation because no display server is available.");
-            return;
-        }
-        let ui = app::BusinessSetup::new().unwrap();
-        assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_company_name(), "");
     }
 
     #[test]
@@ -522,12 +459,27 @@ mod docs_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
+        // Step 6: Template -> Step 7
+        ui.invoke_select_template("Modern".into());
+
+        // Step 7: Product -> Step 8
+        ui.set_product_name("My First Product".into());
+        ui.set_product_price("10.00".into());
+        ui.invoke_next_step();
+
+        // Step 8: Domain -> Step 9
+        ui.invoke_select_domain("subdomain".into());
+
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "My First Product");
+        assert_eq!(ui.get_product_price(), "10.00");
+        assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 
     #[test]
