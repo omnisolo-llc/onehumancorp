@@ -65,9 +65,9 @@ impl TelemetrySyncDaemon {
             .await?;
 
         if res.status().is_success() {
-            for id in ids {
-                query("DELETE FROM telemetry_buffer WHERE id = $1")
-                    .bind(id)
+            if !ids.is_empty() {
+                query("DELETE FROM telemetry_buffer WHERE id = ANY($1)")
+                    .bind(&ids)
                     .execute(&self.pool)
                     .await?;
             }

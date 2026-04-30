@@ -81,29 +81,55 @@ impl AutoDreamWorker {
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
         
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        let client = std::sync::Arc::new(crate::minimax::MinimaxClient::new(api_key));
+        let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(5));
+
+        let mut join_set = tokio::task::JoinSet::new();
+
         for (id, org_id, payload) in tasks {
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-            let client = crate::minimax::MinimaxClient::new(api_key);
-            let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
-            let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
-                println!("AutoDream: failed to summarize logs: {}.", e);
-                format!("Summary of task: {}", payload)
+            let client_clone = client.clone();
+            let db_clone = db.clone();
+            let sem_clone = sem.clone();
+            
+            join_set.spawn(async move {
+                let _permit = sem_clone.acquire().await.unwrap();
+                let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
+                let summary = client_clone.reason(&prompt).await.unwrap_or_else(|e| {
+                    println!("AutoDream: failed to summarize logs: {}.", e);
+                    format!("Summary of task: {}", payload)
+                });
+
+                let mem_id = uuid::Uuid::new_v4().to_string();
+
+                let embedding = match client_clone.generate_embedding(&summary).await {
+                    Ok(emb) => serde_json::to_string(&emb).unwrap(),
+                    Err(e) => {
+                        println!("AutoDream: failed to generate embedding: {}", e);
+                        "[0.0]".to_string()
+                    }
+                };
+
+                db_clone.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await.map_err(|e| e.to_string())?;
+                db_clone.mark_task_auto_dreamed(&id).await.map_err(|e| e.to_string())?;
+
+                println!("AutoDream: ingested completed task {}", id);
+                Ok::<(), String>(())
             });
-            
-            let mem_id = uuid::Uuid::new_v4().to_string();
-            
-            let embedding = match client.generate_embedding(&summary).await {
-                Ok(emb) => serde_json::to_string(&emb).unwrap(),
-                Err(e) => {
-                    println!("AutoDream: failed to generate embedding: {}", e);
-                    "[0.0]".to_string()
+        }
+
+        while let Some(res) = join_set.join_next().await {
+            match res {
+                Ok(Err(e)) => {
+                    join_set.abort_all();
+                    return Err(e.into());
                 }
-            };
-            
-            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
-            db.mark_task_auto_dreamed(&id).await?;
-            
-            println!("AutoDream: ingested completed task {}", id);
+                Err(e) => {
+                    join_set.abort_all();
+                    return Err(e.into());
+                }
+                _ => {}
+            }
         }
         
         Ok(())

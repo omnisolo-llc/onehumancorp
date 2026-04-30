@@ -219,16 +219,20 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             println!("Worker processing job: {}", job.id);
-                            match self.handler.handle(job.clone()).await {
-                                Ok(_) => {
-                                    println!("Worker successfully processed job: {}", job.id);
-                                    let _ = self.queue.complete(&job.id).await;
+                            let handler_clone = self.handler.clone();
+                            let queue_clone = self.queue.clone();
+                            tokio::spawn(async move {
+                                match handler_clone.handle(job.clone()).await {
+                                    Ok(_) => {
+                                        println!("Worker successfully processed job: {}", job.id);
+                                        let _ = queue_clone.complete(&job.id).await;
+                                    }
+                                    Err(e) => {
+                                        println!("Worker failed to process job: {}, error: {}", job.id, e);
+                                        let _ = queue_clone.fail(&job.id, &e).await;
+                                    }
                                 }
-                                Err(e) => {
-                                    println!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    let _ = self.queue.fail(&job.id, &e).await;
-                                }
-                            }
+                            });
                         }
                         Ok(None) => {
                             // No job available
@@ -432,6 +436,7 @@ impl QueueManager {
         Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
     {
         let mut interval = tokio::time::interval(interval);
+        let handler = std::sync::Arc::new(handler);
         
         loop {
             tokio::select! {
@@ -440,16 +445,21 @@ impl QueueManager {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
                                 println!("QueueManager dispatched job: {}", job.id);
-                                match handler(job.clone()).await {
-                                    Ok(_) => {
-                                        println!("Job handler succeeded: {}", job.id);
-                                        let _ = self.mark_completed(&job.id).await;
+                                let handler_clone = handler.clone();
+                                let pool_clone = self.pool.clone();
+                                tokio::spawn(async move {
+                                    let qm = QueueManager::new(pool_clone);
+                                    match handler_clone(job.clone()).await {
+                                        Ok(_) => {
+                                            println!("Job handler succeeded: {}", job.id);
+                                            let _ = qm.mark_completed(&job.id).await;
+                                        }
+                                        Err(e) => {
+                                            println!("Job handler failed: {}, error: {}", job.id, e);
+                                            let _ = qm.mark_failed(&job.id, &e).await;
+                                        }
                                     }
-                                    Err(e) => {
-                                        println!("Job handler failed: {}, error: {}", job.id, e);
-                                        let _ = self.mark_failed(&job.id, &e).await;
-                                    }
-                                }
+                                });
                             }
                             Ok(None) => {
                                 break;
