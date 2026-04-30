@@ -11,7 +11,16 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     ];
 
     for dir in dirs {
-        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(&dir).map_err(|e| e.to_string())?;
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o700);
+            std::fs::set_permissions(&dir, perms).map_err(|e| e.to_string())?;
+        }
     }
 
     // TODO: Increment metrics

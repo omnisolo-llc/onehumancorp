@@ -13,6 +13,7 @@ name = "ohc-builtin-agent"
 path = "src/agents/builtin/main.rs"
 
 [dependencies]
+libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher"] }
 tokio = { workspace = true }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
@@ -46,7 +47,7 @@ futures = { workspace = true }
 urlencoding = "2"
 qrcode = { version = "0.14", default-features = false }
 async-recursion = "1"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+sqlx = { version = "0.8", features = ["sqlite", "postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
 opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }

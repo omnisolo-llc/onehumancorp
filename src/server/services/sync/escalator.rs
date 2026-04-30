@@ -1,14 +1,15 @@
 use std::sync::Arc;
 use tokio::time::{self, Duration};
 use sqlx::Row;
+use crate::utils::dialect::{PoolType, DatabaseKind, dialect_query};
 
 pub struct SyncEscalator {
-    pool: sqlx::PgPool,
+    pool: PoolType,
     client: reqwest::Client,
 }
 
 impl SyncEscalator {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: PoolType) -> Self {
         SyncEscalator {
             pool,
             client: reqwest::Client::new(),
@@ -35,16 +36,26 @@ impl SyncEscalator {
     }
 
     async fn process_escalations(&self) -> Result<(), String> {
-        let rows = sqlx::query("SELECT id, tenant_id, payload FROM local_mcp_rag_tasks WHERE escalation_status = 'local'")
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let rows: Vec<(String, String, String)> = match &self.pool {
+            PoolType::Pg(p) => {
+                let q = dialect_query("SELECT id, tenant_id, payload FROM local_mcp_rag_tasks WHERE escalation_status = 'local'", DatabaseKind::Postgres);
+                let r = sqlx::query(&q)
+                    .fetch_all(p)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                r.into_iter().map(|row| (row.get("id"), row.get("tenant_id"), row.get("payload"))).collect()
+            },
+            PoolType::Sqlite(p) => {
+                let q = dialect_query("SELECT id, tenant_id, payload FROM local_mcp_rag_tasks WHERE escalation_status = 'local'", DatabaseKind::Sqlite);
+                let r = sqlx::query(&q)
+                    .fetch_all(p)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                r.into_iter().map(|row| (row.get("id"), row.get("tenant_id"), row.get("payload"))).collect()
+            }
+        };
 
-        for row in rows {
-            let id: String = row.get("id");
-            let tenant_id: String = row.get("tenant_id");
-            let payload: String = row.get("payload");
-
+        for (id, tenant_id, payload) in rows {
             let payload_str = format!(r#"{{"id": "{}", "tenant_id": "{}", "data": "{}"}}"#, id, tenant_id, payload);
             
             let mut req = self.client.post("https://cloud.onehumancorp.com/api/v1/orchestration/escalate")
@@ -58,12 +69,26 @@ impl SyncEscalator {
             match req.send().await {
                 Ok(resp) => {
                     if resp.status() == reqwest::StatusCode::OK {
-                        sqlx::query("UPDATE local_mcp_rag_tasks SET escalation_status = 'cloud' WHERE id = $1 AND tenant_id = $2")
-                            .bind(&id)
-                            .bind(&tenant_id)
-                            .execute(&self.pool)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                        match &self.pool {
+                            PoolType::Pg(p) => {
+                                let q2 = dialect_query("UPDATE local_mcp_rag_tasks SET escalation_status = 'cloud' WHERE id = $1 AND tenant_id = $2", DatabaseKind::Postgres);
+                                sqlx::query(&q2)
+                                    .bind(&id)
+                                    .bind(&tenant_id)
+                                    .execute(p)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                            },
+                            PoolType::Sqlite(p) => {
+                                let q2 = dialect_query("UPDATE local_mcp_rag_tasks SET escalation_status = 'cloud' WHERE id = $1 AND tenant_id = $2", DatabaseKind::Sqlite);
+                                sqlx::query(&q2)
+                                    .bind(&id)
+                                    .bind(&tenant_id)
+                                    .execute(p)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                            }
+                        }
                     } else {
                         eprintln!("escalation failed with status: {}", resp.status());
                     }
@@ -85,7 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_escalator() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = PoolType::Pg(sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/mydb").unwrap());
         let escalator = Arc::new(SyncEscalator::new(pool));
         
         let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);

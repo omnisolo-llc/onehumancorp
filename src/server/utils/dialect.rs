@@ -25,3 +25,36 @@ pub fn dialect_query(query: &str, kind: DatabaseKind) -> String {
         }
     }
 }
+
+
+pub enum PoolType {
+    Pg(sqlx::PgPool),
+    Sqlite(sqlx::SqlitePool),
+}
+
+impl PoolType {
+    pub async fn connect(url: &str) -> Result<Self, String> {
+        match get_database_kind(url) {
+            DatabaseKind::Postgres => {
+                let pool = sqlx::PgPool::connect(url).await.map_err(|e| e.to_string())?;
+                Ok(PoolType::Pg(pool))
+            }
+            DatabaseKind::Sqlite => {
+                use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+                use std::str::FromStr;
+                let mut options = SqliteConnectOptions::from_str(url).map_err(|e| e.to_string())?;
+
+                if let Ok(key) = std::env::var("SQLCIPHER_KEY") {
+                    options = options.pragma("key", key);
+                }
+
+                let pool = SqlitePoolOptions::new()
+                    .connect_with(options)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                Ok(PoolType::Sqlite(pool))
+            }
+        }
+    }
+}
