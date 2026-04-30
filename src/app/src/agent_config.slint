@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
     width: 600px;
@@ -28,8 +29,24 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
-                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { selected_agent = "Customer Support"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }
         }
@@ -53,14 +70,35 @@ export component AgentConfig inherits Window {
         if (step == 2) : VerticalBox {
             spacing: 10px;
             Text { text: "How often should this agent work?"; color: #1e293b; }
-            Text { text: frequency; font-size: 24px; color: #a855f7; horizontal-alignment: center; }
             
             HorizontalBox {
-                alignment: center;
-                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
-                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
-                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+                spacing: 10px;
+                GlassCard {
+                    height: 60px;
+                    background: frequency == "Hourly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Hourly"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { frequency = "Hourly"; } }
+                }
+                GlassCard {
+                    height: 60px;
+                    background: frequency == "Daily" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Daily"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { frequency = "Daily"; } }
+                }
+                GlassCard {
+                    height: 60px;
+                    background: frequency == "Weekly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Weekly"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { frequency = "Weekly"; } }
+                }
             }
+            Text { text: "Schedule: " + frequency; color: #a855f7; horizontal-alignment: center; }
         }
 
         // Step 3: Review
