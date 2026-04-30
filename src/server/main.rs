@@ -890,7 +890,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     autodream_worker.start();
 
     // Start Telemetry Sync Daemon (if in standalone mode)
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
         telemetry_daemon.start();
