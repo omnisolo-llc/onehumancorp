@@ -35,6 +35,9 @@ pub mod chaos;
 pub mod integrations;
 pub mod utils;
 pub mod storage;
+#[cfg(test)]
+pub mod benchmarks;
+
 pub mod config;
 pub mod http;
 pub mod services {
