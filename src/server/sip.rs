@@ -119,9 +119,9 @@ impl SipDB {
 
     pub async fn get_pending_missions(&self, role: &str) -> Result<Vec<crate::ohc::orchestration::Message>, sqlx::Error> {
         let query = if role == "ANY" {
-            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500"
         } else {
-            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
         };
         
         let rows = if role == "ANY" {
@@ -175,13 +175,13 @@ impl SipDB {
     }
 
     pub async fn complete_mission(&self, mission_id: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
             .bind(&self.org_id)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await?;
             
-        if result.rows_affected() == 0 {
+        if result.is_none() {
             return Err(sqlx::Error::RowNotFound);
         }
         
@@ -326,7 +326,7 @@ impl SipDB {
         let fail_threshold = Utc::now() - age_threshold;
         
         // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
             .bind(stuck_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)
@@ -503,13 +503,13 @@ impl SipDB {
     }
 
     pub async fn burst_mission(&self, mission_id: &str, remote_endpoint: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
             .bind(&self.org_id)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await?;
             
-        if result.rows_affected() == 0 {
+        if result.is_none() {
             return Err(sqlx::Error::RowNotFound);
         }
         
