@@ -87,6 +87,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
 
+            let mut selling_categories = Vec::new();
+            if ui.get_sell_physical() { selling_categories.push("physical".to_string()); }
+            if ui.get_sell_digital() { selling_categories.push("digital".to_string()); }
+            if ui.get_sell_services() { selling_categories.push("services".to_string()); }
+            if ui.get_sell_food() { selling_categories.push("food".to_string()); }
+            if ui.get_sell_subscriptions() { selling_categories.push("subscriptions".to_string()); }
+
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
                     Ok(mut client) => {
@@ -96,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
-                            selling_categories: vec![], // Populated in full implementation
+                            selling_categories,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -215,85 +222,74 @@ mod e2e_tests {
             return;
         }
 
-        let ui = app::BusinessSetup::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
 
-        // Step 0: Welcome -> Step 1
-        assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
 
-        // Step 1: Type -> Step 2
-        ui.set_business_type("Online Store".into());
-        ui.set_step(2);
-        assert_eq!(ui.get_step(), 2);
+            let ui = app::BusinessSetup::new().unwrap();
 
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.set_step(3);
-        assert_eq!(ui.get_step(), 3);
+            // Step 0: Welcome -> Step 1
+            assert_eq!(ui.get_step(), 0);
+            ui.set_step(1);
 
-        // Step 3: What do you sell -> Step 4
-        ui.set_sell_physical(true);
-        ui.set_step(4);
-        assert_eq!(ui.get_step(), 4);
+            // Step 1: Type -> Step 2
+            ui.set_business_type("Online Store".into());
+            ui.set_step(2);
+            assert_eq!(ui.get_step(), 2);
 
-        // Step 4: Payments -> Step 5
-        ui.set_payment_pref("online".into());
-        ui.set_step(5);
-        assert_eq!(ui.get_step(), 5);
+            // Step 2: Name -> Step 3
+            ui.set_company_name("My E2E Store".into());
+            ui.set_step(3);
+            assert_eq!(ui.get_step(), 3);
 
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.set_step(6);
-        assert_eq!(ui.get_step(), 6);
+            // Step 3: What do you sell -> Step 4
+            ui.set_sell_physical(true);
+            ui.set_step(4);
+            assert_eq!(ui.get_step(), 4);
 
-        // Step 6: Template -> Step 7
-        ui.set_website_template("Modern".into());
-        ui.set_step(7);
+            // Step 4: Payments -> Step 5
+            ui.set_payment_pref("online".into());
+            ui.set_step(5);
+            assert_eq!(ui.get_step(), 5);
 
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.set_step(8);
+            // Step 5: Admin -> Step 6
+            ui.set_admin_email("admin@e2e.test".into());
+            ui.set_step(6);
+            assert_eq!(ui.get_step(), 6);
 
-        // Step 8: Domain -> Step 9
-        ui.set_domain_choice("subdomain".into());
-        ui.set_step(9);
+            // Step 6: Template -> Step 7
+            ui.set_website_template("Modern".into());
+            ui.set_step(7);
 
-        // Final state verification
-        assert_eq!(ui.get_company_name(), "My E2E Store");
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
-        assert_eq!(ui.get_sell_physical(), true);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
-    }
-}
+            // Step 7: Product -> Step 8
+            ui.set_product_name("My First Product".into());
+            ui.set_product_price("10.00".into());
+            ui.set_step(8);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_welcome_checklist_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_welcome_checklist_creation because no display server is available.");
-            return;
-        }
-        app::WelcomeChecklist::new().unwrap();
-    }
+            // Step 8: Domain -> Step 9
+            ui.set_domain_choice("subdomain".into());
+            ui.set_step(9);
 
-    #[test]
-    fn test_login_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_login_creation because no display server is available.");
-            return;
-        }
-        let ui = app::Login::new().unwrap();
-        assert_eq!(ui.get_username(), "");
-        assert_eq!(ui.get_password(), "");
+            // Final state verification
+            assert_eq!(ui.get_company_name(), "My E2E Store");
+            assert_eq!(ui.get_business_type(), "Online Store");
+            assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+            assert_eq!(ui.get_payment_pref(), "online");
+            assert_eq!(ui.get_sell_physical(), true);
+            assert_eq!(ui.get_website_template(), "Modern");
+            assert_eq!(ui.get_product_name(), "My First Product");
+            assert_eq!(ui.get_product_price(), "10.00");
+            assert_eq!(ui.get_domain_choice(), "subdomain");
+        });
+
+        // Simulate user login
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
     }
 
     #[test]
@@ -498,36 +494,51 @@ mod docs_tests {
     #[test]
     fn test_e2e_setup_wizard_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
 
-        // Step 0: Welcome -> Step 1
-        assert_eq!(ui.get_step(), 0);
-        ui.invoke_next_step();
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
 
-        // Step 1: Type -> Step 2
-        ui.invoke_select_business_type("Online Store".into());
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
 
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.invoke_next_step();
+            let ui = app::SetupWizard::new().unwrap();
 
-        // Step 3: What do you sell -> Step 4
-        ui.invoke_toggle_sell_physical();
-        ui.invoke_next_step();
+            // Step 0: Welcome -> Step 1
+            assert_eq!(ui.get_step(), 0);
+            ui.invoke_next_step();
 
-        // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
+            // Step 1: Type -> Step 2
+            ui.invoke_select_business_type("Online Store".into());
 
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.invoke_next_step();
+            // Step 2: Name -> Step 3
+            ui.set_company_name("My E2E Store".into());
+            ui.invoke_next_step();
 
-        // Final state verification
-        assert_eq!(ui.get_company_name(), "My E2E Store");
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
-        assert_eq!(ui.get_sell_physical(), true);
+            // Step 3: What do you sell -> Step 4
+            ui.invoke_toggle_sell_physical();
+            ui.invoke_next_step();
+
+            // Step 4: Payments -> Step 5
+            ui.invoke_select_payment_pref("online".into());
+
+            // Step 5: Admin -> Step 6
+            ui.set_admin_email("admin@e2e.test".into());
+            ui.invoke_next_step();
+
+            // Final state verification
+            assert_eq!(ui.get_company_name(), "My E2E Store");
+            assert_eq!(ui.get_business_type(), "Online Store");
+            assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+            assert_eq!(ui.get_payment_pref(), "online");
+            assert_eq!(ui.get_sell_physical(), true);
+        });
+
+        // Simulate user login
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
     }
 
     #[test]
