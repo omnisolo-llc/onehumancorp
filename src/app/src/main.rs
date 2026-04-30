@@ -380,6 +380,26 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+    #[test]
+    fn test_fix_agent_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::FixAgent::new().unwrap();
+    }
+    #[test]
+    fn test_upgrade_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Upgrade::new().unwrap();
+    }
+    #[test]
+    fn test_billing_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Billing::new().unwrap();
+    }
+    #[test]
+    fn test_grow_business_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::GrowBusiness::new().unwrap();
+    }
 }
 
 #[cfg(test)]
