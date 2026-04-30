@@ -220,29 +220,60 @@ impl Agent {
                     }
                 }
 
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                let mut retries = 0;
+                let max_retries = 2;
+                let mut final_result: Result<String, Box<dyn std::error::Error + Send + Sync>> = Err("".into());
+
+                loop {
+                    final_result = self.execute_tool(&tc).await;
+                    if let Err(ref e) = final_result {
+                        if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                            if let crate::types::ToolError::Transient(_) = tool_err {
+                                if retries < max_retries {
+                                    retries += 1;
+                                    let backoff = 2_u64.pow(retries as u32);
+                                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                let (content, error) = match final_result {
                     Ok(r) => {
                         self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
                         (r, String::new())
                     }
                     Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
+                        let err_str = if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                            match tool_err {
+                                crate::types::ToolError::Transient(msg) => format!("Transient Error (after {} retries): {}", retries, msg),
+                                crate::types::ToolError::LlmRecoverable(msg) => format!("Tool Error: {}", msg),
+                                crate::types::ToolError::UserFixable(msg) => {
+                                    on_event(AgentEvent::TaskError { error: msg.clone() });
+                                    return Err(e);
+                                },
+                                crate::types::ToolError::Unexpected(msg) => {
+                                    on_event(AgentEvent::TaskError { error: msg.clone() });
+                                    return Err(e);
+                                }
+                            }
+                        } else {
+                            e.to_string()
+                        };
+                        (String::new(), err_str)
                     }
                 };
+
+                let result_str = if error.is_empty() { content.clone() } else { format!("Error: {}", error) };
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: result_str,
+                    iteration,
+                });
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
