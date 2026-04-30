@@ -7,6 +7,7 @@ use regex::Regex;
 pub struct ShellSession {
     pub session_id: String,
     pub sandbox_dir: PathBuf,
+    pub memory_dir: PathBuf,
     pub current_cwd: RwLock<PathBuf>,
     blocked_patterns: Vec<Regex>,
 }
@@ -15,6 +16,9 @@ impl ShellSession {
     pub async fn new(session_id: &str, sandbox_dir: &str) -> Result<Self, String> {
         let sandbox_path = Path::new(sandbox_dir);
         fs::create_dir_all(sandbox_path).await.map_err(|e| e.to_string())?;
+
+        let memory_dir = sandbox_path.join("memory");
+        fs::create_dir_all(&memory_dir).await.map_err(|e| e.to_string())?;
 
         let env_snapshot_path = sandbox_path.join("env_snapshot.sh");
         if !env_snapshot_path.exists() {
@@ -34,6 +38,7 @@ impl ShellSession {
         Ok(ShellSession {
             session_id: session_id.to_string(),
             sandbox_dir: sandbox_path.to_path_buf(),
+            memory_dir,
             current_cwd: RwLock::new(sandbox_path.to_path_buf()),
             blocked_patterns,
         })
@@ -55,9 +60,11 @@ impl ShellSession {
         let env_snapshot_path = self.sandbox_dir.join("env_snapshot.sh");
         let cwd_snapshot_path = self.sandbox_dir.join("cwd_snapshot.txt");
 
+        let memory_dir_export = format!("export OHC_MEMORY_DIR='{}';", self.memory_dir.display());
+
         let wrapper_cmd = format!(
-            "source '{}' 2>/dev/null || true; {{ {}; }}; declare -p > '{}'; pwd -P > '{}'",
-            env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
+            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p > '{}'; pwd -P > '{}'",
+            memory_dir_export, env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
         );
 
         let mut cmd = Command::new("bash");
@@ -99,6 +106,7 @@ mod tests {
     #[tokio::test]
     async fn test_shell_session() {
         let dir = "/tmp/test_session";
+        let _ = tokio::fs::remove_dir_all(dir).await;
         let session = ShellSession::new("sess1", dir).await.unwrap();
 
         let out = session.run_stateful_command("echo hello").await.unwrap();
@@ -107,6 +115,10 @@ mod tests {
         let out = session.run_stateful_command("export FOO=bar").await.unwrap();
         let out = session.run_stateful_command("echo $FOO").await.unwrap();
         assert!(out.contains("bar"));
+
+        // Test memory directory export
+        let out = session.run_stateful_command("echo $OHC_MEMORY_DIR").await.unwrap();
+        assert!(out.contains("memory"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
