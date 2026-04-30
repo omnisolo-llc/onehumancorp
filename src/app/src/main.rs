@@ -183,6 +183,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_go_to_dashboard({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let _ = dashboard.show();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
