@@ -1,5 +1,8 @@
 # Release Notes
 
+## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
+- Privacy/Offline (Standalone): Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
+
 ## v0.4.11 (Cloud) / v0.4.11+1 (Standalone)
 - Scaling (Cloud): Implemented JSON minification and Gzip compression middleware to optimize server HTTP payloads.
 - Privacy/Offline (Standalone): Fixed TooltipRegistry namespace issue in Slint UI and improved dashboard accessibility.
