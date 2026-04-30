@@ -572,4 +572,40 @@ mod dashboard_docs_tests {
         ui.on_open_help_center(move || {});
         ui.on_open_ai_chat(move || {});
     }
+
+    #[test]
+    fn test_e2e_agent_activity_feed_actions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping E2E test_e2e_agent_activity_feed_actions because no display server is available.");
+            return;
+        }
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.set_username("testuser".into());
+        login_ui.set_password("testpass".into());
+        login_ui.invoke_login("testuser".into(), "testpass".into());
+
+        let ui = app::Dashboard::new().unwrap();
+
+        let actions = std::rc::Rc::new(slint::VecModel::from(vec![
+            app::UiAgentAction {
+                id: "action_1".into(),
+                description: "The Ambassador drafted 3 replies to Instagram DMs".into(),
+            },
+            app::UiAgentAction {
+                id: "action_2".into(),
+                description: "The Promoter scheduled a post for the new Vegan Cake".into(),
+            },
+        ]));
+
+        ui.set_agent_actions(actions.clone().into());
+
+        // Assert state correctly applies
+        let current_actions = ui.get_agent_actions();
+        use slint::Model;
+        let row1 = current_actions.row_data(0).unwrap();
+        let row2 = current_actions.row_data(1).unwrap();
+        assert_eq!(row1.description, "The Ambassador drafted 3 replies to Instagram DMs");
+        assert_eq!(row2.description, "The Promoter scheduled a post for the new Vegan Cake");
+    }
 }
