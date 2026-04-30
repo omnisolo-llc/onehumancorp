@@ -13,9 +13,32 @@ actions:
           - "*"
     steps:
       - run: |
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xvfb
+      - run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
-            --config=buildbuddy-official \
+            --config=buildbuddy \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
             -- //...
+
+  - name: "playwright e2e tests"
+    resource_requests:
+      cpu: 4
+      memory: 8GB
+      disk: 20GB
+    triggers:
+      push:
+        branches:
+          - "main"
+      pull_request:
+        branches:
+          - "*"
+    steps:
+      - run: |
+          npm install
+      - run: |
+          npx playwright install --with-deps chromium
+      - run: |
+          node scripts/run-playwright.mjs
