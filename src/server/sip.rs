@@ -356,6 +356,9 @@ impl SipDB {
     }
 
     pub async fn sync_buffered_metrics(&self, remote_endpoint: &str, batch_size: usize) -> Result<usize, sqlx::Error> {
+        if !crate::config::get().telemetry_enabled {
+            return Ok(0);
+        }
         let batch_size = if batch_size == 0 { 500 } else { batch_size };
         
         let rows = sqlx::query("SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT $2")
@@ -376,6 +379,12 @@ impl SipDB {
             let metric_type: String = row.get("metric_type");
             let payload: String = row.get("payload");
             
+            // PII guardrail
+            if crate::telemetry::contains_pii(&payload) {
+                ids_to_delete.push(id);
+                continue; // drop records containing PII
+            }
+
             ids_to_delete.push(id);
             records.push(serde_json::json!({
                 "metric_type": metric_type,

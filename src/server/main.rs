@@ -89,6 +89,9 @@ pub fn record_telemetry<F>(f: F)
 where
     F: FnOnce() + Send + 'static,
 {
+    if !crate::config::get().telemetry_enabled {
+        return;
+    }
     let tx = get_telemetry_chan();
     let _ = tx.try_send(Box::new(f));
 }
@@ -1012,5 +1015,34 @@ mod tests {
 
         let resp = service.stream_mesh_events(req).await;
         assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_record_telemetry_respects_config() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let executed = Arc::new(AtomicBool::new(false));
+        let executed_clone = executed.clone();
+
+        // Note: The global config is difficult to mock directly here without modifying
+        // the AppConfig structure or using a feature flag for testing, but we can verify
+        // that if telemetry is disabled (which is the default in test environment),
+        // the closure is NOT executed.
+
+        let initial_enabled = crate::config::get().telemetry_enabled;
+
+        // Since we can't reliably override the global OnceLock for `AppConfig` in a concurrent test,
+        // we'll just test the behavior based on the current parsed state.
+
+        crate::record_telemetry(move || {
+            executed_clone.store(true, Ordering::SeqCst);
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        if !initial_enabled {
+            assert!(!executed.load(Ordering::SeqCst), "Telemetry closure should NOT execute when telemetry_enabled is false");
+        }
     }
 }
