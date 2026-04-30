@@ -1,6 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
-import { Tooltip } from "tooltip.slint";
 
 export struct UiRoleCount {
     role: string,
@@ -21,16 +20,6 @@ export component Dashboard inherits Window {
 
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
-
-    in property <string> tt_active_agents: "";
-    in property <string> tt_active_tasks: "";
-    in property <string> tt_scheduled_calls: "";
-    in property <string> tt_team_members: "";
-
-
-
-
-
 
     callback open_help_center();
     callback open_ai_chat();
@@ -61,20 +50,10 @@ export component Dashboard inherits Window {
                 border-radius: 8px;
                 width: 100%;
 
-                touch-agents := TouchArea {
-                    width: 100%;
-                    height: 100%;
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Agents Working Now"; color: #64748b; }
-                        Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
-                    }
-                }
-                Tooltip {
-                    text: tt_active_agents;
-                    show: touch-agents.has-hover;
-                    x: parent.width / 2;
-                    y: parent.height;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Agents Working Now"; color: #64748b; }
+                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
                 }
             }
             Rectangle {
@@ -84,20 +63,10 @@ export component Dashboard inherits Window {
                 border-radius: 8px;
                 width: 100%;
 
-                touch-tasks := TouchArea {
-                    width: 100%;
-                    height: 100%;
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Tasks in Progress"; color: #64748b; }
-                        Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
-                    }
-                }
-                Tooltip {
-                    text: tt_active_tasks;
-                    show: touch-tasks.has-hover;
-                    x: parent.width / 2;
-                    y: parent.height;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Tasks in Progress"; color: #64748b; }
+                    Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
                 }
             }
             Rectangle {
@@ -107,20 +76,10 @@ export component Dashboard inherits Window {
                 border-radius: 8px;
                 width: 100%;
 
-                touch-calls := TouchArea {
-                    width: 100%;
-                    height: 100%;
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Upcoming Calls"; color: #64748b; }
-                        Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
-                    }
-                }
-                Tooltip {
-                    text: tt_scheduled_calls;
-                    show: touch-calls.has-hover;
-                    x: parent.width / 2;
-                    y: parent.height;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Upcoming Calls"; color: #64748b; }
+                    Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
                 }
             }
             Rectangle {
@@ -130,20 +89,10 @@ export component Dashboard inherits Window {
                 border-radius: 8px;
                 width: 100%;
 
-                touch-team := TouchArea {
-                    width: 100%;
-                    height: 100%;
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "My Team"; color: #64748b; }
-                        Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
-                    }
-                }
-                Tooltip {
-                    text: tt_team_members;
-                    show: touch-team.has-hover;
-                    x: parent.width / 2;
-                    y: parent.height;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "My Team"; color: #64748b; }
+                    Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
                 }
             }
         }
