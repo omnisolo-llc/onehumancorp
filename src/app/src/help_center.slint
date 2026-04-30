@@ -38,6 +38,16 @@ export component HelpCenter inherits Window {
                     }
                 }
 
+                Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Learn how to list new items, add photos, and set prices."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
                 Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
                 Rectangle {
                     background: white; border-radius: 8px;
@@ -55,6 +65,26 @@ export component HelpCenter inherits Window {
                         padding: 12px;
                         Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
                         Text { text: "Your agent can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "Marketing"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "How to run a promotion"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Learn how to create discount codes and share them on social media."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "Account & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "How to change your subscription"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Find out how to upgrade or downgrade your plan and view past invoices."; color: #64748b; wrap: word-wrap; }
                     }
                 }
             }
