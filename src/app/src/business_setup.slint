@@ -31,6 +31,7 @@ export component BusinessSetup inherits Window {
     in-out property <bool> launching: false;
 
     callback launch();
+    callback save_state();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -81,32 +82,32 @@ export component BusinessSetup inherits Window {
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🛒 Online Store"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Online Store"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Online Store"; step = 2; save_state(); } }
                 }
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔧 Service Business"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Service Business"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Service Business"; step = 2; save_state(); } }
                 }
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🍔 Restaurant / Food"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Restaurant / Food"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Restaurant / Food"; step = 2; save_state(); } }
                 }
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🎨 Creative / Portfolio"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Creative / Portfolio"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Creative / Portfolio"; step = 2; save_state(); } }
                 }
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🏪 Local Business"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Local Business"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Local Business"; step = 2; save_state(); } }
                 }
                 GlassCard {
                     height: 50px;
                     VerticalBox { alignment: center; padding: 12px; Text { text: "✨ Other"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { business_type = "Other"; step = 2; } }
+                    TouchArea { clicked => { business_type = "Other"; step = 2; save_state(); } }
                 }
             }
 
@@ -184,7 +185,7 @@ export component BusinessSetup inherits Window {
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { payment_pref = "online"; step = 5; } }
+                    TouchArea { clicked => { payment_pref = "online"; step = 5; save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -193,7 +194,7 @@ export component BusinessSetup inherits Window {
                         Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Tap to pay on phone (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { payment_pref = "inperson"; step = 5; } }
+                    TouchArea { clicked => { payment_pref = "inperson"; step = 5; save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -202,7 +203,7 @@ export component BusinessSetup inherits Window {
                         Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Online & In-person"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { payment_pref = "both"; step = 5; } }
+                    TouchArea { clicked => { payment_pref = "both"; step = 5; save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -211,7 +212,7 @@ export component BusinessSetup inherits Window {
                         Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Set up payments later"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { payment_pref = "skip"; step = 5; } }
+                    TouchArea { clicked => { payment_pref = "skip"; step = 5; save_state(); } }
                 }
             }
 
@@ -269,7 +270,7 @@ export component BusinessSetup inherits Window {
                 width: 80px;
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step - 1; } }
+                TouchArea { clicked => { step = step - 1; save_state(); } }
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 
@@ -278,7 +279,7 @@ export component BusinessSetup inherits Window {
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox { alignment: center; Text { text: step == 0 ? "Get Started →" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step + 1; } }
+                TouchArea { clicked => { step = step + 1; save_state(); } }
             }
 
             if (step == 6 && !launching) : GlassCard {

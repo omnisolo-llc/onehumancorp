@@ -113,7 +113,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     tokio::spawn(async move {
-        match HubServiceClient::connect("http://127.0.0.1:18789").await {
+        let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        match HubServiceClient::connect(hub_url).await {
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
@@ -140,11 +141,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = app::BusinessSetup::new()?;
     let ui_handle = ui.as_weak();
 
+    ui.on_save_state({
+        let ui_handle = ui_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+            ]);
+
+            tokio::spawn(async move {
+                let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                if let Ok(mut client) = HubServiceClient::connect(hub_url).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
     ui.on_launch({
         let ui_handle = ui_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
                 ("company_description".to_string(), ui.get_company_description().to_string()),
@@ -161,7 +192,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let handle_clone = ui_handle.clone();
 
             tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                match HubServiceClient::connect(hub_url).await {
                     Ok(mut client) => {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
                             state,
@@ -206,26 +238,32 @@ mod e2e_tests {
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
         ui.set_step(1);
+        ui.invoke_save_state();
 
         // Step 1: Type -> Step 2
         ui.set_business_type("Online Store".into());
         ui.set_step(2);
+        ui.invoke_save_state();
 
         // Step 2: Name -> Step 3
         ui.set_company_name("My E2E Store".into());
         ui.set_step(3);
+        ui.invoke_save_state();
 
         // Step 3: What do you sell -> Step 4
         ui.set_sell_physical(true);
         ui.set_step(4);
+        ui.invoke_save_state();
 
         // Step 4: Payments -> Step 5
         ui.set_payment_pref("online".into());
         ui.set_step(5);
+        ui.invoke_save_state();
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
         ui.set_step(6);
+        ui.invoke_save_state();
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -233,6 +271,8 @@ mod e2e_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+
+        ui.invoke_launch();
     }
 }
 

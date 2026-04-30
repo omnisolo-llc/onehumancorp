@@ -8,9 +8,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_slint_path = std::path::Path::new(&manifest_dir).join("src/app.slint");
     slint_build::compile(&app_slint_path).unwrap();
 
-    let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
-    // SAFETY: This is only called at build time and does not concurrently access env
-    unsafe { std::env::set_var("PROTOC", protoc_path) };
+    // Fallback logic for protoc without explicitly breaking cross-platform
+    if std::env::var("PROTOC").is_err() {
+        let default_protoc = std::path::PathBuf::from("../../../protobuf+/protoc");
+        if default_protoc.exists() {
+            unsafe { std::env::set_var("PROTOC", default_protoc) };
+        }
+    }
 
     tonic_build::configure()
         .compile_protos(
