@@ -4,6 +4,8 @@ import { GlassCard } from "glass_card.slint";
 export struct UiAgentCost {
     name: string,
     cost: string,
+    roi: string,
+    efficiency: string,
     pct: float,
 }
 
@@ -75,6 +77,11 @@ export component CostDashboard inherits Window {
                         Text { text: ac.name; color: white; }
                         Rectangle {}
                         Text { text: ac.cost; color: white; }
+                    }
+                    HorizontalBox {
+                        Text { text: "ROI: " + ac.roi; color: #64748b; font-size: 12px; }
+                        Rectangle {}
+                        Text { text: "Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
                     }
                     Rectangle {
                         height: 8px;
