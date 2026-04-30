@@ -3,9 +3,11 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, prost::Message)]
 pub struct Message {
+    #[prost(string, tag = "1")]
     pub topic: String,
+    #[prost(bytes = "vec", tag = "2")]
     pub payload: Vec<u8>,
 }
 
@@ -138,7 +140,9 @@ impl RedisTransport {
 impl MeshTransport for RedisTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use redis::AsyncCommands;
-        let payload = serde_json::to_string(&message).map_err(|e| e.to_string())?;
+        use prost::Message as ProstMessage;
+        let mut payload = Vec::new();
+        message.encode(&mut payload);
         let mut conn = self.publish_conn.lock().await;
         let _: () = conn.publish(topic, payload).await.map_err(|e| e.to_string())?;
         Ok(())
@@ -146,6 +150,7 @@ impl MeshTransport for RedisTransport {
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use tokio_stream::StreamExt;
+        use prost::Message as ProstMessage;
 
         let conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let mut pubsub = conn.into_pubsub();
@@ -155,8 +160,8 @@ impl MeshTransport for RedisTransport {
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
-                if let Ok(payload_str) = msg.get_payload::<String>() {
-                    if let Ok(message) = serde_json::from_str::<Message>(&payload_str) {
+                if let Ok(payload_bytes) = msg.get_payload::<Vec<u8>>() {
+                    if let Ok(message) = Message::decode(&payload_bytes[..]) {
                         handler(message);
                     }
                 }
