@@ -21,9 +21,9 @@ impl DB {
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
 
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
             .execute(&self.pool)
-            .await?;
+            .await;
 
         let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
         migrator.run(&self.pool).await?;
@@ -64,7 +64,7 @@ impl DB {
     }
 
     pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT id, organization_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
+        let rows = sqlx::query("SELECT id::text, organization_id::text, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
             .fetch_all(&self.pool)
             .await?;
 
@@ -80,7 +80,7 @@ impl DB {
     }
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+        sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::vector)")
             .bind(id)
             .bind(org_id)
             .bind(task_id)
@@ -93,7 +93,7 @@ impl DB {
     }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query("UPDATE tasks SET auto_dreamed = TRUE WHERE id = $1")
+        sqlx::query("UPDATE tasks SET auto_dreamed = TRUE WHERE id = $1::uuid")
             .bind(task_id)
             .execute(&self.pool)
             .await?;
