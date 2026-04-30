@@ -75,7 +75,7 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
                     let org_id = match hub.task_manager().get_task(&task_id) {
                         Ok(task) => task.organization_id.clone(),
                         Err(_) => {
-                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
+                            println!("AutoDream: Failed to get task {} to find organization context", task_id);
                             "system".to_string() // Fallback
                         }
                     };

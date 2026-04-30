@@ -68,7 +68,7 @@ impl AutoDreamWorker {
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
         
         for (id, data) in stale_sessions {
-             println!("AutoDream: pruned session {}", id);
+             println!("AutoDream: pruned stale session");
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
@@ -151,7 +151,7 @@ impl AutoDreamWorker {
                         .await?;
                 }
                 Err(e) => {
-                    println!("AutoDreamWorker: failed to embed session {}: {}", session_id, e);
+                    println!("AutoDreamWorker: failed to embed session: {}", e);
                 }
             }
         }
