@@ -223,6 +223,7 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc GenerateReferralLink(GenerateReferralLinkRequest) returns (GenerateReferralLinkResponse);
 }
 
 message StartOnboardingRequest {
@@ -1454,6 +1455,14 @@ service IntegrationService {
   rpc CreateIssue(CreateIssueRequest) returns (Issue);
   rpc UpdateIssueStatus(IssueStatusRequest) returns (Issue);
   rpc AssignIssue(IssueAssignRequest) returns (Issue);
+}
+
+message GenerateReferralLinkRequest {
+  string user_id = 1;
+}
+
+message GenerateReferralLinkResponse {
+  string link = 1;
 }
 
 message McpToolProto {

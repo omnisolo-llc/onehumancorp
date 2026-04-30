@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiUser {
     id: string,
@@ -16,6 +17,7 @@ export component UserManagement inherits Window {
 
     in property <[UiUser]> users;
     callback delete_user(string);
+    callback generate_referral_link();
 
     background: #f8fafc;
 
@@ -29,15 +31,20 @@ export component UserManagement inherits Window {
             Button { text: "Invite User"; }
         }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-
-            HorizontalBox {
-                padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+        GlassCard {
+            VerticalBox {
+                padding: 24px;
+                spacing: 12px;
+                Text { text: "Grow Together"; font-size: 18px; font-weight: 700; color: white; }
+                Text {
+                    text: "Share OHC with a friend! When they join and launch their business, you both get 1 month of Pro features for free. It's an easy way to expand your team or help another business owner get started.";
+                    color: #e2e8f0;
+                    wrap: word-wrap;
+                }
+                Button {
+                    text: "Get My Shareable Link";
+                    clicked => { generate_referral_link(); }
+                }
             }
         }
 

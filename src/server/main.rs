@@ -835,6 +835,18 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+
+    async fn generate_referral_link(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::GenerateReferralLinkRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::GenerateReferralLinkResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let link = crate::services::growth::referral_api::generate_referral_link(&req.user_id)
+            .map_err(|e| tonic::Status::internal(e))?;
+        Ok(tonic::Response::new(crate::ohc::orchestration::GenerateReferralLinkResponse {
+            link,
+        }))
+    }
 }
 
 #[tokio::main]
