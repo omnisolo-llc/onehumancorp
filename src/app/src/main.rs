@@ -116,6 +116,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
                 ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
                 ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
@@ -200,12 +204,29 @@ mod e2e_tests {
         ui.set_step(6);
         assert_eq!(ui.get_step(), 6);
 
+        // Step 6: Template -> Step 7
+        ui.set_website_template("Modern".into());
+        ui.set_step(7);
+
+        // Step 7: Product -> Step 8
+        ui.set_product_name("My First Product".into());
+        ui.set_product_price("10.00".into());
+        ui.set_step(8);
+
+        // Step 8: Domain -> Step 9
+        ui.set_domain_choice("subdomain".into());
+        ui.set_step(9);
+
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "My First Product");
+        assert_eq!(ui.get_product_price(), "10.00");
+        assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 }
 
