@@ -426,13 +426,20 @@ impl Store {
                 Ok(data.claims)
             }
             Err(e) => {
-                let oidc_cfg = self.oidc_cfg.read().unwrap();
-                if oidc_cfg.enabled {
-                     let cfg = crate::oidc::OIDCConfig {
-                         issuer_url: oidc_cfg.issuer_url.clone(),
-                         client_id: oidc_cfg.client_id.clone(),
-                         enabled: oidc_cfg.enabled,
-                     };
+                let cfg_opt = {
+                    let oidc_cfg = self.oidc_cfg.read().unwrap();
+                    if oidc_cfg.enabled {
+                        Some(crate::oidc::OIDCConfig {
+                            issuer_url: oidc_cfg.issuer_url.clone(),
+                            client_id: oidc_cfg.client_id.clone(),
+                            enabled: oidc_cfg.enabled,
+                        })
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(cfg) = cfg_opt {
                      return crate::oidc::validate_oidc_token(token, &cfg).await;
                 }
                 Err(e.to_string())
@@ -556,14 +563,51 @@ impl AuthService for Arc<Store> {
         }
     }
 
-    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
-        // TODO: Implement token revocation in gRPC
+    async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+        if let Some(auth_header) = request.metadata().get("authorization") {
+            if let Ok(auth_str) = auth_header.to_str() {
+                if auth_str.starts_with("Bearer ") {
+                    let token = &auth_str["Bearer ".len()..];
+                    if let Ok(claims) = self.as_ref().validate_token(token).await {
+                        let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
+                            .unwrap_or_else(|| chrono::Utc::now());
+                        let _ = self.as_ref().revoke_token(claims.jti, exp);
+                    }
+                }
+            }
+        }
         Ok(Response::new(EmptyResponse {}))
     }
 
-    async fn get_me(&self, _request: Request<EmptyRequest>) -> Result<Response<UserProto>, Status> {
-        // TODO: Implement after adding JWT interceptor to extract user claims
-        Err(Status::unimplemented("get_me requires JWT authentication interceptor"))
+    async fn get_me(&self, request: Request<EmptyRequest>) -> Result<Response<UserProto>, Status> {
+        let auth_header = request.metadata().get("authorization")
+            .ok_or_else(|| Status::unauthenticated("Missing authorization header"))?;
+
+        let auth_str = auth_header.to_str()
+            .map_err(|_| Status::unauthenticated("Invalid authorization header"))?;
+
+        if !auth_str.starts_with("Bearer ") {
+            return Err(Status::unauthenticated("Authorization must be a Bearer token"));
+        }
+
+        let token = &auth_str["Bearer ".len()..];
+        let claims = self.as_ref().validate_token(token).await
+            .map_err(|e| Status::unauthenticated(e))?;
+
+        let user = self.as_ref().get_user(&claims.sub, "")
+            .ok_or_else(|| Status::not_found("user not found"))?;
+
+        Ok(Response::new(UserProto {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            roles: user.roles,
+            active: user.active,
+            organization_id: user.organization_id.unwrap_or_default(),
+            created_at_unix: user.created_at.timestamp(),
+            updated_at_unix: user.updated_at.timestamp(),
+            oidc_subject: user.oidc_subject.unwrap_or_default(),
+        }))
     }
 
     async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
