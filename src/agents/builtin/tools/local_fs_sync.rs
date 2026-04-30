@@ -5,7 +5,9 @@ use tokio::fs;
 use std::path::Path;
 use super::{Tool, ToolExecutor};
 
-struct LocalFSSyncExecutor;
+struct LocalFSSyncExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for LocalFSSyncExecutor {
@@ -16,19 +18,25 @@ impl ToolExecutor for LocalFSSyncExecutor {
         let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string()))?;
         let path = args["Path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string()))?;
 
-        let clean_path = Path::new(path);
+        let mut clean_path = Path::new(path).to_path_buf();
         if !clean_path.starts_with(".agent-task/") || path.contains("..") {
             return Err(ToolError::LlmRecoverable("sandbox violation: path must start with .agent-task/".to_string()));
+        }
+        if let Some(wd) = &self.working_dir {
+            clean_path = wd.join(clean_path);
         }
 
         match action {
             "read" => {
-                let content = fs::read_to_string(clean_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let content = fs::read_to_string(&clean_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(content)
             }
             "write" => {
                 let content = args["Content"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
-                fs::write(clean_path, content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                if let Some(parent) = clean_path.parent() {
+                    fs::create_dir_all(parent).await.ok();
+                }
+                fs::write(&clean_path, content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(json!({"status":"written"}).to_string())
             }
             "sync" => {
@@ -43,7 +51,7 @@ impl ToolExecutor for LocalFSSyncExecutor {
     }
 }
 
-pub fn local_fs_sync_tool() -> Tool {
+pub fn local_fs_sync_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "local_fs_sync".to_string(),
         description: "Performs local file system operations restricted to .agent-task/ directory.".to_string(),
@@ -66,6 +74,6 @@ pub fn local_fs_sync_tool() -> Tool {
             },
             "required": ["Action", "Path"]
         }),
-        execute: Arc::new(LocalFSSyncExecutor),
+        execute: Arc::new(LocalFSSyncExecutor { working_dir }),
     }
 }
