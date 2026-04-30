@@ -5,7 +5,9 @@ use tokio::fs;
 
 use super::{Tool, ToolExecutor};
 
-struct ReadExecutor;
+struct ReadExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for ReadExecutor {
@@ -14,7 +16,9 @@ impl ToolExecutor for ReadExecutor {
         args: Value,
     ) -> Result<String, ToolError> {
         let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
-        let content = fs::read_to_string(path)
+        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let content = fs::read_to_string(&actual_path)
             .await
             .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
@@ -36,7 +40,7 @@ impl ToolExecutor for ReadExecutor {
     }
 }
 
-pub fn read_tool() -> Tool {
+pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Read".to_string(),
         description: "Read the contents of a file. Optionally specify start_line and end_line for partial reads.".to_string(),
@@ -59,6 +63,6 @@ pub fn read_tool() -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(ReadExecutor),
+        execute: Arc::new(ReadExecutor { working_dir }),
     }
 }

@@ -264,7 +264,8 @@ impl AgentService for AgentServiceImpl {
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        all_tools.push(agent_tool());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -387,7 +388,10 @@ impl AgentService for AgentServiceImpl {
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
             let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+
+            let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
+            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir);
+            tools.push(agent_tool());
             let agent = Agent::new(llm, tools);
 
             let mut no_op = |_: AgentEvent| {};
@@ -479,5 +483,103 @@ impl AgentService for SharedAgentService {
         req: tonic::Request<SubAgentRequest>,
     ) -> Result<tonic::Response<SubAgentResponse>, tonic::Status> {
         self.0.dispatch_to_sub_agent(req).await
+    }
+}
+
+use ohc_builtin_agent_core::types::ToolError;
+use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+use serde_json::{json, Value};
+use crate::proto::agent_service::agent_service_client::AgentServiceClient;
+
+struct SubagentExecutor;
+
+#[async_trait::async_trait]
+impl ToolExecutor for SubagentExecutor {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let prompt = args["prompt"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("agent: prompt is required".to_string()))?;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let branch_name = format!("subagent-{}", task_id);
+        let worktree_path = format!(".agent-worktrees/{}", task_id);
+
+        // Create worktree
+        let _ = tokio::process::Command::new("git")
+            .args(["branch", &branch_name])
+            .output()
+            .await;
+
+        let wt_output = tokio::process::Command::new("git")
+            .args(["worktree", "add", &worktree_path, &branch_name])
+            .output()
+            .await;
+
+        if let Err(e) = wt_output {
+            return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
+        }
+
+        let mut req = SubAgentRequest::default();
+        req.task = prompt.to_string();
+        req.working_dir = worktree_path.clone();
+
+        let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+        let res = async {
+            let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                .map_err(|e| format!("invalid sub-agent address: {}", e))?
+                .connect()
+                .await
+                .map_err(|e| format!("connect to sub-agent: {}", e))?;
+            let mut client = AgentServiceClient::new(channel);
+            client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
+        }.await;
+
+        // Cleanup
+        let _ = tokio::process::Command::new("git")
+            .args(["worktree", "remove", "--force", &worktree_path])
+            .output()
+            .await;
+        let _ = tokio::process::Command::new("git")
+            .args(["branch", "-D", &branch_name])
+            .output()
+            .await;
+
+        match res {
+            Ok(r) => {
+                let inner = r.into_inner();
+                if !inner.error.is_empty() {
+                    Err(ToolError::LlmRecoverable(inner.error))
+                } else {
+                    Ok(inner.result)
+                }
+            }
+            Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+        }
+    }
+}
+
+pub fn agent_tool() -> Tool {
+    Tool {
+        name: "Agent".to_string(),
+        description: "Spawn a sub-agent to execute a task autonomously. \
+            The sub-agent runs its own ReAct loop in an isolated git worktree. \
+            Use for parallelizable or delegatable work."
+            .to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The task prompt for the sub-agent."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Short description of the sub-task."
+                }
+            },
+            "required": ["prompt"]
+        }),
+        execute: Arc::new(SubagentExecutor),
     }
 }
