@@ -207,13 +207,13 @@ impl UserRepository for PgUserRepository {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             organization_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1
+            WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             organization_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 AND organization_id=$10
+            WHERE id=$1 AND organization_id=$10 RETURNING id
             "#
         };
 
@@ -228,7 +228,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.organization_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .execute(&self.pool)
+                .fetch_optional(&self.pool)
                 .await
         } else {
             sqlx::query(query)
@@ -242,11 +242,11 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .bind(org_id)
-                .execute(&self.pool)
+                .fetch_optional(&self.pool)
                 .await
         }.map_err(|e| e.to_string())?;
 
-        if res.rows_affected() == 0 {
+        if res.is_none() {
             return Err("user not found or unauthorized".to_string());
         }
 
@@ -255,18 +255,18 @@ impl UserRepository for PgUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         let query = if org_id.is_empty() || org_id == "sys" {
-            "DELETE FROM users WHERE id = $1"
+            "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
-            "DELETE FROM users WHERE id = $1 AND organization_id = $2"
+            "DELETE FROM users WHERE id = $1 AND organization_id = $2 RETURNING id"
         };
 
         let res = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(id).execute(&self.pool).await
+            sqlx::query(query).bind(id).fetch_optional(&self.pool).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).execute(&self.pool).await
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await
         }.map_err(|e| e.to_string())?;
 
-        if res.rows_affected() == 0 {
+        if res.is_none() {
             return Err("user not found or unauthorized".to_string());
         }
 
