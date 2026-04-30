@@ -6,6 +6,10 @@ cargo_build_script(
     srcs = ["build.rs"],
     data = [
         "src/agent_config.slint",
+        "src/walkthrough.slint",
+        "src/experiments.slint",
+        "src/wizard.slint",
+        "src/service_manager.slint",
         "src/agent_hire.slint",
         "src/agent_status_indicator.slint",
         "src/agents.slint",
@@ -71,6 +75,10 @@ rust_binary(
     ],
     data = [
         "src/agent_config.slint",
+        "src/walkthrough.slint",
+        "src/experiments.slint",
+        "src/wizard.slint",
+        "src/service_manager.slint",
         "src/agent_hire.slint",
         "src/agent_status_indicator.slint",
         "src/agents.slint",
@@ -150,6 +158,10 @@ rust_test(
     crate_root = "src/main.rs",
     data = [
         "src/agent_config.slint",
+        "src/walkthrough.slint",
+        "src/experiments.slint",
+        "src/wizard.slint",
+        "src/service_manager.slint",
         "src/agent_hire.slint",
         "src/agent_status_indicator.slint",
         "src/agents.slint",
