@@ -1,7 +1,7 @@
-use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::sync_service_server::SyncService;
+use crate::ohc::orchestration::*;
 use crate::sip::SipDB;
+use tonic::{Request, Response, Status};
 
 pub struct MySyncService {
     pool: sqlx::PgPool,
@@ -45,16 +45,23 @@ impl SyncService for MySyncService {
                 p.status
             };
 
-            let force_local = md.get("x-ohc-conflict-resolution")
+            let force_local = md
+                .get("x-ohc-conflict-resolution")
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+            match sip_db
+                .upsert_mission(&p.id, &status, &p.payload, force_local)
+                .await
+            {
                 Ok(_) => {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: id={}, error={}", p.id, e);
+                    eprintln!(
+                        "failed to upsert mission from sync daemon: id={}, error={}",
+                        p.id, e
+                    );
                 }
             }
         }
@@ -117,7 +124,11 @@ impl SyncService for MySyncService {
         let mut synced_count = 0;
 
         for delta in deltas {
-            if delta.id.is_empty() || delta.entity_id.is_empty() || delta.data.is_empty() || delta.updated_at.is_empty() {
+            if delta.id.is_empty()
+                || delta.entity_id.is_empty()
+                || delta.data.is_empty()
+                || delta.updated_at.is_empty()
+            {
                 continue;
             }
 
@@ -188,13 +199,16 @@ impl SyncService for MySyncService {
             };
 
             let q = crate::queue::PostgresTaskQueue::new(self.pool.clone());
-            
+
             match crate::queue::TaskQueue::enqueue(&q, job).await {
                 Ok(_) => {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to enqueue escalation job: id={}, error={}", p.memory_id, e);
+                    eprintln!(
+                        "failed to enqueue escalation job: id={}, error={}",
+                        p.memory_id, e
+                    );
                 }
             }
         }
@@ -214,18 +228,39 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/ohc").await.unwrap_or_else(|_| {
-            // Fallback or skip if no DB.
-            // Since we can't easily skip in Rust without specific crates or flags,
-            // we just use a dummy pool that will fail if used.
-            // But for empty payloads, it shouldn't be used!
-            // So we can just use a dummy pool!
-            // Wait, connecting to invalid URL will fail.
-            // Let's just use a dummy pool if we can create one without connecting.
-            // `PgPoolOptions::new().connect_lazy("...")` is lazy! So it won't fail on creation!
-            // That is perfect for this test!
-            sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
-        });
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect("postgres://postgres:postgres@localhost:5432/ohc")
+            .await
+            .unwrap_or_else(|_| {
+                // Fallback or skip if no DB.
+                // Since we can't easily skip in Rust without specific crates or flags,
+                // we just use a dummy pool that will fail if used.
+                // But for empty payloads, it shouldn't be used!
+                // So we can just use a dummy pool!
+                // Wait, connecting to invalid URL will fail.
+                // Let's just use a dummy pool if we can create one without connecting.
+                // `PgPoolOptions::new().connect_lazy("...")` is lazy! So it won't fail on creation!
+                // That is perfect for this test!
+                sqlx::postgres::PgPoolOptions::new()
+                    .before_acquire(|conn, _meta| {
+                        Box::pin(async move {
+                            sqlx::query("SET app.current_tenant = 'system';")
+                                .execute(conn)
+                                .await?;
+                            Ok(true)
+                        })
+                    })
+                    .connect_lazy("postgres://localhost/dummy")
+                    .unwrap()
+            });
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
@@ -235,16 +270,38 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPushRequest { payload: "test payload".to_string() });
+        let req = Request::new(PowerSyncPushRequest {
+            payload: "test payload".to_string(),
+        });
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
     }
 
     #[tokio::test]
     async fn test_power_sync_pull() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await.unwrap();
@@ -252,16 +309,39 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
+        let req = Request::new(SyncMcpDeltasRequest {
+            tenant_id: "org1".to_string(),
+            deltas: vec![],
+        });
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
     }
     #[tokio::test]
     async fn test_sync_escalation_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
@@ -270,7 +350,17 @@ mod tests {
     }
     #[tokio::test]
     async fn test_vector_sync() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();

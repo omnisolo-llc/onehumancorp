@@ -1,7 +1,7 @@
 use redis::AsyncCommands;
+use sqlx::Row;
 use std::time::Duration;
 use uuid::Uuid;
-use sqlx::Row;
 
 pub struct DistributedLock {
     client: redis::Client,
@@ -19,9 +19,13 @@ impl DistributedLock {
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self
+            .client
+            .get_async_connection()
+            .await
+            .map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
-        
+
         loop {
             if start.elapsed() > timeout {
                 return Err("timeout acquiring lock".to_string());
@@ -46,17 +50,28 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
-        let script = redis::Script::new(r#"
+        let mut con = self
+            .client
+            .get_async_connection()
+            .await
+            .map_err(|e| e.to_string())?;
+        let script = redis::Script::new(
+            r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
             else
                 return 0
             end
-        "#);
+        "#,
+        );
 
-        let res: i32 = script.key(&self.key).arg(&self.value).invoke_async(&mut con).await.map_err(|e| e.to_string())?;
-        
+        let res: i32 = script
+            .key(&self.key)
+            .arg(&self.value)
+            .invoke_async(&mut con)
+            .await
+            .map_err(|e| e.to_string())?;
+
         if res == 1 {
             Ok(())
         } else {
@@ -125,7 +140,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_claim_mission_no_db() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let res = claim_mission(&pool, "agent-1").await;
         // Should fail because table doesn't exist or connection fails on execution!
         assert!(res.is_err());

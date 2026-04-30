@@ -107,7 +107,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_discovery_proxy() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/mydb")
+            .unwrap();
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
         assert_eq!(proxy.switchboard, "localhost:50051");
     }

@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use sqlx::Row;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 use tokio::sync::mpsc;
-use sqlx::Row;
 
 #[derive(Debug, Clone)]
 pub struct Job {
@@ -100,16 +100,20 @@ impl PostgresTaskQueue {
 impl TaskQueue for PostgresTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let run_after = job.run_after;
-        
-        let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+
+        let mut payload_map: serde_json::Value =
+            serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
         payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
         payload_map["attempts"] = serde_json::json!(job.attempts);
         payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
-        
+
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
-        
-        let org_id = payload_map["organization_id"].as_str().unwrap_or("").to_string();
-        
+
+        let org_id = payload_map["organization_id"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
         sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
             .bind(org_id)
@@ -120,7 +124,7 @@ impl TaskQueue for PostgresTaskQueue {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(())
     }
 
@@ -130,14 +134,14 @@ impl TaskQueue for PostgresTaskQueue {
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         if let Some(row) = row {
             let id: String = row.get("id");
             let parent_task_id: String = row.get("parent_task_id");
             let payload: String = row.get("payload");
             let status: String = row.get("status");
             let scheduled_at: DateTime<Utc> = row.get("scheduled_at");
-            
+
             let mut j = Job {
                 id,
                 parent_task_id,
@@ -151,8 +155,9 @@ impl TaskQueue for PostgresTaskQueue {
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             };
-            
-            let mut payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+
+            let mut payload_map: serde_json::Value =
+                serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
                 j.agent_role = role.to_string();
             }
@@ -162,9 +167,9 @@ impl TaskQueue for PostgresTaskQueue {
             if let Some(max_attempts) = payload_map["max_attempts"].as_i64() {
                 j.max_attempts = max_attempts as i32;
             }
-            
+
             j.attempts += 1;
-            
+
             Ok(Some(j))
         } else {
             Ok(None)
@@ -177,18 +182,20 @@ impl TaskQueue for PostgresTaskQueue {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(())
     }
 
     async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = payload || $2 WHERE id = $1")
-            .bind(job_id)
-            .bind(format!(" (Error: {})", reason))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-            
+        sqlx::query(
+            "UPDATE sub_agent_queue SET status = 'FAILED', payload = payload || $2 WHERE id = $1",
+        )
+        .bind(job_id)
+        .bind(format!(" (Error: {})", reason))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 }
@@ -205,13 +212,21 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(queue: Arc<dyn TaskQueue>, roles: Vec<String>, handler: Arc<dyn TaskJobHandler>) -> Self {
-        Worker { queue, roles, handler }
+    pub fn new(
+        queue: Arc<dyn TaskQueue>,
+        roles: Vec<String>,
+        handler: Arc<dyn TaskJobHandler>,
+    ) -> Self {
+        Worker {
+            queue,
+            roles,
+            handler,
+        }
     }
 
     pub async fn start(&self, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
-        
+
         loop {
             tokio::select! {
                 _ = interval.tick() => {
@@ -253,7 +268,15 @@ pub trait JobQueue: Send + Sync {
 }
 
 pub struct InMemJobQueue {
-    topics: RwLock<HashMap<String, (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>)>>,
+    topics: RwLock<
+        HashMap<
+            String,
+            (
+                mpsc::Sender<Vec<u8>>,
+                Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>,
+            ),
+        >,
+    >,
 }
 
 impl InMemJobQueue {
@@ -263,12 +286,18 @@ impl InMemJobQueue {
         }
     }
 
-    fn get_or_create_topic(&self, topic: &str) -> (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>) {
+    fn get_or_create_topic(
+        &self,
+        topic: &str,
+    ) -> (
+        mpsc::Sender<Vec<u8>>,
+        Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>,
+    ) {
         let mut topics = self.topics.write().unwrap();
         if let Some(t) = topics.get(topic) {
             return t.clone();
         }
-        
+
         let (tx, rx) = mpsc::channel(10000);
         let rx = Arc::new(tokio::sync::Mutex::new(rx));
         let t = (tx, rx);
@@ -305,8 +334,18 @@ pub struct WorkerPool {
 }
 
 impl WorkerPool {
-    pub fn new(queue: Arc<dyn JobQueue>, topic: String, workers: usize, handler: Arc<dyn JobPayloadHandler>) -> Self {
-        WorkerPool { queue, topic, handler, workers }
+    pub fn new(
+        queue: Arc<dyn JobQueue>,
+        topic: String,
+        workers: usize,
+        handler: Arc<dyn JobPayloadHandler>,
+    ) -> Self {
+        WorkerPool {
+            queue,
+            topic,
+            handler,
+            workers,
+        }
     }
 
     pub async fn start(&self, shutdown_rx: tokio::sync::broadcast::Sender<()>) {
@@ -315,7 +354,7 @@ impl WorkerPool {
             let topic = self.topic.clone();
             let handler = self.handler.clone();
             let mut rx = shutdown_rx.subscribe();
-            
+
             tokio::spawn(async move {
                 println!("Worker {} starting", i);
                 loop {
@@ -367,7 +406,7 @@ impl QueueManager {
 
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
-        
+
         sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(job.id)
             .bind(job.organization_id)
@@ -378,7 +417,7 @@ impl QueueManager {
             .bind(job.updated_at)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
@@ -387,11 +426,12 @@ impl QueueManager {
             .bind(worker_id)
             .fetch_optional(&self.pool)
             .await?;
-            
+
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
-            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-            
+            let payload: serde_json::Value =
+                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
                 organization_id: row.get("organization_id"),
@@ -412,7 +452,7 @@ impl QueueManager {
             .bind(job_id)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
@@ -421,17 +461,22 @@ impl QueueManager {
             .bind(job_id)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
-    pub async fn start_polling<F, Fut>(&self, worker_id: &str, interval: Duration, handler: F, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>)
-    where
+    pub async fn start_polling<F, Fut>(
+        &self,
+        worker_id: &str,
+        interval: Duration,
+        handler: F,
+        mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+    ) where
         F: Fn(SubAgentJob) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
     {
         let mut interval = tokio::time::interval(interval);
-        
+
         loop {
             tokio::select! {
                 _ = interval.tick() => {
@@ -495,8 +540,9 @@ impl TaskQueueService {
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
-        let deps_str = serde_json::to_string(&task.dependencies).unwrap_or_else(|_| "[]".to_string());
-        
+        let deps_str =
+            serde_json::to_string(&task.dependencies).unwrap_or_else(|_| "[]".to_string());
+
         sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id, dependencies) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)")
             .bind(task.id)
             .bind(task.parent_id)
@@ -509,7 +555,7 @@ impl TaskQueueService {
             .bind(deps_str)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
@@ -518,13 +564,15 @@ impl TaskQueueService {
             .bind(agent_id)
             .fetch_optional(&self.pool)
             .await?;
-            
+
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
-            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let payload: serde_json::Value =
+                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             let deps_str: String = row.get("dependencies");
-            let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
-            
+            let dependencies: serde_json::Value =
+                serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
+
             Ok(Some(SharedTaskModel {
                 id: row.get("id"),
                 organization_id: row.get("organization_id"),
@@ -548,23 +596,28 @@ impl TaskQueueService {
             .bind(task_id)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
-    pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
+    pub async fn get_completed_tasks(
+        &self,
+        limit: i64,
+    ) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
         let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
-            
+
         let mut tasks = Vec::new();
         for row in rows {
             let payload_str: String = row.get("payload");
-            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let payload: serde_json::Value =
+                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             let deps_str: String = row.get("dependencies");
-            let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
-            
+            let dependencies: serde_json::Value =
+                serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
+
             tasks.push(SharedTaskModel {
                 id: row.get("id"),
                 organization_id: row.get("organization_id"),
@@ -579,7 +632,7 @@ impl TaskQueueService {
                 updated_at: row.get("updated_at"),
             });
         }
-        
+
         Ok(tasks)
     }
 }
@@ -605,15 +658,15 @@ mod tests {
         let queue = Arc::new(InMemJobQueue::new());
         let handler = Arc::new(MockHandler);
         let pool = WorkerPool::new(queue.clone(), "test_topic".to_string(), 3, handler);
-        
+
         let (tx, _) = tokio::sync::broadcast::channel(1);
         pool.start(tx.clone()).await;
-        
+
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();
-        
+
         tokio::time::sleep(Duration::from_millis(500)).await;
-        
+
         let _ = tx.send(());
     }
 
@@ -623,7 +676,18 @@ mod tests {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        sqlx::query("SET app.current_tenant = 'system';")
+                            .execute(conn)
+                            .await?;
+                        Ok(true)
+                    })
+                })
+                .connect(&db_url)
+                .await
+                .unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             // Initialize schema for test
@@ -668,7 +732,18 @@ mod tests {
     #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        sqlx::query("SET app.current_tenant = 'system';")
+                            .execute(conn)
+                            .await?;
+                        Ok(true)
+                    })
+                })
+                .connect(&db_url)
+                .await
+                .unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();

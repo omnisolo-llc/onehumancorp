@@ -53,7 +53,16 @@ mod tests {
     #[ignore]
     async fn test_buffer_metric_persistence() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = sqlx::PgPool::connect(&db_url).await.unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect(&db_url).await.unwrap();
 
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;

@@ -85,7 +85,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_escalator() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/mydb")
+            .unwrap();
         let escalator = Arc::new(SyncEscalator::new(pool));
         
         let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);

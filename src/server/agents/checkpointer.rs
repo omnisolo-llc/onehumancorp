@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
 use sqlx::Row;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Checkpoint {
@@ -15,7 +15,11 @@ pub struct Checkpoint {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
+    async fn get_checkpoint(
+        &self,
+        thread_id: &str,
+        checkpoint_id: &str,
+    ) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
 }
@@ -32,7 +36,11 @@ impl PgCheckpointer {
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+    async fn get_checkpoint(
+        &self,
+        thread_id: &str,
+        checkpoint_id: &str,
+    ) -> Result<Option<Checkpoint>, String> {
         let row = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
         )
@@ -51,8 +59,10 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value =
+                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value =
+                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             Ok(Some(Checkpoint {
                 thread_id,
@@ -107,8 +117,10 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value =
+                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value =
+                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             checkpoints.push(Checkpoint {
                 thread_id,
@@ -132,16 +144,16 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
-    
+
     use base64::engine::general_purpose::STANDARD;
     use base64::Engine;
-    
+
     let b64 = STANDARD.encode(&compressed);
     let mut result = Vec::new();
     result.push(b'"');
     result.extend_from_slice(b64.as_bytes());
     result.push(b'"');
-    
+
     Ok(result)
 }
 
@@ -159,11 +171,13 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     };
 
     let decoded = STANDARD.decode(decode_input).map_err(|e| e.to_string())?;
-    
+
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
+    decoder
+        .read_to_end(&mut decompressed)
+        .map_err(|e| e.to_string())?;
+
     Ok(decompressed)
 }
 
@@ -178,7 +192,7 @@ mod tests {
         let decompressed = decompress_data(&compressed).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
-    
+
     #[test]
     fn test_decompress_unquoted() {
         let data = b"Hello, world!";
@@ -189,21 +203,31 @@ mod tests {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(data).unwrap();
         let compressed = encoder.finish().unwrap();
-        
+
         use base64::engine::general_purpose::STANDARD;
         use base64::Engine;
-        
+
         let b64 = STANDARD.encode(&compressed);
-        
+
         let decompressed = decompress_data(b64.as_bytes()).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
     #[tokio::test]
     #[ignore]
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let saver = PgCheckpointer::new(pool);
-        
+
         let cp = Checkpoint {
             thread_id: "thread-1".to_string(),
             checkpoint_id: "cp-1".to_string(),
@@ -220,9 +244,19 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let saver = PgCheckpointer::new(pool);
-        
+
         let res = saver.list_checkpoints("thread-list").await;
         assert!(res.is_err());
     }

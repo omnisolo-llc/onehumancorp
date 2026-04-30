@@ -942,7 +942,16 @@ mod tests {
     // Note: These tests are ignored by default because they require a running Postgres database.
     async fn setup_test_service() -> Option<MyHubService> {
         let db_url = std::env::var("DATABASE_URL").ok()?;
-        let pool = sqlx::PgPool::connect(&db_url).await.ok()?;
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET app.current_tenant = 'system';")
+                        .execute(conn)
+                        .await?;
+                    Ok(true)
+                })
+            })
+            .connect(&db_url).await.ok()?;
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, pool.clone()));
