@@ -45,19 +45,31 @@ impl OnboardingAgent {
             ],
         };
 
+        let mut futures = vec![];
         for (name, desc, price, strategy) in products {
             let id = format!("prod-{}", uuid::Uuid::new_v4());
-            sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                .bind(id)
-                .bind(org_id)
-                .bind(name)
-                .bind(desc)
-                .bind(price)
-                .bind(strategy)
-                .bind(json!({}))
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
+            let org_id = org_id.to_string();
+            let name = name.to_string();
+            let desc = desc.to_string();
+            let strategy = strategy.to_string();
+            let pool = self.db.pool.clone();
+
+            futures.push(tokio::spawn(async move {
+                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(name)
+                    .bind(desc)
+                    .bind(price)
+                    .bind(strategy)
+                    .bind(json!({}))
+                    .execute(&pool)
+                    .await
+            }));
+        }
+
+        for f in futures {
+            f.await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
         }
 
         Ok(())
