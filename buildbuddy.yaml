@@ -37,8 +37,8 @@ actions:
           - "*"
     steps:
       - run: |
-          npm install
+          /usr/bin/npm install --frozen-lockfile
       - run: |
-          npx playwright install --with-deps chromium
+          /usr/bin/npx playwright install --with-deps chromium
       - run: |
-          node scripts/run-playwright.mjs
+          /usr/bin/node scripts/run-playwright.mjs
