@@ -1,3 +1,4 @@
+pub mod models;
 use sqlx::PgPool;
 use std::env;
 use sqlx::Row;

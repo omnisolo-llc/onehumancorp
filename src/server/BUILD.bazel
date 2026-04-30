@@ -14,6 +14,7 @@ cargo_build_script(
     edition = "2024",
     deps = [
         "@crates//:tonic-build",
+        "@crates//:rust_decimal",
     ],
 )
 
