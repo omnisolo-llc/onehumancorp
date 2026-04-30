@@ -37,7 +37,7 @@ actions:
           - "*"
     steps:
       - run: |
-          curl -fsSL https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.gz | sudo tar -xzf - -C /usr/local --strip-components=1
+          curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0-linux-x64.tar.gz | sudo tar -xzf - -C /usr/local --strip-components=1
       - run: |
           npm install --frozen-lockfile
       - run: |
