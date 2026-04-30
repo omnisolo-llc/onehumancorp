@@ -102,8 +102,8 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
     if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
         if let Ok(spiffe_id_str) = spiffe_id.to_str() {
              match crate::auth::parse_spiffe_id(spiffe_id_str) {
-                 Ok((org_id, agent_id)) => {
-                     println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
+                 Ok((_org_id, _agent_id)) => {
+                     println!("Authenticated SPIFFE ID successfully.");
                  }
                  Err(e) => return Err(tonic::Status::permission_denied(e)),
              }
