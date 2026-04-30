@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
@@ -13,6 +13,7 @@ export component AgentConfig inherits Window {
     in-out property <bool> can_reply: false;
     in-out property <bool> can_social: false;
     in-out property <string> frequency: "Daily";
+    in-out property <bool> is_advanced: false;
 
     background: #f8fafc;
 
@@ -20,10 +21,23 @@ export component AgentConfig inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            CheckBox {
+                text: "Expert Mode";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
+            }
+        }
 
         // Step 0: Choose Agent
         if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: API Key Overrides"; font-family: "Inter"; font-size: 14px; color: #1e293b; }
+                LineEdit { placeholder-text: "sk-proj-..."; }
+            }
             spacing: 10px;
             Text { text: "Choose an agent to add to your team"; color: #1e293b; }
             
