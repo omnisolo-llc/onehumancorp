@@ -71,4 +71,63 @@ mod tests {
         assert_eq!(redacted["user_id"], "123");
         assert_eq!(redacted["secret"], "[REDACTED]");
     }
+
+    #[test]
+    fn test_no_pii_logging_statements() {
+        use walkdir::WalkDir;
+        use std::fs;
+
+        let mut violations = Vec::new();
+        let search_dirs = vec!["src/server", "."];
+
+        let mut found_dir = false;
+        for dir in search_dirs {
+            if std::path::Path::new(dir).exists() {
+                // To ensure we don't just find an empty dir, check if there are .rs files
+                let count = WalkDir::new(dir)
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+                    .count();
+
+                if count > 0 {
+                    found_dir = true;
+                    for entry in WalkDir::new(dir)
+                        .into_iter()
+                        .filter_map(Result::ok)
+                        .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+                    {
+                        let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                        for (i, line) in content.lines().enumerate() {
+                            let lower_line = line.to_lowercase();
+                            if lower_line.contains("println!") ||
+                               lower_line.contains("eprintln!") ||
+                               lower_line.contains("info!") ||
+                               lower_line.contains("error!") ||
+                               lower_line.contains("warn!") ||
+                               lower_line.contains("debug!") ||
+                               lower_line.contains("tracing::")
+                            {
+                                if lower_line.contains("tenant_id") ||
+                                   lower_line.contains("org_id") ||
+                                   lower_line.contains("session_data") ||
+                                   lower_line.contains("session_id") ||
+                                   lower_line.contains("payload") {
+                                    violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        assert!(found_dir, "Could not find src/server or current directory with .rs files to run PII leakage test.");
+        assert!(
+            violations.is_empty(),
+            "Found PII logging violations in the following lines:\n{:#?}",
+            violations
+        );
+    }
 }
