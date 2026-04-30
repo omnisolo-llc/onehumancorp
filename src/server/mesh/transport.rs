@@ -13,16 +13,26 @@ pub struct Message {
 pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
 pub struct MemoryTransport {
     subs: Mutex<HashMap<String, broadcast::Sender<Message>>>,
+    presence: Mutex<HashMap<String, (String, std::time::Instant)>>, // agent_id -> (status, expires_at)
+    locks: Mutex<HashMap<String, (String, std::time::Instant)>>, // resource -> (owner, expires_at)
 }
 
 impl MemoryTransport {
     pub fn new() -> Self {
         MemoryTransport {
             subs: Mutex::new(HashMap::new()),
+            presence: Mutex::new(HashMap::new()),
+            locks: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -57,6 +67,53 @@ impl MeshTransport for MemoryTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let mut locks = self.locks.lock().await;
+        let now = std::time::Instant::now();
+
+        // Remove expired locks
+        locks.retain(|_, (_, expires_at)| *expires_at > now);
+
+        if locks.contains_key(resource) {
+            Ok(false)
+        } else {
+            let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
+            locks.insert(resource.to_string(), (owner.to_string(), expires_at));
+            Ok(true)
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        let mut locks = self.locks.lock().await;
+        if let Some((lock_owner, _)) = locks.get(resource) {
+            if lock_owner == owner {
+                locks.remove(resource);
+            }
+        }
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let mut presence = self.presence.lock().await;
+        let expires_at = std::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
+        presence.insert(agent_id.to_string(), (status.to_string(), expires_at));
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let mut presence = self.presence.lock().await;
+        let now = std::time::Instant::now();
+
+        // Remove expired
+        presence.retain(|_, (_, expires_at)| *expires_at > now);
+
+        let agents = presence.iter()
+            .map(|(id, (status, _))| (id.clone(), status.clone()))
+            .collect();
+
+        Ok(agents)
     }
 }
 
@@ -112,23 +169,101 @@ impl MeshTransport for RedisTransport {
 
         Ok(cancel)
     }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+
+        let key = format!("lock:{}", resource);
+        let result: bool = redis::cmd("SET")
+            .arg(&key)
+            .arg(owner)
+            .arg("NX")
+            .arg("EX")
+            .arg(ttl_seconds)
+            .query_async(&mut *conn)
+            .await
+            .unwrap_or(false);
+
+        Ok(result)
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+
+        let key = format!("lock:{}", resource);
+
+        // Use a Lua script to ensure we only delete the lock if we own it
+        let script = redis::Script::new(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
+        );
+
+        let _: () = script
+            .key(&key)
+            .arg(owner)
+            .invoke_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let key = format!("presence:{}", agent_id);
+
+        redis::cmd("SET")
+            .arg(&key)
+            .arg(status)
+            .arg("EX")
+            .arg(ttl_seconds)
+            .query_async::<()>(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+
+        let mut keys: Vec<String> = Vec::new();
+        {
+            let mut iter: redis::AsyncIter<String> = conn.scan_match("presence:*").await.map_err(|e| e.to_string())?;
+            use tokio_stream::StreamExt;
+            while let Some(key) = iter.next_item().await {
+                keys.push(key);
+            }
+        }
+
+        let mut result = Vec::new();
+        for key in keys {
+            let agent_id = key.trim_start_matches("presence:").to_string();
+            if let Ok(status) = conn.get::<_, String>(&key).await {
+                result.push((agent_id, status));
+            }
+        }
+
+        Ok(result)
+    }
 }
 
-pub async fn create_transport(redis_url: Option<&str>, standalone: bool) -> Arc<dyn MeshTransport> {
+pub async fn create_transport(redis_url: Option<&str>, standalone: bool) -> Result<Arc<dyn MeshTransport>, String> {
     if standalone {
-        return Arc::new(MemoryTransport::new());
+        return Ok(Arc::new(MemoryTransport::new()));
     }
 
     if let Some(url) = redis_url {
         match RedisTransport::new(url).await {
-            Ok(transport) => Arc::new(transport),
+            Ok(transport) => Ok(Arc::new(transport)),
             Err(e) => {
-                eprintln!("Failed to connect to Redis for MeshTransport: {}. Falling back to MemoryTransport.", e);
-                Arc::new(MemoryTransport::new())
+                Err(format!("Failed to connect to Redis for MeshTransport: {}", e))
             }
         }
     } else {
-        Arc::new(MemoryTransport::new())
+        Err("Redis URL is required for Cloud mode.".to_string())
     }
 }
 
@@ -166,7 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_transport_standalone() {
-        let transport = create_transport(None, true).await;
+        let transport = create_transport(None, true).await.unwrap();
         let msg = Message {
             topic: "test_factory".to_string(),
             payload: b"test".to_vec(),
@@ -175,13 +310,70 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_create_transport_redis_fallback() {
+    async fn test_create_transport_redis_fails() {
         let transport = create_transport(Some("redis://localhost:9999"), false).await;
-        let msg = Message {
-            topic: "test_fallback".to_string(),
-            payload: b"test".to_vec(),
-        };
-        assert!(transport.publish("test_fallback", msg).await.is_ok());
+        assert!(transport.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_memory_transport_locking() {
+        let transport = MemoryTransport::new();
+
+        // Test lock acquisition
+        let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
+        assert!(acquired);
+
+        // Test mutual exclusion
+        let acquired_again = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
+        assert!(!acquired_again);
+
+        // Test lock release
+        transport.release_lock("my_resource", "agent_1").await.unwrap();
+
+        // Test lock acquisition after release
+        let acquired_after_release = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
+        assert!(acquired_after_release);
+    }
+
+    #[tokio::test]
+    async fn test_memory_transport_lock_expiration() {
+        let transport = MemoryTransport::new();
+
+        // Acquire lock with short TTL (1 second)
+        let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
+        assert!(acquired);
+
+        // Sleep for 2 seconds to let lock expire
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        // Second agent should be able to acquire lock now
+        let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
+        assert!(acquired_after_expiration);
+    }
+
+    #[tokio::test]
+    async fn test_memory_transport_presence() {
+        let transport = MemoryTransport::new();
+
+        // Register presence
+        transport.register_presence("agent_1", "online", 10).await.unwrap();
+        transport.register_presence("agent_2", "busy", 1).await.unwrap();
+
+        // Get active agents
+        let mut active_agents = transport.get_active_agents().await.unwrap();
+        active_agents.sort();
+
+        assert_eq!(active_agents.len(), 2);
+        assert_eq!(active_agents[0], ("agent_1".to_string(), "online".to_string()));
+        assert_eq!(active_agents[1], ("agent_2".to_string(), "busy".to_string()));
+
+        // Wait for agent_2 presence to expire
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        // Get active agents again
+        let active_agents_after_expiration = transport.get_active_agents().await.unwrap();
+        assert_eq!(active_agents_after_expiration.len(), 1);
+        assert_eq!(active_agents_after_expiration[0], ("agent_1".to_string(), "online".to_string()));
     }
 }
 

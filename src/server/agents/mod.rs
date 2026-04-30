@@ -10,4 +10,3 @@ pub mod memory;
 pub mod mcp;
 pub mod legacy_mesh;
 pub mod sandbox;
-pub mod presence;
