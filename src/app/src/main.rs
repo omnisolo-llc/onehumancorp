@@ -751,6 +751,34 @@ mod docs_tests {
 
         // Step 8: Domain -> Step 9
         ui.invoke_select_domain("subdomain".into());
+        assert_eq!(ui.get_step(), 9);
+
+        // Step 9: Launch -> Step 10
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+        assert_eq!(ui.get_launching(), true);
+
+        // Simulate background launch completing
+        ui.set_launching(false);
+        ui.set_step(10);
+
+        // Step 10: Go to Dashboard
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
