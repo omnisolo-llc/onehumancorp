@@ -13,7 +13,17 @@ impl DB {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
-        let pool = PgPool::connect(&database_url).await?;
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url)
+            .await?;
 
         Ok(DB { pool })
     }
