@@ -100,7 +100,16 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         }
     }
 
-    cfg.database_url = Some("sqlite://ohc-standalone.db".to_string());
+    let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+        if !key.is_empty() {
+            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+        } else {
+            "sqlite://ohc-standalone.db".to_string()
+        }
+    } else {
+        "sqlite://ohc-standalone.db".to_string()
+    };
+    cfg.database_url = Some(sqlite_url);
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
