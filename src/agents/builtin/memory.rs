@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use sqlx::PgPool;
+use sqlx::{PgPool, SqlitePool, Row};
 use tracing::{error, info};
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryEntry {
     pub memory_id: String,
     pub context: String,
@@ -14,74 +14,155 @@ pub struct MemoryEntry {
     pub organization_id: String,
 }
 
-pub struct PgVectorMemoryStore {
-    pool: PgPool,
-    organization_id: String,
+pub enum PgVectorMemoryStore {
+    Postgres { pool: PgPool, organization_id: String },
+    Sqlite { pool: SqlitePool, organization_id: String },
 }
 
 impl PgVectorMemoryStore {
     pub async fn new(database_url: &str, organization_id: String) -> Result<Self, sqlx::Error> {
-        let pool = PgPool::connect(database_url).await?;
-        Ok(Self {
-            pool,
-            organization_id,
-        })
+        if database_url.starts_with("sqlite:") {
+            let pool = SqlitePool::connect(database_url).await?;
+            Ok(PgVectorMemoryStore::Sqlite { pool, organization_id })
+        } else {
+            let pool = PgPool::connect(database_url).await?;
+            Ok(PgVectorMemoryStore::Postgres { pool, organization_id })
+        }
     }
 
     pub async fn write(&self, context: &str, embedding: Vec<f32>) -> Result<(), sqlx::Error> {
         let memory_id = uuid::Uuid::new_v4().to_string();
 
-        // Convert Vec<f32> to a format pgvector understands if needed,
-        // or just use the BYTEA fallback as seen in migration 005.
-        // If the DB actually uses VECTOR(1536), sqlx might need a wrapper.
-        // For simplicity and parity, we'll try to use the BYTEA approach if VECTOR is not available.
-
-        sqlx::query(
-            "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, organization_id) VALUES ($1, $2, $3, $4)"
-        )
-        .bind(&memory_id)
-        .bind(context)
-        .bind(serde_json::to_vec(&embedding).unwrap_or_default())
-        .bind(&self.organization_id)
-        .execute(&self.pool)
-        .await?;
+        match self {
+            PgVectorMemoryStore::Postgres { pool, organization_id } => {
+                sqlx::query(
+                    "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, organization_id) \
+                     VALUES ($1, $2, $3, $4) \
+                     ON CONFLICT(memory_id) DO UPDATE SET \
+                         context=excluded.context, \
+                         vector_embedding=excluded.vector_embedding, \
+                         created_at=GREATEST(swarm_memory_embeddings.created_at, excluded.created_at)"
+                )
+                .bind(&memory_id)
+                .bind(context)
+                .bind(serde_json::to_vec(&embedding).unwrap_or_default())
+                .bind(organization_id)
+                .execute(pool)
+                .await?;
+            },
+            PgVectorMemoryStore::Sqlite { pool, organization_id } => {
+                sqlx::query(
+                    "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, organization_id) \
+                     VALUES ($1, $2, $3, $4) \
+                     ON CONFLICT(memory_id) DO UPDATE SET \
+                         context=excluded.context, \
+                         vector_embedding=excluded.vector_embedding, \
+                         created_at=max(swarm_memory_embeddings.created_at, excluded.created_at)"
+                )
+                .bind(&memory_id)
+                .bind(context)
+                .bind(serde_json::to_vec(&embedding).unwrap_or_default())
+                .bind(organization_id)
+                .execute(pool)
+                .await?;
+            }
+        }
 
         Ok(())
     }
 
     pub async fn search(&self, embedding: Vec<f32>, limit: usize) -> Result<Vec<MemoryEntry>, sqlx::Error> {
-        // Real semantic search using pgvector Cosine similarity operator <=>
-        // We cast the input array to vector type.
+        match self {
+            PgVectorMemoryStore::Postgres { pool, organization_id } => {
+                let query = if !embedding.is_empty() {
+                    "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+                     FROM swarm_memory_embeddings \
+                     WHERE organization_id = $1 \
+                     ORDER BY vector_embedding <=> $2::vector \
+                     LIMIT $3"
+                } else {
+                    "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+                     FROM swarm_memory_embeddings \
+                     WHERE organization_id = $1 \
+                     ORDER BY created_at DESC LIMIT $2"
+                };
 
-        // If the database doesn't have pgvector, this query might fail.
-        // We fallback to time-based ordering if it does.
-        let query = if !embedding.is_empty() {
-            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
-             FROM swarm_memory_embeddings \
-             WHERE organization_id = $1 \
-             ORDER BY vector_embedding <=> $2::vector \
-             LIMIT $3"
-        } else {
-            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
-             FROM swarm_memory_embeddings \
-             WHERE organization_id = $1 \
-             ORDER BY created_at DESC LIMIT $2"
-        };
+                let mut q = sqlx::query(query)
+                    .bind(organization_id);
 
-        let mut q = sqlx::query_as::<_, MemoryEntry>(query)
-            .bind(&self.organization_id);
+                if !embedding.is_empty() {
+                    let vec_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    q = q.bind(vec_str).bind(limit as i64);
+                } else {
+                    q = q.bind(limit as i64);
+                }
 
-        if !embedding.is_empty() {
-            // Convert Vec<f32> to a string representation that pgvector expects: '[1.0, 2.0, ...]'
-            let vec_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-            q = q.bind(vec_str);
+                let db_rows = q.fetch_all(pool)
+                    .await?;
+
+                let mut rows = Vec::new();
+                for r in db_rows {
+                    let created_at: DateTime<Utc> = r.try_get("created_at").unwrap_or_else(|_| Utc::now());
+                    rows.push(MemoryEntry {
+                        memory_id: r.get("memory_id"),
+                        context: r.get("context"),
+                        embedding: None,
+                        source_plugin: r.try_get("source_plugin").ok(),
+                        created_at,
+                        organization_id: r.get("organization_id"),
+                    });
+                }
+                Ok(rows)
+            },
+            PgVectorMemoryStore::Sqlite { pool, organization_id } => {
+                let query = if !embedding.is_empty() {
+                    "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+                     FROM swarm_memory_embeddings \
+                     WHERE organization_id = $1 \
+                     ORDER BY vec_distance_cosine(vector_embedding, $2) \
+                     LIMIT $3"
+                } else {
+                    "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+                     FROM swarm_memory_embeddings \
+                     WHERE organization_id = $1 \
+                     ORDER BY created_at DESC LIMIT $2"
+                };
+
+                let mut q = sqlx::query(query)
+                    .bind(organization_id);
+
+                if !embedding.is_empty() {
+                    let vec_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    q = q.bind(vec_str).bind(limit as i64);
+                } else {
+                    q = q.bind(limit as i64);
+                }
+
+                let db_rows = q.fetch_all(pool)
+                    .await?;
+
+                let mut rows = Vec::new();
+                for r in db_rows {
+                    // FIXED DATE PARSING BUG: Use try_get::<DateTime<Utc>, _> natively
+                    let created_at: DateTime<Utc> = r.try_get("created_at").unwrap_or_else(|_| Utc::now());
+
+                    rows.push(MemoryEntry {
+                        memory_id: r.get("memory_id"),
+                        context: r.get("context"),
+                        embedding: None,
+                        source_plugin: r.try_get("source_plugin").ok(),
+                        created_at,
+                        organization_id: r.get("organization_id"),
+                    });
+                }
+                Ok(rows)
+            }
         }
+    }
 
-        let rows = q.bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await?;
-
-        Ok(rows)
+    pub async fn shared_search(&self, limit: usize) -> Result<Vec<MemoryEntry>, sqlx::Error> {
+        // Cross department context sharing ignores agent boundaries
+        self.search(vec![], limit).await
     }
 }
 

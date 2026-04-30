@@ -936,7 +936,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    // Start Stale Context Pruning Background Worker
+
+    tokio::spawn(async move {
+        // We run pruning every 24 hours (simulated here with an interval)
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400));
+        loop {
+            interval.tick().await;
+            println!("Running stale context pruning...");
+
+            let database_url = std::env::var("DATABASE_URL")
+                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+
+            if let Ok(vector_repo) = crate::agents::memory::VectorRepository::new(&database_url).await {
+                // Prune records older than 180 days (6 months)
+                let six_months_ago = chrono::Utc::now() - chrono::Duration::days(180);
+                if let Err(e) = vector_repo.prune_stale(six_months_ago).await {
+                    eprintln!("Failed to prune stale memory context: {}", e);
+                } else {
+                    println!("Successfully pruned stale memory context older than {}", six_months_ago);
+                }
+            }
+        }
+    });
+
     println!("Server listening on {}", addr);
+
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))

@@ -171,7 +171,7 @@ impl AgentServiceImpl {
         };
 
         let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
+            store.shared_search(5).await.unwrap_or_default()
         } else {
             vec![]
         };

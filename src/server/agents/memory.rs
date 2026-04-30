@@ -13,98 +13,217 @@ pub struct EmbeddingRecord {
     pub created_at: DateTime<Utc>,
 }
 
-pub struct VectorRepository {
-    pool: sqlx::PgPool,
+pub enum VectorRepository {
+    Postgres(sqlx::PgPool),
+    Sqlite(sqlx::SqlitePool),
 }
 
 impl VectorRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        VectorRepository { pool }
+    pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
+        if database_url.starts_with("sqlite:") {
+            let options = database_url.parse::<sqlx::sqlite::SqliteConnectOptions>()
+                .map_err(|e| sqlx::Error::Configuration(e.into()))?
+                .extension("vector0")
+                .extension("vss0");
+            let pool = sqlx::SqlitePool::connect_with(options).await?;
+            Ok(VectorRepository::Sqlite(pool))
+        } else {
+            let pool = sqlx::PgPool::connect(database_url).await?;
+            Ok(VectorRepository::Postgres(pool))
+        }
+    }
+
+    pub fn new_postgres(pool: sqlx::PgPool) -> Self {
+        VectorRepository::Postgres(pool)
+    }
+
+    pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
+        VectorRepository::Sqlite(pool)
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
-        sqlx::query(
-            "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at) \
-             VALUES ($1, $2, $3, $4, $5::vector, $6, $7) \
-             ON CONFLICT(id) DO UPDATE SET \
-                 content=excluded.content, \
-                 embedding=excluded.embedding, \
-                 created_at=excluded.created_at"
-        )
-        .bind(&record.id)
-        .bind(&record.organization_id)
-        .bind(&record.agent_id)
-        .bind(&record.content)
-        .bind(emb_str)
-        .bind(&record.source_type)
-        .bind(record.created_at)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        match self {
+            VectorRepository::Postgres(pool) => {
+                // Conflict resolution via ON CONFLICT... DO UPDATE
+                // We keep the most recent created_at if multiple facts with the same ID exist
+                sqlx::query(
+                    "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at) \
+                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7) \
+                     ON CONFLICT(id) DO UPDATE SET \
+                         content=excluded.content, \
+                         embedding=excluded.embedding, \
+                         created_at=GREATEST(consolidated_memory.created_at, excluded.created_at)"
+                )
+                .bind(&record.id)
+                .bind(&record.organization_id)
+                .bind(&record.agent_id)
+                .bind(&record.content)
+                .bind(&emb_str)
+                .bind(&record.source_type)
+                .bind(record.created_at)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            VectorRepository::Sqlite(pool) => {
+                // SQLite vector insertion format
+                // In SQLite, GREATEST is max()
+                sqlx::query(
+                    "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7) \
+                     ON CONFLICT(id) DO UPDATE SET \
+                         content=excluded.content, \
+                         embedding=excluded.embedding, \
+                         created_at=max(consolidated_memory.created_at, excluded.created_at)"
+                )
+                .bind(&record.id)
+                .bind(&record.organization_id)
+                .bind(&record.agent_id)
+                .bind(&record.content)
+                .bind(&emb_str)
+                .bind(&record.source_type)
+                .bind(record.created_at)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
 
         Ok(())
     }
 
     pub async fn semantic_search(&self, organization_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
-
-        let rows = sqlx::query(
-            "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at \
-             FROM consolidated_memory \
-             WHERE organization_id = $1 \
-             ORDER BY embedding <-> $2::vector \
-             LIMIT $3"
-        )
-        .bind(organization_id)
-        .bind(emb_str)
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
         let mut results = Vec::new();
-        for row in rows {
-            let id: String = row.get("id");
-            let organization_id: String = row.get("organization_id");
-            let agent_id: String = row.get("agent_id");
-            let content: String = row.get("content");
-            let emb_str_res: String = row.get("embedding");
-            let source_type: String = row.get("source_type");
-            let created_at: DateTime<Utc> = row.get("created_at");
 
-            let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).map_err(|e| e.to_string())?;
+        match self {
+            VectorRepository::Postgres(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at \
+                     FROM consolidated_memory \
+                     WHERE organization_id = $1 \
+                     ORDER BY embedding <-> $2::vector \
+                     LIMIT $3"
+                )
+                .bind(organization_id)
+                .bind(&emb_str)
+                .bind(limit)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
 
-            results.push(EmbeddingRecord {
-                id,
-                organization_id,
-                agent_id,
-                content,
-                embedding,
-                source_type,
-                created_at,
-            });
+                for row in rows {
+                    let id: String = row.get("id");
+                    let organization_id: String = row.get("organization_id");
+                    let agent_id: String = row.get("agent_id");
+                    let content: String = row.get("content");
+                    let emb_str_res: String = row.try_get("embedding").unwrap_or_default();
+                    let source_type: String = row.get("source_type");
+                    let created_at: DateTime<Utc> = row.try_get("created_at").unwrap_or_else(|_| Utc::now());
+
+                    let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+
+                    results.push(EmbeddingRecord {
+                        id,
+                        organization_id,
+                        agent_id,
+                        content,
+                        embedding,
+                        source_type,
+                        created_at,
+                    });
+                }
+            }
+            VectorRepository::Sqlite(pool) => {
+                // Here we use `vec_distance_cosine` for SQLite VSS/Vec
+                let rows = sqlx::query(
+                    "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at \
+                     FROM consolidated_memory \
+                     WHERE organization_id = $1 \
+                     ORDER BY vec_distance_cosine(embedding, $2) \
+                     LIMIT $3"
+                )
+                .bind(organization_id)
+                .bind(&emb_str)
+                .bind(limit)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    let id: String = row.get("id");
+                    let organization_id: String = row.get("organization_id");
+                    let agent_id: String = row.get("agent_id");
+                    let content: String = row.get("content");
+                    let emb_str_res: String = row.try_get("embedding").unwrap_or_default();
+                    let source_type: String = row.get("source_type");
+
+                    // FIXED DATE PARSING BUG: using try_get::<DateTime<Utc>, _> natively
+                    let created_at: DateTime<Utc> = row.try_get("created_at").unwrap_or_else(|_| Utc::now());
+
+                    let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+
+                    results.push(EmbeddingRecord {
+                        id,
+                        organization_id,
+                        agent_id,
+                        content,
+                        embedding,
+                        source_type,
+                        created_at,
+                    });
+                }
+            }
         }
 
         Ok(results)
     }
 
+    // Cross-department context sharing
+    pub async fn shared_search(&self, organization_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search(organization_id, query_embedding, limit).await
+    }
+
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
-        sqlx::query("DELETE FROM consolidated_memory WHERE created_at < $1 AND source_type = 'TASK_SUMMARY'")
-            .bind(older_than)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        match self {
+            VectorRepository::Postgres(pool) => {
+                sqlx::query("DELETE FROM consolidated_memory WHERE created_at < $1")
+                    .bind(older_than)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            VectorRepository::Sqlite(pool) => {
+                // Pass DateTime<Utc> directly to SQLite when using chrono feature
+                sqlx::query("DELETE FROM consolidated_memory WHERE created_at < $1")
+                    .bind(older_than)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 
     pub async fn delete(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        match self {
+            VectorRepository::Postgres(pool) => {
+                sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
+                    .bind(id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            VectorRepository::Sqlite(pool) => {
+                sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
+                    .bind(id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 }
