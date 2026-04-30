@@ -395,8 +395,8 @@ impl Hub {
                     }
                     
                     if hist.len() > 1 {
-                        let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        println!("Telemetry: Token burn rate for {}: {}", org_id, rate);
+                        let _rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
+                        // Removed noisy log for signal hygiene
                     }
                 } else {
                     history.remove(&org_id);
@@ -510,13 +510,15 @@ impl Hub {
         };
 
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
+        let mesh_active = db_ping > 0;
+        let cloud_connected = mode != "standalone";
 
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
             "db_ping_ms": db_ping,
-            "mesh_active": true, 
-            "cloud_connected": true,
+            "mesh_active": mesh_active,
+            "cloud_connected": cloud_connected,
         }))
     }
 }
