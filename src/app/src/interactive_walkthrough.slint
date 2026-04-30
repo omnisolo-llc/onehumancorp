@@ -1,26 +1,25 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component InteractiveWalkthrough inherits Window {
     width: 600px;
     height: 800px;
-    background: transparent;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     always-on-top: true;
 
     in-out property <int> current_step: 0;
 
     Rectangle {
-        background: #000000;
+        background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
         opacity: 0.5;
         width: parent.width;
         height: parent.height;
     }
 
-    Rectangle {
+    GlassCard {
         x: 20px;
         y: 100px;
         width: 335px;
-        background: white;
-        border-radius: 12px;
 
         VerticalBox {
             padding: 20px;
@@ -32,8 +31,9 @@ export component InteractiveWalkthrough inherits Window {
                       current_step == 2 ? "Set up payments" :
                       "You're all set!";
                 font-size: 20px;
+                font-family: "Outfit";
                 font-weight: 700;
-                color: #0f172a;
+                color: white;
             }
 
             Text {
@@ -41,7 +41,8 @@ export component InteractiveWalkthrough inherits Window {
                       current_step == 1 ? "Click here to add photos and prices for what you sell." :
                       current_step == 2 ? "Connect your bank so you can get paid by customers." :
                       "Your store is ready. You can always find more help in the Help Center.";
-                color: #475569;
+                color: #94a3b8;
+                font-family: "Inter";
                 wrap: word-wrap;
             }
 
