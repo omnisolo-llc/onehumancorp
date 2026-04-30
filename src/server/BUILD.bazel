@@ -18,7 +18,7 @@ cargo_build_script(
 )
 
 rust_binary(
-    name = "server-rust",
+    name = "server",
     srcs = glob(["**/*.rs"]),
     data = glob(["migrations/*.sql"]),
     edition = "2024",
@@ -36,6 +36,8 @@ rust_binary(
         "@crates//:config",
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
+        "@crates//:futures",
+        "@crates//:futures-util",
         "@crates//:hex",
         "@crates//:hmac",
         "@crates//:jsonwebtoken",
@@ -83,6 +85,7 @@ rust_test(
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
         "@crates//:futures",
+        "@crates//:futures-util",
         "@crates//:hex",
         "@crates//:hmac",
         "@crates//:jsonwebtoken",

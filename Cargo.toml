@@ -5,7 +5,7 @@ edition = "2024"
 build = "src/server/build.rs"
 
 [[bin]]
-name = "server-rust"
+name = "server"
 path = "src/server/main.rs"
 
 [[bin]]
