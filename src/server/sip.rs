@@ -175,13 +175,13 @@ impl SipDB {
     }
 
     pub async fn complete_mission(&self, mission_id: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
             .bind(&self.org_id)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await?;
             
-        if result.rows_affected() == 0 {
+        if result.is_none() {
             return Err(sqlx::Error::RowNotFound);
         }
         
@@ -503,13 +503,13 @@ impl SipDB {
     }
 
     pub async fn burst_mission(&self, mission_id: &str, remote_endpoint: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
             .bind(&self.org_id)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await?;
             
-        if result.rows_affected() == 0 {
+        if result.is_none() {
             return Err(sqlx::Error::RowNotFound);
         }
         
