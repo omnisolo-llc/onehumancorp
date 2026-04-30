@@ -35,7 +35,10 @@ export component SetupWizard inherits Window {
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
+    in-out property <string> product_sku: "";
+    in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
+    in-out property <string> custom_dns_target: "";
 
     in-out property <bool> launching: false;
     in-out property <string> launch_status: "Your business is setting up…";
@@ -49,6 +52,7 @@ export component SetupWizard inherits Window {
     callback select_template(string);
     callback select_domain(string);
     callback save_state();
+    callback toggle_advanced();
 
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
@@ -56,6 +60,7 @@ export component SetupWizard inherits Window {
     select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
     select_template(t) => { website_template = t; step = step + 1; save_state(); }
     select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
+    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -81,7 +86,7 @@ export component SetupWizard inherits Window {
                 TouchArea {
                     width: 20px;
                     height: 20px;
-                    clicked => { is_advanced = !is_advanced; }
+                    clicked => { toggle_advanced(); }
                     Rectangle {
                         width: 100%;
                         height: 100%;
@@ -333,6 +338,14 @@ export component SetupWizard inherits Window {
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
 
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
+                    Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
+                }
+
                 GlassCard {
                     height: 100px;
                     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -348,6 +361,12 @@ export component SetupWizard inherits Window {
                 spacing: 16px;
                 Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
+                }
 
                 GlassCard {
                     height: 80px;
@@ -384,6 +403,7 @@ export component SetupWizard inherits Window {
                         Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        if (is_advanced) : Text { text: "K8s Tenant: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
                     }
                 }
 
