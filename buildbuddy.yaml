@@ -37,7 +37,12 @@ actions:
           - "*"
     steps:
       - run: |
-          curl -fsSL https://get.docker.com | sudo sh
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL "https://download.docker.com/linux/ubuntu/gpg" -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" | sudo tee /etc/apt/sources.list.d/docker.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
       - run: |
           sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/workspace -w /workspace \
             mcr.microsoft.com/playwright:v1.58.0 \
