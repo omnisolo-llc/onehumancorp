@@ -232,6 +232,11 @@ message StartOnboardingRequest {
   repeated string selling_categories = 4;
   string payment_pref = 5;
   string admin_email = 6;
+  string website_template = 7;
+  string first_product_name = 8;
+  string first_product_price = 9;
+  string domain_choice = 10;
+  string first_product_description = 11;
 }
 
 message StartOnboardingResponse {

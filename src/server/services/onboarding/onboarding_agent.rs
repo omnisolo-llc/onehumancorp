@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use serde_json::json;
+use uuid::Uuid;
 use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
 pub struct OnboardingAgent {
@@ -17,6 +18,11 @@ impl OnboardingAgent {
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
+        if !req.first_product_name.is_empty() {
+            let price_cents = self.parse_price_to_cents(&req.first_product_price);
+            self.add_product(&org_id, &req.first_product_name, &req.first_product_description, price_cents).await?;
+        }
+
         self.generate_initial_products(&org_id, &business_type).await?;
 
         Ok(StartOnboardingResponse {
@@ -24,6 +30,39 @@ impl OnboardingAgent {
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
             organization_id: org_id,
         })
+    }
+
+    async fn add_product(&self, org_id: &str, name: &str, description: &str, price_cents: i32) -> Result<(), String> {
+        let id = format!("prod-{}", uuid::Uuid::new_v4());
+        let desc = if description.is_empty() { "Your first product" } else { description };
+        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(id)
+            .bind(org_id)
+            .bind(name)
+            .bind(desc)
+            .bind(price_cents)
+            .bind("physical")
+            .bind(json!({}))
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    fn parse_price_to_cents(&self, price_str: &str) -> i32 {
+        if price_str.is_empty() {
+            return 0;
+        }
+
+        // Remove currency symbols and whitespace
+        let cleaned = price_str.chars().filter(|c| c.is_digit(10) || *c == '.').collect::<String>();
+
+        if let Ok(price_float) = cleaned.parse::<f64>() {
+            return (price_float * 100.0).round() as i32;
+        }
+
+        // Fallback: try direct integer parse if float parse failed (e.g. "2500" vs "25.00")
+        cleaned.parse::<i32>().unwrap_or(0)
     }
 
     async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
@@ -105,6 +144,10 @@ mod tests {
             selling_categories: vec![],
             payment_pref: "online".to_string(),
             admin_email: "admin@test.com".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "First Cake".to_string(),
+            first_product_price: "2500".to_string(),
+            domain_choice: "subdomain".to_string(),
         };
 
         let res = agent.start_onboarding(req).await;
