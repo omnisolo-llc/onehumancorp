@@ -15,98 +15,17 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DashboardSnapshot {
-    organization: Organization,
-    meetings: Vec<serde_json::Value>,
-    costs: CostSummary,
-    storage: Option<StorageSummary>,
-    agents: Vec<AgentModel>,
-    statuses: Vec<StatusBucket>,
-    updated_at: String,
-    hybrid_health: Option<HybridHealth>,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Organization {
-    id: String,
-    name: String,
-    domain: String,
-    tier: String,
-    members: Vec<OrganizationMember>,
-    role_profiles: Vec<RoleProfile>,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RoleProfile {
-    role: String,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct OrganizationMember {
-    id: String,
-    name: String,
-    role: String,
-    manager_id: Option<String>,
-    is_human: bool,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CostSummary {
-    total_cost_usd: f64,
-    total_tokens: i32,
-    total_actions: i32,
-    agents: Vec<AgentCost>,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AgentCost {
-    agent_id: String,
-    cost_usd: f64,
-    token_used: i32,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct StorageSummary {
-    used_bytes: i64,
-    limit_bytes: i64,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AgentModel {
-    id: String,
-    name: String,
-    role: String,
-    organization_id: String,
-    status: String,
-    provider_type: String,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct StatusBucket {
-    status: String,
-    count: i32,
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct HybridHealth {
-    mode: String,
-    status: String,
-    mesh_active: bool,
-    cloud_connected: bool,
-    sync_backlog: i32,
-    stuck_missions: i32,
-}
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -171,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
                             println!("Wizard state saved to backend.");
                             slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle_clone.upgrade() {
+                                if let Some(_ui) = handle_clone.upgrade() {
                                     // Done launching!
                                 }
                             }).unwrap();
