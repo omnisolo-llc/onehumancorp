@@ -62,39 +62,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move || {
+        move |business_type, company_name, company_description, payment_pref, admin_email| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("business_type".to_string(), business_type.to_string()),
+                ("company_name".to_string(), company_name.to_string()),
+                ("company_description".to_string(), company_description.to_string()),
                 ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
                 ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("admin_email".to_string(), admin_email.to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
 
+            let req_business_type = business_type.to_string();
+            let req_company_name = company_name.to_string();
+            let req_company_description = company_description.to_string();
+            let req_payment_pref = payment_pref.to_string();
+            let req_admin_email = admin_email.to_string();
+
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
                     Ok(mut client) => {
+                        let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
+                            business_type: req_business_type,
+                            company_name: req_company_name,
+                            company_description: req_company_description,
+                            payment_pref: req_payment_pref,
+                            admin_email: req_admin_email,
+                            selling_categories: vec![], // Populated in full implementation
+                        });
+
+                        match client.start_onboarding(onboarding_request).await {
+                            Ok(resp) => {
+                                let r = resp.into_inner();
+                                let msg = r.message.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_status("Onboarding Complete!".into());
+                                        ui.set_launch_details(msg.into());
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => {
+                                let err_msg = e.to_string();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_status("Onboarding Failed".into());
+                                        ui.set_launch_details(err_msg.into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
                             state,
                         });
                         if let Err(e) = client.save_wizard_state(request).await {
                             println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
                         }
                     }
                     Err(e) => {
