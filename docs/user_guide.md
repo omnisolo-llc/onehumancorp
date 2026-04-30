@@ -1,61 +1,34 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# User Guide: OHC Flutter App
+# User Guide: OHC Slint App
 
 ## 1. Overview
 
-This guide covers the Bazel-native Flutter app workflow in `src/app`.
-The app's screenshots are generated from the Bazel-built Flutter web bundle by
-running Playwright with platform-specific viewport and device profiles.
+This guide covers the Bazel-native Slint app workflow in `src/app`.
+The app provides a unified, mobile-first onboarding experience for small business owners.
 
-## 2. Regenerate Screenshots
+## 2. Onboarding Flow
 
-Run either of the following from the repository root:
+The OHC Slint app features a comprehensive 11-step onboarding wizard:
+1.  **Welcome**: Introduction to OneHumanCorp.
+2.  **Business Type**: Selection of business category (Online Store, Service, etc.).
+3.  **Name & Description**: Naming the business and AI-assisted description.
+4.  **Sell Categories**: Multi-select for what the business sells (Physical, Digital, Services, etc.).
+5.  **Payments**: Choice of payment collection (Online, In-person, Both).
+6.  **Admin Account**: Creating the administrator account.
+7.  **Template Selection**: Choosing a website design theme (Modern, Classic, Bold).
+8.  **Product Add**: Adding the first product or service with price and photo.
+9.  **Domain Choice**: Choosing between a free OHC subdomain or a custom domain.
+10. **Review & Launch**: Summary of setup and triggering the AI deployment.
+11. **Checklist**: Post-launch checklist for the business owner.
+
+## 3. Running Tests
+
+Run the following from the repository root:
 
 ```bash
-bazelisk run //src/app:capture_screenshots
+bazelisk test //src/app:app_test
 ```
-
-Or use the VS Code task `App: Capture Flutter screenshots`.
-
-Generated images are written to:
-
-- `docs/business/public/assets/screenshots/app/landing-page/`
-
-## 3. Screenshot Gallery
-
-### Web
-
-![OHC Flutter app on web](./business/public/assets/screenshots/app/landing-page/web.png)
-![OHC Flutter app login on web](./business/public/assets/screenshots/app/login/web.png)
-
-### macOS
-
-![OHC Flutter app with macOS profile](./business/public/assets/screenshots/app/landing-page/macos.png)
-![OHC Flutter app login with macOS profile](./business/public/assets/screenshots/app/login/macos.png)
-
-### Windows
-
-![OHC Flutter app with Windows profile](./business/public/assets/screenshots/app/landing-page/windows.png)
-![OHC Flutter app login with Windows profile](./business/public/assets/screenshots/app/login/windows.png)
-
-### Android
-
-![OHC Flutter app with Android profile](./business/public/assets/screenshots/app/landing-page/android.png)
-![OHC Flutter app login with Android profile](./business/public/assets/screenshots/app/login/android.png)
-
-### iOS
-
-![OHC Flutter app with iOS profile](./business/public/assets/screenshots/app/landing-page/ios.png)
-![OHC Flutter app login with iOS profile](./business/public/assets/screenshots/app/login/ios.png)
-
-### Linux
-
-![OHC Flutter app with Linux profile](./business/public/assets/screenshots/app/landing-page/linux.png)
-![OHC Flutter app login with Linux profile](./business/public/assets/screenshots/app/login/linux.png)
-
-</div>
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
 ## 4. Documentation
 
@@ -65,5 +38,5 @@ Please refer to the detailed architecture documents in the `docs/` folder:
 </div>
 
 <div markdown="1" style="font-family: Outfit, Inter, sans-serif; padding: 20px; font-size: 12px; color: #888;">
-Last synced: 2026-04-18 01:47:55
+Last synced: 2026-04-30 17:55:00
 </div>
