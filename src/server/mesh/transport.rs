@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Message {
@@ -13,16 +14,24 @@ pub struct Message {
 pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn acquire_lock(&self, key: &str, token: &str, ttl: Duration) -> Result<bool, String>;
+    async fn release_lock(&self, key: &str, token: &str) -> Result<(), String>;
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
 pub struct MemoryTransport {
     subs: Mutex<HashMap<String, broadcast::Sender<Message>>>,
+    locks: Mutex<HashMap<String, (String, std::time::Instant)>>,
+    presence: Mutex<HashMap<String, (String, std::time::Instant)>>,
 }
 
 impl MemoryTransport {
     pub fn new() -> Self {
         MemoryTransport {
             subs: Mutex::new(HashMap::new()),
+            locks: Mutex::new(HashMap::new()),
+            presence: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -57,6 +66,47 @@ impl MeshTransport for MemoryTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, key: &str, token: &str, ttl: Duration) -> Result<bool, String> {
+        let mut locks = self.locks.lock().await;
+        let now = std::time::Instant::now();
+
+        if let Some((_, expiry)) = locks.get(key) {
+            if *expiry > now {
+                return Ok(false);
+            }
+        }
+
+        locks.insert(key.to_string(), (token.to_string(), now + ttl));
+        Ok(true)
+    }
+
+    async fn release_lock(&self, key: &str, token: &str) -> Result<(), String> {
+        let mut locks = self.locks.lock().await;
+        if let Some((existing_token, _)) = locks.get(key) {
+            if existing_token == token {
+                locks.remove(key);
+            }
+        }
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let mut presence = self.presence.lock().await;
+        let expiry = std::time::Instant::now() + Duration::from_secs(ttl_seconds);
+        presence.insert(agent_id.to_string(), (status.to_string(), expiry));
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let mut presence = self.presence.lock().await;
+        let now = std::time::Instant::now();
+        presence.retain(|_, (_, expiry)| *expiry > now);
+
+        Ok(presence.iter().map(|(id, (status, _))| {
+            (id.clone(), status.clone())
+        }).collect())
     }
 }
 
@@ -111,6 +161,57 @@ impl MeshTransport for RedisTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, key: &str, token: &str, ttl: Duration) -> Result<bool, String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+        let res: Option<String> = redis::cmd("SET")
+            .arg(format!("lock:{}", key))
+            .arg(token)
+            .arg("NX")
+            .arg("PX")
+            .arg(ttl.as_millis() as u64)
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(res.is_some())
+    }
+
+    async fn release_lock(&self, key: &str, token: &str) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let script = redis::Script::new(r#"
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            else
+                return 0
+            end
+        "#);
+        let _: i32 = script.key(format!("lock:{}", key)).arg(token).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+        let key = format!("presence:{}", agent_id);
+        let _: () = conn.set_ex(key, status, ttl_seconds).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        use redis::AsyncCommands;
+        let mut conn = self.publish_conn.lock().await;
+        let keys: Vec<String> = conn.keys("presence:*").await.map_err(|e| e.to_string())?;
+
+        let mut result = Vec::new();
+        for key in keys {
+            let agent_id = key.trim_start_matches("presence:").to_string();
+            if let Ok(status) = conn.get::<_, String>(&key).await {
+                result.push((agent_id, status));
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -182,6 +283,34 @@ mod tests {
             payload: b"test".to_vec(),
         };
         assert!(transport.publish("test_fallback", msg).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_memory_transport_lock() {
+        let transport = MemoryTransport::new();
+
+        let acquired1 = transport.acquire_lock("my_lock", "token1", Duration::from_secs(1)).await.unwrap();
+        assert!(acquired1);
+
+        let acquired2 = transport.acquire_lock("my_lock", "token2", Duration::from_secs(1)).await.unwrap();
+        assert!(!acquired2);
+
+        transport.release_lock("my_lock", "token1").await.unwrap();
+
+        let acquired3 = transport.acquire_lock("my_lock", "token3", Duration::from_secs(1)).await.unwrap();
+        assert!(acquired3);
+    }
+
+    #[tokio::test]
+    async fn test_memory_transport_presence() {
+        let transport = MemoryTransport::new();
+
+        transport.register_presence("agent1", "IDLE", 2).await.unwrap();
+
+        let active = transport.get_active_agents().await.unwrap();
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].0, "agent1");
+        assert_eq!(active[0].1, "IDLE");
     }
 }
 

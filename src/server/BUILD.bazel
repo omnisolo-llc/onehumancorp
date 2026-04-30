@@ -28,6 +28,8 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":build_script",
+        "@crates//:futures",
+        "@crates//:futures-util",
         "@crates//:aes-gcm",
         "@crates//:axum",
         "@crates//:base64",

@@ -204,50 +204,6 @@ pub trait CapabilityStore: Send + Sync {
     async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String>;
 }
 
-pub struct DBCapabilityStore {
-    pub pool: sqlx::PgPool,
-}
-
-#[async_trait]
-impl CapabilityStore for DBCapabilityStore {
-    async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String> {
-        let row = sqlx::query("SELECT capabilities FROM agent_session_data WHERE session_id = $1")
-            .bind(session_id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| format!("failed to fetch session capabilities: {}", e))?;
-
-        let caps_json: Option<String> = row.get("capabilities");
-        Ok(caps_json)
-    }
-}
-
-pub struct DBCapabilityAuthorizer {
-    store: Box<dyn CapabilityStore>,
-}
-
-impl DBCapabilityAuthorizer {
-    pub fn new(store: Box<dyn CapabilityStore>) -> Self {
-        DBCapabilityAuthorizer { store }
-    }
-
-    pub async fn authorize(&self, session_id: &str, capability: &str) -> Result<(), String> {
-        let caps_json = self.store.get_capabilities(session_id).await?;
-        let caps_json = caps_json.ok_or_else(|| "capability denied".to_string())?;
-
-        let capabilities: Vec<String> = serde_json::from_str(&caps_json)
-            .map_err(|e| format!("failed to unmarshal capabilities: {}", e))?;
-
-        for c in capabilities {
-            if c == capability {
-                return Ok(());
-            }
-        }
-
-        Err("capability denied".to_string())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,18 +217,6 @@ mod tests {
         async fn get_capabilities(&self, _session_id: &str) -> Result<Option<String>, String> {
             Ok(self.caps.clone())
         }
-    }
-
-    #[tokio::test]
-    async fn test_db_capability_authorizer() {
-        let mock_store = Box::new(MockCapabilityStore {
-            caps: Some("[\"read\", \"write\"]".to_string()),
-        });
-        let authorizer = DBCapabilityAuthorizer::new(mock_store);
-
-        assert!(authorizer.authorize("session-1", "read").await.is_ok());
-        assert!(authorizer.authorize("session-1", "write").await.is_ok());
-        assert!(authorizer.authorize("session-1", "delete").await.is_err());
     }
 
     #[test]
