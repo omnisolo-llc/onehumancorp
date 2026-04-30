@@ -2,6 +2,13 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 import { Tooltip } from "tooltip.slint";
 
+
+export struct UiPendingApproval {
+    task_id: string,
+    title: string,
+    proposed_content: string,
+}
+
 export struct UiRoleCount {
     role: string,
     count: int,
@@ -19,6 +26,7 @@ export component Dashboard inherits Window {
     in property <int> scheduled_calls_count: 0;
     in property <int> team_members_count: 0;
 
+    in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
@@ -34,6 +42,7 @@ export component Dashboard inherits Window {
 
     callback open_help_center();
     callback open_ai_chat();
+    callback approve_task(string);
 
     Flickable {
     VerticalBox {
@@ -144,6 +153,37 @@ export component Dashboard inherits Window {
                     show: touch-team.has-hover;
                     x: parent.width / 2;
                     y: parent.height;
+                }
+            }
+        }
+
+
+        if (pending_approvals.length > 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Action Required Flow (Drafts pending review)"; font-size: 20px; font-weight: 700; color: #b91c1c; }
+
+            for approval in pending_approvals : Rectangle {
+                background: #fef2f2;
+                border-color: #fca5a5;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+
+                    Text { text: approval.title; font-weight: 700; color: #991b1b; }
+                    Text { text: approval.proposed_content; color: #7f1d1d; wrap: word-wrap; }
+
+                    HorizontalBox {
+                        alignment: end;
+                        spacing: 10px;
+                        Button { text: "Edit"; }
+                        Button {
+                            text: "Approve";
+                            clicked => { approve_task(approval.task_id); }
+                        }
+                    }
                 }
             }
         }
