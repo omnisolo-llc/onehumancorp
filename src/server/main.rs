@@ -858,7 +858,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mesh_transport = mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
-    ).await;
+    ).await.expect("Failed to create MeshTransport");
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
