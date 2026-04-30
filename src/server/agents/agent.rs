@@ -19,7 +19,6 @@ pub const EVENT_TASK: &str = "task";
 pub const EVENT_STATUS: &str = "status";
 pub const EVENT_HANDOFF: &str = "handoff";
 pub const EVENT_CODE_REVIEWED: &str = "CodeReviewed";
-pub const EVENT_TESTS_FAILED: &str = "TestsFailed";
 pub const EVENT_TESTS_PASSED: &str = "TestsPassed";
 pub const EVENT_SPEC_APPROVED: &str = "SpecApproved";
 pub const EVENT_BLOCKER_RAISED: &str = "BlockerRaised";

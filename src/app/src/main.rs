@@ -9,7 +9,7 @@ pub mod ohc {
 }
 
 pub mod tooltip_registry;
-use tooltip_registry::TooltipRegistry;
+
 use slint::ComponentHandle;
 
 pub mod app {
@@ -335,7 +335,6 @@ mod tests {
         app::Logs::new().unwrap();
     }
     #[test]
-    #[test]
     fn test_pricing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Pricing::new().unwrap();
@@ -558,7 +557,7 @@ mod dashboard_docs_tests {
         }
 
         let ui = app::Dashboard::new().unwrap();
-        let tooltip_registry = TooltipRegistry::new();
+        let tooltip_registry = crate::tooltip_registry::TooltipRegistry::new();
 
         ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
         ui.set_tt_active_tasks(tooltip_registry.get_tooltip("dashboard_active_tasks").unwrap_or_default().into());
