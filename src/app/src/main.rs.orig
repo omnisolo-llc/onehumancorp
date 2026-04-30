@@ -183,19 +183,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_go_to_dashboard({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let _ = ui.hide();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -296,7 +283,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     setup_wizard_ui.run()?;
-    
+
     Ok(())
 }
 
@@ -501,7 +488,7 @@ mod e2e_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
@@ -1170,42 +1157,6 @@ mod cost_transparency_e2e_tests {
     }
 
     #[test]
-    fn test_e2e_swarm_observability_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "Login should be successful");
-
-        // Navigate to Dashboard
-        let dashboard_ui = app::Dashboard::new().unwrap();
-
-        // Populate mock agent activity messages
-        let mock_messages = vec![
-            app::UiMeshMessage {
-                id: "msg-1".into(),
-                content: "✅ Your Support Agent replied to 3 customers".into(),
-            },
-            app::UiMeshMessage {
-                id: "msg-2".into(),
-                content: "📦 Order Manager updated stock for 12 items".into(),
-            }
-        ];
-
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
-        dashboard_ui.set_mesh_messages(messages_model.into());
-    }
-
-    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
@@ -1222,25 +1173,7 @@ mod cost_transparency_e2e_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let billing_opened_clone = billing_opened.clone();
-        dashboard_ui.on_open_billing(move || {
-            *billing_opened_clone.borrow_mut() = true;
-        });
-
-        dashboard_ui.invoke_open_billing();
-        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
-
         let my_plan_ui = app::MyPlan::new().unwrap();
-        let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let upgrade_opened_clone = upgrade_opened.clone();
-        my_plan_ui.on_upgrade(move || {
-            *upgrade_opened_clone.borrow_mut() = true;
-        });
-        my_plan_ui.invoke_upgrade();
-        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
-
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
