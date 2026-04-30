@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -26,10 +27,10 @@ impl ToolExecutor for TodoWriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let todos_arr = args["todos"]
             .as_array()
-            .ok_or("todowrite: todos must be an array")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("todowrite: todos must be an array".to_string()))?;
 
         let items: Vec<TodoItem> = todos_arr
             .iter()
@@ -71,7 +72,7 @@ impl ToolExecutor for TodoReadExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let todos = self.todos.read().await;
         if todos.is_empty() {
             return Ok("Todo list is empty.".to_string());

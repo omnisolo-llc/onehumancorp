@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
@@ -220,29 +221,67 @@ impl Agent {
                     }
                 }
 
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let mut retry_count = 0;
+                let max_retries = 3;
+                let mut content = String::new();
+                let mut error = String::new();
+
+                loop {
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            content = r;
+                            break;
+                        }
+                        Err(ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                let err = format!("Transient error after retries: {}", msg);
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                error = err;
+                                break;
+                            }
+                        }
+                        Err(ToolError::LlmRecoverable(msg)) => {
+                            let err = format!("LLM Recoverable error: {}", msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            // Return the raw error as a ToolMessage directly to the model so it can self-correct
+                            error = err;
+                            break;
+                        }
+                        Err(ToolError::UserFixable(msg)) => {
+                            let err = format!("User intervention required: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        Err(ToolError::Fatal(msg)) => {
+                            let err = format!("Fatal tool error: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
+                }
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
@@ -289,12 +328,12 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
-            .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+            .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         tool.execute.execute(tc.arguments.clone()).await
     }
@@ -331,7 +370,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }

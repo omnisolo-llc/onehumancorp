@@ -15,6 +15,7 @@ rust_library(
         "//src/agents/builtin:__subpackages__",
     ],
     deps = [
+        "//src/agents/builtin:core",
         "@crates//:chrono",
         "@crates//:glob",
         "@crates//:qrcode",

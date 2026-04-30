@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -51,7 +52,7 @@ pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.
