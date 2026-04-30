@@ -624,7 +624,15 @@ mod tests {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        Ok(true)
+                    })
+                })
+                .connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             // Initialize schema for test
@@ -669,7 +677,15 @@ mod tests {
     #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        Ok(true)
+                    })
+                })
+                .connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();
