@@ -1055,6 +1055,36 @@ mod cost_transparency_e2e_tests {
     use slint::Model;
 
     #[test]
+    fn test_e2e_dashboard_simplification_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let pending_tasks = vec![
+            app::UiPendingApproval {
+                task_id: "test-task-123".into(),
+                title: "Draft Confirmation for Maya".into(),
+                proposed_content: "Review the custom cake order details.".into(),
+            }
+        ];
+        let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
+        dashboard_ui.set_pending_approvals(pending_model.into());
+    }
+
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
