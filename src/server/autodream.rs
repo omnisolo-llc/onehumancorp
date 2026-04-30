@@ -72,7 +72,7 @@ impl AutoDreamWorker {
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
-             db.inject_truth(&format!("session-summary-{}", id), &summary, "[0.0]").await?;
+             db.inject_truth(&format!("session-summary-{}", id), &summary, &format!("[{}]", vec!["0.0"; 1536].join(", "))).await?;
         }
         
         Ok(())
@@ -97,7 +97,7 @@ impl AutoDreamWorker {
                 Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
                 Err(e) => {
                     println!("AutoDream: failed to generate embedding: {}", e);
-                    "[0.0]".to_string()
+                    format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
             };
             
@@ -309,7 +309,7 @@ mod tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = Arc::new(DB { pool });
+        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = AutoDreamWorker::new(db);
 
         assert!(worker.consolidate_epoch().await.is_ok());

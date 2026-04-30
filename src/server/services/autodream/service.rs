@@ -40,10 +40,10 @@ impl AutoDreamService for MyAutoDreamService {
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
         let embedding = match client.generate_embedding(&req.query_text).await {
-            Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| "[0.0]".to_string()),
+            Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
             Err(e) => {
                 println!("AutoDream service: failed to generate embedding: {}", e);
-                "[0.0]".to_string()
+                format!("[{}]", vec!["0.0"; 1536].join(", "))
             }
         };
 
