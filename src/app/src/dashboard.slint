@@ -1,5 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+import { TooltipArea } from "tooltip.slint";
+import { HelpCenterContent } from "help_center.slint";
 
 export struct UiRoleCount {
     role: string,
@@ -12,6 +14,8 @@ export component Dashboard inherits Window {
     title: "Dashboard";
 
     background: #f8fafc;
+
+    in-out property <bool> show_help: false;
 
     in property <int> active_agents_count: 0;
     in property <int> active_tasks_count: 0;
@@ -27,7 +31,10 @@ export component Dashboard inherits Window {
 
         // Header
         HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            TooltipArea {
+                tooltip_key: "dashboard_revenue";
+                Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            }
             Rectangle {}
             Button { text: "Billing & Credits"; }
         }
@@ -36,16 +43,19 @@ export component Dashboard inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
+            TooltipArea {
+                tooltip_key: "agent_status_active";
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 180px;
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Active Agents"; color: #64748b; }
+                        Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
+                    }
                 }
             }
             Rectangle {
@@ -110,6 +120,51 @@ export component Dashboard inherits Window {
                     Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Button { text: "+"; }
                 }
+            }
+        }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 24px;
+        y: parent.height - self.height - 24px;
+        width: 56px;
+        height: 56px;
+        border-radius: 28px;
+        background: #0ea5e9;
+
+        Text {
+            text: "?";
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => { root.show_help = !root.show_help; }
+        }
+    }
+
+    if root.show_help : Rectangle {
+        background: #00000088;
+        x: 0; y: 0; width: parent.width; height: parent.height;
+        TouchArea { } // Block clicks
+
+        Rectangle {
+            width: 600px;
+            height: 600px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: white;
+            border-radius: 12px;
+
+            VerticalBox {
+                Button {
+                    text: "Close";
+                    clicked => { root.show_help = false; }
+                }
+                HelpCenterContent { }
             }
         }
     }

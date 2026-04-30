@@ -1,10 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
-export component InteractiveWalkthrough inherits Window {
-    width: 600px;
-    height: 800px;
+export component InteractiveWalkthroughContent inherits Rectangle {
     background: transparent;
-    always-on-top: true;
 
     property <int> current_step: 0;
 
@@ -67,4 +64,13 @@ export component InteractiveWalkthrough inherits Window {
             }
         }
     }
+}
+
+export component InteractiveWalkthrough inherits Window {
+    width: 600px;
+    height: 800px;
+    background: transparent;
+    always-on-top: true;
+
+    content := InteractiveWalkthroughContent {}
 }

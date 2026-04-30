@@ -1,4 +1,8 @@
 
+export global TooltipGlobals {
+    pure callback get_tooltip(string) -> string;
+}
+
 export component Tooltip inherits Rectangle {
     in property <string> text;
     in property <bool> show: false;
@@ -13,5 +17,20 @@ export component Tooltip inherits Rectangle {
         font-size: 12px;
         padding: 8px;
         wrap: word-wrap;
+    }
+}
+
+export component TooltipArea {
+    in property <string> tooltip_key;
+    @children
+
+    ta := TouchArea { }
+
+    Tooltip {
+        x: ta.mouse-x;
+        y: ta.mouse-y + 20px;
+        text: TooltipGlobals.get_tooltip(root.tooltip_key);
+        show: ta.has-hover;
+        z: 100;
     }
 }

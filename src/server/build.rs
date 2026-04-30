@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set PROTOC environment variable to point to the built protoc in runfiles
-    let protoc_path = PathBuf::from("../../../protobuf+/protoc");
+    let protoc_path = PathBuf::from("/usr/bin/protoc");
     // SAFETY: This is only called at build time and does not concurrently access env
     unsafe { env::set_var("PROTOC", protoc_path) };
     

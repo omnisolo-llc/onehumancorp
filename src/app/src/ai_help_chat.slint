@@ -1,9 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
-export component AiHelpChat inherits Window {
-    width: 600px;
-    height: 800px;
-    title: "AI Help Assistant";
+export component AiHelpChatContent inherits Rectangle {
     background: white;
 
     in-out property <string> user_input: "";
@@ -40,4 +37,15 @@ export component AiHelpChat inherits Window {
             }
         }
     }
+}
+
+export component AiHelpChat inherits Window {
+    width: 600px;
+    height: 800px;
+    title: "AI Help Assistant";
+    background: transparent;
+
+    in-out property <string> user_input <=> content.user_input;
+
+    content := AiHelpChatContent {}
 }

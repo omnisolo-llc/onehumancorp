@@ -1,9 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
-export component ApiDocs inherits Window {
-    width: 800px;
-    height: 600px;
-    title: "API Reference (Advanced)";
+export component ApiDocsContent inherits Rectangle {
     background: #f8fafc;
 
     VerticalBox {
@@ -42,4 +39,13 @@ export component ApiDocs inherits Window {
             }
         }
     }
+}
+
+export component ApiDocs inherits Window {
+    width: 800px;
+    height: 600px;
+    title: "API Reference (Advanced)";
+    background: transparent;
+
+    content := ApiDocsContent {}
 }

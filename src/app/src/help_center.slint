@@ -1,9 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
-export component HelpCenter inherits Window {
-    width: 600px;
-    height: 800px;
-    title: "Help Center";
+export component HelpCenterContent inherits Rectangle {
     background: #f8fafc;
 
     in-out property <string> search_query: "";
@@ -60,22 +57,15 @@ export component HelpCenter inherits Window {
             }
         }
     }
+}
 
-    Rectangle {
-        x: parent.width - self.width - 16px;
-        y: parent.height - self.height - 16px;
-        width: 56px;
-        height: 56px;
-        border-radius: 28px;
-        background: #0ea5e9;
+export component HelpCenter inherits Window {
+    width: 600px;
+    height: 800px;
+    title: "Help Center";
+    background: transparent;
 
-        Text {
-            text: "?";
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-    }
+    in-out property <string> search_query <=> content.search_query;
+
+    content := HelpCenterContent {}
 }

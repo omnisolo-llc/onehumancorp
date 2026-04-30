@@ -1,9 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
-export component VideoTutorials inherits Window {
-    width: 600px;
-    height: 800px;
-    title: "Video Tutorials";
+export component VideoTutorialsContent inherits Rectangle {
     background: #f8fafc;
 
     VerticalBox {
@@ -53,4 +50,13 @@ export component VideoTutorials inherits Window {
             }
         }
     }
+}
+
+export component VideoTutorials inherits Window {
+    width: 600px;
+    height: 800px;
+    title: "Video Tutorials";
+    background: transparent;
+
+    content := VideoTutorialsContent {}
 }
