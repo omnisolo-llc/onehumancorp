@@ -584,6 +584,88 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ApiDocs::new().unwrap();
     }
+    #[test]
+    fn test_e2e_agent_config_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::AgentConfig::new().unwrap();
+        let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let publish_success_clone = publish_success.clone();
+
+        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
+            assert_eq!(agent, "Customer Support");
+            assert_eq!(can_reply, true);
+            assert_eq!(can_social, false);
+            assert_eq!(frequency, "Daily");
+            *publish_success_clone.borrow_mut() = true;
+        });
+
+        // Step 0: Choose Agent -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.set_selected_agent("Customer Support".into());
+        ui.set_step(1);
+
+        // Step 1: Capabilities -> Step 2
+        ui.set_can_reply(true);
+        ui.set_step(2);
+
+        // Step 2: Frequency -> Step 3
+        ui.set_frequency("Daily".into());
+        ui.set_step(3);
+
+        // Step 3: Review
+        ui.invoke_activate_agent(
+            ui.get_selected_agent(),
+            ui.get_can_reply(),
+            ui.get_can_social(),
+            ui.get_frequency()
+        );
+
+        assert_eq!(ui.get_step(), 3);
+        assert_eq!(ui.get_selected_agent(), "Customer Support");
+        assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_frequency(), "Daily");
+        assert!(*publish_success.borrow());
+    }
+
+    #[test]
+    fn test_e2e_interactive_walkthrough_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::InteractiveWalkthrough::new().unwrap();
+
+        assert_eq!(ui.get_current_step(), 0);
+        ui.set_current_step(1);
+        assert_eq!(ui.get_current_step(), 1);
+        ui.set_current_step(2);
+        assert_eq!(ui.get_current_step(), 2);
+        ui.set_current_step(3);
+        assert_eq!(ui.get_current_step(), 3);
+    }
+
+    #[test]
+    fn test_e2e_grow_business_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::GrowBusiness::new().unwrap();
+
+        let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let execute_success_clone = execute_success.clone();
+
+        ui.on_execute(move |strategy| {
+            assert_eq!(strategy, "Add 5 more products");
+            *execute_success_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(ui.get_step(), 0);
+        ui.set_selected_strategy("Add 5 more products".into());
+        ui.set_step(1);
+        assert_eq!(ui.get_step(), 1);
+
+        ui.invoke_execute(ui.get_selected_strategy());
+
+        assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
+        assert!(*execute_success.borrow());
+    }
+
 }
 
 #[cfg(test)]
@@ -664,7 +746,7 @@ mod dashboard_docs_tests {
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
 
         // 6. Test tooltips rendering logic with registry
-        let tooltip_registry = TooltipRegistry::new();
+        let tooltip_registry = crate::tooltip_registry::TooltipRegistry::new();
         dashboard_ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
         assert_eq!(dashboard_ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
     }
