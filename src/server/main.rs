@@ -138,14 +138,16 @@ pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
+    onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        MyHubService { hub, invite_tracker, viral_loop_tracker }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }
 
@@ -819,6 +821,17 @@ impl HubService for MyHubService {
         let meetings = self.hub.get_meetings();
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
+
+    async fn start_onboarding(
+        &self,
+        request: Request<StartOnboardingRequest>,
+    ) -> Result<Response<StartOnboardingResponse>, Status> {
+        let req = request.into_inner();
+        match self.onboarding_agent.start_onboarding(req).await {
+            Ok(resp) => Ok(Response::new(resp)),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 }
 
 #[tokio::main]
@@ -866,7 +879,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start AutoDream worker
@@ -941,12 +954,13 @@ mod tests {
     // Helper to create a dummy hub and service for testing
     // Note: These tests are ignored by default because they require a running Postgres database.
     async fn setup_test_service() -> Option<MyHubService> {
-        let db_url = std::env::var("DATABASE_URL").ok()?;
-        let pool = sqlx::PgPool::connect(&db_url).await.ok()?;
+        let _ = std::env::var("DATABASE_URL").ok()?;
+
+        let db = Arc::new(crate::db::DB::new().await.ok()?);
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(event_tx, pool.clone()));
-        Some(MyHubService::new(hub, pool))
+        let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+        Some(MyHubService::new(hub, db.pool.clone(), db))
     }
 
     #[tokio::test]
