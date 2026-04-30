@@ -29,6 +29,7 @@ pub fn sleep_tool() -> Tool {
         description: "Sleep for a number of seconds (max 60). \
             Use when waiting for async operations."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

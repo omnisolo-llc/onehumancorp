@@ -45,6 +45,7 @@ pub fn finance_report_tool() -> Tool {
     Tool {
         name: "finance_report".to_string(),
         description: "Generate a plain-language financial report or summary for the business.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
