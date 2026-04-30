@@ -582,6 +582,19 @@ impl TaskQueueService {
         
         Ok(tasks)
     }
+
+    pub async fn process_agent_activity_feed(&self) -> Result<(), sqlx::Error> {
+        // Find tasks in DRAFT state and process them for the "Agent Activity Feed" UI
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'PENDING_APPROVAL' WHERE id = (SELECT id FROM shared_tasks WHERE status = 'DRAFT' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id")
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(r) = row {
+            let id: String = r.get("id");
+            println!("Processed drafted task into pending approval for activity feed: {}", id);
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
