@@ -64,6 +64,7 @@ pub fn bash_tool() -> Tool {
             Use for build/test/git/shell operations. \
             Commands run in the repository root."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

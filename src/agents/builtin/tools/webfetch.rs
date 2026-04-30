@@ -86,6 +86,7 @@ pub fn webfetch_tool() -> Tool {
     Tool {
         name: "WebFetch".to_string(),
         description: "Fetch the contents of a URL. Returns text content, stripping HTML tags.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {

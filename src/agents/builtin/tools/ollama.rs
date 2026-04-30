@@ -63,6 +63,7 @@ pub fn ollama_tool() -> Tool {
     Tool {
         name: "ollama".to_string(),
         description: "Manage local Ollama instances (list, pull, check health).".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {

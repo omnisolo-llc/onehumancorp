@@ -26,6 +26,7 @@ pub mod ollama;
 pub struct Tool {
     pub name: String,
     pub description: String,
+    pub is_read_only: bool,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
 }
@@ -41,6 +42,7 @@ impl Clone for Tool {
         Self {
             name: self.name.clone(),
             description: self.description.clone(),
+            is_read_only: self.is_read_only,
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
         }
