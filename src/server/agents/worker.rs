@@ -12,6 +12,7 @@ pub struct TaskWorker {
 }
 
 impl TaskWorker {
+    #[allow(dead_code)]
     pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>) -> Self {
         TaskWorker {
             plane_client,

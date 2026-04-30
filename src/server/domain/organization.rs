@@ -4,6 +4,7 @@ use crate::ohc::organization::RoleProfile;
 use crate::ohc::common::Role;
 use chrono::{DateTime, Utc};
 
+#[allow(dead_code)]
 pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-eng", id);
@@ -103,6 +104,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
     }
 }
 
+#[allow(dead_code)]
 pub trait OrganizationExt {
     fn action_limit(&self) -> i64;
     fn member_by_id(&self, id: &str) -> Option<&TeamMember>;
@@ -127,6 +129,7 @@ impl OrganizationExt for Organization {
     }
 }
 
+#[allow(dead_code)]
 pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-mkt", id);
@@ -210,6 +213,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
     }
 }
 
+#[allow(dead_code)]
 pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let cfo_id = format!("{}-cfo", id);
@@ -285,6 +289,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
     }
 }
 
+#[allow(dead_code)]
 fn default_software_company_role_profiles() -> Vec<RoleProfile> {
     vec![
         RoleProfile {
@@ -416,6 +421,7 @@ fn default_software_company_role_profiles() -> Vec<RoleProfile> {
     ]
 }
 
+#[allow(dead_code)]
 fn default_digital_marketing_role_profiles() -> Vec<RoleProfile> {
     vec![
         RoleProfile {
@@ -469,6 +475,7 @@ fn default_digital_marketing_role_profiles() -> Vec<RoleProfile> {
     ]
 }
 
+#[allow(dead_code)]
 fn default_accounting_role_profiles() -> Vec<RoleProfile> {
     vec![
         RoleProfile {

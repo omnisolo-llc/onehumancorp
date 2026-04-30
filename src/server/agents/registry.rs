@@ -41,6 +41,7 @@ impl Registry {
         providers.get(&t).cloned()
     }
 
+    #[allow(dead_code)]
     pub fn all(&self) -> Vec<Arc<dyn Provider>> {
         let providers = self.providers.read().unwrap();
         let mut out: Vec<Arc<dyn Provider>> = Vec::new();

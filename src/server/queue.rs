@@ -26,6 +26,7 @@ pub struct Job {
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
+    #[allow(dead_code)]
     async fn complete(&self, job_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String>;
 }
@@ -195,6 +196,7 @@ impl TaskQueue for PostgresTaskQueue {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait TaskJobHandler: Send + Sync {
     async fn handle(&self, job: Job) -> Result<(), String>;
 }
@@ -206,6 +208,7 @@ pub struct Worker {
 }
 
 impl Worker {
+    #[allow(dead_code)]
     pub fn new(queue: Arc<dyn TaskQueue>, roles: Vec<String>, handler: Arc<dyn TaskJobHandler>) -> Self {
         Worker { queue, roles, handler }
     }
@@ -362,6 +365,7 @@ pub struct QueueManager {
 }
 
 impl QueueManager {
+    #[allow(dead_code)]
     pub fn new(pool: sqlx::PgPool) -> Self {
         QueueManager { pool }
     }
@@ -553,6 +557,7 @@ impl TaskQueueService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
         let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)

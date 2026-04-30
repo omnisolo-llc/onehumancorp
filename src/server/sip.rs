@@ -53,6 +53,7 @@ impl SipDB {
         }
     }
 
+    #[allow(dead_code)]
     fn get_cache(&self, key: &str) -> Option<String> {
         let expirations = self.cache_expirations.read().unwrap();
         if let Some(exp) = expirations.get(key) {

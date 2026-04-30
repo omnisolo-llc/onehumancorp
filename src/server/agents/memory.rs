@@ -18,6 +18,7 @@ pub struct VectorRepository {
 }
 
 impl VectorRepository {
+    #[allow(dead_code)]
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository { pool }
     }

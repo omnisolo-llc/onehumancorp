@@ -103,6 +103,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn handle_pr_created(&self, msg: Message) -> Result<(), String> {
         let branch = msg.content.clone();
         

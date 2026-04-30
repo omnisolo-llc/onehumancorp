@@ -228,6 +228,7 @@ pub struct LocalLLMClient {
 }
 
 impl LocalLLMClient {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
@@ -292,6 +293,7 @@ pub struct ResilientClient {
 }
 
 impl ResilientClient {
+    #[allow(dead_code)]
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {
             primary,
@@ -327,6 +329,7 @@ pub struct CachedMinimaxClient {
 }
 
 impl CachedMinimaxClient {
+    #[allow(dead_code)]
     pub fn new(client: MinimaxClient, pool: sqlx::PgPool, redis: Option<redis::Client>) -> Self {
         CachedMinimaxClient { client, pool, redis }
     }

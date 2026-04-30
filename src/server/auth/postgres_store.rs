@@ -9,6 +9,7 @@ pub struct PgUserRepository {
 }
 
 impl PgUserRepository {
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         PgUserRepository { pool }
     }

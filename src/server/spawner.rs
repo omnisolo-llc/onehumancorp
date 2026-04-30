@@ -4,6 +4,7 @@ use crate::hub::Hub;
 use crate::tasks::SharedTask;
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait SubAgentSpawner: Send + Sync {
     async fn spawn(&self, task: SharedTask) -> Result<(), String>;
 }
@@ -13,6 +14,7 @@ pub struct DefaultSubAgentSpawner {
 }
 
 impl DefaultSubAgentSpawner {
+    #[allow(dead_code)]
     pub fn new(hub: Arc<Hub>) -> Self {
         DefaultSubAgentSpawner { hub }
     }

@@ -61,6 +61,7 @@ impl BwrapRunner {
         BwrapRunner { validator }
     }
 
+    #[allow(dead_code)]
     pub fn is_bwrap_available(&self) -> bool {
         std::process::Command::new("bwrap")
             .arg("--version")
@@ -183,6 +184,7 @@ pub struct Manager {
 }
 
 impl Manager {
+    #[allow(dead_code)]
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
         let runner = Arc::new(BwrapRunner::new(validator.clone()));

@@ -6,6 +6,7 @@ pub struct PresenceManager {
 }
 
 impl PresenceManager {
+    #[allow(dead_code)]
     pub fn new(client: redis::Client) -> Self {
         PresenceManager { client }
     }

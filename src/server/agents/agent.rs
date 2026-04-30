@@ -5,6 +5,7 @@ use tokio_stream::StreamExt;
 use redis::AsyncCommands;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[allow(dead_code)]
 pub enum Status {
     IDLE,
     ACTIVE,
@@ -15,24 +16,38 @@ pub enum Status {
     WaitingForTools,
 }
 
+#[allow(dead_code)]
 pub const EVENT_TASK: &str = "task";
+#[allow(dead_code)]
 pub const EVENT_STATUS: &str = "status";
+#[allow(dead_code)]
 pub const EVENT_HANDOFF: &str = "handoff";
+#[allow(dead_code)]
 pub const EVENT_CODE_REVIEWED: &str = "CodeReviewed";
+#[allow(dead_code)]
 pub const EVENT_TESTS_PASSED: &str = "TestsPassed";
+#[allow(dead_code)]
 pub const EVENT_SPEC_APPROVED: &str = "SpecApproved";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_RAISED: &str = "BlockerRaised";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_CLEARED: &str = "BlockerCleared";
+#[allow(dead_code)]
 pub const EVENT_PR_CREATED: &str = "PRCreated";
+#[allow(dead_code)]
 pub const EVENT_PR_MERGED: &str = "PRMerged";
+#[allow(dead_code)]
 pub const EVENT_DESIGN_REVIEWED: &str = "DesignReviewed";
+#[allow(dead_code)]
 pub const EVENT_APPROVAL_NEEDED: &str = "ApprovalNeeded";
 
+#[allow(dead_code)]
 pub const AVAILABLE_MCP_BUNDLES: &[&str] = &[
     "github",
 ];
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
     async fn receive(&self) -> Result<Vec<u8>, String>;
@@ -49,6 +64,7 @@ where
     R: tokio::io::AsyncRead + Unpin + Send + 'static,
     W: tokio::io::AsyncWrite + Unpin + Send + 'static,
 {
+    #[allow(dead_code)]
     pub fn new(reader: R, writer: W) -> Self {
         InProcessTransport {
             reader: tokio::sync::Mutex::new(tokio::io::BufReader::new(reader)),
@@ -98,6 +114,7 @@ pub struct RedisPubSubTransport {
 }
 
 impl RedisPubSubTransport {
+    #[allow(dead_code)]
     pub async fn new(client: redis::Client, publish_chan: &str, subscribe_chan: &str) -> Result<Self, String> {
         let mut pubsub = client.get_async_pubsub().await.map_err(|e| e.to_string())?;
         pubsub.subscribe(subscribe_chan).await.map_err(|e| e.to_string())?;
@@ -134,6 +151,7 @@ impl Transport for RedisPubSubTransport {
     }
 }
 
+#[allow(dead_code)]
 pub trait AgentExt {
     fn base_system_prompt(&self) -> String;
 }

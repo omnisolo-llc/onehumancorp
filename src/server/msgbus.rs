@@ -13,6 +13,7 @@ pub struct Message {
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    #[allow(dead_code)]
     async fn close(&self) -> Result<(), String>;
 }
 

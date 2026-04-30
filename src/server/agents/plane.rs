@@ -11,6 +11,7 @@ struct CircuitBreaker {
 }
 
 impl CircuitBreaker {
+    #[allow(dead_code)]
     fn new(max_failures: usize, reset_timeout: Duration) -> Self {
         CircuitBreaker {
             failures: Mutex::new(0),
@@ -47,8 +48,10 @@ impl CircuitBreaker {
     }
 }
 
+#[allow(dead_code)]
 static GLOBAL_PLANE_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 
+#[allow(dead_code)]
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_PLANE_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(30)))
 }
@@ -77,6 +80,7 @@ pub struct Client {
 }
 
 impl Client {
+    #[allow(dead_code)]
     pub fn new_from_env() -> Self {
         let base_url = std::env::var("PLANE_URL")
             .unwrap_or_else(|_| "http://plane-api:8000".to_string());
