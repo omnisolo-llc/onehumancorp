@@ -79,26 +79,46 @@ pub struct Mission {
 pub async fn claim_mission(pool: &sqlx::PgPool, agent_id: &str) -> Result<Option<Mission>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-    let query = r#"
-        UPDATE ohc_tasks.mission_queue
-        SET status = 'IN_PROGRESS',
-            assigned_agent = $1,
-            updated_at = NOW()
-        WHERE mission_id = (
-            SELECT mission_id
-            FROM ohc_tasks.mission_queue
-            WHERE status = 'QUEUED'
-            FOR UPDATE SKIP LOCKED
-            LIMIT 1
-        )
-        RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
-    "#;
+    let db_type = std::env::var("DATABASE_URL").unwrap_or_default();
+    let row = if db_type.starts_with("sqlite") {
+        let tx_row = sqlx::query("SELECT mission_id FROM ohc_tasks_mission_queue WHERE status = 'QUEUED' LIMIT 1")
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
-    let row = sqlx::query(query)
-        .bind(agent_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        if let Some(r) = tx_row {
+            let id: String = sqlx::Row::get(&r, "mission_id");
+            sqlx::query("UPDATE ohc_tasks_mission_queue SET status = 'IN_PROGRESS', assigned_agent = $1, updated_at = CURRENT_TIMESTAMP WHERE mission_id = $2 AND status = 'QUEUED' RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at")
+                .bind(agent_id)
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        } else {
+            None
+        }
+    } else {
+        let query = r#"
+            UPDATE ohc_tasks.mission_queue
+            SET status = 'IN_PROGRESS',
+                assigned_agent = $1,
+                updated_at = NOW()
+            WHERE mission_id = (
+                SELECT mission_id
+                FROM ohc_tasks.mission_queue
+                WHERE status = 'QUEUED'
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+            )
+            RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
+        "#;
+
+        sqlx::query(query)
+            .bind(agent_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?
+    };
 
     if let Some(row) = row {
         let payload_str: String = row.get("payload");

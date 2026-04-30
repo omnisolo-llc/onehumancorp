@@ -557,11 +557,20 @@ impl SipDB {
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
-            .bind(mission_id)
-            .bind(&self.org_id)
-            .fetch_optional(&mut *tx)
-            .await?;
+        let db_type = std::env::var("DATABASE_URL").unwrap_or_default();
+        let row = if db_type.starts_with("sqlite") {
+            sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2")
+                .bind(mission_id)
+                .bind(&self.org_id)
+                .fetch_optional(&mut *tx)
+                .await?
+        } else {
+            sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
+                .bind(mission_id)
+                .bind(&self.org_id)
+                .fetch_optional(&mut *tx)
+                .await?
+        };
 
         if let Some(r) = row {
             let existing_id: String = r.get("id");

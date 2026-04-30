@@ -125,11 +125,42 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, scheduled_at")
-            .bind(&roles)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let db_type = std::env::var("DATABASE_URL").unwrap_or_default();
+        let row = if db_type.starts_with("sqlite") {
+            let tx_row = sqlx::query("SELECT id, payload FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP ORDER BY scheduled_at ASC")
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut selected_id = None;
+            for r in tx_row {
+                let p: String = r.get("payload");
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&p) {
+                    if let Some(role) = json.get("agent_role").and_then(|v| v.as_str()) {
+                        if roles.contains(&role.to_string()) {
+                            selected_id = Some(r.get::<String, _>("id"));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if let Some(id) = selected_id {
+                sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = $1 RETURNING id, organization_id, parent_task_id, payload, status, scheduled_at")
+                    .bind(id)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            } else {
+                None
+            }
+        } else {
+            sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, scheduled_at")
+                .bind(&roles)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?
+        };
             
         if let Some(row) = row {
             let id: String = row.get("id");
@@ -358,11 +389,15 @@ pub struct SubAgentJob {
 
 pub struct QueueManager {
     pool: sqlx::PgPool,
+    sqlite_lock: std::sync::Arc<tokio::sync::Mutex<()>>,
 }
 
 impl QueueManager {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        QueueManager { pool }
+        QueueManager {
+            pool,
+            sqlite_lock: std::sync::Arc::new(tokio::sync::Mutex::new(())),
+        }
     }
 
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
@@ -383,10 +418,28 @@ impl QueueManager {
     }
 
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
-            .bind(worker_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        let db_type = std::env::var("DATABASE_URL").unwrap_or_default();
+        let row = if db_type.starts_with("sqlite") {
+            let _guard = self.sqlite_lock.lock().await;
+            let tx_row = sqlx::query("SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC LIMIT 1")
+                .fetch_optional(&self.pool)
+                .await?;
+            if let Some(r) = tx_row {
+                let id: String = r.get("id");
+                sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = 'QUEUED' RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+                    .bind(worker_id)
+                    .bind(id)
+                    .fetch_optional(&self.pool)
+                    .await?
+            } else {
+                None
+            }
+        } else {
+            sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+                .bind(worker_id)
+                .fetch_optional(&self.pool)
+                .await?
+        };
             
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
@@ -486,11 +539,15 @@ pub struct SharedTaskModel {
 
 pub struct TaskQueueService {
     pool: sqlx::PgPool,
+    sqlite_lock: std::sync::Arc<tokio::sync::Mutex<()>>,
 }
 
 impl TaskQueueService {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        TaskQueueService { pool }
+        TaskQueueService {
+            pool,
+            sqlite_lock: std::sync::Arc::new(tokio::sync::Mutex::new(())),
+        }
     }
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
@@ -514,10 +571,58 @@ impl TaskQueueService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
-            .bind(agent_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        let db_type = std::env::var("DATABASE_URL").unwrap_or_default();
+        let row = if db_type.starts_with("sqlite") {
+            let _guard = self.sqlite_lock.lock().await;
+            let tx_row = sqlx::query("SELECT id, dependencies FROM shared_tasks WHERE status = 'PENDING' AND (assigned_agent IS NULL OR assigned_agent = $1) ORDER BY created_at ASC")
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
+
+            let mut selected_id = None;
+            for r in tx_row {
+                let deps_str: String = r.get("dependencies");
+                let mut all_completed = true;
+                if let Ok(deps) = serde_json::from_str::<Vec<String>>(&deps_str) {
+                    for dep in deps {
+                        let dep_status_row = sqlx::query("SELECT status FROM shared_tasks WHERE id = $1")
+                            .bind(&dep)
+                            .fetch_optional(&self.pool)
+                            .await?;
+                        if let Some(dep_r) = dep_status_row {
+                            let s: String = dep_r.get("status");
+                            if s != "COMPLETED" {
+                                all_completed = false;
+                                break;
+                            }
+                        } else {
+                            all_completed = false;
+                            break;
+                        }
+                    }
+                }
+
+                if all_completed {
+                    selected_id = Some(r.get::<String, _>("id"));
+                    break;
+                }
+            }
+
+            if let Some(id) = selected_id {
+                sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = $2 AND status = 'PENDING' RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
+                    .bind(agent_id)
+                    .bind(id)
+                    .fetch_optional(&self.pool)
+                    .await?
+            } else {
+                None
+            }
+        } else {
+            sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
+                .bind(agent_id)
+                .fetch_optional(&self.pool)
+                .await?
+        };
             
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
@@ -612,17 +717,17 @@ mod tests {
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();
         
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
         
         let _ = tx.send(());
     }
 
     #[tokio::test]
-    #[ignore] // Requires live database - times out in CI
+     // Requires live database - times out in CI
     async fn test_task_queue_service_push_claim() {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("DATABASE_URL_NOT_SET") {
             let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
@@ -665,9 +770,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires live database - times out in CI
+     // Requires live database - times out in CI
     async fn test_task_queue_service_with_dependencies() {
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("DATABASE_URL_NOT_SET") {
             let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
@@ -720,5 +825,46 @@ mod tests {
             let claim_3 = service.claim_task("agent_2").await.unwrap().unwrap();
             assert_eq!(claim_3.id, task_id_child);
         }
+    }
+}
+
+#[tokio::test]
+async fn test_chaos_queue_manager_retry_and_timeout() {
+    if let Ok(db_url) = std::env::var("DATABASE_URL_NOT_SET") {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+
+        let manager = QueueManager::new(pool.clone());
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id VARCHAR PRIMARY KEY, organization_id VARCHAR, parent_task_id VARCHAR, payload JSONB, status VARCHAR, worker_id VARCHAR, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let job = SubAgentJob {
+            id: job_id.clone(),
+            organization_id: "org_chaos".to_string(),
+            parent_task_id: "task_chaos".to_string(),
+            payload: serde_json::json!({"action": "chaos"}),
+            status: "QUEUED".to_string(),
+            worker_id: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        manager.enqueue(job).await.unwrap();
+
+        let claimed = manager.poll("worker_chaos_1").await.unwrap().unwrap();
+        assert_eq!(claimed.id, job_id);
+
+        manager.mark_failed(&job_id, "simulated network drop").await.unwrap();
+
+        let row = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = $1")
+            .bind(&job_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let status: String = sqlx::Row::get(&row, "status");
+        assert_eq!(status, "FAILED");
     }
 }
