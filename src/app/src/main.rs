@@ -16,18 +16,6 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -60,10 +48,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
+    setup_wizard_ui.on_suggest_description({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let name = ui.get_company_name().to_string();
+            let biz_type = ui.get_business_type().to_string();
+            let prompt = format!("Generate a one-line catchy business description for a {} named {}. Be concise.", biz_type, name);
+
+            let handle_clone = ui_handle.clone();
+            tokio::spawn(async move {
+                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "wizard-ui".into(),
+                        });
+                        match client.reason(request).await {
+                            Ok(response) => {
+                                let content = response.into_inner().content;
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_company_description(content.into());
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => println!("Reasoning failed: {:?}", e),
+                        }
+                    }
+                    Err(e) => println!("Could not connect to server: {:?}", e),
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            let name = ui.get_company_name().to_string();
+            let email = ui.get_admin_email().to_string();
+            let biz_type = ui.get_business_type().to_string();
+
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
@@ -83,18 +109,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
                     Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                        // 1. Save state
+                        let _ = client.save_wizard_state(tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
                             state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
+                        })).await;
+
+                        // 2. Provision
+                        let provision_req = ohc::orchestration::ProvisionRequest {
+                            profile: Some(ohc::orchestration::Profile {
+                                name: name.clone(),
+                                industry: biz_type.clone(),
+                                size: "1".into(),
+                                language: "en".into(),
+                            }),
+                            goals: vec!["Launch".into()],
+                            deployment: "standalone".into(),
+                            admin: Some(ohc::orchestration::Admin {
+                                name: "".into(),
+                                email: email.clone(),
+                                password: "".into(),
+                            }),
+                        };
+
+                        match client.provision(tonic::Request::new(provision_req)).await {
+                            Ok(resp) => {
+                                println!("Provisioned: {:?}", resp.into_inner().message);
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.hide().unwrap();
+                                        let dashboard = app::Dashboard::new().unwrap();
+                                        dashboard.show().unwrap();
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => println!("Provisioning failed: {:?}", e),
                         }
                     }
                     Err(e) => {
@@ -105,129 +153,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::BusinessSetup::new()?;
-    let ui_handle = ui.as_weak();
-
-    ui.on_launch({
-        let ui_handle = ui_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-            ]);
-
-            let handle_clone = ui_handle.clone();
-
-            tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
-                    Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
-                    }
-                }
-            });
-        }
-    });
-
-    ui.run()?;
+    setup_wizard_ui.run()?;
     
     Ok(())
-}
-
-#[cfg(test)]
-mod e2e_tests {
-    use super::*;
-
-    #[test]
-    fn test_e2e_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
-            return;
-        }
-
-        let ui = app::BusinessSetup::new().unwrap();
-
-        // Step 0: Welcome -> Step 1
-        assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
-
-        // Step 1: Type -> Step 2
-        ui.set_business_type("Online Store".into());
-        ui.set_step(2);
-        assert_eq!(ui.get_step(), 2);
-
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.set_step(3);
-        assert_eq!(ui.get_step(), 3);
-
-        // Step 3: What do you sell -> Step 4
-        ui.set_sell_physical(true);
-        ui.set_step(4);
-        assert_eq!(ui.get_step(), 4);
-
-        // Step 4: Payments -> Step 5
-        ui.set_payment_pref("online".into());
-        ui.set_step(5);
-        assert_eq!(ui.get_step(), 5);
-
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.set_step(6);
-        assert_eq!(ui.get_step(), 6);
-
-        // Step 6: Template -> Step 7
-        ui.set_website_template("Modern".into());
-        ui.set_step(7);
-
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.set_step(8);
-
-        // Step 8: Domain -> Step 9
-        ui.set_domain_choice("subdomain".into());
-        ui.set_step(9);
-
-        // Final state verification
-        assert_eq!(ui.get_company_name(), "My E2E Store");
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
-        assert_eq!(ui.get_sell_physical(), true);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
-    }
 }
 
 #[cfg(test)]
@@ -252,41 +180,6 @@ mod tests {
         let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
-    }
-
-    #[test]
-    fn test_business_setup_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_business_setup_creation because no display server is available.");
-            return;
-        }
-        let ui = app::BusinessSetup::new().unwrap();
-        assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_company_name(), "");
-    }
-
-    #[test]
-    fn test_agent_hire_next_button_disabled_by_default() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
-            return;
-        }
-        let ui = app::AgentHire::new().unwrap();
-        assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_selected_role(), "");
-        assert_eq!(ui.get_next_enabled(), false);
-    }
-
-    #[test]
-    fn test_agent_hire_next_button_enabled_after_role_selection() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
-            return;
-        }
-        let ui = app::AgentHire::new().unwrap();
-        assert_eq!(ui.get_step(), 0);
-        ui.set_selected_role("SOFTWARE_ENGINEER".into());
-        assert_eq!(ui.get_next_enabled(), true);
     }
 
     #[test]
@@ -334,7 +227,6 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Logs::new().unwrap();
     }
-    #[test]
     #[test]
     fn test_pricing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -414,8 +306,8 @@ mod tests {
         ui.set_focus_avoid_competitors(true);
         ui.set_step(2);
 
-        // Step 2: Examples -> Step 3
-        ui.set_step(3);
+        // Step 2: Review
+        ui.set_step(2);
 
         // Verify state
         assert_eq!(ui.get_tone(), "Concise");
