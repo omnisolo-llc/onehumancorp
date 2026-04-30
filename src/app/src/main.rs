@@ -9,6 +9,7 @@ pub mod ohc {
 }
 
 pub mod tooltip_registry;
+use tooltip_registry::TooltipRegistry;
 use slint::ComponentHandle;
 
 pub mod app {
@@ -415,5 +416,33 @@ mod docs_tests {
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ApiDocs::new().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod dashboard_docs_tests {
+    use super::*;
+
+    #[test]
+    fn test_dashboard_tooltips_and_help_actions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_dashboard_tooltips_and_help_actions because no display server is available.");
+            return;
+        }
+
+        let ui = app::Dashboard::new().unwrap();
+        let tooltip_registry = TooltipRegistry::new();
+
+        ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
+        ui.set_tt_active_tasks(tooltip_registry.get_tooltip("dashboard_active_tasks").unwrap_or_default().into());
+        ui.set_tt_scheduled_calls(tooltip_registry.get_tooltip("dashboard_scheduled_calls").unwrap_or_default().into());
+        ui.set_tt_team_members(tooltip_registry.get_tooltip("dashboard_team_members").unwrap_or_default().into());
+
+        assert_eq!(ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
+        assert_eq!(ui.get_tt_active_tasks(), "Tasks that your agents are actively processing right now.");
+
+        // Ensure callbacks can be set
+        ui.on_open_help_center(move || {});
+        ui.on_open_ai_chat(move || {});
     }
 }
