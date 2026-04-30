@@ -74,6 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
+                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                     }
                 }).unwrap();
             }
@@ -101,6 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), ui.get_product_name().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             tokio::spawn(async move {
@@ -195,6 +203,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -410,6 +422,12 @@ mod e2e_tests {
 
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
+
+        // Verify advanced state correctly saves using native callback simulation
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+
         ui.invoke_next_step();
 
         // Step 1: Type -> Step 2
@@ -463,6 +481,7 @@ mod e2e_tests {
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
         assert_eq!(ui.get_domain_choice(), "subdomain");
+
     }
 }
 
