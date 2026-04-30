@@ -664,8 +664,45 @@ mod dashboard_docs_tests {
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
 
         // 6. Test tooltips rendering logic with registry
-        let tooltip_registry = TooltipRegistry::new();
+        let tooltip_registry = crate::tooltip_registry::TooltipRegistry::new();
         dashboard_ui.set_tt_active_agents(tooltip_registry.get_tooltip("dashboard_active_agents").unwrap_or_default().into());
         assert_eq!(dashboard_ui.get_tt_active_agents(), "The number of AI agents currently working on tasks for your business.");
+    }
+}
+
+
+#[cfg(test)]
+mod extra_handoff_tests {
+    use super::*;
+
+    #[test]
+    fn test_ui_handoff_approval() {
+        if std::env::var("CI").is_ok() || std::env::var("DISPLAY").is_err() {
+            println!("Skipping test_ui_handoff_approval because no display server is available.");
+            return;
+        }
+        let ui = app::Handoffs::new().unwrap();
+
+        let model = std::rc::Rc::new(slint::VecModel::default());
+        model.push(app::UiHandoff {
+            id: "task-123".into(),
+            intent: "Social Media Post".into(),
+            agent_name: "The Promoter".into(),
+            description: "Approve draft post about new vegan cakes".into(),
+            date: "Today".into(),
+            status: "PENDING".into(),
+        });
+        ui.set_handoffs(model.into());
+
+        let called = std::rc::Rc::new(std::cell::Cell::new(false));
+        let called_clone = called.clone();
+        ui.on_resolve_handoff(move |id, action| {
+            assert_eq!(id, "task-123");
+            assert_eq!(action, "approve");
+            called_clone.set(true);
+        });
+
+        ui.invoke_resolve_handoff("task-123".into(), "approve".into());
+        assert!(called.get());
     }
 }

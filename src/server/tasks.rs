@@ -30,13 +30,15 @@ pub struct SharedTask {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     event_tx: tokio::sync::mpsc::Sender<serde_json::Value>,
+    pool: Option<sqlx::PgPool>,
 }
 
 impl TaskManager {
-    pub fn new(event_tx: tokio::sync::mpsc::Sender<serde_json::Value>) -> Self {
+    pub fn new(event_tx: tokio::sync::mpsc::Sender<serde_json::Value>, pool: Option<sqlx::PgPool>) -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             event_tx,
+            pool,
         }
     }
 
@@ -169,6 +171,106 @@ impl TaskManager {
         
         claimed_tasks
     }
+
+    pub fn submit_for_approval(&self, task_id: &str, agent_id: &str, risk: String, content: String) -> Result<(), String> {
+        let mut tasks = self.tasks.write().unwrap();
+        if let Some(task) = tasks.get_mut(task_id) {
+            if task.assigned_agent_id.as_deref() == Some(agent_id) {
+                task.status = "PENDING_APPROVAL".to_string();
+                task.action_risk = Some(risk.clone());
+                task.proposed_content = Some(content.clone());
+                task.approval_status = Some("PENDING".to_string());
+                task.updated_at = Utc::now();
+
+                if let Some(pool) = &self.pool {
+                    let task_id_clone = task_id.to_string();
+                    let agent_id_clone = agent_id.to_string();
+                    let risk_clone = risk.clone();
+                    let content_clone = content.clone();
+                    let tenant_id = task.organization_id.clone();
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        let res = sqlx::query(
+                            "INSERT INTO agent_approvals (tenant_id, task_id, agent_id, action_risk, proposed_content, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')"
+                        )
+                        .bind(tenant_id)
+                        .bind(task_id_clone)
+                        .bind(agent_id_clone)
+                        .bind(risk_clone)
+                        .bind(content_clone)
+                        .execute(&pool_clone)
+                        .await;
+                        if let Err(e) = res {
+                            println!("Failed to insert agent_approval to DB: {}", e);
+                        }
+                    });
+                }
+
+                if let Err(e) = self.event_tx.try_send(serde_json::json!({
+                    "event_type": "agent_approval_submitted",
+                    "task_id": task_id,
+                    "agent_id": agent_id,
+                    "risk": risk,
+                    "content": content
+                })) {
+                    println!("Failed to emit approval submission event: {}", e);
+                }
+
+                return Ok(());
+            } else {
+                return Err("task not assigned to this agent".to_string());
+            }
+        }
+        Err("task not found".to_string())
+    }
+
+    pub fn process_approval(&self, task_id: &str, approved: bool) -> Result<(), String> {
+        let mut tasks = self.tasks.write().unwrap();
+        if let Some(task) = tasks.get_mut(task_id) {
+            if task.status == "PENDING_APPROVAL" {
+                if approved {
+                    task.status = "APPROVED".to_string();
+                    task.approval_status = Some("APPROVED".to_string());
+                } else {
+                    task.status = "REJECTED".to_string();
+                    task.approval_status = Some("REJECTED".to_string());
+                }
+                task.updated_at = Utc::now();
+
+                let status_str = if approved { "APPROVED" } else { "REJECTED" };
+
+                if let Some(pool) = &self.pool {
+                    let task_id_clone = task_id.to_string();
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        let res = sqlx::query(
+                            "UPDATE agent_approvals SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE task_id = $2"
+                        )
+                        .bind(status_str)
+                        .bind(task_id_clone)
+                        .execute(&pool_clone)
+                        .await;
+                        if let Err(e) = res {
+                            println!("Failed to update agent_approval in DB: {}", e);
+                        }
+                    });
+                }
+
+                if let Err(e) = self.event_tx.try_send(serde_json::json!({
+                    "event_type": "agent_approval_processed",
+                    "task_id": task_id,
+                    "approved": approved
+                })) {
+                    println!("Failed to emit approval processed event: {}", e);
+                }
+
+                return Ok(());
+            } else {
+                return Err("task not pending approval".to_string());
+            }
+        }
+        Err("task not found".to_string())
+    }
 }
 
 
@@ -180,7 +282,7 @@ mod tests {
     #[test]
     fn test_create_and_get_task() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let tm = TaskManager::new(tx);
+        let tm = TaskManager::new(tx, None);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         assert_eq!(task.title, "Test Task");
@@ -193,7 +295,7 @@ mod tests {
     #[test]
     fn test_claim_task() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let tm = TaskManager::new(tx);
+        let tm = TaskManager::new(tx, None);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         let claimed = tm.claim_task(&task.id, "agent1".to_string()).unwrap();
@@ -210,7 +312,7 @@ mod tests {
     #[test]
     fn test_review_task() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let tm = TaskManager::new(tx);
+        let tm = TaskManager::new(tx, None);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
@@ -227,7 +329,7 @@ mod tests {
     #[test]
     fn test_complete_task() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let tm = TaskManager::new(tx);
+        let tm = TaskManager::new(tx, None);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
@@ -240,5 +342,38 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["result"], "Success result");
         assert!(payload["completed_at"].is_string());
+    }
+
+    #[test]
+    fn test_submit_for_approval() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx, None);
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
+
+        tm.submit_for_approval(&task.id, "agent1", "high".to_string(), "proposed text".to_string()).unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.status, "PENDING_APPROVAL");
+        assert_eq!(fetched.action_risk.unwrap(), "high");
+        assert_eq!(fetched.proposed_content.unwrap(), "proposed text");
+        assert_eq!(fetched.approval_status.unwrap(), "PENDING");
+    }
+
+    #[test]
+    fn test_process_approval() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx, None);
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
+        tm.submit_for_approval(&task.id, "agent1", "high".to_string(), "proposed text".to_string()).unwrap();
+
+        tm.process_approval(&task.id, true).unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.status, "APPROVED");
+        assert_eq!(fetched.approval_status.unwrap(), "APPROVED");
     }
 }

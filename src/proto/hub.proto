@@ -190,7 +190,32 @@ message SharedTask {
   string proposed_content = 16;
 }
 
+
+message SubmitForApprovalRequest {
+  string task_id = 1;
+  string agent_id = 2;
+  string risk = 3;
+  string content = 4;
+}
+
+message SubmitForApprovalResponse {
+  bool success = 1;
+}
+
+message ApproveTaskRequest {
+  string task_id = 1;
+  bool approved = 2;
+}
+
+message ApproveTaskResponse {
+  bool success = 1;
+}
+
 service HubService {
+  rpc SubmitForApproval(SubmitForApprovalRequest) returns (SubmitForApprovalResponse);
+  rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
+  rpc RejectTask(ApproveTaskRequest) returns (ApproveTaskResponse);
+
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
   rpc Publish(PublishMessageRequest) returns (PublishMessageResponse);

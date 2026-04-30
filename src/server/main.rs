@@ -156,6 +156,51 @@ impl MyHubService {
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+    async fn submit_for_approval(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::SubmitForApprovalRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::SubmitForApprovalResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let tm = self.hub.task_manager();
+
+        match tm.submit_for_approval(&req.task_id, &req.agent_id, req.risk, req.content) {
+            Ok(_) => Ok(tonic::Response::new(crate::ohc::orchestration::SubmitForApprovalResponse {
+                success: true,
+            })),
+            Err(e) => Err(tonic::Status::internal(format!("Failed to submit task for approval: {}", e))),
+        }
+    }
+
+    async fn approve_task(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::ApproveTaskRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::ApproveTaskResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let tm = self.hub.task_manager();
+
+        match tm.process_approval(&req.task_id, req.approved) {
+            Ok(_) => Ok(tonic::Response::new(crate::ohc::orchestration::ApproveTaskResponse {
+                success: true,
+            })),
+            Err(e) => Err(tonic::Status::internal(format!("Failed to approve task: {}", e))),
+        }
+    }
+
+    async fn reject_task(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::ApproveTaskRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::ApproveTaskResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let tm = self.hub.task_manager();
+
+        match tm.process_approval(&req.task_id, false) {
+            Ok(_) => Ok(tonic::Response::new(crate::ohc::orchestration::ApproveTaskResponse {
+                success: true,
+            })),
+            Err(e) => Err(tonic::Status::internal(format!("Failed to reject task: {}", e))),
+        }
+    }
+
     async fn register_agent(
         &self,
         request: Request<RegisterAgentRequest>,

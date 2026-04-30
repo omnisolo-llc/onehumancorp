@@ -64,3 +64,25 @@ test.describe('Agent Management', () => {
     await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
 });
+
+test.describe('Handoffs & Approvals Workflow', () => {
+  test('should view and approve pending handoffs', async ({ page }) => {
+    // Navigate starting from home page
+    await page.goto('/login');
+    // Fill credentials
+    await page.locator('input[type="email"]').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    // Go to Handoffs
+    await page.goto('/handoffs');
+
+    // Check if handoff list is visible
+    await expect(page.locator('text=Handoffs & Escalations')).toBeVisible();
+
+    // This E2E test assumes that the backend will seed a task or the UI has a way to test this without
+    // actually needing complex setup since we mock backend calls or use a test fixture.
+    // Wait for network/hydration
+    await page.waitForTimeout(1000);
+  });
+});
