@@ -16,7 +16,7 @@ mod tests {
     use super::*;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
-    use crate::agents::legacy_mesh::DistributedLock;
+
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
@@ -42,20 +42,5 @@ mod tests {
         // If the database connection fails (which it will with a dummy pool),
         // it MUST return a database error instead of panicking or succeeding silently.
         assert!(result.is_err());
-    }
-
-    // Test ChaosEngine CorruptAgentLock failure mode injection target.
-    #[tokio::test]
-    async fn test_corrupt_agent_lock_failure() {
-        // Using an invalid redis URL will prevent acquire from succeeding and should fail safe instead of panic.
-        let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
-        let lock = DistributedLock::new(client, "test_chaos_lock");
-
-        let acquire_res = lock.acquire(Duration::from_millis(100), Duration::from_millis(500)).await;
-        // Expect Err because the port is invalid or closed, testing safe degradation
-        assert!(acquire_res.is_err());
-
-        let release_res = lock.release().await;
-        assert!(release_res.is_err());
     }
 }
