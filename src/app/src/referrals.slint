@@ -10,17 +10,53 @@ export struct UiReferral {
 
 export component Referrals inherits Window {
     width: 500px;
-    height: 600px;
-    title: "Viral Loop Dashboard";
+    height: 700px;
+    title: "Referral Program";
 
     background: #f8fafc;
 
     in property <[UiReferral]> referrals;
+    in-out property <string> my_referral_link: "ohc://join?ref=PENDING";
+    in-out property <string> my_share_message: "I use OneHumanCorp to run my business. Use my link to get 1 month free Pro: ";
+
     callback refresh();
+    callback share_referral();
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        // Banner
+        Rectangle {
+            background: #a855f7;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Share OHC, Get 1 Month Free Pro"; font-size: 20px; font-weight: 700; color: white; }
+                Text { text: "Share OHC with a friend, both get 1 month free Pro."; color: white; wrap: word-wrap; }
+
+                HorizontalBox {
+                    spacing: 10px;
+
+                    Rectangle {
+                        background: white;
+                        border-radius: 4px;
+                        Text {
+                            text: my_referral_link;
+                            color: #1e293b;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    Button {
+                        text: "Share";
+                        clicked => { share_referral(); }
+                    }
+                }
+            }
+        }
 
         HorizontalBox {
             Text { text: "Viral Loop Dashboard"; font-size: 20px; font-weight: 700; color: #1e293b; }

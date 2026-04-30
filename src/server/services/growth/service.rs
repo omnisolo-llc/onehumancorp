@@ -12,6 +12,7 @@ pub struct MyGrowthService {
     team_invites: RwLock<Vec<TeamInviteProto>>,
     waitlist: RwLock<Vec<WaitlistEntry>>,
     onboarding_funnels: RwLock<Vec<OnboardingFunnel>>,
+    viral_loop_tracker: Option<std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>>,
 }
 
 impl MyGrowthService {
@@ -23,7 +24,13 @@ impl MyGrowthService {
             team_invites: RwLock::new(Vec::new()),
             waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
+            viral_loop_tracker: None,
         }
+    }
+
+    pub fn with_viral_tracker(mut self, tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Self {
+        self.viral_loop_tracker = Some(tracker);
+        self
     }
 }
 
@@ -105,6 +112,9 @@ impl GrowthService for MyGrowthService {
         
         if let Some(r) = refs.iter_mut().find(|r| r.id == req.id) {
             r.clicks += 1;
+            if let Some(tracker) = &self.viral_loop_tracker {
+                tracker.record_invite_sent(&r.user_id);
+            }
             return Ok(Response::new(r.clone()));
         }
         
@@ -120,6 +130,9 @@ impl GrowthService for MyGrowthService {
         
         if let Some(r) = refs.iter_mut().find(|r| r.id == req.id) {
             r.conversions += 1;
+            if let Some(tracker) = &self.viral_loop_tracker {
+                tracker.record_invite_accepted(&r.user_id);
+            }
             return Ok(Response::new(r.clone()));
         }
         
