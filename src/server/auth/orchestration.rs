@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use tonic::{Request, Status};
 use crate::auth::parse_spiffe_id;
 use crate::ohc::orchestration::*;

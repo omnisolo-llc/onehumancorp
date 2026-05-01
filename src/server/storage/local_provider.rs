@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use std::fs;
