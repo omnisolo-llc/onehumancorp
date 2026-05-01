@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Referrals } from "referrals.slint";
 
 export struct UiUser {
     id: string,
@@ -29,17 +30,7 @@ export component UserManagement inherits Window {
             Button { text: "Invite User"; }
         }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-
-            HorizontalBox {
-                padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
-            }
-        }
+        Referrals {}
 
         VerticalBox {
             spacing: 12px;
