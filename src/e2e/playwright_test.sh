@@ -8,31 +8,16 @@ set -euo pipefail
 
 spec_file="${1:-}"
 
-# Resolve workspace root from Bazel runfiles
-if [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
+# Resolve workspace root — we always run from the repo root
+if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
+  workspace_root="${BUILD_WORKSPACE_DIRECTORY}"
+elif [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
   workspace_root="${TEST_SRCDIR}/${TEST_WORKSPACE}"
-elif [[ -n "${RUNFILES_DIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
-  workspace_root="${RUNFILES_DIR}/${TEST_WORKSPACE}"
 else
-  # Fallback for local invocation
-  workspace_root="$(pwd)"
+  workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 fi
 
-# Resolve the server binary
-server_bin=""
-for candidate in \
-  "${workspace_root}/bazel-bin/src/server/server" \
-  "${workspace_root}/src/server/server" \
-  ; do
-  if [[ -x "$candidate" ]]; then
-    server_bin="$candidate"
-    break
-  fi
-done
-
-if [[ -z "$server_bin" ]]; then
-  echo "Warning: server binary not found in runfiles, tests may fail to start backend" >&2
-fi
+cd "$workspace_root"
 
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
@@ -41,70 +26,81 @@ mkdir -p "$HOME"
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/tmp/ohc-playwright-browsers}"
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 
-# Find node + npx
-if command -v npx &>/dev/null; then
-  NPX="npx"
-elif [[ -x "${workspace_root}/node_modules/.bin/npx" ]]; then
-  NPX="${workspace_root}/node_modules/.bin/npx"
-else
-  echo "npx not found" >&2
-  exit 1
-fi
-
 # Install chromium if not cached
 if ! find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 3 -type f -name 'chrome-headless-shell' 2>/dev/null | grep -q .; then
   echo "[playwright] Installing Chromium..."
-  $NPX playwright install chromium >/dev/null 2>&1 || true
+  npx playwright install chromium 2>&1 || true
 fi
 
-# Start infrastructure (postgres, redis via docker compose)
+# Cleanup handler
 cleanup() {
   local exit_code=$?
   if [[ -n "${SERVER_PID:-}" ]]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  # Tear down docker compose
-  docker compose -f "${workspace_root}/deploy/docker-compose.e2e.yml" down >/dev/null 2>&1 || true
+  docker compose -f deploy/docker-compose.e2e.yml down >/dev/null 2>&1 || true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
+# Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker compose -f "${workspace_root}/deploy/docker-compose.e2e.yml" up -d >/dev/null 2>&1
+docker compose -f deploy/docker-compose.e2e.yml up -d 2>&1
 
 # Wait for postgres
-wait_for_port() {
-  local port=$1 label=$2 attempts=${3:-60}
-  for ((i = 1; i <= attempts; i++)); do
-    if nc -z 127.0.0.1 "$port" 2>/dev/null; then
-      return 0
+echo "[playwright] Waiting for postgres..."
+for i in $(seq 1 60); do
+  if pg_isready -h 127.0.0.1 -p 5432 -U ohc >/dev/null 2>&1; then
+    break
+  fi
+  if nc -z 127.0.0.1 5432 2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+# Start the server binary
+SERVER_BIN="${workspace_root}/bazel-bin/src/server/server"
+if [[ ! -x "$SERVER_BIN" ]]; then
+  # Try building it
+  SERVER_BIN="$(find "${workspace_root}/bazel-bin" -name server -type f -executable 2>/dev/null | head -1)"
+fi
+
+if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
+  echo "[playwright] Starting server from $SERVER_BIN..."
+  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc" \
+  REDIS_URL="redis://127.0.0.1:6379" \
+    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  SERVER_PID=$!
+
+  # Wait for server
+  echo "[playwright] Waiting for server on port 18789..."
+  for i in $(seq 1 30); do
+    if nc -z 127.0.0.1 18789 2>/dev/null; then
+      echo "[playwright] Server is ready."
+      break
+    fi
+    # Check if server crashed
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      echo "[playwright] Server process died. Log:"
+      tail -20 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true
+      break
     fi
     sleep 1
   done
-  echo "Timed out waiting for $label on port $port" >&2
-  return 1
-}
-
-wait_for_port 5432 "postgres"
-
-# Start the server binary if available
-if [[ -n "$server_bin" ]]; then
-  echo "[playwright] Starting server..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc" \
-    "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
-  SERVER_PID=$!
-  wait_for_port 18789 "server" 30 || true
+else
+  echo "[playwright] Warning: server binary not found, tests may fail"
 fi
 
-# Run the specific spec file (or all if not specified)
+# Run the specific spec file
 export CI=true
 export BASE_URL="${BASE_URL:-http://localhost:18789}"
 
 if [[ -n "$spec_file" ]]; then
   echo "[playwright] Running spec: $spec_file"
-  $NPX playwright test --config "${workspace_root}/playwright.config.ts" "$spec_file"
+  npx playwright test --config playwright.config.ts "src/e2e/$spec_file"
 else
   echo "[playwright] Running all specs"
-  $NPX playwright test --config "${workspace_root}/playwright.config.ts"
+  npx playwright test --config playwright.config.ts
 fi
