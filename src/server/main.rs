@@ -907,8 +907,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    // Start Memory Consolidation Worker
+    let vector_repo = std::sync::Arc::new(match &db.store {
+        crate::db::DbStore::Postgres => crate::agents::memory::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => crate::agents::memory::VectorRepository::new_sqlite(sqlite_pool.clone()),
+    });
+    let consolidation_worker = crate::agents::memory::MemoryConsolidationWorker::new(vector_repo);
+    consolidation_worker.start();
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        // Initialize local tables required for standalone mode
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    agent_id TEXT,
+                    content TEXT NOT NULL,
+                    embedding VECTOR(1536),
+                    source_type TEXT NOT NULL,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
         let db_path = "ohc-standalone.db";
         if std::path::Path::new(db_path).exists() {
             #[cfg(unix)]
