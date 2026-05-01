@@ -1824,6 +1824,10 @@ mod cost_transparency_e2e_tests {
         let share_to_x_called_clone = share_to_x_called.clone();
         business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
 
+        let share_to_whatsapp_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_whatsapp_called_clone = share_to_whatsapp_called.clone();
+        business_share_ui.on_share_to_whatsapp(move || { *share_to_whatsapp_called_clone.borrow_mut() = true; });
+
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
         business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
@@ -1840,6 +1844,9 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_share_to_x();
         assert!(*share_to_x_called.borrow());
+
+        business_share_ui.invoke_share_to_whatsapp();
+        assert!(*share_to_whatsapp_called.borrow());
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
