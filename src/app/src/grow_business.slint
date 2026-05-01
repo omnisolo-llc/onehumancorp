@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { UserSettings } from "user_settings.slint";
 
 export component GrowBusiness inherits Window {
     width: 500px;
@@ -7,8 +8,7 @@ export component GrowBusiness inherits Window {
 
     in-out property <int> step: 0;
     in-out property <string> selected_strategy: "";
-    in-out property <bool> is_advanced: false;
-    callback execute(string);
+        callback execute(string);
 
     background: #f8fafc;
 
@@ -21,8 +21,8 @@ export component GrowBusiness inherits Window {
             Rectangle {}
             CheckBox {
                 text: "Expert Mode";
-                checked: is_advanced;
-                toggled => { is_advanced = !is_advanced; }
+                checked: UserSettings.is_advanced;
+                toggled => { UserSettings.toggle_advanced(); }
             }
         }
 
@@ -45,7 +45,7 @@ export component GrowBusiness inherits Window {
             Text { text: "You are about to start: " + selected_strategy; color: #1e293b; }
             Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #64748b; wrap: word-wrap; }
             
-            if (is_advanced) : VerticalBox {
+            if (UserSettings.is_advanced) : VerticalBox {
                 spacing: 8px;
                 Text { text: "Advanced Target KPIs"; font-weight: 700; color: #1e293b; }
                 LineEdit {

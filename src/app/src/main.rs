@@ -1,3 +1,27 @@
+use slint::{ComponentHandle, Global};
+
+
+macro_rules! bind_user_settings {
+    ($ui:ident, $ui_type:ty) => {
+        let ui_handle = $ui.as_weak();
+        $ui.global::<crate::app::UserSettings>().on_toggle_advanced(move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let current = ui.global::<crate::app::UserSettings>().get_is_advanced();
+                let new_state = !current;
+                ui.global::<crate::app::UserSettings>().set_is_advanced(new_state);
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let mut state = std::collections::HashMap::new();
+                        state.insert("is_advanced".to_string(), if new_state { "true".to_string() } else { "false".to_string() });
+                        let _ = client.save_wizard_state(tonic::Request::new(crate::ohc::orchestration::SaveWizardStateRequest { state })).await;
+                    }
+                });
+            }
+        });
+    };
+}
+
 use ohc::orchestration::hub_service_client::HubServiceClient;
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
@@ -9,7 +33,7 @@ pub mod ohc {
     }
 }
 
-use slint::ComponentHandle;
+
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -49,6 +73,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+    bind_user_settings!(setup_wizard_ui, app::SetupWizard);
 
     let _ = setup_wizard_ui.hide();
 
@@ -92,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { ui.global::<app::UserSettings>().set_is_advanced(val == "true"); }
                         if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
                         if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                         if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
@@ -123,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), ui.get_product_name().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("is_advanced".to_string(), ui.global::<app::UserSettings>().get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -219,6 +245,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+        bind_user_settings!(dashboard, app::Dashboard);
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
                 dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -261,7 +288,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("is_advanced".to_string(), ui.global::<app::UserSettings>().get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -443,6 +470,7 @@ mod e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -526,9 +554,9 @@ mod e2e_tests {
         assert_eq!(ui.get_step(), 0);
 
         // Verify advanced state correctly saves using native callback simulation
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), true);
+        assert_eq!(ui.global::<app::UserSettings>().get_is_advanced(), false);
+        ui.global::<app::UserSettings>().invoke_toggle_advanced();
+        assert_eq!(ui.global::<app::UserSettings>().get_is_advanced(), true);
 
         ui.invoke_next_step();
 
@@ -733,6 +761,7 @@ mod tests {
     fn test_website_builder_viral_storefront_footer() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::WebsiteBuilder::new().unwrap();
+        bind_user_settings!(ui, app::WebsiteBuilder);
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
 
@@ -771,6 +800,7 @@ mod tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::PromptTuning::new().unwrap();
+        bind_user_settings!(ui, app::PromptTuning);
 
         // Step 0: Tone -> Step 1
         assert_eq!(ui.get_step(), 0);
@@ -931,6 +961,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::WebsiteBuilder::new().unwrap();
+        bind_user_settings!(ui, app::WebsiteBuilder);
 
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
@@ -997,6 +1028,7 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1081,6 +1113,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::AgentConfig::new().unwrap();
+        bind_user_settings!(ui, app::AgentConfig);
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
@@ -1166,6 +1199,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::GrowBusiness::new().unwrap();
+        bind_user_settings!(ui, app::GrowBusiness);
 
         let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let execute_success_clone = execute_success.clone();
@@ -1204,6 +1238,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1268,6 +1303,7 @@ mod dashboard_docs_tests {
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1335,6 +1371,7 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1382,6 +1419,7 @@ mod cost_transparency_e2e_tests {
 
         // Navigate to Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1433,6 +1471,7 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        bind_user_settings!(dashboard_ui, app::Dashboard);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });

@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { UserSettings } from "user_settings.slint";
 import { GlassCard } from "glass_card.slint";
 
 export struct UiPromptExample {
@@ -13,8 +14,7 @@ export component PromptTuning inherits Window {
 
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly";
-    in-out property <bool> is_advanced: false;
-    
+
     in-out property <bool> focus_only_business: false;
     in-out property <bool> focus_avoid_competitors: false;
     in-out property <bool> focus_reply_spanish: false;
@@ -40,8 +40,8 @@ export component PromptTuning inherits Window {
                 Rectangle {}
                 CheckBox {
                     text: "Expert Mode";
-                    checked: is_advanced;
-                    toggled => { is_advanced = !is_advanced; }
+                    checked: UserSettings.is_advanced;
+                    toggled => { UserSettings.toggle_advanced(); }
                 }
             }
 
@@ -157,14 +157,14 @@ export component PromptTuning inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    if (is_advanced) : VerticalBox {
+                    if (UserSettings.is_advanced) : VerticalBox {
                         Text { text: "Raw System Prompt JSON"; color: #1e293b; font-weight: 700; }
                         LineEdit {
                             text: "{\n  \"tone\": \"" + tone + "\",\n  \"focus_business\": " + (focus_only_business ? "true" : "false") + "\n}";
                             height: 100px;
                         }
                     }
-                    if (!is_advanced) : VerticalBox {
+                    if (!UserSettings.is_advanced) : VerticalBox {
                         spacing: 10px;
                         Rectangle {
                             background: #e2e8f0;
