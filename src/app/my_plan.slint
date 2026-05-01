@@ -15,6 +15,7 @@ export component MyPlan inherits Window {
     in-out property <string> estimated_bill: "$124.50";
 
     callback upgrade();
+    callback view_details();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -34,7 +35,11 @@ export component MyPlan inherits Window {
                 spacing: 8px;
                 Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
                 Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Button { text: "Upgrade"; height: 44px; clicked => { upgrade(); } }
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "Upgrade"; height: 44px; clicked => { upgrade(); } }
+                    Button { text: "View Cost Details"; height: 44px; clicked => { view_details(); } }
+                }
             }
         }
 

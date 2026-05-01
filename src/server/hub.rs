@@ -10,6 +10,9 @@ use crate::tasks::TaskManager;
 use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
+use std::sync::Arc;
+use crate::services::billing::auditor::CostAuditor;
+use crate::pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -30,6 +33,7 @@ pub struct Hub {
     tracker: Tracker,
     task_manager: TaskManager,
     scheduler: Scheduler,
+    cost_auditor: Arc<CostAuditor>,
     recent_events: RwLock<Vec<HubEvent>>,
     token_usage_history: RwLock<HashMap<String, Vec<i64>>>,
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
@@ -55,12 +59,17 @@ impl Hub {
             tracker: Tracker::new(),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
+            cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
             get_token_usage: None,
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
         }
+    }
+
+    pub fn get_cost_auditor(&self) -> Arc<CostAuditor> {
+        self.cost_auditor.clone()
     }
 
     pub fn register_agent(&self, agent: Agent) {
