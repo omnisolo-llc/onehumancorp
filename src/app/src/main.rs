@@ -56,11 +56,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     login_ui.on_start_setup_wizard({
         let login_handle = login_ui_handle.clone();
         move || {
-            if let Some(ui) = login_handle.upgrade() {
-                let _ = ui.hide();
-            }
             if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
                 let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
             }
         }
     });
@@ -349,6 +349,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod growth_e2e_tests {
     use super::*;
     use slint::Model;
+
+    #[test]
+    fn test_start_setup_wizard_transitions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_ui_handle = login_ui.as_weak();
+
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+        let _ = setup_wizard_ui.hide();
+
+        let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+
+        let transition_executed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let transition_executed_clone = transition_executed.clone();
+
+        login_ui.on_start_setup_wizard({
+            let login_handle = login_ui_handle.clone();
+            move || {
+                if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                    let _ = wizard.show();
+                }
+                if let Some(ui) = login_handle.upgrade() {
+                    let _ = ui.hide();
+                }
+                *transition_executed_clone.borrow_mut() = true;
+            }
+        });
+
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+    }
 
     #[test]
     fn test_e2e_referral_flow() {
