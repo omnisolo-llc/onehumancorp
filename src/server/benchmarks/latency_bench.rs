@@ -91,8 +91,8 @@ pub async fn bench_dashboard_snapshot() {
         let hub_clone2 = hub.clone();
 
         let (_, _) = tokio::join!(
-            async move { let _ = hub_clone1.get_agents(); },
-            async move { let _ = hub_clone2.get_meetings(); }
+            tokio::task::spawn_blocking(move || { let _ = hub_clone1.get_agents(); }),
+            tokio::task::spawn_blocking(move || { let _ = hub_clone2.get_meetings(); })
         );
 
         fetch_times.push(start.elapsed().as_micros());
