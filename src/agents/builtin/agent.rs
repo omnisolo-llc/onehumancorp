@@ -17,6 +17,7 @@ pub enum AgentEvent {
     TaskComplete { content: String },
     TaskError { error: String },
     IterationStarted { iteration: i32, message_count: usize },
+    CheckpointSaved { iteration: i32, path: String },
 }
 
 /// Configuration for a single agent run.
@@ -36,6 +37,8 @@ pub struct AgentRunConfig {
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
+    pub enable_state_checkpointing: bool,
+    pub state_scratchpad_path: Option<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -55,6 +58,8 @@ impl Default for AgentRunConfig {
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
             guardrails: None,
+            enable_state_checkpointing: false,
+            state_scratchpad_path: None,
         }
     }
 }
@@ -163,7 +168,22 @@ impl Agent {
             })
             .collect();
 
-        let mut messages: Vec<Message> = vec![Message::user(initial_message)];
+        let mut messages: Vec<Message> = Vec::new();
+
+        let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
+        let scratchpad_path = cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
+
+        if cfg.enable_state_checkpointing {
+            if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
+                if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
+                    messages = saved_msgs;
+                }
+            }
+        }
+
+        if messages.is_empty() {
+            messages.push(Message::user(initial_message));
+        }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
         let mut last_assistant_content = String::new();
@@ -409,7 +429,7 @@ impl Agent {
             }
 
             // Execute mutating calls sequentially to prevent race conditions
-            for tc in mutating_calls {
+            for tc in &mutating_calls {
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
@@ -513,6 +533,24 @@ impl Agent {
                 tool_calls: vec![],
                 tool_results,
             });
+
+            // State Management Checkpointing Mechanic (Claude Code)
+            if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
+                if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
+                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+                        // In a backend microservice context, executing global git commands is unsafe.
+                        // We skip executing global `git add/commit` here and only write to the
+                        // local scratchpad path. A proper implementation would either create an isolated
+                        // workspace/worktree, or rely on a Checkpointer database structure.
+                        // The Claude Code scratchpad concept is satisfied by storing the progress JSON.
+
+                        on_event(AgentEvent::CheckpointSaved {
+                            iteration,
+                            path: scratchpad_path.clone(),
+                        });
+                    }
+                }
+            }
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -1013,5 +1051,69 @@ mod tests {
         assert!(result.is_ok());
         let content = result.unwrap();
         assert_eq!(content, "Better answer");
+    }
+
+    #[tokio::test]
+    async fn test_state_checkpointing() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_mutating".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let mut mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
+        cfg.state_scratchpad_path = Some(scratchpad_path.clone());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify the file was created
+        assert!(std::path::Path::new(&scratchpad_path).exists());
+
+        // Clean up
+        let _ = std::fs::remove_file(&scratchpad_path);
+
+        // Verify event was emitted
+        let mut found_checkpoint_event = false;
+        for e in events {
+            if let AgentEvent::CheckpointSaved { path, .. } = e {
+                assert_eq!(path, scratchpad_path);
+                found_checkpoint_event = true;
+            }
+        }
+        assert!(found_checkpoint_event);
     }
 }

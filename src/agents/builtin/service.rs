@@ -304,6 +304,8 @@ impl AgentServiceImpl {
             compaction_threshold_tokens: 60_000,
             guardrails: None,
             enable_llm_judge: false,
+            enable_state_checkpointing: false,
+            state_scratchpad_path: None,
         }
     }
 }
@@ -388,6 +390,11 @@ impl AgentService for AgentServiceImpl {
                         message_count: message_count as i32,
                         ..Default::default()
                     },
+                    AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[Checkpoint Saved: Iteration {}, Path: {}]\n", iteration, path),
+                        ..Default::default()
+                    },
                     AgentEvent::TextChunk { content } => RunTaskEvent {
                         r#type: EventType::TextChunk as i32,
                         content,
@@ -461,7 +468,9 @@ impl AgentService for AgentServiceImpl {
                 enable_context_compaction: true,
                 compaction_threshold_tokens: 60_000,
                 guardrails: None,
-            enable_llm_judge: false,
+                enable_llm_judge: false,
+                enable_state_checkpointing: false,
+                state_scratchpad_path: None,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
