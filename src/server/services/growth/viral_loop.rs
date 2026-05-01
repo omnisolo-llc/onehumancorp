@@ -1,28 +1,38 @@
 use std::sync::RwLock;
+use opentelemetry::{global, KeyValue};
+use opentelemetry::metrics::Counter;
 
 pub struct ViralLoopTracker {
     invites_sent: RwLock<i32>,
     invites_accepted: RwLock<i32>,
+    invites_sent_metric: Counter<u64>,
+    invites_accepted_metric: Counter<u64>,
 }
 
 impl ViralLoopTracker {
     pub fn new() -> Self {
+        let meter = global::meter("ohc.growth");
+        let invites_sent_metric = meter.u64_counter("ohc.growth.viral_loop.invites_sent").build();
+        let invites_accepted_metric = meter.u64_counter("ohc.growth.viral_loop.invites_accepted").build();
+
         ViralLoopTracker {
             invites_sent: RwLock::new(0),
             invites_accepted: RwLock::new(0),
+            invites_sent_metric,
+            invites_accepted_metric,
         }
     }
 
     pub fn record_invite_sent(&self, _user_id: &str) {
         let mut sent = self.invites_sent.write().unwrap();
         *sent += 1;
-        // TODO: Track event in analytics
+        self.invites_sent_metric.add(1, &[]);
     }
 
     pub fn record_invite_accepted(&self, _invitee_id: &str) {
         let mut accepted = self.invites_accepted.write().unwrap();
         *accepted += 1;
-        // TODO: Track event in analytics
+        self.invites_accepted_metric.add(1, &[]);
     }
 
     pub fn calculate_k_factor(&self) -> f64 {
