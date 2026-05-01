@@ -610,9 +610,11 @@ mod tests {
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();
         
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         
         let _ = tx.send(());
+        // Yield to allow workers to exit cleanly before test finishes
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
 
     #[tokio::test]

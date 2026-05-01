@@ -136,18 +136,17 @@ impl CompressedEmbeddingCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread;
 
-    #[test]
-    fn test_local_embedding_cache() {
-        let cache = LocalEmbeddingCache::new(Duration::from_secs(1));
+    #[tokio::test]
+    async fn test_local_embedding_cache() {
+        let cache = LocalEmbeddingCache::new(Duration::from_millis(10));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         assert_eq!(cache.get("prompt2"), None);
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(1500));
+        tokio::time::sleep(Duration::from_millis(50)).await;
         assert_eq!(cache.get("prompt1"), None);
         
         // Prune
@@ -155,15 +154,15 @@ mod tests {
         assert_eq!(cache.prune(), 1); // Should prune prompt1
     }
 
-    #[test]
-    fn test_compressed_embedding_cache() {
-        let cache = CompressedEmbeddingCache::new(Duration::from_secs(1));
+    #[tokio::test]
+    async fn test_compressed_embedding_cache() {
+        let cache = CompressedEmbeddingCache::new(Duration::from_millis(10));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(1500));
+        tokio::time::sleep(Duration::from_millis(50)).await;
         assert_eq!(cache.get("prompt1"), None);
     }
 }
