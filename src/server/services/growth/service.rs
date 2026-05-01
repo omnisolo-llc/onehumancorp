@@ -29,11 +29,16 @@ impl MyGrowthService {
         }
     }
 
-    async fn get_org_id(&self, metadata: &tonic::metadata::MetadataMap) -> String {
-        metadata.get("x-org-id")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("default")
-            .to_string()
+    async fn get_org_id(&self, metadata: &tonic::metadata::MetadataMap) -> Result<String, Status> {
+        let spiffe_id_str = metadata.get("x-spiffe-id")
+            .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
+            .to_str()
+            .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
+
+        let (org_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str)
+            .map_err(|e| Status::permission_denied(e))?;
+
+        Ok(org_id)
     }
 }
 
@@ -76,7 +81,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<ReferralsResponse>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
@@ -109,7 +114,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<CreateReferralRequest>,
     ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
         if req.user_id.is_empty() {
@@ -159,7 +164,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
         
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -187,7 +192,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
         
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -295,7 +300,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<ViralCoefficientResponse>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
@@ -338,7 +343,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<ViralCoefficientMetricsResponse>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
         let res = self.get_viral_coefficient(request).await?.into_inner();
         
         Ok(Response::new(ViralCoefficientMetricsResponse {
@@ -401,7 +406,7 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GetQuotaRequest>,
     ) -> Result<Response<QuotaMetrics>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await;
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -470,24 +475,29 @@ mod tests {
         let pool = PgPool::connect(&database_url).await.unwrap();
         let service = MyGrowthService::new(pool);
 
-        let req = Request::new(CreateReferralRequest {
+        let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),
             referral_code: "TESTCODE".to_string(),
         });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
 
         let resp = service.create_referral(req).await.unwrap().into_inner();
         assert_eq!(resp.user_id, "test_user");
         assert_eq!(resp.referral_code, "TESTCODE");
 
-        let click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
         assert_eq!(click_resp.clicks, 1);
 
-        let conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
         assert_eq!(conv_resp.conversions, 1);
 
-        let list_resp = service.get_referrals(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        let mut list_req = Request::new(EmptyRequest {});
+        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
     }
 }
