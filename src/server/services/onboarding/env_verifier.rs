@@ -104,7 +104,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if is_standalone {
-        config.telemetry_enabled = telemetry_enabled;
+        config.telemetry_enabled = false;
     } else {
         config.telemetry_enabled = true;
         if let Some(tel) = env_vars.get("OHC_TELEMETRY_ENABLED") {
@@ -179,7 +179,7 @@ mod tests {
         env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
         let config = verify_environment(&env).unwrap();
-        assert!(config.telemetry_enabled);
+        assert!(!config.telemetry_enabled);
     }
 
     #[test]
