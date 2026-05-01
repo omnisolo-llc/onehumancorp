@@ -1009,15 +1009,15 @@ mod tests {
         // Step 0: Tone -> Step 1
         assert_eq!(ui.get_step(), 0);
         ui.set_tone("Concise".into());
-        ui.set_step(1);
+        ui.invoke_next_step();
 
         // Step 1: Focus -> Step 2
         ui.set_focus_only_business(true);
         ui.set_focus_avoid_competitors(true);
-        ui.set_step(2);
+        ui.invoke_next_step();
 
         // Step 2: Examples -> Step 3
-        ui.set_step(3);
+        ui.invoke_next_step();
 
         // Verify state
         assert_eq!(ui.get_tone(), "Concise");
@@ -1391,15 +1391,15 @@ mod docs_tests {
         // Step 0: Choose Agent -> Step 1
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_agent("Customer Support".into());
-        ui.set_step(1);
+        ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
-        ui.set_step(2);
+        ui.invoke_next_step();
 
         // Step 2: Frequency -> Step 3
         ui.set_frequency_value(2.0); // 2.0 maps to "Daily"
-        ui.set_step(3);
+        ui.invoke_next_step();
 
         // Step 3: Review
         ui.invoke_activate_agent(
