@@ -12,20 +12,19 @@ func TestSharedTask(t *testing.T) {
 	payload := json.RawMessage(`{"key":"value"}`)
 
 	task := SharedTask{
-		ID:              "uuid-1234",
-		OrganizationID:  "org1",
-		AssignedAgentID: &agentID,
-		Status:          "PENDING",
-		Payload:         payload,
-		CreatedAt:       now,
+		ID:        "uuid-1234",
+		AgentID:   &agentID,
+		Status:    "PENDING",
+		Payload:   payload,
+		CreatedAt: now,
 	}
 
 	if task.ID != "uuid-1234" {
 		t.Errorf("Expected ID 'uuid-1234', got '%s'", task.ID)
 	}
 
-	if task.AssignedAgentID == nil || *task.AssignedAgentID != "agent123" {
-		t.Errorf("Expected AssignedAgentID 'agent123'")
+	if task.AgentID == nil || *task.AgentID != "agent123" {
+		t.Errorf("Expected AgentID 'agent123'")
 	}
 
 	if task.Status != "PENDING" {
@@ -40,26 +39,23 @@ func TestSharedTask(t *testing.T) {
 		t.Errorf("Expected CreatedAt to be equal to initial time")
 	}
 
-	if !task.IsPending() {
-		t.Errorf("Expected IsPending to be true")
-	}
+    if !task.IsPending() {
+        t.Errorf("Expected IsPending to be true")
+    }
 
-	task.Assign("agent456")
-	if task.IsPending() {
-		t.Errorf("Expected IsPending to be false after Assign")
-	}
-	if *task.AgentID != "agent456" {
-		t.Errorf("Expected AgentID 'agent456', got '%s'", *task.AgentID)
-	}
-	if *task.AssignedAgentID != "agent456" {
-		t.Errorf("Expected AssignedAgentID 'agent456', got '%s'", *task.AssignedAgentID)
-	}
+    task.Assign("agent456")
+    if task.IsPending() {
+        t.Errorf("Expected IsPending to be false after Assign")
+    }
+    if *task.AgentID != "agent456" {
+        t.Errorf("Expected AgentID 'agent456', got '%s'", *task.AgentID)
+    }
 
-	task.Complete(json.RawMessage(`{"result":"done"}`))
-	if task.Status != "COMPLETED" {
-		t.Errorf("Expected Status 'COMPLETED', got '%s'", task.Status)
-	}
-	if string(task.Payload) != `{"result":"done"}` {
-		t.Errorf("Expected Payload `{\"result\":\"done\"}`, got '%s'", string(task.Payload))
-	}
+    task.Complete(json.RawMessage(`{"result":"done"}`))
+    if task.Status != "COMPLETED" {
+        t.Errorf("Expected Status 'COMPLETED', got '%s'", task.Status)
+    }
+    if string(task.Payload) != `{"result":"done"}` {
+        t.Errorf("Expected Payload `{\"result\":\"done\"}`, got '%s'", string(task.Payload))
+    }
 }

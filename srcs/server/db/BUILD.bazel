@@ -1,9 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "db",
-    srcs = ["db.go"],
-    importpath = "github.com/onehumancorp/ohc/srcs/server/db",
-    visibility = ["//visibility:public"],
-    embedsrcs = glob(["migrations/*.sql"]),
-)
