@@ -201,6 +201,13 @@ impl GrowthService for MyGrowthService {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            let limiter = crate::pricing::rate_limit::RedisRateLimiter::new(client);
+            let user_id: String = row.get("user_id");
+            let _ = limiter.set_tenant_tier(&user_id, crate::pricing::rate_limit::PlanTier::Pro).await;
+        }
+
         Ok(Response::new(Referral {
             id: row.get("id"),
             user_id: row.get("user_id"),

@@ -9,7 +9,7 @@ test.describe('Referral Program', () => {
     await page.locator('button:has-text("Login")').click();
 
     // 2. Navigate to Referrals dashboard
-    await page.goto('/referrals');
+    await page.locator('button:has-text("Referrals")').click();
     await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
 
     // 3. Generate a new referral link

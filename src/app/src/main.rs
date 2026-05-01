@@ -191,6 +191,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                 let _ = dashboard.show();
+                let ref_handle = referrals_handle.clone();
+                dashboard.on_open_referrals(move || {
+                    if let Some(ui) = ref_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 Box::leak(Box::new(dashboard));
             }
         }
@@ -321,6 +327,16 @@ mod growth_e2e_tests {
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let referrals_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let referrals_opened_clone = referrals_opened.clone();
+        dashboard_ui.on_open_referrals(move || {
+            *referrals_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_referrals();
+        assert!(*referrals_opened.borrow(), "Referrals should be opened from Dashboard");
 
         let ui = app::Referrals::new().unwrap();
 
