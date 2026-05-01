@@ -1,12 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
-### Cloud Scaling Improvements
-- feat: complete Referral Program with credit attribution and one-tap share (#9025)
-
-### Privacy/Offline Improvements
-- feat: complete Referral Program with credit attribution and one-tap share (#9025)
-
 ## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
