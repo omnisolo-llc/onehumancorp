@@ -15,6 +15,15 @@ pub struct ProviderMetadata {
 }
 
 pub fn get_catalog() -> Vec<IntegrationProvider> {
-    // Return empty catalog since functionality was removed
-    vec![]
+    let mut catalog = vec![];
+
+    // We instantiate nats as a placeholder, without making actual network connection
+    // since this is used in synchronous `new()` of registry
+    let nats_provider = crate::integrations::nats::provider::NatsProvider::with_client(
+        std::sync::Arc::new(crate::integrations::nats::client::RealNatsClient::dummy()),
+        "nats://localhost:4222"
+    ).into_integration_provider();
+    catalog.push(nats_provider);
+
+    catalog
 }
