@@ -1,0 +1,22 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+import { GlassCard } from "glass_card.slint";
+import { HorizontalBox } from "std-widgets.slint";
+
+export component TooltipElement inherits GlassCard {
+    x: TooltipRegistry.active_x;
+    y: TooltipRegistry.active_y - self.height - 8px;
+    visible: TooltipRegistry.is_visible;
+    z: 10000;
+
+    HorizontalBox {
+        padding: 12px;
+        Text {
+            text: TooltipRegistry.active_text;
+            color: white;
+            font-family: "Inter";
+            font-size: 14px;
+            wrap: word-wrap;
+            max-width: 250px;
+        }
+    }
+}

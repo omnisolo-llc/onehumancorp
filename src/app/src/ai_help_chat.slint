@@ -1,7 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export component AiHelpChat inherits Window {
-    width: 600px;
+    width: 375px; // Mobile first width // Mobile first width
     height: 800px;
     title: "AI Help Assistant";
     background: white;
@@ -19,7 +19,7 @@ export component AiHelpChat inherits Window {
                 padding: 16px;
                 Text {
                     text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                    color: #0f172a;
+                    color: white; font-family: "Outfit";
                     wrap: word-wrap;
                 }
             }

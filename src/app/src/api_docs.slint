@@ -1,10 +1,10 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export component ApiDocs inherits Window {
-    width: 800px;
+    width: 375px; // Mobile first width
     height: 600px;
     title: "API Reference (Advanced)";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         padding: 16px;
@@ -14,7 +14,7 @@ export component ApiDocs inherits Window {
             text: "Developer API";
             font-size: 24px;
             font-weight: 700;
-            color: #0f172a;
+            color: white; font-family: "Outfit";
         }
 
         Text {

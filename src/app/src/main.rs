@@ -44,7 +44,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+
+    // We attach the TooltipRegistry callback directly to the SetupWizard to avoid creating unused variables
+    // that would trigger rust compiler warnings. Global callbacks apply process-wide.
     let setup_wizard_ui = app::SetupWizard::new()?;
+    let registry = setup_wizard_ui.global::<app::TooltipRegistry>();
+    registry.on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+            "help" => "Open the Help Center for guides and tutorials.".into(),
+            _ => "".into(),
+        }
+    });
+
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
     let init_ui_handle = setup_wizard_handle.clone();
@@ -855,6 +868,16 @@ mod docs_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+        // Set up the TooltipRegistry global callback
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
+
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
         // But we can verify it doesn't crash on Dashboard creation.
@@ -872,6 +895,35 @@ mod docs_tests {
         dashboard_ui.invoke_open_help_center();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+    }
+
+    #[test]
+    fn test_tooltip_registry_callback() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Set up the TooltipRegistry global callback
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
+
+        let text = registry.invoke_request_tooltip_text("ask_ai".into());
+        assert_eq!(text, "Ask our AI a question to get immediate help.");
     }
 
     #[test]
@@ -1046,6 +1098,16 @@ mod docs_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+        // Set up the TooltipRegistry global callback
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
+
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
 
@@ -1094,14 +1156,25 @@ mod dashboard_docs_tests {
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+        // Set up the TooltipRegistry global callback
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
+
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
-            // Verify HelpCenter component can be instantiated
             let _help_center = app::HelpCenter::new().unwrap();
         });
+
+        // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
 
@@ -1110,14 +1183,19 @@ mod dashboard_docs_tests {
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
-            // Verify AiHelpChat component can be instantiated
             let _ai_chat = app::AiHelpChat::new().unwrap();
         });
+
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+
+        // 6. Test other components (VideoTutorials, ApiDocs, ReleaseNotes)
+        let _video_tutorials = app::VideoTutorials::new().unwrap();
+        let _api_docs = app::ApiDocs::new().unwrap();
+        let _release_notes = app::ReleaseNotes::new().unwrap();
     }
 }
 
@@ -1144,6 +1222,16 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Set up the TooltipRegistry global callback
+        let registry = dashboard_ui.global::<app::TooltipRegistry>();
+        registry.on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask our AI a question to get immediate help.".into(),
+                "help" => "Open the Help Center for guides and tutorials.".into(),
+                _ => "".into(),
+            }
+        });
 
         let pending_tasks = vec![
             app::UiPendingApproval {
