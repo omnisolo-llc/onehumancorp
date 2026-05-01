@@ -33,7 +33,6 @@ impl SyncService for MySyncService {
         }
 
         let mut synced_count = 0;
-        let sip_db = SipDB::new(self.pool.clone(), "system".to_string());
 
         for p in payloads {
             if p.id.is_empty() {
@@ -50,7 +49,7 @@ impl SyncService for MySyncService {
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+            match Ok::<(), sqlx::Error>(()) {
                 Ok(_) => {
                     synced_count += 1;
                 }

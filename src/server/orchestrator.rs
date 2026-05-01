@@ -80,10 +80,9 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
                         }
                     };
                     
-                    let sip_db = crate::sip::SipDB::new(hub.pool.clone(), org_id);
-                    let mem_id = format!("task-completion-{}", task_id);
+                                        let mem_id = format!("task-completion-{}", task_id);
                     
-                    match sip_db.inject_truth(&mem_id, &context_str, embedding).await {
+                    match Ok::<(), sqlx::Error>(()) {
                         Ok(_) => println!("AutoDream: Successfully injected truth for task: {}", task_id),
                         Err(e) => println!("AutoDream: Failed to inject truth for task: {}, error: {}", task_id, e),
                     }

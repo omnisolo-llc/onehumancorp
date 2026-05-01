@@ -23,7 +23,7 @@ log() { echo "[kind-e2e] $*"; }
 require_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "error: required tool '$1' not found on PATH" >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -35,7 +35,7 @@ trap cleanup EXIT
 
 # ── Prerequisites ──────────────────────────────────────────────────────────────
 for tool in kind helm kubectl docker curl; do
-  require_tool "${tool}" || { echo "Skipping test since ${tool} is not installed" && exit 0; }
+  require_tool "${tool}" || { echo "Skipping test since ${tool} is not installed"; exit 0; }
 done
 
 # ── Locate repo root (works both inside and outside Bazel sandbox) ────────────
