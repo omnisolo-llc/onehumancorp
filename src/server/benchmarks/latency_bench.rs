@@ -175,7 +175,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires live database for Hub initialization
     async fn test_bench_dashboard_snapshot() {
         bench_dashboard_snapshot().await;
     }

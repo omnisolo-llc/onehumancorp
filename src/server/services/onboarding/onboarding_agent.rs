@@ -190,7 +190,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_start_onboarding_online_store() {
         let db = match setup_test_db().await {
             Some(db) => db,

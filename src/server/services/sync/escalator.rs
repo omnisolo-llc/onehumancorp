@@ -84,7 +84,6 @@ mod tests {
     use std::sync::Arc;
 
     #[tokio::test]
-    #[ignore] // Cannot connect to a live postgres instance in a basic test
     async fn test_sync_escalator() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();

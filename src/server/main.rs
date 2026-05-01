@@ -1085,7 +1085,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1104,7 +1103,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_accept_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1120,7 +1118,6 @@ mod tests {
         assert!(resp.unwrap().into_inner().success);
     }
     #[tokio::test]
-    #[ignore]
     async fn test_publish_teammate_mesh_event_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1143,7 +1140,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_stream_mesh_events_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
