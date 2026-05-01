@@ -18,10 +18,10 @@ test.describe('Dashboard UX', () => {
     // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
     // and verify the labels.
     await expect(page.locator('text=Dashboard').first()).toBeVisible();
-    await expect(page.locator('text=Active Helpers')).toBeVisible();
+    await expect(page.locator('text=Today\'s Sales')).toBeVisible();
+    await expect(page.locator('text=New Orders')).toBeVisible();
+    await expect(page.locator('text=Active AI Helpers')).toBeVisible();
     await expect(page.locator('text=Tasks in Progress')).toBeVisible();
-    await expect(page.locator('text=Upcoming Bookings')).toBeVisible();
-    await expect(page.locator('text=Team Members')).toBeVisible();
   });
 });
 
@@ -34,6 +34,13 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 
   // Verify navigation actions
   await expect(page.locator('text=Quick Actions')).toBeVisible();
+
+  // Verify First-Time User Tour ? icon toggle
+  const questionMarkBtn = page.locator('button:has-text("?")');
+  await expect(questionMarkBtn).toBeVisible();
+  await questionMarkBtn.click();
+  await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
+
   await expect(page.locator('text=Add Product')).toBeVisible();
   await expect(page.locator('text=View Orders')).toBeVisible();
   await expect(page.locator('text=Messages')).toBeVisible();
