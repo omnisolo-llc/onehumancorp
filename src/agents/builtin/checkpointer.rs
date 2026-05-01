@@ -164,7 +164,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
     decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
+
     Ok(decompressed)
 }
 
