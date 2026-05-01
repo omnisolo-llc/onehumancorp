@@ -35,7 +35,6 @@ export component SetupWizard inherits Window {
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
-    in-out property <string> product_description: "";
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
@@ -45,7 +44,7 @@ export component SetupWizard inherits Window {
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
 
-    callback launch(string, string, string, string, string, string, string, string, string, string);
+    callback launch(string, string, string, string, string, string, string, string, string);
     callback next_step();
     callback select_business_type(string);
     callback toggle_sell_physical();
@@ -59,7 +58,6 @@ export component SetupWizard inherits Window {
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
-    callback generate_product_description();
 
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
@@ -349,18 +347,6 @@ export component SetupWizard inherits Window {
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
 
-                Text { text: "Description"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit {
-                    placeholder-text: "Tell customers about your product...";
-                    text <=> product_description;
-                    height: 80px;
-                }
-                Button {
-                    text: "✨ Auto-generate Description";
-                    height: 40px;
-                    clicked => { generate_product_description(); }
-                }
-
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
@@ -443,8 +429,7 @@ export component SetupWizard inherits Window {
             // Step 10: Welcome Checklist
             if (step == 10) : VerticalBox {
                 spacing: 16px;
-                Text { text: "🎉 Business Live! 🎉"; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
-                Text { text: "You're set up! Here's what to do next:"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "You're set up! Here's what to do next:"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
                 GlassCard {
                     VerticalBox {
@@ -458,26 +443,17 @@ export component SetupWizard inherits Window {
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            TouchArea {
-                                clicked => { root.go_to_dashboard(); }
-                                Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
-                            }
+                            Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            TouchArea {
-                                clicked => { root.go_to_dashboard(); }
-                                Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
-                            }
+                            Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            TouchArea {
-                                clicked => { root.go_to_dashboard(); }
-                                Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
-                            }
+                            Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                     }
                 }
@@ -511,7 +487,7 @@ export component SetupWizard inherits Window {
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;
-                    launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, product_description);
+                    launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice);
                 } }
             }
 

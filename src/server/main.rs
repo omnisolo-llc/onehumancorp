@@ -952,8 +952,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true",
-        None
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
 
     // Start Builtin Agent
