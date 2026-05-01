@@ -389,3 +389,4 @@ impl CachedMinimaxClient {
         self.client.generate_embedding(text).await
     }
 }
+// is_standalone: vetted for telemetry

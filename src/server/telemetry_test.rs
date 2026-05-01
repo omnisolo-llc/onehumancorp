@@ -119,7 +119,13 @@ mod tests {
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
                                lower_line.contains("session_id") ||
-                               lower_line.contains("payload") {
+                               lower_line.contains("payload") ||
+                               lower_line.contains("email") ||
+                               lower_line.contains("phone") ||
+                               lower_line.contains("password") ||
+                               lower_line.contains("user_data") ||
+                               lower_line.contains("contact") ||
+                               lower_line.contains("address") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
@@ -136,6 +142,59 @@ mod tests {
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
+            violations
+        );
+    }
+
+    #[test]
+    fn test_reqwest_client_sovereignty_checks() {
+        use walkdir::WalkDir;
+        use std::fs;
+        use std::env;
+        use std::path::PathBuf;
+
+        let mut violations = Vec::new();
+
+        let mut search_dirs = vec![PathBuf::from(".")];
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let mut p = PathBuf::from(workspace_dir);
+            p.push("src/server");
+            search_dirs.push(p);
+        } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+            let mut p = PathBuf::from(runfiles_dir);
+            search_dirs.push(p);
+        }
+
+        let mut checked_files = 0;
+
+        for dir in search_dirs {
+            if dir.exists() {
+                let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
+                    e.path().components().all(|c| c.as_os_str() != "external")
+                });
+
+                for entry in walker
+                    .filter_map(Result::ok)
+                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+                {
+                    checked_files += 1;
+                    let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                    if content.contains("reqwest::Client") {
+                        if !content.contains("is_standalone") && !content.contains("STANDALONE_MODE") && !content.contains("telemetry_enabled") && !entry.path().display().to_string().contains("test") {
+                            violations.push(format!("{}: Contains reqwest::Client but no sovereignty checks (is_standalone or telemetry_enabled)", entry.path().display()));
+                        }
+                    }
+                }
+
+                if checked_files > 10 {
+                    break;
+                }
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Found reqwest::Client usage without sovereignty checks in the following files:\n{:#?}",
             violations
         );
     }

@@ -35,6 +35,10 @@ impl SyncEscalator {
     }
 
     async fn process_escalations(&self) -> Result<(), String> {
+        if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            return Err("Local sovereignty constraint: outbound cloud sync is disabled in Standalone mode".to_string());
+        }
+
         let rows = sqlx::query("SELECT id, tenant_id, payload FROM local_mcp_rag_tasks WHERE escalation_status = 'local'")
             .fetch_all(&self.pool)
             .await

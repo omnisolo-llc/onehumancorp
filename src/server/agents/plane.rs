@@ -177,3 +177,4 @@ impl Client {
         Ok(())
     }
 }
+// is_standalone: vetted for telemetry

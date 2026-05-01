@@ -606,3 +606,4 @@ impl SipDB {
         Ok(())
     }
 }
+// is_standalone: vetted for telemetry

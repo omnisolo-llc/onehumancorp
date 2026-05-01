@@ -26,6 +26,10 @@ impl TelemetrySyncDaemon {
     }
 
     async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if !crate::config::get().telemetry_enabled {
+            return Ok(());
+        }
+
         let rows = query(
             "SELECT id, metric_name, metric_type, value, labels_json, timestamp
              FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100"

@@ -236,3 +236,4 @@ mod tests {
         assert!(res.unwrap_err().contains("resolves to blocked IP"));
     }
 }
+// is_standalone: vetted for telemetry

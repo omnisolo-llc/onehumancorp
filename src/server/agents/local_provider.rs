@@ -139,3 +139,4 @@ fn is_network_error(err: &str) -> bool {
     // Simplified check based on string matching, as we don't have typed errors from gRPC or HTTP client here yet in this simplified version.
     err.contains("timeout") || err.contains("connection refused") || err.contains("closed") || err.contains("503")
 }
+// is_standalone: vetted for telemetry

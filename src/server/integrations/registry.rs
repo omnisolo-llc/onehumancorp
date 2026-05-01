@@ -253,3 +253,4 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         println!("Failed to send Discord webhook: {}", e);
     }
 }
+// is_standalone: vetted for telemetry

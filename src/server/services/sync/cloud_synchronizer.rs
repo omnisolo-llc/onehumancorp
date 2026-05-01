@@ -18,6 +18,10 @@ impl CloudSynchronizerImpl {
     }
 
     pub async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String> {
+        if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            return Err("Local sovereignty constraint: outbound cloud sync is disabled in Standalone mode".to_string());
+        }
+
         let pending = self.repo.get_pending_sync(organization_id, 50).await?;
 
         for mission in pending {
@@ -54,6 +58,10 @@ impl CloudSynchronizerImpl {
     }
 
     pub async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String> {
+        if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            return Err("Local sovereignty constraint: outbound cloud sync is disabled in Standalone mode".to_string());
+        }
+
         let active = self.repo.get_active_escalations(organization_id).await?;
 
         for mission in active {
@@ -154,6 +162,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_push_pending_missions_empty() {
+        unsafe { std::env::set_var("STANDALONE_MODE", "false"); }
         let repo = Arc::new(MockLocalRepository::new());
         let sync = CloudSynchronizerImpl::new(repo, "http://localhost:8080".to_string());
         let res = sync.push_pending_missions("test_org").await;
@@ -162,6 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pull_mission_updates_empty() {
+        unsafe { std::env::set_var("STANDALONE_MODE", "false"); }
         let repo = Arc::new(MockLocalRepository::new());
         let sync = CloudSynchronizerImpl::new(repo, "http://localhost:8080".to_string());
         let res = sync.pull_mission_updates("test_org").await;
