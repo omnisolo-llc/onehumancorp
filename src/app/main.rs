@@ -15,6 +15,13 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+use std::cell::RefCell;
+use copypasta::{ClipboardContext, ClipboardProvider};
+
+thread_local! {
+    static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -178,7 +185,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |link| {
             if let Some(_ui) = ui_handle.upgrade() {
                 let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
-                println!("Share message copied to clipboard: {}", pre_filled_msg);
+
+                CLIPBOARD.with(|cb| {
+                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                        if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
+                            println!("Failed to copy to clipboard: {:?}", e);
+                        } else {
+                            println!("Share message copied to clipboard: {}", pre_filled_msg);
+                        }
+                    } else {
+                        println!("Clipboard not initialized, failed to copy share link");
+                    }
+                });
             }
         }
     });
@@ -256,7 +274,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         move || {
                             if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
                                 let link = ui.get_share_link();
-                                println!("Shareable Store Link copied to clipboard: {}", link);
+
+                                CLIPBOARD.with(|cb| {
+                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                        if let Err(e) = ctx.set_contents(link.to_string()) {
+                                            println!("Failed to copy to clipboard: {:?}", e);
+                                        } else {
+                                            println!("Shareable Store Link copied to clipboard: {}", link);
+                                        }
+                                    } else {
+                                        println!("Clipboard not initialized, failed to copy store link");
+                                    }
+                                });
                             }
                         }
                     });
