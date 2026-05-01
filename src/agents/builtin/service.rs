@@ -47,6 +47,77 @@ pub struct AgentServiceImpl {
     llm_override: Option<Arc<dyn LlmClient>>,
 }
 
+
+async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Option<&str>) -> String {
+    let current = current_dir.to_path_buf();
+    let target = if let Some(wd) = working_dir {
+        current.join(wd)
+    } else {
+        current.clone()
+    };
+
+    // Use tokio for canonicalize. Fallback to raw paths if it fails (e.g., dir doesn't exist yet).
+    let target_path = tokio::fs::canonicalize(&target).await.unwrap_or(target);
+    let current_path = tokio::fs::canonicalize(&current).await.unwrap_or(current);
+
+    let mut paths_to_check = Vec::new();
+    let mut ptr = target_path.as_path();
+
+    // Traverse upwards from target to current
+    loop {
+        paths_to_check.push(ptr.join("AGENTS.md"));
+        if ptr == current_path.as_path() {
+            break; // Stop at the workspace root
+        }
+        if let Some(p) = ptr.parent() {
+            ptr = p;
+            // Prevent going out of the workspace if canonicalization mismatched
+            if !ptr.starts_with(&current_path) && ptr != current_path.as_path() {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // paths_to_check currently has [leaf, parent, grandparent, ..., root]
+    // We want root to leaf (so leaf overrides/appends to root)
+    paths_to_check.reverse();
+
+    // Collect all contents, keeping track of them to handle truncation properly
+    // so we don't truncate the leaf.
+    let mut all_contents = Vec::new();
+    for p in paths_to_check {
+        if let Ok(content) = tokio::fs::read_to_string(&p).await {
+            all_contents.push(content);
+        }
+    }
+
+    let mut combined = String::new();
+    // Reconstruct string backwards to ensure leaf is prioritized if truncation happens.
+
+
+    for (i, content) in all_contents.iter().enumerate() {
+        if i > 0 {
+            combined.push_str("\n\n");
+        }
+        combined.push_str(content);
+    }
+
+    if combined.len() > 32768 {
+        // We must truncate from the start of the string, keeping the end.
+        let overflow = combined.len() - 32768;
+        let mut start_idx = overflow;
+        while start_idx < combined.len() && !combined.is_char_boundary(start_idx) {
+            start_idx += 1;
+        }
+        // Return the rightmost 32KB
+        combined = combined[start_idx..].to_string();
+    }
+
+    combined
+}
+
 impl AgentServiceImpl {
     pub fn new(agent_id: impl Into<String>, cfg: AgentConfig, auth: AuthMode) -> Self {
         Self {
@@ -192,7 +263,8 @@ impl AgentServiceImpl {
         };
 
         // Attempt to load AGENTS.md for user instructions
-        let user_instructions = tokio::fs::read_to_string("AGENTS.md").await.unwrap_or_default();
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let user_instructions = load_cascading_agents_md(&current_dir, None).await;
         let developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
 
         let max_tokens = if req.max_tokens == 0 {
@@ -374,7 +446,10 @@ impl AgentService for AgentServiceImpl {
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
                 developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
-                user_instructions: tokio::fs::read_to_string("AGENTS.md").await.unwrap_or_default(),
+                user_instructions: {
+                    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+                    load_cascading_agents_md(&current_dir, if sub_req.working_dir.is_empty() { None } else { Some(&sub_req.working_dir) }).await
+                },
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
@@ -581,5 +656,56 @@ pub fn agent_tool() -> Tool {
             "required": ["prompt"]
         }),
         execute: Arc::new(SubagentExecutor),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md() {
+        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).unwrap();
+
+        let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
+        root_file.write_all(b"ROOT INSTRUCTION").unwrap();
+        root_file.flush().unwrap();
+
+        std::fs::create_dir_all(base_dir.join("nested")).unwrap();
+        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        nested_file.write_all(b"NESTED INSTRUCTION").unwrap();
+        nested_file.flush().unwrap();
+
+        let result = load_cascading_agents_md(&base_dir, Some("nested")).await;
+
+        let _ = std::fs::remove_dir_all(&base_dir);
+
+        assert_eq!(result, "ROOT INSTRUCTION\n\nNESTED INSTRUCTION");
+    }
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md_truncation() {
+        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).unwrap();
+
+        let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
+        let massive_str = "A".repeat(40000);
+        root_file.write_all(massive_str.as_bytes()).unwrap();
+        root_file.flush().unwrap();
+
+        std::fs::create_dir_all(base_dir.join("nested")).unwrap();
+        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        nested_file.write_all(b"CRITICAL_LEAF").unwrap();
+        nested_file.flush().unwrap();
+
+        let result = load_cascading_agents_md(&base_dir, Some("nested")).await;
+
+        let _ = std::fs::remove_dir_all(&base_dir);
+
+        assert!(result.len() <= 32768);
+        assert!(result.ends_with("CRITICAL_LEAF"));
     }
 }
