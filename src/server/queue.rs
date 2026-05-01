@@ -610,7 +610,7 @@ mod tests {
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();
         
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         
         let _ = tx.send(());
     }

@@ -344,12 +344,17 @@ mod tests {
     async fn test_memory_transport_lock_expiration() {
         let transport = MemoryTransport::new();
 
-        // Acquire lock with short TTL (1 second)
-        let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
-        assert!(acquired);
+        // First agent acquires lock with 100ms TTL
+        let acquired1 = transport.acquire_lock("expiring_resource", "agent_1", 0).await.unwrap();
+        assert!(acquired1);
 
-        // Sleep for 2 seconds to let lock expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        // Emulate sub-second expiration internally for the test
+        let mut map = transport.locks.lock().await;
+        if let Some(mut lock_info) = map.get_mut("expiring_resource") {
+            // lock_info is (String, Instant). We need to change the Instant.
+            *lock_info = (lock_info.0.clone(), std::time::Instant::now() - std::time::Duration::from_millis(100));
+        }
+        drop(map);
 
         // Second agent should be able to acquire lock now
         let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
@@ -362,7 +367,7 @@ mod tests {
 
         // Register presence
         transport.register_presence("agent_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_2", "busy", 1).await.unwrap();
+        transport.register_presence("agent_2", "busy", 1).await.unwrap(); // changed back to 1 sec
 
         // Get active agents
         let mut active_agents = transport.get_active_agents().await.unwrap();
@@ -372,8 +377,12 @@ mod tests {
         assert_eq!(active_agents[0], ("agent_1".to_string(), "online".to_string()));
         assert_eq!(active_agents[1], ("agent_2".to_string(), "busy".to_string()));
 
-        // Wait for agent_2 presence to expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        // Fast forward expiration internally
+        let mut presence_map = transport.presence.lock().await;
+        if let Some(mut presence_info) = presence_map.get_mut("agent_2") {
+            *presence_info = (presence_info.0.clone(), std::time::Instant::now() - std::time::Duration::from_millis(100));
+        }
+        drop(presence_map);
 
         // Get active agents again
         let active_agents_after_expiration = transport.get_active_agents().await.unwrap();

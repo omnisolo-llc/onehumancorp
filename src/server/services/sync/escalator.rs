@@ -85,7 +85,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_escalator() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let db_url = match std::env::var("DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => {
+                println!("Skipping test: DATABASE_URL not set");
+                return;
+            }
+        };
+
+        let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();
         let escalator = Arc::new(SyncEscalator::new(pool));
         
         let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
