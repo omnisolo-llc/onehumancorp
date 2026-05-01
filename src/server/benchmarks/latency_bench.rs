@@ -17,7 +17,7 @@ pub async fn bench_queue_latency() {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    conn.execute("SET app.current_tenant = 'none'").await?;
                     Ok(true)
                 })
             })
@@ -54,7 +54,7 @@ pub async fn bench_dashboard_snapshot() {
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SET app.current_tenant = 'system'").await?;
+                conn.execute("SET app.current_tenant = 'none'").await?;
                 Ok(true)
             })
         })
