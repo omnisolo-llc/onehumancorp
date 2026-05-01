@@ -1544,3 +1544,21 @@ service McpService {
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
 }
+
+message PublishSiteRequest {
+  string template = 1;
+  string primary_color = 2;
+  string product_name = 3;
+  string product_price = 4;
+  string product_description = 5;
+  string domain_choice = 6;
+}
+
+message PublishSiteResponse {
+  string url = 1;
+  string status = 2;
+}
+
+service WebsiteBuilderService {
+  rpc PublishSite(PublishSiteRequest) returns (PublishSiteResponse);
+}

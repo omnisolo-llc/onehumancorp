@@ -75,6 +75,10 @@ impl Hub {
         agents.get(id).cloned()
     }
 
+    pub fn get_pool(&self) -> sqlx::PgPool {
+        self.pool.clone()
+    }
+
     pub fn get_agents_count(&self) -> usize {
         let agents = self.agents.read().unwrap();
         agents.len()

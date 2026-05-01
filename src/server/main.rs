@@ -59,6 +59,7 @@ pub mod services {
     pub mod scheduler;
     pub mod agent;
     pub mod autodream;
+    pub mod website_builder;
 }
 
 use tokio::sync::mpsc;
@@ -135,6 +136,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ohc::orchestration::website_builder_service_server::WebsiteBuilderServiceServer;
 use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
 use ohc::orchestration::*;
 
@@ -1054,10 +1056,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
+    let website_builder_service = services::website_builder::service::MyWebsiteBuilderService::new(hub.clone());
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(WebsiteBuilderServiceServer::new(website_builder_service))
         .serve(addr)
         .await?;
 

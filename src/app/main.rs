@@ -359,6 +359,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let website_builder_ui = app::WebsiteBuilder::new()?;
+    let website_builder_handle = website_builder_ui.as_weak();
+
+    website_builder_ui.on_publish_site({
+        let handle = website_builder_handle.clone();
+        move |template, color, product, price, description, domain| {
+            let req_template = template.to_string();
+            let req_color = color.to_string();
+            let req_product = product.to_string();
+            let req_price = price.to_string();
+            let req_description = description.to_string();
+            let req_domain = domain.to_string();
+
+            let handle_clone = handle.clone();
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = ohc::orchestration::website_builder_service_client::WebsiteBuilderServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
+                        template: req_template,
+                        primary_color: req_color,
+                        product_name: req_product,
+                        product_price: req_price,
+                        product_description: req_description,
+                        domain_choice: req_domain,
+                    });
+
+                    if let Ok(_resp) = client.publish_site(request).await {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle_clone.upgrade() {
+                                ui.set_is_publishing(false);
+                            }
+                        }).unwrap();
+                    } else {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle_clone.upgrade() {
+                                ui.set_is_publishing(false);
+                            }
+                        }).unwrap();
+                    }
+                } else {
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = handle_clone.upgrade() {
+                            ui.set_is_publishing(false);
+                        }
+                    }).unwrap();
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
