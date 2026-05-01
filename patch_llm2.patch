@@ -1,0 +1,62 @@
+--- src/agents/builtin/output_parser.rs
++++ src/agents/builtin/output_parser.rs
+@@ -1,9 +1,15 @@
+ use crate::types::{ChatRequest, Message, ToolError, ChatResponse};
+ use serde::de::DeserializeOwned;
+ use std::sync::Arc;
+ use async_trait::async_trait;
+-use crate::llm::LlmClient;
+
++#[async_trait]
++pub trait LlmClientForParser: Send + Sync {
++    async fn chat(
++        &self,
++        req: ChatRequest,
++    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
++}
++
+ /// Implements the Output Parsing mechanic from the Master Catalog:
+ /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
+ /// the failed completion, and the parsing error back to the model)."
+ pub async fn parse_structured_output<T: DeserializeOwned>(
+-    llm: &Arc<dyn LlmClient>,
++    llm: &Arc<dyn LlmClientForParser>,
+     req: ChatRequest,
+     max_retries: usize,
+ ) -> Result<T, ToolError> {
+@@ -50,7 +56,7 @@
+     }
+
+     #[async_trait::async_trait]
+-    impl LlmClient for MockLlmClient {
++    impl LlmClientForParser for MockLlmClient {
+         async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+             let mut resps = self.responses.lock().await;
+             let content = if !resps.is_empty() {
+@@ -81,7 +87,7 @@
+             temperature: 0.0,
+         };
+
+-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
++        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+         assert_eq!(result.result, "success");
+     }
+
+@@ -102,7 +108,7 @@
+             temperature: 0.0,
+         };
+
+-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
++        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+         assert_eq!(result.result, "success after retry");
+     }
+
+@@ -122,7 +128,7 @@
+             temperature: 0.0,
+         };
+
+-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 2).await;
++        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+         assert!(result.is_err());
+         if let Err(ToolError::Fatal(msg)) = result {
+             assert!(msg.contains("Output parsing failed after 2 retries"));
