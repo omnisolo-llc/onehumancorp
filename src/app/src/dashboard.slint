@@ -30,6 +30,11 @@ export component Dashboard inherits Window {
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
+    in-out property <bool> show_milestone: false;
+    in property <string> milestone_title: "";
+    in property <string> milestone_message: "";
+    callback dismiss_milestone();
+
     callback open_help_center();
     callback open_ai_chat();
     callback approve_task(string);
@@ -56,6 +61,34 @@ export component Dashboard inherits Window {
             Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
             Button { text: "Help"; height: 44px; clicked => { open_help_center(); } }
             Button { text: "Billing"; height: 44px; clicked => { open_billing(); } }
+        }
+
+        if (show_milestone) : GlassCard {
+            border-color: #f59e0b;
+            border-width: 1px;
+            background: rgba(245, 158, 11, 0.1);
+
+            HorizontalBox {
+                padding: 16px;
+                spacing: 12px;
+                alignment: start;
+
+                Text { text: "🎉"; font-size: 32px; vertical-alignment: center; }
+
+                VerticalBox {
+                    spacing: 4px;
+                    Text { text: milestone_title; font-weight: 700; font-size: 18px; color: white; }
+                    Text { text: milestone_message; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                }
+
+                Rectangle {}
+
+                Button {
+                    text: "Dismiss";
+                    height: 36px;
+                    clicked => { dismiss_milestone(); }
+                }
+            }
         }
 
         // Quick Actions Navigation
