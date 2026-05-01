@@ -1221,7 +1221,7 @@ mod docs_tests {
         ui.set_step(2);
 
         // Step 2: Frequency -> Step 3
-        ui.set_frequency("Daily".into());
+        ui.set_frequency_value(2.0); // 2.0 maps to "Daily"
         ui.set_step(3);
 
         // Step 3: Review
@@ -1236,6 +1236,7 @@ mod docs_tests {
         assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_frequency(), "Daily");
+        assert_eq!(ui.get_show_toast(), true);
         assert!(*publish_success.borrow());
     }
 
