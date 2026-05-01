@@ -92,12 +92,6 @@ impl Store {
         self.data.read().unwrap().clone()
     }
 
-    pub fn update(&self, settings: AppSettings) -> Result<(), String> {
-        let mut data = self.data.write().unwrap();
-        *data = settings;
-        drop(data); // Release lock before save!
-        self.save()
-    }
 
     pub fn set_extra(&self, key: String, value: String) -> Result<(), String> {
         let mut data = self.data.write().unwrap();

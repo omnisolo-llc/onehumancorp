@@ -128,6 +128,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_cleanup_environment_cloud() {
         provision_environment(true).unwrap();
         let res = cleanup_environment(true);

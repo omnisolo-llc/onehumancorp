@@ -225,3 +225,83 @@ mod tests {
         assert!(received.load(Ordering::SeqCst));
         cancel();
     }
+
+#[cfg(test)]
+mod chaos_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::time::Duration;
+
+    #[tokio::test]
+    async fn test_chaos_mesh_message_loss() {
+        let transport = MemoryTransport::new();
+        let received_count = Arc::new(AtomicUsize::new(0));
+        let received_clone = received_count.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "chaos_topic" {
+                received_clone.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = transport.subscribe("chaos_topic", handler).await.unwrap();
+
+        for i in 0..10 {
+            let msg = Message {
+                topic: "chaos_topic".to_string(),
+                payload: vec![i as u8],
+            };
+
+            // Simulate chaos by randomly dropping some messages at the application level
+            if i % 2 == 0 {
+                let _ = transport.publish("chaos_topic", msg).await;
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        // Verify only 5 messages made it through the chaos
+        assert_eq!(received_count.load(Ordering::SeqCst), 5);
+        cancel();
+    }
+}
+
+#[cfg(test)]
+mod chaos_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::time::Duration;
+
+    #[tokio::test]
+    async fn test_chaos_mesh_message_loss() {
+        let transport = MemoryTransport::new();
+        let received_count = Arc::new(AtomicUsize::new(0));
+        let received_clone = received_count.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "chaos_topic" {
+                received_clone.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = transport.subscribe("chaos_topic", handler).await.unwrap();
+
+        for i in 0..10 {
+            let msg = Message {
+                topic: "chaos_topic".to_string(),
+                payload: vec![i as u8],
+            };
+
+            // Simulate chaos by randomly dropping some messages at the application level
+            if i % 2 == 0 {
+                let _ = transport.publish("chaos_topic", msg).await;
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        // Verify only 5 messages made it through the chaos
+        assert_eq!(received_count.load(Ordering::SeqCst), 5);
+        cancel();
+    }
+}

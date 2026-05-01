@@ -29,7 +29,6 @@ pub struct SharedTask {
 
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
-    event_tx: tokio::sync::mpsc::Sender<serde_json::Value>,
 }
 
 impl TaskManager {

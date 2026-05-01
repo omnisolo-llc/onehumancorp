@@ -4,22 +4,8 @@ use crate::hub::Hub;
 use crate::tasks::SharedTask;
 
 #[async_trait]
-pub trait TaskOrchestrator: Send + Sync {
-    async fn receive_high_level_request(&self, org_id: &str, title: &str) -> Result<String, String>;
-    async fn enqueue_task(&self, task: SharedTask, depends_on: Vec<String>) -> Result<SharedTask, String>;
-    async fn acquire_ready_task(&self, agent_id: &str, capabilities: Vec<String>) -> Result<Option<SharedTask>, String>;
-    async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String>;
-}
 
-pub struct DefaultTaskOrchestrator {
-    hub: Arc<Hub>,
-}
 
-impl DefaultTaskOrchestrator {
-    pub fn new(hub: Arc<Hub>) -> Self {
-        DefaultTaskOrchestrator { hub }
-    }
-}
 
 #[async_trait]
 impl TaskOrchestrator for DefaultTaskOrchestrator {
@@ -98,44 +84,3 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
     }
 }
 
-pub fn start_token_burn_forecaster(
-    _hub: Arc<Hub>,
-    tick_duration: std::time::Duration,
-) {
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tick_duration);
-        let mut history: std::collections::HashMap<String, Vec<i64>> = std::collections::HashMap::new();
-
-        loop {
-            interval.tick().await;
-            println!("TokenBurnForecaster: tick");
-
-            let orgs = vec!["org1".to_string(), "org2".to_string()];
-            
-            for org_id in orgs {
-                let total_tokens = 1000; 
-                
-                if total_tokens > 0 {
-                    let h = history.entry(org_id.clone()).or_insert_with(Vec::new);
-                    h.push(total_tokens);
-                    
-                    if h.len() > 5 {
-                        h.remove(0);
-                    }
-                    
-                    if h.len() > 1 {
-                        let rate = (h.last().unwrap() - h.first().unwrap()) as f64 / (h.len() - 1) as f64;
-                        println!("TokenBurnForecaster: rate: {}", rate);
-                        
-                        let prediction_24h = rate * 60.0 * 24.0;
-                        println!("TokenBurnForecaster: predicted 24h: {}", prediction_24h);
-                        
-                        if prediction_24h > 0.0 {
-                            println!("TokenBurnForecaster: Predictive cost alert triggered.");
-                        }
-                    }
-                }
-            }
-        }
-    });
-}

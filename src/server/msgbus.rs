@@ -6,14 +6,12 @@ use async_trait::async_trait;
 #[derive(Debug, Clone)]
 pub struct Message {
     pub topic: String,
-    pub payload: Vec<u8>,
 }
 
 #[async_trait]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
-    async fn close(&self) -> Result<(), String>;
 }
 
 pub struct MemoryBus {
