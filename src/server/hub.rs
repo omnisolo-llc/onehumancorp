@@ -572,7 +572,7 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     use tokio::sync::mpsc;
-    use sqlx::PgPool;
+
 
     #[tokio::test]
     async fn test_check_health() {
