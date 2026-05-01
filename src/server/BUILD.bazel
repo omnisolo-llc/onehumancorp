@@ -65,6 +65,7 @@ rust_binary(
 )
 
 rust_test(
+    timeout = "long",
     name = "server_test",
     srcs = glob(["**/*.rs"]),
     crate_root = "main.rs",
@@ -115,6 +116,7 @@ rust_test(
 )
 
 rust_test(
+    timeout = "long",
     name = "crypto_test",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",

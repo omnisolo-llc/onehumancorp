@@ -257,16 +257,10 @@ impl AutoDreamWorker {
                     Ok(embedding) => {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
+                        let task_id_str = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+                        let task_id = if let Ok(uuid) = uuid::Uuid::parse_str(&task_id_str) { uuid.to_string() } else { continue; };
 
-                        sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(&mem_id)
-                            .bind("system") // Placeholder since we don't have org_id in yml name
-                            .bind("system_agent")
-                            .bind(&content)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .execute(&db.pool)
-                            .await?;
+                        db.insert_autodream_memory(&mem_id, "system", "system_agent", &task_id, &content, &emb_str, "TASK_SUMMARY").await?;
 
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;

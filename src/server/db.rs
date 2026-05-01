@@ -165,7 +165,7 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
