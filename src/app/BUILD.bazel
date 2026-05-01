@@ -155,6 +155,7 @@ exports_files([
 
 rust_test(
     name = "app_test",
+    size = "small",
     srcs = [
         "main.rs",
     ],

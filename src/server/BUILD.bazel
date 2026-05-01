@@ -125,6 +125,7 @@ rust_test(
 
 rust_test(
     name = "crypto_test",
+    size = "small",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
