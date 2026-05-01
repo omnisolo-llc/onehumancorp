@@ -84,7 +84,7 @@ test.describe('Login Page', () => {
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.keyboard.press('Enter');
-    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should remember email if checked', async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Login Page', () => {
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.locator('button:has-text("Sign In")').click();
-    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should disable button during loading', async ({ page }) => {
@@ -170,7 +170,7 @@ test.describe('Login Authentication', () => {
       await page.locator('button:has-text("Sign In")').click();
       await page.waitForTimeout(500);
     }
-    await expect(page.locator('text=/locked|too many attempts/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/locked|too many attempts/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should show session timeout message', async ({ page }) => {
@@ -178,7 +178,7 @@ test.describe('Login Authentication', () => {
     await page.fill('input[type="email"]', 'expired@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.locator('button:has-text("Sign In")').click();
-    await expect(page.locator('text=/session.*expired|timed out/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/session.*expired|timed out/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should redirect to dashboard after login', async ({ page }) => {
@@ -201,16 +201,16 @@ test.describe('Login Authentication', () => {
 test.describe('Login Social Auth', () => {
   test('should show google sign in button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('button:has-text("Google")')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('button:has-text("Google")')).toBeVisible({ timeout: 5000 });
   });
 
   test('should show github sign in button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('button:has-text("GitHub")')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('button:has-text("GitHub")')).toBeVisible({ timeout: 5000 });
   });
 
   test('should show microsoft sign in button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('button:has-text("Microsoft")')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('button:has-text("Microsoft")')).toBeVisible({ timeout: 5000 });
   });
 });

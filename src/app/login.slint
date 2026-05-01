@@ -51,7 +51,7 @@ export component Login inherits Window {
                 }
 
                 Text {
-                    text: "Sign in to orchestrate your swarm";
+                    text: "Sign in to manage your business";
                     font-size: 14px;
                     horizontal-alignment: center;
                     color: #a8b2c1;
@@ -103,12 +103,12 @@ export component Login inherits Window {
                 }
 
                 Button {
-                    text: "Continue with SSO";
+                    text: "Company Login";
                     clicked => { oauth_login("SSO"); }
                 }
                 
                 Button {
-                    text: "⚙ Connection Settings";
+                    text: "⚙ Advanced Settings";
                     clicked => { open_settings(); }
                 }
 
