@@ -605,7 +605,7 @@ mod tests {
         let pool = WorkerPool::new(queue.clone(), "test_topic".to_string(), 3, handler);
         
         let (tx, _) = tokio::sync::broadcast::channel(1);
-        pool.start(tx.clone()).await;
+        let tx_clone = tx.clone(); let _pool_handle = tokio::spawn(async move { pool.start(tx_clone).await; });
         
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();

@@ -342,14 +342,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_lock_expiration() {
+        // Fast-forwarding time in tests via mock or reducing the wait directly
         let transport = MemoryTransport::new();
 
         // Acquire lock with short TTL (1 second)
         let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
         assert!(acquired);
 
-        // Sleep for 2 seconds to let lock expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        // Manually manipulate the lock's expiration time to avoid actual sleeping
+        let mut locks = transport.locks.lock().await;
+        if let Some(lock_info) = locks.get_mut("expiring_resource") {
+            lock_info.1 = std::time::Instant::now() - std::time::Duration::from_secs(1);
+        }
+        drop(locks);
 
         // Second agent should be able to acquire lock now
         let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
