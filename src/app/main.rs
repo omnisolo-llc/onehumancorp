@@ -90,6 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                         if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
@@ -121,6 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
@@ -381,6 +383,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_generate_company_description({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let name = ui.get_company_name().to_string();
+            let biz_type = ui.get_business_type().to_string();
+            let prompt = format!("Generate a catchy one-line tagline and a short professional description for a business named '{}' which is a {}.", name, biz_type);
+
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "wizard-ui".to_string(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        let content = resp.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_company_description(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
+    setup_wizard_ui.on_generate_product_description({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let name = ui.get_product_name().to_string();
+            let biz_name = ui.get_company_name().to_string();
+            let prompt = format!("Generate a professional and appealing product description for '{}' sold by '{}'.", name, biz_name);
+
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "wizard-ui".to_string(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        let content = resp.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_product_description(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -399,6 +457,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("admin_email".to_string(), admin_email.to_string()),
                 ("website_template".to_string(), website_template.to_string()),
                 ("product_name".to_string(), product_name.to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
@@ -418,6 +477,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_admin_password = ui.get_admin_password().to_string();
             let req_website_template = website_template.to_string();
             let req_product_name = product_name.to_string();
+            let req_product_description = ui.get_product_description().to_string();
             let req_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
 
@@ -443,6 +503,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             website_template: req_website_template,
                             first_product_name: req_product_name,
                             first_product_price: req_product_price,
+                            first_product_description: req_product_description,
                             domain_choice: req_domain_choice,
                         });
 
@@ -818,6 +879,7 @@ mod e2e_tests {
         // Step 7: Product -> Step 8
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.00".into());
+        ui.set_product_description("E2E Description".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 8);
 
@@ -838,6 +900,7 @@ mod e2e_tests {
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
+        assert_eq!(ui.get_product_description(), "E2E Description");
         assert_eq!(ui.get_domain_choice(), "subdomain");
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1189,6 +1252,7 @@ mod docs_tests {
         // Step 7: Product -> Step 8
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.00".into());
+        ui.set_product_description("E2E Description".into());
         ui.invoke_next_step();
 
         // Step 8: Domain -> Step 9
@@ -1231,6 +1295,7 @@ mod docs_tests {
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
+        assert_eq!(ui.get_product_description(), "E2E Description");
         assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 
@@ -1272,8 +1337,42 @@ mod docs_tests {
         });
 
         ui.on_upload_logo(|| {});
-        ui.on_generate_logo(|| {});
-        ui.on_generate_description(|| {});
+        let ui_handle_for_logo = ui.as_weak();
+        ui.on_generate_logo(move || {
+            let _handle = ui_handle_for_logo.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt: "Generate 3 logo design ideas for a small business.".to_string(),
+                        from_agent_id: "website-builder-ui".to_string(),
+                    });
+                    let _ = client.reason(request).await;
+                }
+            });
+        });
+        let ui_handle_for_desc = ui.as_weak();
+        ui.on_generate_description(move || {
+            let ui = ui_handle_for_desc.unwrap();
+            let product = ui.get_product_name().to_string();
+            let prompt = format!("Generate a catchy product description for '{}'.", product);
+            let handle = ui_handle_for_desc.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "website-builder-ui".to_string(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        let content = resp.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_product_description(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        });
         ui.on_upload_photo(|| {});
 
         assert_eq!(ui.get_step(), 0);
