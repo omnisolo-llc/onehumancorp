@@ -251,26 +251,25 @@ pub trait JobQueue: Send + Sync {
 }
 
 pub struct InMemJobQueue {
-    topics: RwLock<HashMap<String, (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>)>>,
+    topics: DashMap<String, (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>)>,
 }
 
 impl InMemJobQueue {
     pub fn new() -> Self {
         InMemJobQueue {
-            topics: RwLock::new(HashMap::new()),
+            topics: DashMap::new(),
         }
     }
 
     fn get_or_create_topic(&self, topic: &str) -> (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>) {
-        let mut topics = self.topics.write().unwrap();
-        if let Some(t) = topics.get(topic) {
-            return t.clone();
+        if let Some(t) = self.topics.get(topic) {
+            return t.value().clone();
         }
         
         let (tx, rx) = mpsc::channel(10000);
         let rx = Arc::new(tokio::sync::Mutex::new(rx));
         let t = (tx, rx);
-        topics.insert(topic.to_string(), t.clone());
+        self.topics.insert(topic.to_string(), t.clone());
         t
     }
 }
@@ -604,7 +603,10 @@ mod tests {
         let handler = Arc::new(MockHandler);
         let pool = WorkerPool::new(queue.clone(), "test_topic".to_string(), 3, handler);
         
-        let (tx, _) = tokio::sync::broadcast::channel(1);
+        let (tx, rx) = tokio::sync::broadcast::channel(1);
+        // Ensure that we don't drop the rx to keep the channel open
+        let _rx = rx;
+
         pool.start(tx.clone()).await;
         
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
