@@ -438,17 +438,19 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
-                        let err = format!("LLM Recoverable error: {}", msg);
+                        let mechanic_msg = format!("The tool failed with the following error: {}. Please fix the error and try again, or use a different approach.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: format!("Error: {}", mechanic_msg),
                             iteration,
                         });
+                        // LangGraph Mechanic: Return the raw error as a ToolMessage
+                        // so the model can self-correct
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: err,
+                            error: mechanic_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -532,14 +534,16 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
-                            let err = format!("LLM Recoverable error: {}", msg);
+                            let mechanic_msg = format!("The tool failed with the following error: {}. Please fix the error and try again, or use a different approach.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
+                                result: format!("Error: {}", mechanic_msg),
                                 iteration,
                             });
-                            error = err;
+                            // LangGraph Mechanic: Return the raw error as a ToolMessage
+                            // so the model can self-correct
+                            error = mechanic_msg;
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
