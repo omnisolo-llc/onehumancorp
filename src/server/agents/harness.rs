@@ -213,7 +213,6 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
 }
@@ -225,7 +224,6 @@ impl Manager {
         let docker_backend = Arc::new(DockerBackend::new());
         Manager {
             config,
-            validator,
             local_backend,
             docker_backend,
         }
@@ -243,24 +241,6 @@ impl Manager {
 #[async_trait]
 pub trait CapabilityStore: Send + Sync {
     async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String>;
-}
-
-pub struct DBCapabilityStore {
-    pub pool: sqlx::PgPool,
-}
-
-#[async_trait]
-impl CapabilityStore for DBCapabilityStore {
-    async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String> {
-        let row = sqlx::query("SELECT capabilities FROM agent_session_data WHERE session_id = $1")
-            .bind(session_id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| format!("failed to fetch session capabilities: {}", e))?;
-
-        let caps_json: Option<String> = row.get("capabilities");
-        Ok(caps_json)
-    }
 }
 
 pub struct DBCapabilityAuthorizer {

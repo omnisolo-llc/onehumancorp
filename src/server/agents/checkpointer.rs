@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -15,7 +14,6 @@ pub struct Checkpoint {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
 }
@@ -32,41 +30,6 @@ impl PgCheckpointer {
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
-        let row = sqlx::query(
-            "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
-        )
-        .bind(thread_id)
-        .bind(checkpoint_id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        if let Some(row) = row {
-            let thread_id: String = row.get("thread_id");
-            let checkpoint_id: String = row.get("checkpoint_id");
-            let parent_id: Option<String> = row.get("parent_id");
-            let checkpoint_raw: Vec<u8> = row.get("checkpoint");
-            let metadata_raw: Vec<u8> = row.get("metadata");
-            let created_at: DateTime<Utc> = row.get("created_at");
-
-            let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
-
-            Ok(Some(Checkpoint {
-                thread_id,
-                checkpoint_id,
-                parent_id,
-                data,
-                metadata,
-                created_at,
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let data_bytes = serde_json::to_vec(&checkpoint.data).map_err(|e| e.to_string())?;
         let compressed_data = compress_data(&data_bytes)?;
