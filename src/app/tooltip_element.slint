@@ -1,0 +1,27 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+
+export component TooltipElement inherits Rectangle {
+    in property <string> tooltip_id;
+
+    // By placing TouchArea BEHIND children, it doesn't block them if they consume pointer events,
+    // but standard TouchArea won't receive hover if child consumes it.
+    // However, if we put TouchArea here and pass pointer events if we can... wait, we can't.
+    // Actually, maybe we can just put TouchArea behind, and if the child is a Button it might still pass hover?
+    ta := TouchArea {
+        width: 100%;
+        height: 100%;
+    }
+
+    @children
+
+    property <bool> update_tooltip: {
+        if (ta.has-hover) {
+            TooltipRegistry.show_tooltip(tooltip_id, self.absolute-position.x, self.absolute-position.y + self.height);
+        } else {
+            // Need to be careful not to hide if another tooltip just showed up,
+            // but for simplicity we hide.
+            TooltipRegistry.hide_tooltip();
+        }
+        return true;
+    };
+}
