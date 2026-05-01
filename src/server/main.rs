@@ -164,7 +164,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<RegisterAgentResponse>, Status> {
         let req = request.into_inner();
         if let Some(agent) = req.agent {
-            self.hub.register_agent(agent);
+            self.hub.register_agent(agent).await;
             Ok(Response::new(RegisterAgentResponse { success: true }))
         } else {
             Err(Status::invalid_argument("agent is required"))
@@ -198,7 +198,7 @@ impl HubService for MyHubService {
         request: Request<OpenMeetingRequest>,
     ) -> Result<Response<MeetingRoom>, Status> {
         let req = request.into_inner();
-        let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda);
+        let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda).await;
         Ok(Response::new(meeting))
     }
 
@@ -208,7 +208,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
-            match self.hub.clone().publish(msg) {
+            match self.hub.clone().publish(msg).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -223,7 +223,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         if let Some(task) = req.task {
-            match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
+            match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task).await {
                 Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -696,7 +696,7 @@ impl HubService for MyHubService {
         }
         
         // Quota Enforcement
-        if self.hub.get_agents_count() >= 10 {
+        if self.hub.get_agents_count().await >= 10 {
             return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
         }
         
@@ -712,7 +712,7 @@ impl HubService for MyHubService {
             provider_type: "builtin".to_string(),
         };
         
-        self.hub.register_agent(sub_agent);
+        self.hub.register_agent(sub_agent).await;
         
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
@@ -733,7 +733,7 @@ impl HubService for MyHubService {
             meeting_id: String::new(),
         };
         
-        match self.hub.clone().publish(msg) {
+        match self.hub.clone().publish(msg).await {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -870,7 +870,7 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = self.hub.get_meetings().await;
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
 
@@ -1037,7 +1037,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     meeting_id: String::new(),
                 };
                 
-                match hub_for_sched.clone().publish(msg) {
+                match hub_for_sched.clone().publish(msg).await {
                     Ok(_) => {
                         let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                     }

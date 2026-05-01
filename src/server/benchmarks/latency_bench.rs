@@ -81,7 +81,7 @@ pub async fn bench_dashboard_snapshot() {
             organization_id: "system".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
     }
 
     for _ in 0..iterations {

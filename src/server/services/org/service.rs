@@ -73,19 +73,19 @@ impl OrgService for MyOrgService {
         let hub_clone3 = self.hub.clone();
 
         let (agents, meetings, summary) = tokio::join!(
-            async move { hub_clone1.get_agents() },
-            async move { hub_clone2.get_meetings() },
+            async move { hub_clone1.get_agents().await },
+            async move { hub_clone2.get_meetings().await },
             async move { hub_clone3.tracker().summary("system") }
         );
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
         let mut agent_set = std::collections::HashSet::new();
-        for a in &agents {
+        for a in agents.iter() {
             agent_set.insert(a.id.clone());
         }
         
-        for m in &meetings {
+        for m in meetings.iter() {
             for msg in &m.transcript {
                 total_msgs += 1;
                 if agent_set.contains(&msg.from_agent) {
