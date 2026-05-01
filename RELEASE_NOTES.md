@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
+- Scaling (Cloud): Implement Referral Program with credit attribution and one-tap share (#9025)
+- Privacy/Offline (Standalone): Implement Referral Program with credit attribution and one-tap share (#9025)
+
 ## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
 - Scaling (Cloud): 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
 - Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
