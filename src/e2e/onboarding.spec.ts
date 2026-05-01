@@ -139,10 +139,10 @@ test.describe('Onboarding Welcome Checklist', () => {
 
   test('should link to documentation', async ({ page }) => {
     await page.goto('/welcome-checklist');
-    const docLink = page.locator('a:has-text("Documentation"), a:has-text("Guides")').first();
+    const docLink = page.locator('a:has-text("Documentation"), a:has-text("Docs")').first();
     if (await docLink.isVisible()) {
       await docLink.click();
-      await expect(page.locator('text=/guides|documentation/i')).toBeVisible();
+      await expect(page.locator('text=/docs|documentation/i')).toBeVisible();
     }
   });
 
