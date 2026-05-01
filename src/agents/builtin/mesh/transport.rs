@@ -128,7 +128,189 @@ impl MeshTransport for MemoryTransport {
     }
 }
 
+
+#[derive(Clone)]
+pub struct IpcTransport {
+    pool: sqlx::SqlitePool,
+    subs: DashMap<String, broadcast::Sender<Message>>,
+}
+
+impl IpcTransport {
+    pub async fn new(db_url: &str) -> Result<Self, String> {
+        use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+        let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
+        let options = options.create_if_missing(true);
+        let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
+
+        // Initialize schema
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_locks (
+                resource TEXT PRIMARY KEY,
+                owner TEXT NOT NULL,
+                expires_at DATETIME NOT NULL
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_presence (
+                agent_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                expires_at DATETIME NOT NULL
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        let subs = DashMap::new();
+
+        Ok(IpcTransport { pool, subs })
+    }
+
+    pub async fn start_worker(&self) {
+        let pool = self.pool.clone();
+        let subs = self.subs.clone();
+
+        let mut last_id = 0;
+        loop {
+            // Poll for new messages
+            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
+                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+            )
+            .bind(last_id)
+            .fetch_all(&pool)
+            .await;
+
+            if let Ok(rows) = rows {
+                for (id, topic, payload) in rows {
+                    last_id = id;
+                    if let Some(tx) = subs.get(&topic) {
+                        let _ = tx.send(Message { topic: topic.clone(), payload });
+                    }
+                }
+            }
+
+            // Cleanup old messages (keep last 1 hour)
+            let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
+                .execute(&pool)
+                .await;
+
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    }
+}
+
+#[async_trait]
+impl MeshTransport for IpcTransport {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+            .bind(topic)
+            .bind(&message.payload)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Deliver to local subscribers without polling delay
+        if let Some(tx) = self.subs.get(topic) {
+            let _ = tx.send(message);
+        }
+
+        Ok(())
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
+            let (tx, _) = broadcast::channel(100);
+            tx
+        }).clone();
+
+        let mut rx = tx.subscribe();
+
+        let worker = tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                handler(msg);
+            }
+        });
+
+        let cancel = Box::new(move || {
+            worker.abort();
+        });
+
+        Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        // Cleanup expired locks
+        let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= datetime('now')")
+            .execute(&self.pool)
+            .await;
+
+        let result = sqlx::query(
+            "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
+             ON CONFLICT(resource) DO NOTHING"
+        )
+        .bind(resource)
+        .bind(owner)
+        .bind(format!("+{} seconds", ttl_seconds))
+        .execute(&self.pool)
+        .await;
+
+        match result {
+            Ok(res) => Ok(res.rows_affected() > 0),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        sqlx::query("DELETE FROM mesh_locks WHERE resource = ? AND owner = ?")
+            .bind(resource)
+            .bind(owner)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        sqlx::query(
+            "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES (?, ?, datetime('now', ?))
+             ON CONFLICT(agent_id) DO UPDATE SET status = excluded.status, expires_at = excluded.expires_at"
+        )
+        .bind(agent_id)
+        .bind(status)
+        .bind(format!("+{} seconds", ttl_seconds))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let _ = sqlx::query("DELETE FROM mesh_presence WHERE expires_at <= datetime('now')")
+            .execute(&self.pool)
+            .await;
+
+        let rows: Result<Vec<(String, String)>, _> = sqlx::query_as(
+            "SELECT agent_id, status FROM mesh_presence"
+        )
+        .fetch_all(&self.pool)
+        .await;
+
+        match rows {
+            Ok(r) => Ok(r),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
 pub struct RedisTransport {
+
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
@@ -279,6 +461,22 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     }
 
     // Standalone fallback
+    if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if db_url.starts_with("sqlite") {
+            match IpcTransport::new(&db_url).await {
+                Ok(t) => {
+                    let t_clone = t.clone();
+                    tokio::spawn(async move { t_clone.start_worker().await; });
+                    println!("Initialized IpcTransport (Standalone)");
+                    return Ok(Arc::new(t));
+                },
+                Err(e) => {
+                    println!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                }
+            }
+        }
+    }
+
     if let Some(url) = redis_url {
         match RedisTransport::new(url).await {
             Ok(t) => {
@@ -299,6 +497,66 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[tokio::test]
+    async fn test_ipc_transport() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "ipc_test_topic" && msg.payload == b"ipc_hello" {
+                received_clone.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = transport.subscribe("ipc_test_topic", handler).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let msg = Message {
+            topic: "ipc_test_topic".to_string(),
+            payload: b"ipc_hello".to_vec(),
+        };
+
+        transport.publish("ipc_test_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transport_locking() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_locks_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let acquired = transport.acquire_lock("ipc_resource", "agent_1", 1).await.unwrap();
+        assert!(acquired);
+
+        let acquired_again = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
+        assert!(!acquired_again);
+
+        transport.release_lock("ipc_resource", "agent_1").await.unwrap();
+
+        let acquired_after_release = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
+        assert!(acquired_after_release);
+    }
+
 
     #[tokio::test]
     async fn test_memory_transport() {
