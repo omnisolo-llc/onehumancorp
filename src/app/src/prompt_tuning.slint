@@ -23,6 +23,9 @@ export component PromptTuning inherits Window {
     
     callback add_example();
     callback save_prompt();
+    callback next_step();
+
+    next_step => { step = step + 1; }
 
     background: #f8fafc;
 
@@ -130,7 +133,7 @@ export component PromptTuning inherits Window {
                     text: step == 3 ? "Save" : "Next";
                     clicked => {
                         if (step < 3) {
-                            step = step + 1;
+                            next_step();
                         } else {
                             save_prompt();
                         }

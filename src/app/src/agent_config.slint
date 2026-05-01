@@ -7,6 +7,7 @@ export component AgentConfig inherits Window {
     title: "Configure AI Agent";
 
     callback activate_agent(string, bool, bool, string);
+    callback next_step();
 
     in-out property <int> step: 0;
     in-out property <string> selected_agent: "";
@@ -16,6 +17,8 @@ export component AgentConfig inherits Window {
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
     in-out property <bool> is_advanced: false;
     in-out property <bool> show_toast: false;
+
+    next_step => { step = step + 1; }
 
     background: #f8fafc;
 
@@ -132,7 +135,7 @@ export component AgentConfig inherits Window {
                 text: step == 3 ? "Activate" : "Next";
                 clicked => {
                     if (step < 3) {
-                        step = step + 1;
+                        next_step();
                     } else {
                         show_toast = true;
                         activate_agent(selected_agent, can_reply, can_social, frequency);

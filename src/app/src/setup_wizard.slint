@@ -48,6 +48,10 @@ export component SetupWizard inherits Window {
     callback next_step();
     callback select_business_type(string);
     callback toggle_sell_physical();
+    callback toggle_sell_digital();
+    callback toggle_sell_services();
+    callback toggle_sell_food();
+    callback toggle_sell_subscriptions();
     callback select_payment_pref(string);
     callback select_template(string);
     callback go_to_dashboard();
@@ -58,6 +62,10 @@ export component SetupWizard inherits Window {
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
     toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
+    toggle_sell_digital => { sell_digital = !sell_digital; save_state(); }
+    toggle_sell_services => { sell_services = !sell_services; save_state(); }
+    toggle_sell_food => { sell_food = !sell_food; save_state(); }
+    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
     select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
     select_template(t) => { website_template = t; step = step + 1; save_state(); }
     select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
@@ -205,25 +213,25 @@ export component SetupWizard inherits Window {
                     height: 50px;
                     background: sell_digital ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "💾 Digital downloads"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { sell_digital = !sell_digital; } }
+                    TouchArea { clicked => { toggle_sell_digital(); } }
                 }
                 GlassCard {
                     height: 50px;
                     background: sell_services ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "📅 Services / appointments"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { sell_services = !sell_services; } }
+                    TouchArea { clicked => { toggle_sell_services(); } }
                 }
                 GlassCard {
                     height: 50px;
                     background: sell_food ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🍕 Food & beverages"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { sell_food = !sell_food; } }
+                    TouchArea { clicked => { toggle_sell_food(); } }
                 }
                 GlassCard {
                     height: 50px;
                     background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { sell_subscriptions = !sell_subscriptions; } }
+                    TouchArea { clicked => { toggle_sell_subscriptions(); } }
                 }
             }
 
