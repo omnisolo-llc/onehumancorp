@@ -32,6 +32,8 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub enable_context_compaction: bool,
+    pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
 }
@@ -49,6 +51,8 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            enable_context_compaction: true,
+            compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
             guardrails: None,
         }
@@ -197,9 +201,9 @@ impl Agent {
                 }
             };
 
-            let input_tokens = resp.usage.input_tokens;
+            let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
-            let total_tokens = (input_tokens + output_tokens) as i64;
+            let total_tokens = (turn_input_tokens + output_tokens) as i64;
             self.progress.add_tokens(total_tokens);
             global_turn_tokens += output_tokens;
 
@@ -509,6 +513,74 @@ impl Agent {
                 tool_calls: vec![],
                 tool_results,
             });
+
+            // Context Compaction Mechanic
+            // Use the input_tokens from the last request to determine the current context window size.
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
+                // We want to compact if we have enough messages to make it worthwhile
+                if messages.len() > 5 {
+                    let mut compact_messages = Vec::new();
+                    // Keep the first message (usually the initial prompt)
+                    compact_messages.push(messages[0].clone());
+
+                    // The middle part to be compacted
+                    let middle_start = 1;
+                    let middle_end = messages.len() - 3;
+
+                    if middle_end > middle_start {
+                        let mut middle_text = String::new();
+                        for m in &messages[middle_start..middle_end] {
+                            middle_text.push_str(&format!("[Role: {}]\n", m.role));
+                            if !m.content.is_empty() {
+                                middle_text.push_str(&m.content);
+                                middle_text.push('\n');
+                            }
+                            if !m.tool_calls.is_empty() {
+                                middle_text.push_str("Tool Calls:\n");
+                                for tc in &m.tool_calls {
+                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
+                                }
+                            }
+                            if !m.tool_results.is_empty() {
+                                middle_text.push_str("Tool Results:\n");
+                                for tr in &m.tool_results {
+                                    let mut preview = tr.content.clone();
+                                    if preview.len() > 200 {
+                                        preview.truncate(200);
+                                        preview.push_str("...");
+                                    }
+                                    middle_text.push_str(&format!("  {} (error: {})\n", preview, tr.error));
+                                }
+                            }
+                            middle_text.push_str("---\n");
+                        }
+
+                        let summary_req = ChatRequest {
+                            model: cfg.model.clone(),
+                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve all architectural decisions, unresolved bugs, and the exact state of progress. Discard redundant or raw tool outputs. Be concise.".to_string(),
+                            messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
+                            tools: vec![],
+                            max_tokens: 2000,
+                            temperature: 0.0,
+                        };
+
+                        match self.llm.chat(summary_req).await {
+                            Ok(summary_resp) => {
+                                let summary = summary_resp.message.content;
+                                compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
+                                // Append the remaining recent messages
+                                compact_messages.extend_from_slice(&messages[middle_end..]);
+                                messages = compact_messages;
+                            }
+                            Err(e) => {
+                                // If compaction fails, just log it and continue. Don't crash the agent.
+                                let err = format!("Context compaction failed: {}", e);
+                                on_event(AgentEvent::TaskError { error: err.clone() });
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Hit max iterations.
@@ -634,6 +706,88 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_context_compaction() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "tool call 1".to_string(),
+                        tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "tool call 2".to_string(),
+                        tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "tool call 3".to_string(),
+                        tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("compacted summary"), // Responds to the compaction request
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("final answer"),
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        struct MockToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("tool output".to_string())
+            }
+        }
+
+        let tools: Vec<Tool> = vec![
+            Tool {
+                name: "test_tool".to_string(),
+                description: "test".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            }
+        ];
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_context_compaction = true;
+        cfg.compaction_threshold_tokens = 50; // Set low threshold to trigger compaction
+
+        let agent = Agent::new(client, tools);
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello, this is a very long conversation", &mut on_event).await;
+
+        assert!(result.is_ok());
+
+        // We can verify that it produced the final answer, meaning it survived the loop and compaction.
+        assert_eq!(result.unwrap(), "final answer");
     }
 
     #[tokio::test]
