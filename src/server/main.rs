@@ -928,10 +928,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tenant_id TEXT NOT NULL,
                     agent_id TEXT,
                     content TEXT NOT NULL,
-                    embedding TEXT,
+                    embedding VECTOR(1536),
                     source_type TEXT NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    owner_override BOOLEAN DEFAULT FALSE
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 );"
             )
             .execute(pool)

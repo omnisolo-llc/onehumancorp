@@ -89,7 +89,6 @@ rust_binary(
         "api_docs.slint",
         "app.slint",
         "autodream_walkthrough.slint",
-        "business_share.slint",
         "channels.slint",
         "chat.slint",
         "cost_dashboard.slint",
