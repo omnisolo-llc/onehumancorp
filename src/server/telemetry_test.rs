@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 #[cfg(test)]
 mod tests {
     use super::*;

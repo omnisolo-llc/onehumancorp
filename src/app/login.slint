@@ -8,8 +8,8 @@ export component Login inherits Window {
     title: "One Human Corp - Login";
 
     property <bool> loading: false;
-    in-out property <bool> is_sign_up: false;
-    in-out property <string> error_message: "";
+    property <bool> is_sign_up: false;
+    property <string> error_message: "";
     in-out property <bool> show_verification: false;
     in-out property <string> verification_message: "";
 
@@ -17,7 +17,6 @@ export component Login inherits Window {
     in-out property <string> password: "";
 
     callback login(string, string);
-    callback register(string, string);
     callback oauth_login(string);
     callback open_settings();
     callback resend_verification(string);
@@ -52,7 +51,7 @@ export component Login inherits Window {
                 }
 
                 Text {
-                    text: "Sign in to manage your business";
+                    text: "Sign in to orchestrate your swarm";
                     font-size: 14px;
                     horizontal-alignment: center;
                     color: #a8b2c1;
@@ -88,13 +87,7 @@ export component Login inherits Window {
 
                 Button {
                     text: is_sign_up ? "Sign Up" : "Sign In";
-                    clicked => {
-                        if (is_sign_up) {
-                            register(username, password);
-                        } else {
-                            login(username, password);
-                        }
-                    }
+                    clicked => { login(username, password); }
                 }
 
                 Button {
@@ -110,12 +103,12 @@ export component Login inherits Window {
                 }
 
                 Button {
-                    text: "Company Login";
+                    text: "Continue with SSO";
                     clicked => { oauth_login("SSO"); }
                 }
                 
                 Button {
-                    text: "⚙ Advanced Settings";
+                    text: "⚙ Connection Settings";
                     clicked => { open_settings(); }
                 }
 

@@ -29,6 +29,115 @@ pub struct Config {
     pub default_policy: Policy,
 }
 
+#[async_trait]
+pub trait IsolationStrategy: Send + Sync {
+    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String>;
+}
+
+pub struct ProcessIsolationStrategy {
+}
+
+impl ProcessIsolationStrategy {
+    pub fn new() -> Self {
+        ProcessIsolationStrategy { }
+    }
+}
+
+#[async_trait]
+impl IsolationStrategy for ProcessIsolationStrategy {
+    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
+        let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+
+        let status_msg = serde_json::json!({
+            "agent":    agent_type,
+            "status":   "RUNNING",
+            "worktree": worktree,
+            "sandbox":  isolation_sandbox_id,
+        });
+
+        if let Some(t) = transport.as_ref() {
+            let _ = t.send(status_msg.to_string().as_bytes()).await;
+        }
+
+        let output_msg = serde_json::json!({
+            "agent":   agent_type,
+            "stream":  "stdout",
+            "content": format!("Execution started in isolated worktree {}", worktree),
+        });
+
+        if let Some(t) = transport.as_ref() {
+            let _ = t.send(output_msg.to_string().as_bytes()).await;
+        }
+
+        let mut child = tokio::process::Command::new("bash")
+            .arg("-c")
+            .arg(command)
+            .current_dir(worktree)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
+
+        use tokio::io::AsyncBufReadExt;
+
+        let mut stdout_reader = tokio::io::BufReader::new(stdout).lines();
+        let mut stderr_reader = tokio::io::BufReader::new(stderr).lines();
+
+        let tx_stdout_transport = transport.clone();
+        let agent_type_out = agent_type.to_string();
+        let stdout_handle = tokio::spawn(async move {
+            while let Ok(Some(line)) = stdout_reader.next_line().await {
+                let msg = serde_json::json!({
+                    "agent":  agent_type_out,
+                    "stream": "stdout",
+                    "content": line,
+                });
+                if let Some(t) = tx_stdout_transport.as_ref() {
+                    let _ = t.send(msg.to_string().as_bytes()).await;
+                }
+            }
+        });
+
+        let tx_stderr_transport = transport.clone();
+        let agent_type_err = agent_type.to_string();
+        let stderr_handle = tokio::spawn(async move {
+            while let Ok(Some(line)) = stderr_reader.next_line().await {
+                let msg = serde_json::json!({
+                    "agent":  agent_type_err,
+                    "stream": "stderr",
+                    "content": line,
+                });
+                if let Some(t) = tx_stderr_transport.as_ref() {
+                    let _ = t.send(msg.to_string().as_bytes()).await;
+                }
+            }
+        });
+
+        let status = child.wait().await.map_err(|e| format!("Failed to wait on child: {}", e))?;
+        let _ = stdout_handle.await;
+        let _ = stderr_handle.await;
+
+        let end_msg = serde_json::json!({
+            "agent":  agent_type,
+            "status": "COMPLETED",
+            "exit_code": status.code().unwrap_or(-1),
+        });
+
+        if let Some(t) = transport.as_ref() {
+            let _ = t.send(end_msg.to_string().as_bytes()).await;
+        }
+
+        if !status.success() {
+            return Err(format!("Process exited with status: {}", status));
+        }
+
+        Ok(())
+    }
+}
+
 pub struct ASTValidator;
 
 impl ASTValidator {

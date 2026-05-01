@@ -48,17 +48,22 @@ impl TeammateMesh for TeammateMeshClient {
     }
 }
 
-pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool, standalone_url_override: Option<&str>) -> Arc<dyn TeammateMesh> {
-    match crate::mesh::transport::create_transport(redis_url, is_cloud, standalone_url_override).await {
-        Ok(transport) => {
-            info!("Successfully created transport for TeammateMesh.");
-            Arc::new(TeammateMeshClient::new(transport))
+pub async fn create_teammate_mesh(redis_url: Option<&str>) -> Arc<dyn TeammateMesh> {
+    if let Some(url) = redis_url {
+        match RedisTransport::new(url).await {
+            Ok(redis_transport) => {
+                info!("Successfully connected to Redis for TeammateMesh.");
+                return Arc::new(TeammateMeshClient::new(Arc::new(redis_transport)));
+            }
+            Err(e) => {
+                warn!("Failed to connect to Redis for TeammateMesh: {}. Falling back to MemoryTransport.", e);
+            }
         }
-        Err(e) => {
-            warn!("Failed to create transport for TeammateMesh: {}. Falling back to MemoryTransport.", e);
-            Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
-        }
+    } else {
+        info!("No Redis URL provided for TeammateMesh. Using MemoryTransport.");
     }
+
+    Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
 }
 
 #[cfg(test)]
@@ -101,12 +106,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_teammate_mesh_fallback() {
-        let temp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!("{}/test_create_teammate_mesh_fallback_{}.db", temp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros());
-        let _db_url = format!("sqlite://{}", db_path);
-
-        // Test fallback behavior with an invalid Redis URL in cloud mode (should fallback to MemoryTransport)
-        let mesh = create_teammate_mesh(Some("redis://invalid-host:9999"), true, Some(&_db_url)).await;
+        // Test fallback behavior with an invalid Redis URL
+        let mesh = create_teammate_mesh(Some("redis://invalid-host:9999")).await;
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();

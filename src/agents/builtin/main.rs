@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
     
-    match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud, None).await {
+    match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
             ohc_builtin_agent::start_builtin_agent(transport, svc_for_redis).await;
         }
