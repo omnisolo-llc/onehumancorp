@@ -11,7 +11,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use sqlx::Row;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job {
     pub id: String,
     pub parent_task_id: String,
@@ -581,6 +581,184 @@ impl TaskQueueService {
         }
         
         Ok(tasks)
+    }
+}
+
+pub struct SqliteTaskQueue {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteTaskQueue {
+    pub fn new(pool: sqlx::SqlitePool) -> Self {
+        SqliteTaskQueue { pool }
+    }
+
+    pub async fn init(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS local_queue_jobs (
+                id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                payload BLOB,
+                status TEXT DEFAULT 'PENDING'
+            );"
+        ).execute(&self.pool).await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl TaskQueue for SqliteTaskQueue {
+    async fn enqueue(&self, job: Job) -> Result<(), String> {
+        // Here job.payload is a String but in the SQLite table it's BLOB, 
+        // we can store it as text since SQLite handles it loosely or cast it.
+        sqlx::query("INSERT INTO local_queue_jobs (id, task_id, role, payload) VALUES (?, ?, ?, ?)")
+            .bind(job.id)
+            .bind(job.parent_task_id)
+            .bind(job.agent_role)
+            .bind(job.payload.as_bytes())
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
+        if roles.is_empty() { return Ok(None); }
+
+        // SQLite doesn't support SELECT ... FOR UPDATE SKIP LOCKED.
+        // We will do a simple select and update approach in a transaction.
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let query_str = format!(
+            "SELECT id, task_id, role, payload, status FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1",
+            role_placeholders
+        );
+
+        let mut query = sqlx::query(&query_str);
+        for role in &roles {
+            query = query.bind(role);
+        }
+
+        let row = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        if let Some(row) = row {
+            use sqlx::Row;
+            let id: String = row.get("id");
+            let task_id: String = row.get("task_id");
+            let role: String = row.get("role");
+            let payload: Vec<u8> = row.get("payload");
+            
+            sqlx::query("UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = ?")
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            tx.commit().await.map_err(|e| e.to_string())?;
+
+            Ok(Some(Job {
+                id,
+                parent_task_id: task_id,
+                agent_role: role,
+                payload: String::from_utf8(payload).unwrap_or_default(),
+                status: "RUNNING".to_string(),
+                attempts: 1,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
+        sqlx::query("UPDATE local_queue_jobs SET status = 'COMPLETED' WHERE id = ?")
+            .bind(job_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+        sqlx::query("UPDATE local_queue_jobs SET status = 'FAILED' WHERE id = ?")
+            .bind(job_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
+pub struct RedisTaskQueue {
+    client: redis::Client,
+    queue_name: String,
+}
+
+impl RedisTaskQueue {
+    pub fn new(redis_url: &str, queue_name: &str) -> Result<Self, String> {
+        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+        Ok(RedisTaskQueue {
+            client,
+            queue_name: queue_name.to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl TaskQueue for RedisTaskQueue {
+    async fn enqueue(&self, job: Job) -> Result<(), String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+        
+        // We use an RPUSH to the redis list
+        let _: () = redis::cmd("RPUSH")
+            .arg(&self.queue_name)
+            .arg(payload_json)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+            
+        Ok(())
+    }
+
+    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        
+        // Use BLPOP with 1 second timeout to avoid busy loop
+        let result: Option<(String, String)> = redis::cmd("BLPOP")
+            .arg(&self.queue_name)
+            .arg(1)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+            
+        if let Some((_, payload_json)) = result {
+            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+                if roles.contains(&job.agent_role) {
+                    return Ok(Some(job));
+                } else {
+                    // Not intended for this worker role, push it back.
+                    let _ = self.enqueue(job).await;
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    async fn complete(&self, _job_id: &str) -> Result<(), String> {
+        // In this simple Redis list implementation, dequeue removes the item
+        Ok(())
+    }
+
+    async fn fail(&self, _job_id: &str, _reason: &str) -> Result<(), String> {
+        // In a real implementation we would move it to a failure queue
+        Ok(())
     }
 }
 
