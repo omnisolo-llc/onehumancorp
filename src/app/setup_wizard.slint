@@ -34,7 +34,6 @@ export component SetupWizard inherits Window {
     // New Steps State
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
-    in-out property <string> product_description: "";
     in-out property <string> product_price: "";
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
@@ -59,8 +58,6 @@ export component SetupWizard inherits Window {
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
-    callback generate_company_description();
-    callback generate_product_description();
 
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
@@ -196,7 +193,7 @@ export component SetupWizard inherits Window {
                 Button {
                     text: "✨ Auto-suggest Description";
                     height: 44px;
-                    clicked => { root.generate_company_description(); }
+                    clicked => { company_description = company_name + " is the best " + business_type + " in town."; }
                 }
             }
 
@@ -349,14 +346,6 @@ export component SetupWizard inherits Window {
 
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
-
-                Text { text: "Description"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. Delicious handmade chocolate cake"; text <=> product_description; height: 44px; }
-                Button {
-                    text: "✨ Auto-suggest Product Description";
-                    height: 44px;
-                    clicked => { root.generate_product_description(); }
-                }
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
