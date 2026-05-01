@@ -300,6 +300,8 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
+            enable_context_compaction: true,
+            compaction_threshold_tokens: 60_000,
             guardrails: None,
             enable_llm_judge: false,
         }
@@ -456,6 +458,8 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
+                enable_context_compaction: true,
+                compaction_threshold_tokens: 60_000,
                 guardrails: None,
             enable_llm_judge: false,
             };
