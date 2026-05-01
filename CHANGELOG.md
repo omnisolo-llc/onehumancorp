@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix Bazel test execution time warning for `server_test` (#8941)
+
+### Privacy/Offline Improvements
+- Fix Bazel test execution time warning for `server_test` (#8941)
+
 ## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
