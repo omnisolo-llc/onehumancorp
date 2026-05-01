@@ -97,6 +97,7 @@ pub struct OIDCConfig {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait UserRepository: Send + Sync {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;
@@ -257,7 +258,7 @@ impl Store {
         let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
         let mut user_id_opt = by_name.get(&name_key).cloned();
 
-        if user_id_opt.is_none() && (org_id == "sys" || org_id.is_empty()) {
+        if user_id_opt.is_none() && org_id.is_empty() {
             user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
         }
 
@@ -269,7 +270,7 @@ impl Store {
         }
 
         if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && org_id != "sys" && user_org != org_id {
+            if !org_id.is_empty() && user_org != org_id {
                 return Err("invalid credentials".to_string());
             }
         }
@@ -285,7 +286,7 @@ impl Store {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
         
-        if !org_id.is_empty() && org_id != "sys" {
+        if !org_id.is_empty() {
             if let Some(ref user_org) = u.organization_id {
                 if user_org != org_id {
                     return None;
@@ -301,7 +302,7 @@ impl Store {
         let users = self.users.read().unwrap();
         users.values()
             .filter(|u| {
-                org_id.is_empty() || org_id == "sys" || u.organization_id.as_deref() == Some(org_id)
+                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
             })
             .cloned()
             .collect()
@@ -313,7 +314,7 @@ impl Store {
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() && org_id != "sys" {
+        if !org_id.is_empty() {
              if u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
@@ -353,7 +354,7 @@ impl Store {
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() && org_id != "sys" {
+        if !org_id.is_empty() {
              if u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
@@ -947,4 +948,35 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     }
     
     Ok((org_id, agent_id))
+}
+
+#[cfg(test)]
+mod isolation_tests {
+    use super::*;
+
+    #[test]
+    fn test_auth_tenant_isolation_sys_org() {
+        let s = Store::new();
+        // Create user in a specific organization
+        let org_user = s.create_user(
+            "tenant_user".to_string(),
+            "tenant@test.com".to_string(),
+            "pass123".to_string(),
+            vec![],
+            "org-1".to_string()
+        ).unwrap();
+
+        // Querying with the correct org_id should succeed
+        assert!(s.get_user(&org_user.id, "org-1").is_some());
+
+        // Querying with empty org_id should succeed (admin context)
+        assert!(s.get_user(&org_user.id, "").is_some());
+
+        // Querying with "sys" should fail because "sys" is no longer a bypass
+        assert!(s.get_user(&org_user.id, "sys").is_none());
+
+        // Similarly, test authentication
+        assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
+        assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
+    }
 }
