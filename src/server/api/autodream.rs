@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use axum::{
     extract::{State, Query},
     response::IntoResponse,

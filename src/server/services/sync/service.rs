@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::sync_service_server::SyncService;

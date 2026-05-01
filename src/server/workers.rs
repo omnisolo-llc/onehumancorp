@@ -3,6 +3,7 @@ use crate::queue::{Job, TaskJobHandler, TaskQueue};
 use std::sync::Arc;
 
 pub struct SubAgentWorker {
+    #[allow(dead_code)]
     queue: Arc<dyn TaskQueue>,
 }
 

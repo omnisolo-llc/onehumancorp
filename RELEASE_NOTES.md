@@ -1,3 +1,7 @@
+## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
+- Scaling (Cloud): Codebase cleanup, systematically resolving dead code warnings and unused variables to ensure perfect compilation and test hygiene in CI.
+- Privacy/Offline (Standalone): Ensured all hybrid-aware SQLite standalone tests pass and maintain structural integrity post-cleanup.
+
 # Release Notes
 
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)

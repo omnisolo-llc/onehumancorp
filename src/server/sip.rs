@@ -7,6 +7,7 @@ use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct CapabilityPlugin {
     pub plugin_id: String,
     pub name: String,
@@ -17,6 +18,7 @@ pub struct CapabilityPlugin {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct EpisodicMemory {
     pub memory_id: String,
     pub context: String,
@@ -26,6 +28,7 @@ pub struct EpisodicMemory {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct MessageModel {
     id: String,
     from_agent: String,
@@ -36,6 +39,7 @@ struct MessageModel {
     occurred_at_unix: i64,
 }
 
+#[allow(dead_code)]
 pub struct SipDB {
     pool: PgPool,
     org_id: String,
@@ -43,6 +47,7 @@ pub struct SipDB {
     cache_expirations: RwLock<HashMap<String, Instant>>,
 }
 
+#[allow(dead_code)]
 impl SipDB {
     pub fn new(pool: PgPool, org_id: String) -> Self {
         SipDB {

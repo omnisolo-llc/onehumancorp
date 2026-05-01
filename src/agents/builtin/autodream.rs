@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 #[path = "autodream/store.rs"]
 pub mod store;
 use crate::db::DB;

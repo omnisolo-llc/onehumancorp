@@ -22,6 +22,7 @@ pub struct UltraPlanManager {
     plans: RwLock<HashMap<String, UltraPlan>>,
 }
 
+#[allow(dead_code)]
 impl UltraPlanManager {
     pub fn new() -> Self {
         UltraPlanManager {

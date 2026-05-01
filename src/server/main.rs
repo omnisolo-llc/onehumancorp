@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;

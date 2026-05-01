@@ -44,6 +44,7 @@ pub struct Store {
     path: Option<PathBuf>,
 }
 
+#[allow(dead_code)]
 impl Store {
     pub fn new() -> Self {
         Store {

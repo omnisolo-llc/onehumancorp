@@ -36,12 +36,14 @@ pub struct CIJob {
     pub branch: String,
 }
 
+#[allow(dead_code)]
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
     ci_jobs: RwLock<Vec<CIJob>>,
 }
 
+#[allow(dead_code)]
 impl Orchestrator {
     pub fn new(hub: Arc<Hub>) -> Self {
         Orchestrator {

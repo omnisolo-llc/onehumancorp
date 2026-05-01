@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use serde::{Deserialize, Serialize};
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation, Algorithm};
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct JWK {
     kid: String,
     kty: String,
@@ -29,6 +31,7 @@ struct JWKSet {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OIDCDiscovery {
     issuer: String,
     jwks_uri: String,
