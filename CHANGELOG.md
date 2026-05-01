@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.16 (Cloud) / v0.4.16+1 (Standalone)
+### Cloud Scaling Improvements
+- [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+
+### Privacy/Offline Improvements
+- [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+
 ## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
