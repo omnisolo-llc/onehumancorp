@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
+use crate::utils::triage::{triage_log, triage_error, TriageCategory};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityPlugin {
@@ -323,14 +324,19 @@ impl SipDB {
 
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
+        let sync_retry_threshold = Utc::now() - chrono::Duration::minutes(15);
         let fail_threshold = Utc::now() - age_threshold;
         
         // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+        let stuck_res = sqlx::query("UPDATE agent_missions SET status = 'STUCK', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
             .bind(stuck_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;
+
+        if stuck_res.rows_affected() > 0 {
+            triage_log(TriageCategory::Bug, &format!("Detected {} stagnant missions, marking as STUCK", stuck_res.rows_affected()));
+        }
             
         // 1b. Immediately requeue STUCK missions
         sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
@@ -338,8 +344,19 @@ impl SipDB {
             .execute(&self.pool)
             .await?;
             
+        // 1c. Requeue SYNCED missions that have no cloud_mission_id and are old (sync failed silently)
+        let sync_fix = sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'SYNCED' AND cloud_mission_id IS NULL AND updated_at < $1 AND organization_id = $2")
+            .bind(sync_retry_threshold)
+            .bind(&self.org_id)
+            .execute(&self.pool)
+            .await?;
+
+        if sync_fix.rows_affected() > 0 {
+            triage_log(TriageCategory::Cleanup, &format!("Requeued {} dangling SYNCED missions", sync_fix.rows_affected()));
+        }
+
         // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
             .bind(fail_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)
@@ -392,10 +409,15 @@ impl SipDB {
             .body(payload_str)
             .send()
             .await
-            .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+            .map_err(|e| {
+                triage_error(TriageCategory::Bug, &format!("Telemetry sync network failure: {}", e));
+                sqlx::Error::Protocol(e.to_string())
+            })?;
             
         if !response.status().is_success() {
-            return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", response.status())));
+            let status = response.status();
+            triage_error(TriageCategory::Bug, &format!("Telemetry remote endpoint error: {}", status));
+            return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", status)));
         }
         
         sqlx::query("DELETE FROM telemetry_buffer WHERE id = ANY($1)")

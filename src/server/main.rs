@@ -19,6 +19,8 @@ mod msgbus;
 mod pipeline;
 mod oidc;
 mod sip;
+#[cfg(test)]
+mod sip_test;
 mod seeder;
 mod orchestrator;
 mod spawner;

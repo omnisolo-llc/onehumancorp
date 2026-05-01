@@ -8,6 +8,7 @@ use tokio::sync::mpsc;
 use crate::billing::Tracker;
 use crate::tasks::TaskManager;
 use crate::scheduler::Scheduler;
+use crate::utils::triage::{triage_log, triage_error, TriageCategory};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 
@@ -141,7 +142,7 @@ impl Hub {
         tokio::spawn(async move {
             if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
                 if limit_status.soft_limit_reached {
-                    println!("Rate limit warning: {:?}", limit_status.user_message);
+                    triage_log(TriageCategory::Refactor, &format!("Rate limit warning for tenant {}: {:?}", tenant_id, limit_status.user_message));
                 }
             }
         });
@@ -190,9 +191,10 @@ impl Hub {
                                         new_transcript.extend(mtg.transcript.iter().cloned());
                                     }
                                     mtg.transcript = new_transcript;
+                                    triage_log(TriageCategory::Cleanup, &format!("Transcript summarized for meeting {}", m_id));
                                 }
                             }
-                            Err(e) => println!("Summarization failed: {}", e),
+                            Err(e) => triage_error(TriageCategory::Bug, &format!("Summarization failed for meeting {}: {}", m_id, e)),
                         }
                     });
                 }
@@ -533,6 +535,31 @@ impl Hub {
             Err(_) => 0,
         };
 
+        let stuck_missions: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
+            .fetch_one(&self.pool)
+            .await
+        {
+            Ok(count) => count,
+            Err(_) => 0,
+        };
+
+        let last_sync: Option<chrono::DateTime<chrono::Utc>> = match sqlx::query_scalar("SELECT MAX(updated_at) FROM agent_missions WHERE status = 'SYNCED'")
+            .fetch_one(&self.pool)
+            .await
+        {
+            Ok(ts) => ts,
+            Err(_) => None,
+        };
+
+        let mut cloud_reachability = serde_json::json!({"cloud_reachable": false});
+        if mode != "standalone" {
+            let repo = Arc::new(crate::services::sync::local_repository_impl::LocalRepositoryImpl::new(self.pool.clone()));
+            let synchronizer = crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::new(repo, self.cloud_url.clone());
+            if let Ok(health) = synchronizer.check_sync_health().await {
+                cloud_reachability = health;
+            }
+        }
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -540,6 +567,10 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
+            "stuck_missions_count": stuck_missions,
+            "last_mission_sync_at": last_sync,
+            "hybrid_sync_healthy": mission_sync_backlog < 100 && stuck_missions == 0,
+            "cloud_reachability": cloud_reachability,
         }))
     }
 }

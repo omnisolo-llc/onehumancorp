@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use crate::services::sync::local_repository::LocalRepository;
 use reqwest::Client;
+use crate::utils::triage::{triage_log, triage_error, TriageCategory};
 
 pub struct CloudSynchronizerImpl {
     repo: Arc<dyn LocalRepository>,
@@ -51,6 +52,37 @@ impl CloudSynchronizerImpl {
         }
 
         Ok(())
+    }
+
+    pub async fn check_sync_health(&self) -> Result<serde_json::Value, String> {
+        let endpoint = format!("{}/health", self.cloud_url);
+        let resp = self.client.get(&endpoint).send().await;
+
+        match resp {
+            Ok(response) => {
+                if response.status().is_success() {
+                    Ok(serde_json::json!({
+                        "cloud_reachable": true,
+                        "cloud_status": response.status().as_u16(),
+                    }))
+                } else {
+                    triage_error(TriageCategory::Bug, &format!("Cloud health check failed with status: {}", response.status()));
+                    Ok(serde_json::json!({
+                        "cloud_reachable": true,
+                        "cloud_status": response.status().as_u16(),
+                        "healthy": false,
+                    }))
+                }
+            }
+            Err(e) => {
+                triage_error(TriageCategory::Bug, &format!("Cloud unreachable: {}", e));
+                Ok(serde_json::json!({
+                    "cloud_reachable": false,
+                    "error": e.to_string(),
+                    "healthy": false,
+                }))
+            }
+        }
     }
 
     pub async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String> {

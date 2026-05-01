@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use crate::utils::triage::{triage_log, triage_error, TriageCategory};
 use crate::agents::plane::Client as PlaneClient;
 use crate::hub::Hub;
 use crate::agents::plane::Issue;
@@ -86,15 +87,15 @@ impl TaskWorker {
     }
 
     async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
-        println!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
+        triage_log(TriageCategory::Refactor, &format!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name));
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
-            println!("failed to update plane issue status: {}", e);
+            triage_error(TriageCategory::Bug, &format!("failed to update plane issue status: {}", e));
             return;
         }
         
         let mut agent_found = false;
-        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { eprintln!("Failed to get agents: {}", e); Vec::new() });
+        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { triage_error(TriageCategory::Bug, &format!("Failed to get agents: {}", e)); Vec::new() });
         
         for a in agents {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {

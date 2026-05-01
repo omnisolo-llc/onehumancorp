@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
 use chrono::Utc;
+use crate::utils::triage::{triage_log, TriageCategory};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CapabilityProfile {
@@ -40,7 +41,7 @@ impl SandboxViolationStore for InMemoryViolationStore {
         
         let capability = capability.to_string();
         crate::record_telemetry(move || {
-             println!("Telemetry: Sandbox violation - capability_denied, capability={}", capability);
+             triage_log(TriageCategory::Security, &format!("Telemetry: Sandbox violation - capability_denied, capability={}", capability));
         });
         
         Ok(())

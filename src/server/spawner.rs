@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use crate::hub::Hub;
 use crate::tasks::SharedTask;
+use crate::utils::triage::{triage_log, TriageCategory};
 
 #[async_trait]
 pub trait SubAgentSpawner: Send + Sync {
@@ -23,7 +24,7 @@ impl SubAgentSpawner for DefaultSubAgentSpawner {
     async fn spawn(&self, task: SharedTask) -> Result<(), String> {
         let hub = self.hub.clone();
         tokio::spawn(async move {
-            println!("Spawning sub-agent for task: {}", task.id);
+            triage_log(TriageCategory::Feature, &format!("Spawning sub-agent for task: {}", task.id));
             // Simulate work
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             
