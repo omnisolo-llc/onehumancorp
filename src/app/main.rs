@@ -1,7 +1,8 @@
-use ohc::orchestration::hub_service_client::HubServiceClient;
-use ohc::orchestration::growth_service_client::GrowthServiceClient;
-use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
+use ohc::orchestration::RegisterAgentRequest;
+use ohc::orchestration::auth_service_client::AuthServiceClient;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::hub_service_client::HubServiceClient;
 
 pub mod ohc {
     pub mod orchestration {
@@ -15,12 +16,112 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+fn instantiate_dashboard(
+    referrals_handle: slint::Weak<app::Referrals>,
+    my_plan_handle: slint::Weak<app::MyPlan>,
+    pricing_handle: slint::Weak<app::Pricing>,
+) {
+    if let Ok(dashboard) = app::Dashboard::new() {
+        let dashboard_handle = dashboard.as_weak();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
+
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+
+        if let Ok(business_share_ui) = app::BusinessShare::new() {
+            let business_share_handle = business_share_ui.as_weak();
+            business_share_ui.on_copy_link({
+                let bs_handle_clone_for_copy = business_share_handle.clone();
+                move || {
+                    if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
+                        let link = ui.get_share_link();
+                        println!("Shareable Store Link copied to clipboard: {}", link);
+                    }
+                }
+            });
+            let bs_handle_clone = business_share_handle.clone();
+            let ref_handle_clone_for_open = referrals_handle.clone();
+            dashboard.on_action_open_referrals(move || {
+                if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+            dashboard.on_action_share_store(move || {
+                *share_store_called_clone.borrow_mut() = true;
+                if let Some(ui) = bs_handle_clone.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+            let business_share_close_clone = business_share_handle.clone();
+            business_share_ui.on_close(move || {
+                if let Some(ui) = business_share_close_clone.upgrade() {
+                    let _ = ui.hide();
+                }
+            });
+            Box::leak(Box::new(business_share_ui));
+        } else {
+            let referrals_handle_clone = referrals_handle.clone();
+            let ref_handle_clone_for_open = referrals_handle.clone();
+            dashboard.on_action_open_referrals(move || {
+                if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+            dashboard.on_action_share_store(move || {
+                *share_store_called_clone.borrow_mut() = true;
+                if let Some(ui) = referrals_handle_clone.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+        }
+
+        let dashboard_milestone_handle = dashboard_handle.clone();
+        dashboard.on_dismiss_milestone(move || {
+            if let Some(ui) = dashboard_milestone_handle.upgrade() {
+                ui.set_show_milestone(false);
+            }
+        });
+
+        let my_plan_handle_clone = my_plan_handle.clone();
+        dashboard.on_open_billing(move || {
+            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                let _ = ui.show();
+            }
+        });
+        let _ = dashboard.show();
+        Box::leak(Box::new(dashboard));
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     tokio::spawn(async move {
-        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        match HubServiceClient::connect(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
@@ -53,22 +154,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = setup_wizard_ui.hide();
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
-    login_ui.on_start_setup_wizard({
-        let login_handle = login_ui_handle.clone();
-        move || {
-            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
-                let _ = wizard.show();
-            }
-            if let Some(ui) = login_handle.upgrade() {
-                let _ = ui.hide();
-            }
-        }
-    });
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = HubServiceClient::connect(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_ui_handle.upgrade() {
@@ -77,27 +176,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 ui.set_step(step);
                             }
                         }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                        if let Some(val) = state.get("business_type") {
+                            ui.set_business_type(val.into());
+                        }
+                        if let Some(val) = state.get("company_name") {
+                            ui.set_company_name(val.into());
+                        }
+                        if let Some(val) = state.get("company_description") {
+                            ui.set_company_description(val.into());
+                        }
+                        if let Some(val) = state.get("sell_physical") {
+                            ui.set_sell_physical(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_digital") {
+                            ui.set_sell_digital(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_services") {
+                            ui.set_sell_services(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_food") {
+                            ui.set_sell_food(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_subscriptions") {
+                            ui.set_sell_subscriptions(val == "true");
+                        }
+                        if let Some(val) = state.get("payment_pref") {
+                            ui.set_payment_pref(val.into());
+                        }
+                        if let Some(val) = state.get("admin_name") {
+                            ui.set_admin_name(val.into());
+                        }
+                        if let Some(val) = state.get("admin_email") {
+                            ui.set_admin_email(val.into());
+                        }
+                        if let Some(val) = state.get("website_template") {
+                            ui.set_website_template(val.into());
+                        }
+                        if let Some(val) = state.get("product_name") {
+                            ui.set_product_name(val.into());
+                        }
+                        if let Some(val) = state.get("product_price") {
+                            ui.set_product_price(val.into());
+                        }
+                        if let Some(val) = state.get("domain_choice") {
+                            ui.set_domain_choice(val.into());
+                        }
+                        if let Some(val) = state.get("is_advanced") {
+                            ui.set_is_advanced(val == "true");
+                        }
+                        if let Some(val) = state.get("product_sku") {
+                            ui.set_product_sku(val.into());
+                        }
+                        if let Some(val) = state.get("product_inventory") {
+                            ui.set_product_inventory(val.into());
+                        }
+                        if let Some(val) = state.get("custom_dns_target") {
+                            ui.set_custom_dns_target(val.into());
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -108,30 +246,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                (
+                    "business_type".to_string(),
+                    ui.get_business_type().to_string(),
+                ),
+                (
+                    "company_name".to_string(),
+                    ui.get_company_name().to_string(),
+                ),
+                (
+                    "company_description".to_string(),
+                    ui.get_company_description().to_string(),
+                ),
+                (
+                    "sell_physical".to_string(),
+                    ui.get_sell_physical().to_string(),
+                ),
+                (
+                    "sell_digital".to_string(),
+                    ui.get_sell_digital().to_string(),
+                ),
+                (
+                    "sell_services".to_string(),
+                    ui.get_sell_services().to_string(),
+                ),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                (
+                    "sell_subscriptions".to_string(),
+                    ui.get_sell_subscriptions().to_string(),
+                ),
+                (
+                    "payment_pref".to_string(),
+                    ui.get_payment_pref().to_string(),
+                ),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                (
+                    "website_template".to_string(),
+                    ui.get_website_template().to_string(),
+                ),
+                (
+                    "product_name".to_string(),
+                    ui.get_product_name().to_string(),
+                ),
+                (
+                    "product_price".to_string(),
+                    ui.get_product_price().to_string(),
+                ),
+                (
+                    "domain_choice".to_string(),
+                    ui.get_domain_choice().to_string(),
+                ),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                (
+                    "product_inventory".to_string(),
+                    ui.get_product_inventory().to_string(),
+                ),
+                (
+                    "custom_dns_target".to_string(),
+                    ui.get_custom_dns_target().to_string(),
+                ),
             ]);
 
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = HubServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -141,30 +327,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
 
+    let my_plan_ui = app::MyPlan::new().unwrap();
+    let my_plan_handle = my_plan_ui.as_weak();
+
+    let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle = pricing_ui.as_weak();
+
+    let pricing_handle_clone = pricing_handle.clone();
+    my_plan_ui.on_upgrade(move || {
+        if let Some(ui) = pricing_handle_clone.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
     referrals_ui.on_refresh({
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                match GrowthServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
                     Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let response = client
+                            .get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {}))
+                            .await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle.upgrade() {
-                                    let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
-                                        app::UiReferral {
-                                            referral_code: r.referral_code.into(),
-                                            user_id: r.user_id.into(),
-                                            clicks: r.clicks,
-                                            conversions: r.conversions,
-                                            created_at: "".into(), // Simplified
-                                        }
-                                    }).collect();
-                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
+                                    let ui_referrals: Vec<app::UiReferral> = referrals
+                                        .into_iter()
+                                        .map(|r| {
+                                            app::UiReferral {
+                                                referral_code: r.referral_code.into(),
+                                                user_id: r.user_id.into(),
+                                                clicks: r.clicks,
+                                                conversions: r.conversions,
+                                                created_at: "".into(), // Simplified
+                                            }
+                                        })
+                                        .collect();
+                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(
+                                        ui_referrals,
+                                    )));
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                     Err(e) => println!("Failed to connect for referrals: {:?}", e),
@@ -188,7 +400,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                match GrowthServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
                             user_id: "current_user".to_string(), // In production, use actual user_id
@@ -202,7 +419,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = handle.upgrade() {
                                     ui.set_my_referral_link(link.into());
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                     Err(e) => println!("Failed to create referral: {:?}", e),
@@ -213,113 +431,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_go_to_dashboard({
         let ui_handle = setup_wizard_handle.clone();
+        let ref_handle = referrals_handle.clone();
+        let plan_handle = my_plan_handle.clone();
+        let price_handle = pricing_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
             }
-
-    let my_plan_ui = app::MyPlan::new().unwrap();
-    let my_plan_handle = my_plan_ui.as_weak();
-
-    let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle = pricing_ui.as_weak();
-
-    let pricing_handle_clone = pricing_handle.clone();
-    my_plan_ui.on_upgrade(move || {
-        if let Some(ui) = pricing_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
-            if let Ok(dashboard) = app::Dashboard::new() {
-                let dashboard_handle = dashboard.as_weak();
-                let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let add_product_called_clone = add_product_called.clone();
-                dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-                let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let view_orders_called_clone = view_orders_called.clone();
-                dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-                let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let check_messages_called_clone = check_messages_called.clone();
-                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-                let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let see_analytics_called_clone = see_analytics_called.clone();
-                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-
-                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let share_store_called_clone = share_store_called.clone();
-
-                if let Ok(business_share_ui) = app::BusinessShare::new() {
-                    let business_share_handle = business_share_ui.as_weak();
-
-                    business_share_ui.on_copy_link({
-                        let bs_handle_clone_for_copy = business_share_handle.clone();
-                        move || {
-                            if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
-                                let link = ui.get_share_link();
-                                println!("Shareable Store Link copied to clipboard: {}", link);
-                            }
-                        }
-                    });
-
-                    let bs_handle_clone = business_share_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = bs_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-
-                    let business_share_close_clone = business_share_handle.clone();
-                    business_share_ui.on_close(move || {
-                        if let Some(ui) = business_share_close_clone.upgrade() {
-                            let _ = ui.hide();
-                        }
-                    });
-
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
-                } else {
-                    let referrals_handle_clone = referrals_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = referrals_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                }
-
-                let dashboard_milestone_handle = dashboard_handle.clone();
-                dashboard.on_dismiss_milestone(move || {
-                    if let Some(ui) = dashboard_milestone_handle.upgrade() {
-                        ui.set_show_milestone(false);
-                    }
-                });
-
-
-                let my_plan_handle_clone = my_plan_handle.clone();
-                dashboard.on_open_billing(move || {
-                    if let Some(ui) = my_plan_handle_clone.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-                let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
-
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
-            }
+            instantiate_dashboard(
+                ref_handle.clone(),
+                plan_handle.clone(),
+                price_handle.clone(),
+            );
         }
     });
 
@@ -401,17 +524,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type,
+              company_name,
+              company_description,
+              payment_pref,
+              admin_email,
+              website_template,
+              product_name,
+              product_price,
+              domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
                 ("company_name".to_string(), company_name.to_string()),
-                ("company_description".to_string(), company_description.to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                (
+                    "company_description".to_string(),
+                    company_description.to_string(),
+                ),
+                (
+                    "sell_physical".to_string(),
+                    ui.get_sell_physical().to_string(),
+                ),
+                (
+                    "sell_digital".to_string(),
+                    ui.get_sell_digital().to_string(),
+                ),
+                (
+                    "sell_services".to_string(),
+                    ui.get_sell_services().to_string(),
+                ),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                (
+                    "sell_subscriptions".to_string(),
+                    ui.get_sell_subscriptions().to_string(),
+                ),
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
@@ -421,8 +567,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("domain_choice".to_string(), domain_choice.to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                (
+                    "product_inventory".to_string(),
+                    ui.get_product_inventory().to_string(),
+                ),
+                (
+                    "custom_dns_target".to_string(),
+                    ui.get_custom_dns_target().to_string(),
+                ),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -440,29 +592,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_domain_choice = domain_choice.to_string();
 
             let mut req_selling_categories = Vec::new();
-            if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
-            if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
-            if ui.get_sell_services() { req_selling_categories.push("services".to_string()); }
-            if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
-            if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
+            if ui.get_sell_physical() {
+                req_selling_categories.push("physical".to_string());
+            }
+            if ui.get_sell_digital() {
+                req_selling_categories.push("digital".to_string());
+            }
+            if ui.get_sell_services() {
+                req_selling_categories.push("services".to_string());
+            }
+            if ui.get_sell_food() {
+                req_selling_categories.push("food".to_string());
+            }
+            if ui.get_sell_subscriptions() {
+                req_selling_categories.push("subscriptions".to_string());
+            }
 
             tokio::spawn(async move {
-                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                match HubServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
                     Ok(mut client) => {
-                        let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
-                            business_type: req_business_type,
-                            company_name: req_company_name,
-                            company_description: req_company_description,
-                            payment_pref: req_payment_pref,
-                            admin_email: req_admin_email,
-                            admin_name: req_admin_name,
-                            admin_password: req_admin_password,
-                            selling_categories: req_selling_categories,
-                            website_template: req_website_template,
-                            first_product_name: req_product_name,
-                            first_product_price: req_product_price,
-                            domain_choice: req_domain_choice,
-                        });
+                        let onboarding_request =
+                            tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
+                                business_type: req_business_type,
+                                company_name: req_company_name,
+                                company_description: req_company_description,
+                                payment_pref: req_payment_pref,
+                                admin_email: req_admin_email,
+                                admin_name: req_admin_name,
+                                admin_password: req_admin_password,
+                                selling_categories: req_selling_categories,
+                                website_template: req_website_template,
+                                first_product_name: req_product_name,
+                                first_product_price: req_product_price,
+                                domain_choice: req_domain_choice,
+                            });
 
                         match client.start_onboarding(onboarding_request).await {
                             Ok(resp) => {
@@ -474,7 +642,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_details(msg.into());
                                         ui.set_step(10); // Go to checklist
                                     }
-                                }).unwrap();
+                                })
+                                .unwrap();
                             }
                             Err(e) => {
                                 let err_msg = e.to_string();
@@ -483,13 +652,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_status("Onboarding Failed".into());
                                         ui.set_launch_details(err_msg.into());
                                     }
-                                }).unwrap();
+                                })
+                                .unwrap();
                             }
                         }
 
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
+                        let request =
+                            tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                state,
+                            });
                         if let Err(e) = client.save_wizard_state(request).await {
                             println!("Failed to save wizard state: {:?}", e);
                         }
@@ -502,8 +673,106 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let setup_wizard_for_login = setup_wizard_handle.clone();
+    let login_ui_clone_for_login = login_ui_handle.clone();
+    let ref_handle_login = referrals_handle.clone();
+    let plan_handle_login = my_plan_handle.clone();
+    let price_handle_login = pricing_handle.clone();
+
+    login_ui.on_login({
+        let login_ui_handle = login_ui_clone_for_login.clone();
+        let setup_wizard_handle = setup_wizard_for_login.clone();
+        move |email, password| {
+            let email_str = email.to_string();
+            let pass_str = password.to_string();
+            let ui_handle = login_ui_handle.clone();
+            let wizard_handle = setup_wizard_handle.clone();
+            let r_h = ref_handle_login.clone();
+            let p_h = plan_handle_login.clone();
+            let pr_h = price_handle_login.clone();
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = AuthServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let req = tonic::Request::new(ohc::orchestration::LoginRequest {
+                        username: email_str,
+                        password: pass_str,
+                        organization_id: "org_1".to_string(),
+                    });
+
+                    if let Ok(_resp) = client.login(req).await {
+                        // Success! Let's get wizard state to resume
+                        if let Ok(mut hub_client) = HubServiceClient::connect(
+                            std::env::var("OHC_HUB_URL")
+                                .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                        )
+                        .await
+                        {
+                            let mut step = 0;
+                            if let Ok(state_resp) = hub_client
+                                .get_wizard_state(tonic::Request::new(
+                                    ohc::orchestration::GetWizardStateRequest {},
+                                ))
+                                .await
+                            {
+                                let state = state_resp.into_inner().state;
+                                if let Some(step_str) = state.get("step") {
+                                    if let Ok(s) = step_str.parse::<i32>() {
+                                        step = s;
+                                    }
+                                }
+                            }
+
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    let _ = ui.hide();
+                                }
+                                if let Some(wizard) = wizard_handle.upgrade() {
+                                    wizard.set_step(step);
+                                    if step > 0 && step < 10 {
+                                        let _ = wizard.show();
+                                    } else {
+                                        instantiate_dashboard(
+                                            r_h.clone(),
+                                            p_h.clone(),
+                                            pr_h.clone(),
+                                        );
+                                    }
+                                }
+                            })
+                            .unwrap();
+                        }
+                    } else {
+                        // Failed to login
+                        slint::invoke_from_event_loop(move || {
+                            /* handle silently in this mock or use proper api */
+                        })
+                        .unwrap();
+                    }
+                }
+            });
+        }
+    });
+
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
     login_ui.run()?;
-    
+
     Ok(())
 }
 
@@ -514,7 +783,9 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_start_setup_wizard_transitions() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_ui_handle = login_ui.as_weak();
@@ -544,162 +815,15 @@ mod growth_e2e_tests {
 
         login_ui.invoke_start_setup_wizard();
 
-        assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+        assert!(
+            *transition_executed.borrow(),
+            "The setup wizard transition closure should be executed"
+        );
     }
 
     #[test]
     fn test_e2e_referral_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let ui = app::Referrals::new().unwrap();
-
-        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiReferral {
-                referral_code: "GROWTH2024".into(),
-                user_id: "user_123".into(),
-                clicks: 45,
-                conversions: 12,
-                created_at: "2024-01-01".into(),
-            }
-        ]));
-
-        ui.set_referrals(referral_data.clone());
-
-        assert_eq!(ui.get_referrals().row_count(), 1);
-        let r = ui.get_referrals().row_data(0).unwrap();
-        assert_eq!(r.referral_code, "GROWTH2024");
-        assert_eq!(r.clicks, 45);
-        assert_eq!(r.conversions, 12);
-    }
-
-    #[test]
-    fn test_e2e_growth_referrals_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-
-        // Mock wiring for action_share_store since we don't have the main closure here
-        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_store_called_clone = share_store_called.clone();
-
-        let referrals_ui = app::Referrals::new().unwrap();
-        let referrals_handle = referrals_ui.as_weak();
-
-        dashboard_ui.on_action_open_referrals(move || {
-            *share_store_called_clone.borrow_mut() = true;
-            if let Some(ui) = referrals_handle.upgrade() {
-                let _ = ui.show();
-            }
-        });
-
-        // Initialize referrals data
-        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiReferral {
-                referral_code: "DASHBOARD2024".into(),
-                user_id: "user_dash".into(),
-                clicks: 10,
-                conversions: 5,
-                created_at: "2024-05-01".into(),
-            }
-        ]));
-        referrals_ui.set_referrals(referral_data);
-
-        // Test link generation mock
-        let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let new_link_generated_clone = new_link_generated.clone();
-        referrals_ui.on_generate_new_link(move || {
-            *new_link_generated_clone.borrow_mut() = true;
-        });
-
-        // Test link sharing mock
-        let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let link_shared_clone = link_shared.clone();
-        referrals_ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
-            *link_shared_clone.borrow_mut() = true;
-        });
-
-        // Trigger dashboard action
-        dashboard_ui.invoke_action_open_referrals();
-        assert!(*share_store_called.borrow(), "action_open_referrals should be invoked");
-
-        // Assert UI state on referrals window
-        assert_eq!(referrals_ui.get_referrals().row_count(), 1);
-        let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
-        assert_eq!(first_row.referral_code, "DASHBOARD2024");
-
-        // Trigger interactions on referrals window
-        referrals_ui.invoke_generate_new_link();
-        assert!(*new_link_generated.borrow(), "generate_new_link should be invoked");
-
-        referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
-        assert!(*link_shared.borrow(), "share_link should be invoked");
-    }
-
-    #[test]
-    fn test_e2e_referral_share_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let ui = app::Referrals::new().unwrap();
-
-        let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let link_copied_clone = link_copied.clone();
-        ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
-            *link_copied_clone.borrow_mut() = true;
-        });
-        ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
-        assert!(*link_copied.borrow(), "Share link callback should be invoked");
-    }
-}
-
-#[cfg(test)]
-mod e2e_tests {
-    use slint::Model;
-    use super::*;
-
-    #[test]
-    fn test_cuj_draft_for_review_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_cuj_draft_for_review_flow because no display server is available.");
             return;
         }
 
@@ -714,33 +838,215 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
+
+        let ui = app::Referrals::new().unwrap();
+
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![app::UiReferral {
+            referral_code: "GROWTH2024".into(),
+            user_id: "user_123".into(),
+            clicks: 45,
+            conversions: 12,
+            created_at: "2024-01-01".into(),
+        }]));
+
+        ui.set_referrals(referral_data.clone());
+
+        assert_eq!(ui.get_referrals().row_count(), 1);
+        let r = ui.get_referrals().row_data(0).unwrap();
+        assert_eq!(r.referral_code, "GROWTH2024");
+        assert_eq!(r.clicks, 45);
+        assert_eq!(r.conversions, 12);
+    }
+
+    #[test]
+    fn test_e2e_growth_referrals_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Test wiring for action_share_store since we don't have the main closure here
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+
+        let referrals_ui = app::Referrals::new().unwrap();
+        let referrals_handle = referrals_ui.as_weak();
+
+        dashboard_ui.on_action_open_referrals(move || {
+            *share_store_called_clone.borrow_mut() = true;
+            if let Some(ui) = referrals_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        // Initialize referrals data
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![app::UiReferral {
+            referral_code: "DASHBOARD2024".into(),
+            user_id: "user_dash".into(),
+            clicks: 10,
+            conversions: 5,
+            created_at: "2024-05-01".into(),
+        }]));
+        referrals_ui.set_referrals(referral_data);
+
+        // Test link generation test
+        let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let new_link_generated_clone = new_link_generated.clone();
+        referrals_ui.on_generate_new_link(move || {
+            *new_link_generated_clone.borrow_mut() = true;
+        });
+
+        // Test link sharing test
+        let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let link_shared_clone = link_shared.clone();
+        referrals_ui.on_share_link(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *link_shared_clone.borrow_mut() = true;
+        });
+
+        // Trigger dashboard action
+        dashboard_ui.invoke_action_open_referrals();
+        assert!(
+            *share_store_called.borrow(),
+            "action_open_referrals should be invoked"
+        );
+
+        // Assert UI state on referrals window
+        assert_eq!(referrals_ui.get_referrals().row_count(), 1);
+        let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
+        assert_eq!(first_row.referral_code, "DASHBOARD2024");
+
+        // Trigger interactions on referrals window
+        referrals_ui.invoke_generate_new_link();
+        assert!(
+            *new_link_generated.borrow(),
+            "generate_new_link should be invoked"
+        );
+
+        referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
+        assert!(*link_shared.borrow(), "share_link should be invoked");
+    }
+
+    #[test]
+    fn test_e2e_referral_share_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
+
+        let ui = app::Referrals::new().unwrap();
+
+        let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let link_copied_clone = link_copied.clone();
+        ui.on_share_link(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *link_copied_clone.borrow_mut() = true;
+        });
+        ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
+        assert!(
+            *link_copied.borrow(),
+            "Share link callback should be invoked"
+        );
+    }
+}
+
+#[cfg(test)]
+mod e2e_tests {
+    use super::*;
+    use slint::Model;
+
+    #[test]
+    fn test_cuj_draft_for_review_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!(
+                "Skipping E2E test_cuj_draft_for_review_flow because no display server is available."
+            );
+            return;
+        }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
-
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                task_id: "test-task-123".into(),
-                title: "Draft Confirmation for Maya".into(),
-                proposed_content: "Hi Maya, thank you for your custom order!".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            task_id: "test-task-123".into(),
+            title: "Draft Confirmation for Maya".into(),
+            proposed_content: "Hi Maya, thank you for your custom order!".into(),
+        }];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
         ui.set_pending_approvals(pending_model.into());
@@ -765,7 +1071,9 @@ mod e2e_tests {
 
     #[test]
     fn test_login_password_visibility_toggle() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::Login::new().unwrap();
 
         // The toggle state in the encapsulated component is internal to Slint
@@ -792,7 +1100,10 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::SetupWizard::new().unwrap();
 
@@ -880,10 +1191,13 @@ mod e2e_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
         );
 
-        assert!(*launch_called.borrow(), "Launch callback should be triggered");
+        assert!(
+            *launch_called.borrow(),
+            "Launch callback should be triggered"
+        );
         assert_eq!(ui.get_step(), 10);
         assert_eq!(ui.get_launching(), false);
 
@@ -894,18 +1208,23 @@ mod e2e_tests {
         });
 
         ui.invoke_go_to_dashboard();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+        assert!(
+            *dashboard_opened.borrow(),
+            "Dashboard should be opened from Setup Wizard"
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_welcome_checklist_creation because no display server is available.");
+            println!(
+                "Skipping test_welcome_checklist_creation because no display server is available."
+            );
             return;
         }
         let ui = app::WelcomeChecklist::new().unwrap();
@@ -929,13 +1248,22 @@ mod tests {
         });
 
         ui.invoke_go_to_add_products();
-        assert!(*add_products_clicked.borrow(), "Add products callback should be triggered");
+        assert!(
+            *add_products_clicked.borrow(),
+            "Add products callback should be triggered"
+        );
 
         ui.invoke_go_to_connect_instagram();
-        assert!(*connect_instagram_clicked.borrow(), "Connect instagram callback should be triggered");
+        assert!(
+            *connect_instagram_clicked.borrow(),
+            "Connect instagram callback should be triggered"
+        );
 
         ui.invoke_go_to_share_link();
-        assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
+        assert!(
+            *share_link_clicked.borrow(),
+            "Share link callback should be triggered"
+        );
     }
 
     #[test]
@@ -952,7 +1280,9 @@ mod tests {
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
+            println!(
+                "Skipping test_agent_hire_next_button_disabled_by_default because no display server is available."
+            );
             return;
         }
         let ui = app::AgentHire::new().unwrap();
@@ -964,7 +1294,9 @@ mod tests {
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
+            println!(
+                "Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available."
+            );
             return;
         }
         let ui = app::AgentHire::new().unwrap();
@@ -985,47 +1317,65 @@ mod tests {
 
     #[test]
     fn test_agents_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Agents::new().unwrap();
     }
     #[test]
     fn test_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Chat::new().unwrap();
     }
     #[test]
     fn test_channels_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Channels::new().unwrap();
     }
     #[test]
     fn test_integrations_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Integrations::new().unwrap();
     }
     #[test]
     fn test_security_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Security::new().unwrap();
     }
     #[test]
     fn test_meetings_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Meetings::new().unwrap();
     }
     #[test]
     fn test_logs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Logs::new().unwrap();
     }
     #[test]
     fn test_pricing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Pricing::new().unwrap();
     }
     #[test]
     fn test_pricing_select_plan() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::Pricing::new().unwrap();
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
@@ -1037,7 +1387,9 @@ mod tests {
     }
     #[test]
     fn test_my_plan_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::MyPlan::new().unwrap();
         ui.set_tier("Starter".into());
         ui.set_total_actions("500".into());
@@ -1046,30 +1398,40 @@ mod tests {
     }
     #[test]
     fn test_cost_dashboard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::CostDashboard::new().unwrap();
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
     }
     #[test]
     fn test_scaling_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Scaling::new().unwrap();
     }
     #[test]
     fn test_swarm_memory_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::SwarmMemory::new().unwrap();
     }
     #[test]
     fn test_website_builder_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::WebsiteBuilder::new().unwrap();
     }
 
     #[test]
     fn test_website_builder_viral_storefront_footer() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
@@ -1082,19 +1444,25 @@ mod tests {
         });
 
         ui.invoke_open_ohc_signup();
-        assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
+        assert!(
+            *signup_opened.borrow(),
+            "Clicking the viral storefront footer should open the OHC signup link"
+        );
     }
-
 
     #[test]
     fn test_setup_wizard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::SetupWizard::new().unwrap();
     }
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -1106,7 +1474,10 @@ mod tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::PromptTuning::new().unwrap();
 
@@ -1131,27 +1502,37 @@ mod tests {
 
     #[test]
     fn test_task_list_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::TaskList::new().unwrap();
     }
     #[test]
     fn test_fix_agent_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::FixAgent::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Upgrade::new().unwrap();
     }
     #[test]
     fn test_billing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Billing::new().unwrap();
     }
     #[test]
     fn test_grow_business_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::GrowBusiness::new().unwrap();
     }
 }
@@ -1252,7 +1633,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_setup_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -1264,7 +1647,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
@@ -1313,7 +1699,7 @@ mod docs_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
         );
         assert_eq!(ui.get_launching(), true);
 
@@ -1328,7 +1714,10 @@ mod docs_tests {
             *dashboard_opened_clone.borrow_mut() = true;
         });
         ui.invoke_go_to_dashboard();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+        assert!(
+            *dashboard_opened.borrow(),
+            "Dashboard should be opened from Setup Wizard"
+        );
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -1344,7 +1733,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_website_builder_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -1356,22 +1747,27 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::WebsiteBuilder::new().unwrap();
 
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "E-commerce");
-            assert_eq!(color, "#34C759");
-            assert_eq!(product, "My Custom Product");
-            assert_eq!(price, "19.99");
-            assert_eq!(description, "A great custom product.");
-            assert_eq!(domain, "custom");
-            *publish_success_clone.borrow_mut() = true;
-        });
+        ui.on_publish_site(
+            move |template, color, product, price, description, domain| {
+                assert_eq!(template, "E-commerce");
+                assert_eq!(color, "#34C759");
+                assert_eq!(product, "My Custom Product");
+                assert_eq!(price, "19.99");
+                assert_eq!(description, "A great custom product.");
+                assert_eq!(domain, "custom");
+                *publish_success_clone.borrow_mut() = true;
+            },
+        );
 
         let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let copied_link_clone = copied_link.clone();
@@ -1417,7 +1813,7 @@ mod docs_tests {
             ui.get_product_name(),
             ui.get_product_price(),
             ui.get_product_description(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
         );
         assert!(ui.get_is_publishing(), "Should be publishing");
         assert!(*publish_success.borrow(), "Publish should have been called");
@@ -1431,33 +1827,47 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_documentation_suite_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
-        dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+        });
 
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
-        dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+        });
 
         let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_api_docs(move || {
+            *docs_opened_clone.borrow_mut() = true;
+        });
 
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || { *videos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_video_tutorials(move || {
+            *videos_opened_clone.borrow_mut() = true;
+        });
 
         let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || { *walkthrough_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+        });
 
         let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || { *release_notes_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+        });
 
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
@@ -1467,25 +1877,52 @@ mod docs_tests {
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
-        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened via the button"
+        );
+        assert!(
+            *ai_chat_opened.borrow(),
+            "AI Chat should be opened via the button"
+        );
+        assert!(
+            *docs_opened.borrow(),
+            "API Docs should be opened via the button"
+        );
+        assert!(
+            *videos_opened.borrow(),
+            "Video Tutorials should be opened via the button"
+        );
+        assert!(
+            *walkthrough_opened.borrow(),
+            "Interactive Walkthrough should be opened via the button"
+        );
+        assert!(
+            *release_notes_opened.borrow(),
+            "Release Notes should be opened via the button"
+        );
 
         // Verify the individual components instantiate correctly and have their basic properties
         let walkthrough = app::InteractiveWalkthrough::new().unwrap();
         walkthrough.set_current_step(1);
-        assert_eq!(walkthrough.get_current_step(), 1, "Walkthrough step should be updated");
+        assert_eq!(
+            walkthrough.get_current_step(),
+            1,
+            "Walkthrough step should be updated"
+        );
 
         let ai_chat = app::AiHelpChat::new().unwrap();
         ai_chat.set_user_input("How to add product".into());
         let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let send_called_clone = send_called.clone();
-        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+        ai_chat.on_send_message(move || {
+            *send_called_clone.borrow_mut() = true;
+        });
         ai_chat.invoke_send_message();
-        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+        assert!(
+            *send_called.borrow(),
+            "AI Chat send_message should be called via the button"
+        );
 
         let help_center = app::HelpCenter::new().unwrap();
         assert_eq!(help_center.get_search_query(), "");
@@ -1493,25 +1930,36 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
@@ -1529,42 +1977,59 @@ mod docs_tests {
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened via the button wrapped in TooltipElement"
+        );
     }
 
     #[test]
     fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::HelpCenter::new().unwrap();
     }
     #[test]
     fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::ReleaseNotes::new().unwrap();
     }
     #[test]
     fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::InteractiveWalkthrough::new().unwrap();
     }
     #[test]
     fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::AiHelpChat::new().unwrap();
     }
     #[test]
     fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::VideoTutorials::new().unwrap();
     }
     #[test]
     fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::ApiDocs::new().unwrap();
     }
     #[test]
     fn test_e2e_agent_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1577,7 +2042,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::AgentConfig::new().unwrap();
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1609,7 +2077,7 @@ mod docs_tests {
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
-            ui.get_frequency()
+            ui.get_frequency(),
         );
 
         assert_eq!(ui.get_step(), 3);
@@ -1622,7 +2090,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_interactive_walkthrough_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1635,7 +2105,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::InteractiveWalkthrough::new().unwrap();
 
@@ -1650,7 +2123,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_grow_business_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1663,7 +2138,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::GrowBusiness::new().unwrap();
 
@@ -1688,7 +2166,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_ai_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1701,30 +2181,42 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
 
-        // Mock navigating to AiConfig from Dashboard
+        // Test navigating to AiConfig from Dashboard
         dashboard_ui.on_open_ai_chat(move || {
             let ui = app::AiConfig::new().unwrap();
             let provider_called = add_provider_called_clone.clone();
@@ -1735,9 +2227,11 @@ mod docs_tests {
         });
 
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*add_provider_called.borrow(), "Add provider callback should have been triggered after navigating from Dashboard");
+        assert!(
+            *add_provider_called.borrow(),
+            "Add provider callback should have been triggered after navigating from Dashboard"
+        );
     }
-
 }
 
 #[cfg(test)]
@@ -1747,7 +2241,9 @@ mod dashboard_docs_tests {
     #[test]
     fn test_documentation_components_e2e_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
+            println!(
+                "Skipping test_documentation_components_e2e_flow because no display server is available."
+            );
             return;
         }
 
@@ -1764,26 +2260,38 @@ mod dashboard_docs_tests {
 
         // Simulate user login
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1794,7 +2302,10 @@ mod dashboard_docs_tests {
             let _help_center = app::HelpCenter::new().unwrap();
         });
         dashboard_ui.invoke_open_help_center();
-        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened from Dashboard"
+        );
 
         // 4. Test opening AI Help Chat from Dashboard
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1805,7 +2316,10 @@ mod dashboard_docs_tests {
             let _ai_chat = app::AiHelpChat::new().unwrap();
         });
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+        assert!(
+            *ai_chat_opened.borrow(),
+            "AI Help Chat should be opened from Dashboard"
+        );
 
         // 5. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
@@ -1824,7 +2338,9 @@ mod cost_transparency_e2e_tests {
         // Use backend logic to circumvent winit display panic in headless env
         let display_var = std::env::var("DISPLAY").unwrap_or_default();
         let wayland_var = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
-        if display_var.is_empty() && wayland_var.is_empty() { return; }
+        if display_var.is_empty() && wayland_var.is_empty() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1837,24 +2353,37 @@ mod cost_transparency_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Assert properties to make sure new plain-language labels exist and work
         dashboard_ui.set_todays_sales("$125.50".into());
@@ -1870,20 +2399,20 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.set_show_quick_actions_hint(true);
         assert!(dashboard_ui.get_show_quick_actions_hint());
 
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                task_id: "test-task-123".into(),
-                title: "Draft Confirmation for Maya".into(),
-                proposed_content: "Review the custom cake order details.".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            task_id: "test-task-123".into(),
+            title: "Draft Confirmation for Maya".into(),
+            proposed_content: "Review the custom cake order details.".into(),
+        }];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
     }
 
     #[test]
     fn test_e2e_swarm_observability_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1902,23 +2431,32 @@ mod cost_transparency_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
-
-        // Populate mock agent activity messages
-        let mock_messages = vec![
+        // Populate test agent activity messages
+        let test_messages = vec![
             app::UiMeshMessage {
                 id: "msg-1".into(),
                 content: "✅ Your Support Agent replied to 3 customers".into(),
@@ -1926,16 +2464,18 @@ mod cost_transparency_e2e_tests {
             app::UiMeshMessage {
                 id: "msg-2".into(),
                 content: "📦 Order Manager updated stock for 12 items".into(),
-            }
+            },
         ];
 
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
+        let messages_model = slint::ModelRc::new(slint::VecModel::from(test_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
     }
 
     #[test]
     fn test_e2e_business_share_and_milestones_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1948,24 +2488,37 @@ mod cost_transparency_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Assert milestones defaults and logic
         assert!(!dashboard_ui.get_show_milestone());
@@ -1975,7 +2528,10 @@ mod cost_transparency_e2e_tests {
 
         assert!(dashboard_ui.get_show_milestone());
         assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
-        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+        assert_eq!(
+            dashboard_ui.get_milestone_message(),
+            "You just got your first customer!"
+        );
 
         let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
         let milestone_dismissed_clone = milestone_dismissed.clone();
@@ -1984,29 +2540,43 @@ mod cost_transparency_e2e_tests {
         });
 
         dashboard_ui.invoke_dismiss_milestone();
-        assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+        assert!(
+            *milestone_dismissed.borrow(),
+            "Milestone should be dismissed"
+        );
 
         dashboard_ui.invoke_action_share_store();
-        assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+        assert!(
+            *share_store_called.borrow(),
+            "Share Store should be invoked from Dashboard"
+        );
 
         // Verify BusinessShare Component
         let business_share_ui = app::BusinessShare::new().unwrap();
 
         let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let copy_link_called_clone = copy_link_called.clone();
-        business_share_ui.on_copy_link(move || { *copy_link_called_clone.borrow_mut() = true; });
+        business_share_ui.on_copy_link(move || {
+            *copy_link_called_clone.borrow_mut() = true;
+        });
 
         let share_to_ig_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_to_ig_called_clone = share_to_ig_called.clone();
-        business_share_ui.on_share_to_instagram(move || { *share_to_ig_called_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_instagram(move || {
+            *share_to_ig_called_clone.borrow_mut() = true;
+        });
 
         let share_to_x_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_to_x_called_clone = share_to_x_called.clone();
-        business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_x(move || {
+            *share_to_x_called_clone.borrow_mut() = true;
+        });
 
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
-        business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
+        business_share_ui.on_close(move || {
+            *close_called_clone.borrow_mut() = true;
+        });
 
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
@@ -2027,7 +2597,9 @@ mod cost_transparency_e2e_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2040,24 +2612,37 @@ mod cost_transparency_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let billing_opened_clone = billing_opened.clone();
@@ -2066,7 +2651,10 @@ mod cost_transparency_e2e_tests {
         });
 
         dashboard_ui.invoke_open_billing();
-        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+        assert!(
+            *billing_opened.borrow(),
+            "Billing should be opened from Dashboard"
+        );
 
         let my_plan_ui = app::MyPlan::new().unwrap();
         let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2075,8 +2663,10 @@ mod cost_transparency_e2e_tests {
             *upgrade_opened_clone.borrow_mut() = true;
         });
         my_plan_ui.invoke_upgrade();
-        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
-
+        assert!(
+            *upgrade_opened.borrow(),
+            "Upgrade should be opened from MyPlan"
+        );
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
@@ -2102,14 +2692,18 @@ mod cost_transparency_e2e_tests {
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
                 name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                cost: "$25.00".into(),
+                roi: "150%".into(),
+                efficiency: "100 tok/$".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
                 name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                cost: "$20.50".into(),
+                roi: "0%".into(),
+                efficiency: "0 tok/$".into(),
                 pct: 0.45,
-            }
+            },
         ]));
 
         cost_ui.set_agent_costs(agent_costs.clone());
@@ -2121,6 +2715,54 @@ mod cost_transparency_e2e_tests {
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        assert_eq!(first_agent.cost, "$25.00");
+        assert_eq!(first_agent.roi, "150%");
+        assert_eq!(first_agent.efficiency, "100 tok/$");
+    }
+
+    #[test]
+    fn test_e2e_login_resume_wizard_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        setup_wizard_ui.set_step(3); // Mock state
+        let login_ui_handle = login_ui.as_weak();
+        let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+        login_ui.on_login({
+            let login_ui_handle = login_ui_handle.clone();
+            let setup_wizard_handle = setup_wizard_handle.clone();
+            let login_successful_clone = login_successful_clone.clone();
+            move |email, password| {
+                assert_eq!(email, "test@example.com");
+                assert_eq!(password, "password123");
+                *login_successful_clone.borrow_mut() = true;
+
+                if let Some(ui) = login_ui_handle.upgrade() {
+                    let _ = ui.hide();
+                }
+                if let Some(wizard) = setup_wizard_handle.upgrade() {
+                    let step = wizard.get_step();
+                    if step > 0 && step < 10 {
+                        let _ = wizard.show();
+                    } else {
+                        // instantiate_dashboard(...) would be called here
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
+        assert_eq!(setup_wizard_ui.get_step(), 3);
     }
 }
