@@ -77,7 +77,7 @@ test.describe('Help Center', () => {
 
   test('should link to documentation', async ({ page }) => {
     await page.goto('/help');
-    const docLink = page.locator('text=/docs|documentation|guide/i').first();
+    const docLink = page.locator('text=/guides|documentation|guide/i').first();
     await expect(docLink).toBeVisible();
   });
 

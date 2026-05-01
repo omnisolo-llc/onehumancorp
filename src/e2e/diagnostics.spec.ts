@@ -40,7 +40,7 @@ test.describe('Diagnostics Page', () => {
 
   test('should show server status', async ({ page }) => {
     await page.goto('/diagnostics');
-    await expect(page.locator('text=/server|api|grpc/i')).toBeVisible();
+    await expect(page.locator('text=/server|custom.*integrations|grpc/i')).toBeVisible();
   });
 
   test('should display uptime metrics', async ({ page }) => {
