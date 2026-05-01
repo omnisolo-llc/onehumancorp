@@ -172,7 +172,7 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+        request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -183,7 +183,7 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+        request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -1215,7 +1215,7 @@ mod wizard_tests {
         let service = service_opt.unwrap();
 
         let org_id = "test_org_wizard";
-        let _tenant_id = "test_org_wizard";
+        let tenant_id = "test_org_wizard";
         let user_id = "test_spiffe_id";
 
         // Clean up any previous state
