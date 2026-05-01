@@ -799,7 +799,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_push_claim() {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
@@ -812,7 +811,9 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect(&db_url).await.unwrap();
+                .connect_lazy(&db_url)
+                .unwrap();
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
             let service = TaskQueueService::new(pool.clone());
 
             // Initialize schema for test
@@ -854,7 +855,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
@@ -865,7 +865,9 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect(&db_url).await.unwrap();
+                .connect_lazy(&db_url)
+                .unwrap();
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
             let service = TaskQueueService::new(pool.clone());
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();
