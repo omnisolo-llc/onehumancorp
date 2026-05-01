@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
@@ -49,6 +50,7 @@ export component Dashboard inherits Window {
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
+    callback action_open_referrals();
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
@@ -63,8 +65,8 @@ export component Dashboard inherits Window {
             spacing: 16px;
             Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {} // Spacer
-            Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
-            Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } }
+            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } } }
+            TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
         }
 
         if (show_menu) : Rectangle {
@@ -77,7 +79,7 @@ export component Dashboard inherits Window {
                 spacing: 8px;
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
@@ -124,14 +126,15 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } }
-                Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
-                Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } }
+                TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
+                TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
+                TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
             }
             HorizontalBox {
                 spacing: 8px;
                 Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
                 Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
+                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
             }
         }
 
@@ -331,7 +334,7 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;

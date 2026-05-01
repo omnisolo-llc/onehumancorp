@@ -36,7 +36,6 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
-    pub(crate) wizard_state: RwLock<HashMap<String, serde_json::Value>>,
 }
 
 impl Hub {
@@ -54,14 +53,13 @@ impl Hub {
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
-            task_manager: TaskManager::new(event_log_tx.clone()),
+            task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
             get_token_usage: None,
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
-            wizard_state: RwLock::new(HashMap::new()),
         }
     }
 

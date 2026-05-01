@@ -21,10 +21,7 @@ mod pipeline;
 mod oidc;
 mod sip;
 mod seeder;
-mod orchestrator;
-mod spawner;
 mod queue;
-mod workers;
 // Agent modules now live in src/agents/builtin/ (ohc_builtin_agent crate)
 mod domain;
 pub mod pricing;
@@ -303,14 +300,39 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<SaveWizardStateRequest>,
     ) -> Result<tonic::Response<SaveWizardStateResponse>, tonic::Status> {
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
+        };
+        let user_id = match request.metadata().get("x-spiffe-id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing x-spiffe-id")),
+        };
+
         let req = request.into_inner();
         let state = req.state;
-
-        let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
         
-        for (k, v) in state {
-            wizard_state.insert(k, serde_json::Value::String(v));
-        }
+        let current_step = state.get("step").and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
+        let state_json = serde_json::to_value(&state).unwrap_or(serde_json::json!({}));
+
+        let tenant_id = org_id.clone();
+
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(&tenant_id)
+        .bind(&org_id)
+        .bind(&user_id)
+        .bind(current_step)
+        .bind(&state_json)
+        .execute(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(SaveWizardStateResponse {
             status: "saved".to_string(),
@@ -319,16 +341,35 @@ impl HubService for MyHubService {
 
     async fn get_wizard_state(
         &self,
-        _request: tonic::Request<GetWizardStateRequest>,
+        request: tonic::Request<GetWizardStateRequest>,
     ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
-        let wizard_state = self.hub.wizard_state.read().map_err(|e| tonic::Status::internal(e.to_string()))?;
-        
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
+        };
+        let tenant_id = org_id.clone();
+
+        let row = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+        )
+        .bind(&tenant_id)
+        .bind(&org_id)
+        .fetch_optional(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let mut state = std::collections::HashMap::new();
-        for (k, v) in wizard_state.iter() {
-            if let Some(s) = v.as_str() {
-                state.insert(k.clone(), s.to_string());
-            } else {
-                state.insert(k.clone(), v.to_string());
+        if let Some(record) = row {
+            use sqlx::Row;
+            let state_json: serde_json::Value = record.get("state_json");
+            if let Some(json_obj) = state_json.as_object() {
+                for (k, v) in json_obj.iter() {
+                    if let Some(s) = v.as_str() {
+                        state.insert(k.clone(), s.to_string());
+                    } else {
+                        state.insert(k.clone(), v.to_string());
+                    }
+                }
             }
         }
 
@@ -339,10 +380,22 @@ impl HubService for MyHubService {
 
     async fn reset_wizard_state(
         &self,
-        _request: tonic::Request<ResetWizardStateRequest>,
+        request: tonic::Request<ResetWizardStateRequest>,
     ) -> Result<tonic::Response<ResetWizardStateResponse>, tonic::Status> {
-        let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
-        wizard_state.clear();
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
+        };
+        let tenant_id = org_id.clone();
+
+        sqlx::query(
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+        )
+        .bind(&tenant_id)
+        .bind(&org_id)
+        .execute(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(ResetWizardStateResponse {
             status: "reset".to_string(),
@@ -401,16 +454,7 @@ impl HubService for MyHubService {
         
         let config_res = services::onboarding::env_verifier::verify_environment(&env_vars);
         
-        let wizard_state = self.hub.wizard_state.read().map_err(|e| tonic::Status::internal(e.to_string()))?;
-        
-        let mut state = std::collections::HashMap::new();
-        for (k, v) in wizard_state.iter() {
-            if let Some(s) = v.as_str() {
-                state.insert(k.clone(), s.to_string());
-            } else {
-                state.insert(k.clone(), v.to_string());
-            }
-        }
+        let state = std::collections::HashMap::new();
 
         match config_res {
             Ok(config) => {
@@ -952,8 +996,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true",
-        None
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
 
     // Start Builtin Agent
@@ -1074,7 +1117,7 @@ mod tests {
 
     // Helper to create a dummy hub and service for testing
     // Note: These tests are ignored by default because they require a running Postgres database.
-    async fn setup_test_service() -> Option<MyHubService> {
+    pub(crate) async fn setup_test_service() -> Option<MyHubService> {
         let _ = std::env::var("DATABASE_URL").ok()?;
 
         let db = Arc::new(crate::db::DB::new().await.ok()?);
@@ -1085,7 +1128,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1104,7 +1146,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_accept_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1120,7 +1161,6 @@ mod tests {
         assert!(resp.unwrap().into_inner().success);
     }
     #[tokio::test]
-    #[ignore]
     async fn test_publish_teammate_mesh_event_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1143,7 +1183,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_stream_mesh_events_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1156,5 +1195,79 @@ mod tests {
 
         let resp = service.stream_mesh_events(req).await;
         assert!(resp.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod wizard_tests {
+    use super::*;
+    use tonic::Request;
+    use ohc::orchestration::{SaveWizardStateRequest, GetWizardStateRequest, ResetWizardStateRequest};
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_wizard_state_persistence() {
+        let service_opt = crate::tests::setup_test_service().await;
+        if service_opt.is_none() {
+            println!("Skipping test due to missing database.");
+            return;
+        }
+        let service = service_opt.unwrap();
+
+        let org_id = "test_org_wizard";
+        let tenant_id = "test_org_wizard";
+        let user_id = "test_spiffe_id";
+
+        // Clean up any previous state
+        let mut req = Request::new(ResetWizardStateRequest {});
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+        let _ = service.reset_wizard_state(req).await;
+
+        // 1. Save state
+        let mut state_map = std::collections::HashMap::new();
+        state_map.insert("step".to_string(), "2".to_string());
+        state_map.insert("business_type".to_string(), "Bakery".to_string());
+
+        let mut req = Request::new(SaveWizardStateRequest { state: state_map });
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", user_id.parse().unwrap());
+
+        let res = service.save_wizard_state(req).await.unwrap();
+        assert_eq!(res.into_inner().status, "saved");
+
+        // 2. Get state
+        let mut req = Request::new(GetWizardStateRequest {});
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+
+        let res = service.get_wizard_state(req).await.unwrap();
+        let state = res.into_inner().state;
+        assert_eq!(state.get("step").unwrap(), "2");
+        assert_eq!(state.get("business_type").unwrap(), "Bakery");
+
+        // 3. Update state
+        let mut update_map = std::collections::HashMap::new();
+        update_map.insert("step".to_string(), "3".to_string());
+        update_map.insert("theme".to_string(), "dark".to_string());
+
+        let mut req = Request::new(SaveWizardStateRequest { state: update_map });
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", user_id.parse().unwrap());
+
+        let _ = service.save_wizard_state(req).await.unwrap();
+
+        // 4. Get updated state
+        let mut req = Request::new(GetWizardStateRequest {});
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+
+        let res = service.get_wizard_state(req).await.unwrap();
+        let state = res.into_inner().state;
+        assert_eq!(state.get("step").unwrap(), "3");
+        assert_eq!(state.get("business_type").unwrap(), "Bakery"); // Existing key should remain
+        assert_eq!(state.get("theme").unwrap(), "dark"); // New key should be added
+
+        // Clean up
+        let mut req = Request::new(ResetWizardStateRequest {});
+        req.metadata_mut().insert("organization_id", org_id.parse().unwrap());
+        let _ = service.reset_wizard_state(req).await;
     }
 }

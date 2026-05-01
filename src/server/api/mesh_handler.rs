@@ -47,6 +47,8 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
                 if sender.send(WsMessage::Text(text.into())).await.is_err() {
                     break;
                 }
+            } else {
+                eprintln!("Failed to encode mesh message to protobuf");
             }
         }
     });
