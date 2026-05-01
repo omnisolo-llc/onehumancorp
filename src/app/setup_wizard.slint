@@ -59,17 +59,6 @@ export component SetupWizard inherits Window {
     callback save_state();
     callback toggle_advanced();
 
-    next_step => { step = step + 1; save_state(); }
-    select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
-    toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
-    toggle_sell_digital => { sell_digital = !sell_digital; save_state(); }
-    toggle_sell_services => { sell_services = !sell_services; save_state(); }
-    toggle_sell_food => { sell_food = !sell_food; save_state(); }
-    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
-    select_template(t) => { website_template = t; step = step + 1; save_state(); }
-    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
-    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -191,7 +180,7 @@ export component SetupWizard inherits Window {
                     height: 100px;
                 }
                 Button {
-                    text: "✨ Auto-suggest Description";
+                    text: "✨ Auto-suggest with AI";
                     height: 44px;
                     clicked => { company_description = company_name + " is the best " + business_type + " in town."; }
                 }
@@ -241,29 +230,32 @@ export component SetupWizard inherits Window {
                 Text { text: "How do you want to receive payments?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
                 GlassCard {
-                    height: 70px;
+                    height: 80px;
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Estimated time to first payment: Under 5 mins"; font-family: "Inter"; font-size: 12px; color: #10b981; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); } }
                 }
                 GlassCard {
-                    height: 70px;
+                    height: 80px;
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Tap to pay on phone (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Estimated time to first payment: 2-3 days"; font-family: "Inter"; font-size: 12px; color: #10b981; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); } }
                 }
                 GlassCard {
-                    height: 70px;
+                    height: 80px;
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Online & In-person"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Estimated time to first payment: Under 5 mins (online)"; font-family: "Inter"; font-size: 12px; color: #10b981; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); } }
                 }
@@ -420,8 +412,25 @@ export component SetupWizard inherits Window {
                     VerticalBox {
                         padding: 16px;
                         alignment: center;
+                        spacing: 12px;
                         Text { text: launch_status; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
+
+                        Rectangle {
+                            height: 4px;
+                            width: 100%;
+                            background: rgba(168, 85, 247, 0.2);
+                            border-radius: 2px;
+                            Rectangle {
+                                width: parent.width * 0.7; // Dummy progress
+                                height: 100%;
+                                background: #a855f7;
+                                border-radius: 2px;
+                                animate width { duration: 2000ms; easing: ease-in-out; }
+                            }
+                        }
+
                         Text { text: launch_details; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+                        Text { text: "Your business is setting up…"; font-size: 12px; font-family: "Inter"; color: #a855f7; horizontal-alignment: center; }
                     }
                 }
             }
