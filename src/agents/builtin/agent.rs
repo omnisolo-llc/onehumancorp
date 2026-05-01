@@ -39,6 +39,10 @@ pub struct AgentRunConfig {
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
+    pub project_trusted: bool,
+    pub allowed_tools: Option<Vec<String>>,
+    pub high_risk_tools: Vec<String>,
+    pub approved_tool_calls: Vec<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -60,6 +64,10 @@ impl Default for AgentRunConfig {
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
+            project_trusted: true,
+            allowed_tools: None,
+            high_risk_tools: vec![],
+            approved_tool_calls: vec![],
         }
     }
 }
@@ -364,8 +372,12 @@ impl Agent {
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
+                let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
                 read_only_futures.push(async move {
+                    if let Err(e) = gating_res {
+                        return (tc_clone, Err(e));
+                    }
                     let mut retry_count = 0;
                     let max_retries = 3;
                     loop {
@@ -459,6 +471,27 @@ impl Agent {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
+                    }
+                }
+
+                // Anthropic Mechanic: 3-Stage Tool Gating
+                if let Err(e) = Self::check_tool_gating(&tc, false, cfg) {
+                    match e {
+                        ToolError::UserFixable(msg) => {
+                            let err = format!("User intervention required: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        ToolError::Fatal(msg) => {
+                            let err = format!("Fatal tool error: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        _ => {
+                            let err = format!("Fatal tool error: {:?}", e);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
                     }
                 }
 
@@ -652,6 +685,29 @@ impl Agent {
         Ok(last_assistant_content)
     }
 
+
+    // Anthropic Mechanic: 3-Stage Tool Gating
+    fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        // Stage 1: Trust establishment at project load
+        if !cfg.project_trusted && !is_read_only {
+            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
+        }
+
+        // Stage 2: Permission check before each tool call
+        if let Some(allowed) = &cfg.allowed_tools {
+            if !allowed.contains(&tc.name) {
+                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+            }
+        }
+
+        // Stage 3: Explicit user confirmation for high-risk operations
+        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        }
+
+        Ok(())
+    }
+
     async fn execute_tool(
         &self,
         tc: &ToolCall,
@@ -668,6 +724,155 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_anthropic_3_stage_tool_gating() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "2".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![
+            Tool {
+                name: "read_tool".to_string(),
+                description: "read".to_string(),
+                is_read_only: true,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+            Tool {
+                name: "mutating_tool".to_string(),
+                description: "write".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+            Tool {
+                name: "high_risk_tool".to_string(),
+                description: "delete".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ];
+
+        let agent = Agent::new(client.clone(), tools.clone());
+
+        // Test 1: Untrusted project rejects mutating tools
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = false;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Project not trusted. Mutating tools are disabled."));
+
+        // Reset mock
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![
+            Tool {
+                name: "unallowed_tool".to_string(),
+                description: "write".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ]);
+
+        // Test 2: Permission check blocks unallowed tools
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not in the allowed list."));
+
+
+        // Test 3: High-risk operations require explicit confirmation
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![
+            Tool {
+                name: "high_risk_tool".to_string(),
+                description: "delete".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.high_risk_tools = vec!["high_risk_tool".to_string()];
+        // Not in approved_tool_calls
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("User intervention required"));
+        assert!(err_str.contains("requires explicit user confirmation"));
+
+    }
+
+
     use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
