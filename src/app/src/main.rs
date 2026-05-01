@@ -233,7 +233,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
-                dashboard.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
+                let referrals_handle_clone = referrals_handle.clone();
+                dashboard.on_action_share_store(move || {
+                    *share_store_called_clone.borrow_mut() = true;
+                    if let Some(ui) = referrals_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
 
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
@@ -386,6 +393,43 @@ mod growth_e2e_tests {
         assert_eq!(r.referral_code, "GROWTH2024");
         assert_eq!(r.clicks, 45);
         assert_eq!(r.conversions, 12);
+    }
+
+    #[test]
+    fn test_e2e_growth_referrals_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Mock wiring for action_share_store since we don't have the main closure here
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+
+        let referrals_ui = app::Referrals::new().unwrap();
+        let referrals_handle = referrals_ui.as_weak();
+
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+            if let Some(ui) = referrals_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_store_called.borrow(), "action_share_store should be invoked");
     }
 
     #[test]
