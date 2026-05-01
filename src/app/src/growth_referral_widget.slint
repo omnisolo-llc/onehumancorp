@@ -1,0 +1,84 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component GrowthReferralWidget inherits Rectangle {
+    in property <string> referral_link: "ohc://join?ref=PENDING";
+    in property <int> clicks: 0;
+    in property <int> conversions: 0;
+    callback generate_link();
+    callback copy_link(string);
+
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    border-width: 1px;
+    border-radius: 12px;
+    padding: 24px;
+    // Glassmorphism effect as per audit docs
+    // Slint doesn't directly support `backdrop-filter: blur`, but we mimic the design token look
+
+    VerticalBox {
+        spacing: 16px;
+
+        Text {
+            text: "Viral Invite Loop";
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        Text {
+            text: "Invite team members to view agents in the Cloud while maintaining local sovereignty.";
+            color: #64748b;
+            font-size: 14px;
+            wrap: word-wrap;
+        }
+
+        Rectangle {
+            background: rgba(168, 85, 247, 0.05);
+            border-color: rgba(168, 85, 247, 0.2);
+            border-width: 1px;
+            border-radius: 8px;
+            padding: 12px;
+
+            HorizontalBox {
+                spacing: 12px;
+                alignment: space-between;
+
+                Text {
+                    text: referral_link;
+                    color: #a855f7;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                }
+
+                Button {
+                    text: "Copy";
+                    clicked => { copy_link(referral_link); }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 20px;
+
+            Button {
+                text: "Generate New Link";
+                primary: true;
+                clicked => { generate_link(); }
+            }
+
+            Rectangle {} // Spacer
+
+            VerticalBox {
+                alignment: center;
+                Text { text: clicks; font-size: 18px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
+                Text { text: "Clicks"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+            }
+
+            VerticalBox {
+                alignment: center;
+                Text { text: conversions; font-size: 18px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
+                Text { text: "Conversions"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+            }
+        }
+    }
+}

@@ -2,10 +2,13 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Set PROTOC environment variable to point to the built protoc in runfiles
-    let protoc_path = PathBuf::from("../../../protobuf+/protoc");
-    // SAFETY: This is only called at build time and does not concurrently access env
-    unsafe { env::set_var("PROTOC", protoc_path) };
+    // Check if PROTOC is already set (e.g. by our environment for local testing)
+    if env::var("PROTOC").is_err() {
+        // Set PROTOC environment variable to point to the built protoc in runfiles
+        let protoc_path = PathBuf::from("../../../protobuf+/protoc");
+        // SAFETY: This is only called at build time and does not concurrently access env
+        unsafe { env::set_var("PROTOC", protoc_path) };
+    }
     
     println!("cargo:warning=Set PROTOC to {:?}", env::var("PROTOC"));
 

@@ -627,6 +627,12 @@ message CreateReferralRequest {
   string referral_code = 2;
 }
 
+message ProcessReferralRequest {
+  string user_id = 1;
+  string target_type = 2;
+  string target_id = 3;
+}
+
 message ReferralsResponse {
   repeated Referral referrals = 1;
 }
@@ -734,6 +740,7 @@ service GrowthService {
   
   rpc GetReferrals(EmptyRequest) returns (ReferralsResponse);
   rpc CreateReferral(CreateReferralRequest) returns (Referral);
+  rpc ProcessReferral(ProcessReferralRequest) returns (Referral);
   rpc ClickReferral(GrowthIdRequest) returns (Referral);
   rpc ConvertReferral(GrowthIdRequest) returns (Referral);
   

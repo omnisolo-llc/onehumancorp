@@ -20,6 +20,7 @@ cargo_build_script(
         "src/dashboard.slint",
         "src/diagnostics.slint",
         "src/glass_card.slint",
+        "src/growth_referral_widget.slint",
         "src/grow_business.slint",
         "src/handoffs.slint",
         "src/help_center.slint",
@@ -134,6 +135,7 @@ rust_binary(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:copypasta",
     ],
 )
 
@@ -213,5 +215,6 @@ rust_test(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:copypasta",
     ],
 )

@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GrowthReferralWidget } from "growth_referral_widget.slint";
 
 export struct UiUser {
     id: string,
@@ -15,7 +16,12 @@ export component UserManagement inherits Window {
     title: "User Management";
 
     in property <[UiUser]> users;
+    in property <string> referral_link: "ohc://join?ref=PENDING";
+    in property <int> referral_clicks: 0;
+    in property <int> referral_conversions: 0;
     callback delete_user(string);
+    callback generate_referral_link();
+    callback copy_referral_link(string);
 
     background: #f8fafc;
 
@@ -29,16 +35,12 @@ export component UserManagement inherits Window {
             Button { text: "Invite User"; }
         }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-
-            HorizontalBox {
-                padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
-            }
+        GrowthReferralWidget {
+            referral_link: root.referral_link;
+            clicks: root.referral_clicks;
+            conversions: root.referral_conversions;
+            generate_link => { root.generate_referral_link(); }
+            copy_link(link) => { root.copy_referral_link(link); }
         }
 
         VerticalBox {

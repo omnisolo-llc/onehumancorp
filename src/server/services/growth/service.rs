@@ -155,6 +155,52 @@ impl GrowthService for MyGrowthService {
         }))
     }
 
+    async fn process_referral(
+        &self,
+        request: Request<ProcessReferralRequest>,
+    ) -> Result<Response<Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await;
+        let req = request.into_inner();
+
+        if req.user_id.is_empty() {
+            return Err(Status::invalid_argument("userId is required"));
+        }
+
+        let referral_code = referral_api::generate_referral_link(&req.user_id)
+            .map_err(|e| Status::internal(e))?
+            .split('=')
+            .last()
+            .unwrap_or("error")
+            .to_string();
+
+        let id = format!("ref-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let created_at = Utc::now().timestamp();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, created_at_unix) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&id)
+            .bind(&org_id)
+            .bind(&req.user_id)
+            .bind(&referral_code)
+            .bind(created_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Referral {
+            id,
+            user_id: req.user_id,
+            referral_code,
+            clicks: 0,
+            conversions: 0,
+            created_at_unix: created_at,
+        }))
+    }
+
     async fn click_referral(
         &self,
         request: Request<GrowthIdRequest>,
