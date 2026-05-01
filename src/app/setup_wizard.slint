@@ -42,10 +42,12 @@ export component SetupWizard inherits Window {
     in-out property <string> custom_dns_target: "";
 
     in-out property <bool> launching: false;
+    in-out property <string> instant_prompt: "";
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
 
     callback launch(string, string, string, string, string, string, string, string, string, string);
+    callback instant_launch(string);
     callback next_step();
     callback select_business_type(string);
     callback toggle_sell_physical();
@@ -117,7 +119,7 @@ export component SetupWizard inherits Window {
                 spacing: 24px;
                 alignment: center;
                 Text {
-                    text: "Your business,\nlive in minutes.";
+                    text: "Your business, live in minutes.";
                     font-size: 32px;
                     font-family: "Outfit";
                     font-weight: 700;
@@ -130,6 +132,41 @@ export component SetupWizard inherits Window {
                     font-family: "Inter";
                     color: #94a3b8;
                     horizontal-alignment: center;
+                }
+
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 16px;
+                        Text { text: "⚡ Instant Build"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; horizontal-alignment: center; }
+                        Text { text: "Tell us about your business in one sentence, and AI will build your store instantly."; font-family: "Inter"; font-size: 14px; color: #94a3b8; horizontal-alignment: center; wrap: word-wrap; }
+                        LineEdit { placeholder-text: "e.g. I run a home bakery selling custom vegan cakes in Austin."; text <=> instant_prompt; height: 60px; }
+
+                        Text { text: "Account Setup"; font-family: "Outfit"; font-size: 16px; font-weight: 700; color: white; }
+                        LineEdit { placeholder-text: "Name"; text <=> admin_name; height: 44px; }
+                        LineEdit { placeholder-text: "Email Address"; text <=> admin_email; height: 44px; }
+                        PasswordInput { placeholder-text: "Password"; text <=> admin_password; }
+
+                        Button {
+                            text: "✨ Build My Business Instantly";
+                            height: 44px;
+                            clicked => {
+                                launching = true;
+                                instant_launch(instant_prompt);
+                            }
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    Text { text: "OR"; font-family: "Inter"; color: #94a3b8; }
+                }
+
+                Button {
+                    text: "Guided Setup (11 Steps) →";
+                    height: 44px;
+                    clicked => { next_step(); }
                 }
             }
 
@@ -495,7 +532,7 @@ export component SetupWizard inherits Window {
             }
             if (step == 0 || step == 10) : Rectangle { width: 80px; } // spacer
 
-            if (step < 9 && step != 1 && step != 4 && step != 6 && step != 8) : GlassCard {
+            if (step > 0 && step < 9 && step != 1 && step != 4 && step != 6 && step != 8) : GlassCard {
                 width: 120px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);

@@ -141,6 +141,7 @@ use ohc::orchestration::*;
 use std::sync::Arc;
 use hub::Hub;
 
+
 pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
@@ -153,7 +154,23 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
+
+        let provider_type = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "gemini".to_string());
+        let llm_client: Option<std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>> = if provider_type == "gemini" {
+            let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+            if !api_key.is_empty() {
+                Some(std::sync::Arc::new(ohc_builtin_agent::llm::gemini::GeminiClient::new(api_key)))
+            } else { None }
+        } else if provider_type == "openai" {
+            let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
+            if !api_key.is_empty() {
+                Some(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new(api_key)))
+            } else { None }
+        } else {
+            None
+        };
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, llm_client);
+
         MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }

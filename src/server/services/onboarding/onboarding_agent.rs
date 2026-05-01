@@ -4,18 +4,105 @@ use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse}
 
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
+    llm: Option<std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>>,
 }
 
 impl OnboardingAgent {
-    pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
-        OnboardingAgent { db }
+    pub fn new(db: std::sync::Arc<crate::db::DB>, llm: Option<std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>>) -> Self {
+        OnboardingAgent { db, llm }
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
-        let business_type = req.business_type.clone();
-        let company_name = req.company_name.clone();
+        let (business_type, company_name) = if !req.instant_prompt.is_empty() {
+            let mut extracted_b_type = "Online Store".to_string();
+            let mut extracted_c_name = "My Instant Business".to_string();
+
+            let prompt = format!(
+                "Extract the business type and business name from this description: '{}'.
+                Respond EXACTLY in this format: TYPE|NAME
+                where TYPE is one of 'Online Store', 'Service Business', 'Restaurant / Food', or 'Other'.
+                Example: Online Store|Maya's Bakery",
+                req.instant_prompt
+            );
+
+            let (mut response_text, mut api_key_missing) = (String::new(), true);
+
+            if let Some(llm) = &self.llm {
+                let chat_req = ohc_builtin_agent::types::ChatRequest {
+                    messages: vec![ohc_builtin_agent::types::Message {
+                        role: ohc_builtin_agent::types::Role::User,
+                        content: prompt.clone(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    }],
+                    model: "gemini-1.5-pro".to_string(), // Fallback standard model
+                    temperature: 0.1,
+                    tools: vec![],
+                    max_tokens: 1024,
+                    system: String::new(),
+                };
+
+                if let Ok(res) = llm.chat(chat_req).await {
+                    response_text = res.message.content;
+                    api_key_missing = false;
+                }
+            }
+
+            if api_key_missing || response_text.is_empty() {
+                // Fallback heuristic for local testing without an API key
+                let p = req.instant_prompt.to_lowercase();
+
+                if p.contains("bakery") || p.contains("cake") || p.contains("food") {
+                    extracted_b_type = "Restaurant / Food".to_string();
+                } else if p.contains("handyman") || p.contains("repair") || p.contains("service") || p.contains("tutor") || p.contains("consult") {
+                    extracted_b_type = "Service Business".to_string();
+                }
+
+                if p.chars().count() < 30 {
+                    extracted_c_name = req.instant_prompt.clone();
+                } else if let Some(idx) = p.find("called") {
+                    let char_idx = p[..idx].chars().count();
+                    let substr = req.instant_prompt.chars().skip(char_idx + 6).collect::<String>();
+                    let substr = substr.trim();
+                    let parts: Vec<&str> = substr.split(&[' ', '.', ','][..]).collect();
+                    if parts.len() > 0 && !parts[0].is_empty() {
+                        extracted_c_name = parts[0].to_string();
+                        if parts.len() > 1 && !parts[1].is_empty() {
+                            extracted_c_name = format!("{} {}", parts[0], parts[1]);
+                        }
+                    }
+                } else if let Some(idx) = p.find("named") {
+                    let char_idx = p[..idx].chars().count();
+                    let substr = req.instant_prompt.chars().skip(char_idx + 5).collect::<String>();
+                    let substr = substr.trim();
+                    let parts: Vec<&str> = substr.split(&[' ', '.', ','][..]).collect();
+                    if parts.len() > 0 && !parts[0].is_empty() {
+                        extracted_c_name = parts[0].to_string();
+                        if parts.len() > 1 && !parts[1].is_empty() {
+                            extracted_c_name = format!("{} {}", parts[0], parts[1]);
+                        }
+                    }
+                }
+            } else {
+                let parts: Vec<&str> = response_text.split('|').collect();
+                if parts.len() >= 2 {
+                    let parsed_type = parts[0].trim();
+                    if parsed_type == "Online Store" || parsed_type == "Service Business" || parsed_type == "Restaurant / Food" || parsed_type == "Other" {
+                        extracted_b_type = parsed_type.to_string();
+                    }
+                    let parsed_name = parts[1].trim();
+                    if !parsed_name.is_empty() {
+                        extracted_c_name = parsed_name.to_string();
+                    }
+                }
+            }
+
+            (extracted_b_type, extracted_c_name)
+        } else {
+            (req.business_type.clone(), req.company_name.clone())
+        };
 
         if !req.first_product_name.is_empty() {
              let desc = if req.first_product_description.is_empty() {
@@ -189,14 +276,89 @@ mod tests {
         Some(db)
     }
 
+
     #[tokio::test]
+    async fn test_start_onboarding_instant_build_heuristic_fallback() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let agent = OnboardingAgent::new(db, None);
+
+        let req = StartOnboardingRequest {
+            business_type: "".to_string(),
+            company_name: "".to_string(),
+            company_description: "".to_string(),
+            selling_categories: vec![],
+            payment_pref: "online".to_string(),
+            admin_email: "test@example.com".to_string(),
+            admin_name: "Test Admin".to_string(),
+            admin_password: "password".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "".to_string(),
+            first_product_price: "0.00".to_string(),
+            first_product_description: "".to_string(),
+            domain_choice: "subdomain".to_string(),
+            instant_prompt: "I run a successful home bakery called Maya's Sweets in Austin.".to_string(),
+        };
+
+        let res = agent.start_onboarding(req).await;
+        assert!(res.is_ok());
+        let resp = res.unwrap();
+        assert!(resp.success);
+
+        let org_id = resp.organization_id;
+        use sqlx::Row;
+
+        let products = sqlx::query("SELECT name, description, fulfillment_strategy FROM products WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&agent.db.pool)
+            .await
+            .unwrap();
+
+        // We know it fell back to generating initial products
+        assert!(!products.is_empty());
+        assert_eq!(products[0].get::<String, _>("fulfillment_strategy"), "physical"); // Restaurant / Food defaults to physical
+    }
+
+    #[tokio::test]
+    async fn test_start_onboarding_instant_build_heuristic_named() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let agent = OnboardingAgent::new(db, None);
+
+        let req = StartOnboardingRequest {
+            business_type: "".to_string(),
+            company_name: "".to_string(),
+            company_description: "".to_string(),
+            selling_categories: vec![],
+            payment_pref: "online".to_string(),
+            admin_email: "test@example.com".to_string(),
+            admin_name: "Test Admin".to_string(),
+            admin_password: "password".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "".to_string(),
+            first_product_price: "0.00".to_string(),
+            first_product_description: "".to_string(),
+            domain_choice: "subdomain".to_string(),
+            instant_prompt: "I am a freelance handyman named Bob Builder.".to_string(),
+        };
+
+        let res = agent.start_onboarding(req).await;
+        assert!(res.is_ok());
+        let resp = res.unwrap();
+        assert!(resp.success);
+    }
+#[tokio::test]
     #[ignore]
     async fn test_start_onboarding_online_store() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
         };
-        let agent = OnboardingAgent::new(db);
+        let agent = OnboardingAgent::new(db, None);
 
         let req = StartOnboardingRequest {
             business_type: "Online Store".to_string(),
@@ -212,6 +374,7 @@ mod tests {
             first_product_price: "25.00".to_string(),
             first_product_description: "A delicious test cake".to_string(),
             domain_choice: "subdomain".to_string(),
+            instant_prompt: "".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();

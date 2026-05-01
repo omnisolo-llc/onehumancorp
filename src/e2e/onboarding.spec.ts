@@ -161,3 +161,29 @@ test.describe('Onboarding Welcome Checklist', () => {
     await expect(supportLink).toBeVisible();
   });
 });
+test('Instant Build happy path creates business profile from a single sentence', async ({ page }) => {
+  await page.goto('/');
+
+  // Simulate user login
+  await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
+  await page.fill('input[placeholder="Password"]', 'password123');
+  await page.click('text=Sign In');
+
+  // Launch Setup Wizard
+  await page.click('text=Launch Setup Wizard');
+
+  // Verify we are at Step 0
+  await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
+
+  // Fill in the Instant Build fields
+  await page.fill('input[placeholder="e.g. I run a home bakery selling custom vegan cakes in Austin."]', 'I run a successful home bakery named Sweet Delights making custom cakes.');
+  await page.fill('input[placeholder="Name"]', 'Test Admin');
+  await page.fill('input[placeholder="Email Address"]', 'test@example.com');
+  await page.fill('input[placeholder="Password"]', 'password123');
+
+  // Click Instant Launch
+  await page.click('text=✨ Build My Business Instantly');
+
+  // Verify transition to final step
+  await expect(page.locator('text=🎉 Business Live! 🎉')).toBeVisible({ timeout: 15000 });
+});

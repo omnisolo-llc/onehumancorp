@@ -472,6 +472,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    setup_wizard_ui.on_instant_launch({
+        let ui_handle = setup_wizard_handle.clone();
+        move |instant_prompt| {
+            let handle_clone = ui_handle.clone();
+            let req_instant_prompt = instant_prompt.to_string();
+
+            tokio::spawn(async move {
+                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    Ok(mut client) => {
+                        let req_admin_email = handle_clone.upgrade().map(|ui| ui.get_admin_email().to_string()).unwrap_or_default();
+                        let req_admin_name = handle_clone.upgrade().map(|ui| ui.get_admin_name().to_string()).unwrap_or_default();
+                        let req_admin_password = handle_clone.upgrade().map(|ui| ui.get_admin_password().to_string()).unwrap_or_default();
+
+                        let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
+                            business_type: String::new(),
+                            company_name: String::new(),
+                            company_description: String::new(),
+                            payment_pref: "online".to_string(),
+                            admin_email: if req_admin_email.is_empty() { "instant@ohc.app".to_string() } else { req_admin_email },
+                            admin_name: if req_admin_name.is_empty() { "Admin".to_string() } else { req_admin_name },
+                            admin_password: if req_admin_password.is_empty() { "password123".to_string() } else { req_admin_password },
+                            selling_categories: vec![],
+                            website_template: "Modern".to_string(),
+                            first_product_name: String::new(),
+                            first_product_price: "0.00".to_string(),
+                            first_product_description: String::new(),
+                            domain_choice: "subdomain".to_string(),
+                            instant_prompt: req_instant_prompt,
+                        });
+
+                        match client.start_onboarding(onboarding_request).await {
+                            Ok(resp) => {
+                                let r = resp.into_inner();
+                                let msg = r.message.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_status("Instant Build Complete!".into());
+                                        ui.set_launch_details(msg.into());
+                                        ui.set_step(10); // Go to checklist
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => {
+                                let err_msg = e.message().to_string();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_status("Launch Failed".into());
+                                        ui.set_launch_details(err_msg.into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                    Err(e) => println!("Hub connection error: {:?}", e),
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, product_description| {
@@ -538,6 +598,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             first_product_price: req_product_price,
                             first_product_description: req_product_description,
                             domain_choice: req_domain_choice,
+                            instant_prompt: "".to_string(),
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -1238,6 +1299,9 @@ mod tests {
 #[cfg(test)]
 mod docs_tests {
     use super::*;
+
+
+
 
     #[test]
     fn test_e2e_setup_wizard_flow() {

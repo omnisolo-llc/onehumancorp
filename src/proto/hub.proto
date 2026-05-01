@@ -261,6 +261,7 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string first_product_description = 13;
+  string instant_prompt = 14;
 }
 
 message StartOnboardingResponse {
