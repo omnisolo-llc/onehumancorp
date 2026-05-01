@@ -41,7 +41,7 @@ impl DB {
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SET app.current_tenant = 'none'").await?;
                         Ok(true)
                     })
                 })
