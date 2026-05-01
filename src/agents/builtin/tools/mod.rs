@@ -98,6 +98,6 @@ pub fn all_tools(
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
-        subagent::subagent_tool(),
+        subagent::subagent_tool(mailbox.clone()),
     ]
 }
