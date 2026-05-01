@@ -199,8 +199,16 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let hub_clone1 = self.hub.clone();
+        let hub_clone2 = self.hub.clone();
+
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub_clone1.get_agents()),
+            tokio::task::spawn_blocking(move || hub_clone2.get_meetings())
+        );
+        let agents = agents_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let mut msg_count = 0;
         for m in &meetings {
             msg_count += m.transcript.len() as i32;
@@ -241,5 +249,59 @@ impl AgentManagerService for MyAgentManagerService {
         }
 
         Ok(Response::new(self.get_snapshot().await))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ohc::orchestration::CreateSnapshotRequest;
+    use tonic::Request;
+
+    #[tokio::test]
+    async fn test_create_snapshot_parallel() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if database_url == "postgres://localhost/dummy" {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(5))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(&database_url).unwrap();
+
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyAgentManagerService::new(hub.clone());
+
+        hub.register_agent(Agent {
+            id: "agent-1".to_string(),
+            name: "Agent 1".to_string(),
+            role: "test".to_string(),
+            organization_id: "system".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+
+        let req = Request::new(CreateSnapshotRequest {
+            label: "test snapshot".to_string(),
+        });
+
+        let start = std::time::Instant::now();
+        let res = service.create_snapshot(req).await;
+        let elapsed = start.elapsed();
+
+        assert!(res.is_ok());
+        let snap = res.unwrap().into_inner();
+        assert_eq!(snap.label, "test snapshot");
+        assert_eq!(snap.agent_count, 1);
+        println!("Elapsed time for parallel create_snapshot: {:?}", elapsed);
     }
 }
