@@ -134,6 +134,80 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
+    let agent_config_ui = app::AgentConfig::new()?;
+    agent_config_ui.on_activate_agent(move |role, can_reply, can_social, frequency| {
+        let mut capabilities = std::collections::HashMap::new();
+        capabilities.insert("reply".to_string(), can_reply);
+        capabilities.insert("social".to_string(), can_social);
+        let work_hours = if frequency == "Real-time" { 24.0 } else if frequency == "Hourly" { 8.0 } else { 2.0 };
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let request = tonic::Request::new(ohc::orchestration::AgentConfig {
+                    role: role.to_string(),
+                    provider: "gemini".to_string(),
+                    capabilities,
+                    work_hours,
+                });
+                let _ = client.handle_config_wizard(request).await;
+            }
+        });
+    });
+
+    let prompt_tuning_ui = app::PromptTuning::new()?;
+    let prompt_tuning_handle = prompt_tuning_ui.as_weak();
+    prompt_tuning_ui.on_save_prompt({
+        let handle = prompt_tuning_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                let tone = ui.get_tone().to_string();
+                let focus_business = ui.get_focus_only_business();
+                let focus_competitors = ui.get_focus_avoid_competitors();
+                let focus_spanish = ui.get_focus_reply_spanish();
+                let mut domain_focus = vec![];
+                if focus_business { domain_focus.push("business".to_string()); }
+                if focus_competitors { domain_focus.push("competitors".to_string()); }
+                if focus_spanish { domain_focus.push("spanish".to_string()); }
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                            personality: tone,
+                            domain_focus,
+                        });
+                        let _ = client.handle_prompt_tuning(request).await;
+                    }
+                });
+            }
+        }
+    });
+
+    let grow_business_ui = app::GrowBusiness::new()?;
+    grow_business_ui.on_execute(move |strategy| {
+        let strategy = strategy.to_string();
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let request = tonic::Request::new(ohc::orchestration::CreateTaskRequest {
+                    mission_id: format!("mission_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                    title: strategy,
+                    description: "Growth strategy triggered by user".to_string(),
+                    priority: "high".to_string(),
+                });
+                let _ = client.create_task(request).await;
+            }
+        });
+    });
+
+    let agent_config_leaked = Box::leak(Box::new(agent_config_ui));
+    let prompt_tuning_leaked = Box::leak(Box::new(prompt_tuning_ui));
+    let grow_business_leaked = Box::leak(Box::new(grow_business_ui));
+
+    let agent_config_handle_for_show = agent_config_leaked.as_weak();
+    let prompt_tuning_handle_for_show = prompt_tuning_leaked.as_weak();
+    let grow_business_handle_for_show = grow_business_leaked.as_weak();
+
+    let _ = agent_config_leaked.hide();
+    let _ = prompt_tuning_leaked.hide();
+    let _ = grow_business_leaked.hide();
+
     let _ = setup_wizard_ui.hide();
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
@@ -300,10 +374,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_go_to_dashboard({
         let ui_handle = setup_wizard_handle.clone();
+        let agent_config_show = agent_config_handle_for_show.clone();
+        let prompt_tuning_show = prompt_tuning_handle_for_show.clone();
+        let grow_business_show = grow_business_handle_for_show.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
             }
+            if let Some(ui) = agent_config_show.upgrade() { let _ = ui.show(); }
+            if let Some(ui) = prompt_tuning_show.upgrade() { let _ = ui.show(); }
+            if let Some(ui) = grow_business_show.upgrade() { let _ = ui.show(); }
+
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let dashboard_handle = dashboard.as_weak();
+                if let Some(ui) = ui_handle.upgrade() {
+                    let _ = ui.hide();
+                }
+                let _ = dashboard.show();
+                let _ = Box::leak(Box::new(dashboard));
+            }
+        }
+    });
 
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();

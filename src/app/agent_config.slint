@@ -48,23 +48,39 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 spacing: 10px;
-                GlassCard {
-                    height: 80px;
-                    background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                FocusScope {
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") { selected_agent = "Customer Support"; return accept; }
+                        return reject;
                     }
-                    TouchArea { clicked => { selected_agent = "Customer Support"; } }
+                    GlassCard {
+                        height: 80px;
+                        accessible-role: button;
+                        accessible-action-default => { selected_agent = "Customer Support"; }
+                        background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                            Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { selected_agent = "Customer Support"; } }
+                    }
                 }
-                GlassCard {
-                    height: 80px;
-                    background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                FocusScope {
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") { selected_agent = "Social Media Manager"; return accept; }
+                        return reject;
                     }
-                    TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                    GlassCard {
+                        height: 80px;
+                        accessible-role: button;
+                        accessible-action-default => { selected_agent = "Social Media Manager"; }
+                        background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                            Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                    }
                 }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }

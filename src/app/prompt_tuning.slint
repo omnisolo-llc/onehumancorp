@@ -55,24 +55,9 @@ export component PromptTuning inherits Window {
 
                 HorizontalBox {
                     spacing: 10px;
-                    GlassCard {
-                        height: 50px;
-                        background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Formal"; } }
-                    }
-                    GlassCard {
-                        height: 50px;
-                        background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Friendly"; } }
-                    }
-                    GlassCard {
-                        height: 50px;
-                        background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Concise"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Concise"; } }
-                    }
+                    FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { tone = "Formal"; return accept; } return reject; } GlassCard { height: 50px; accessible-role: checkbox; accessible-checked: tone == "Formal"; accessible-action-default => { tone = "Formal"; } background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } } TouchArea { clicked => { tone = "Formal"; } } } }
+                    FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { tone = "Friendly"; return accept; } return reject; } GlassCard { height: 50px; accessible-role: checkbox; accessible-checked: tone == "Friendly"; accessible-action-default => { tone = "Friendly"; } background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } } TouchArea { clicked => { tone = "Friendly"; } } } }
+                    FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { tone = "Concise"; return accept; } return reject; } GlassCard { height: 50px; accessible-role: checkbox; accessible-checked: tone == "Concise"; accessible-action-default => { tone = "Concise"; } background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Concise"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } } TouchArea { clicked => { tone = "Concise"; } } } }
                 }
                 Text { text: "Selected: " + tone; color: #a855f7; }
             }
@@ -82,24 +67,9 @@ export component PromptTuning inherits Window {
                 spacing: 10px;
                 Text { text: "Domain focus"; color: #1e293b; }
 
-                GlassCard {
-                    height: 40px;
-                    background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_only_business = !focus_only_business; } }
-                }
-                GlassCard {
-                    height: 40px;
-                    background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
-                }
-                GlassCard {
-                    height: 40px;
-                    background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
-                }
+                FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { focus_only_business = !focus_only_business; return accept; } return reject; } GlassCard { height: 40px; accessible-role: checkbox; accessible-checked: focus_only_business; accessible-action-default => { focus_only_business = !focus_only_business; } background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } } TouchArea { clicked => { focus_only_business = !focus_only_business; } } } }
+                FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { focus_avoid_competitors = !focus_avoid_competitors; return accept; } return reject; } GlassCard { height: 40px; accessible-role: checkbox; accessible-checked: focus_avoid_competitors; accessible-action-default => { focus_avoid_competitors = !focus_avoid_competitors; } background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } } TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } } } }
+                FocusScope { key-pressed(e) => { if (e.text == " " || e.text == "\n") { focus_reply_spanish = !focus_reply_spanish; return accept; } return reject; } GlassCard { height: 40px; accessible-role: checkbox; accessible-checked: focus_reply_spanish; accessible-action-default => { focus_reply_spanish = !focus_reply_spanish; } background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%); VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } } TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } } } }
             }
 
             // Step 2: Examples
