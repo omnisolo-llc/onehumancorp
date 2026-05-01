@@ -23,3 +23,5 @@ pub mod guardrails;
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
 pub mod proto;
+pub mod mesh;
+pub use service::start_builtin_agent;
