@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
 use std::time::{Duration, Instant};
+use dashmap::DashMap;
 use crate::pricing::compression;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -11,14 +11,14 @@ pub struct CacheEntry {
 }
 
 pub struct LocalEmbeddingCache {
-    entries: RwLock<HashMap<String, CacheEntry>>,
+    entries: DashMap<String, CacheEntry>,
     ttl: Duration,
 }
 
 impl LocalEmbeddingCache {
     pub fn new(ttl: Duration) -> Self {
         LocalEmbeddingCache {
-            entries: RwLock::new(HashMap::new()),
+            entries: DashMap::new(),
             ttl,
         }
     }
@@ -32,9 +32,7 @@ impl LocalEmbeddingCache {
 
     pub fn get(&self, prompt: &str) -> Option<String> {
         let key = self.hash_prompt(prompt);
-        let entries = self.entries.read().unwrap();
-        
-        if let Some(entry) = entries.get(&key) {
+        if let Some(entry) = self.entries.get(&key) {
             if Instant::now() > entry.expires_at {
                 return None;
             }
@@ -47,9 +45,7 @@ impl LocalEmbeddingCache {
     pub fn set(&self, prompt: &str, response: &str) {
         let key = self.hash_prompt(prompt);
         let now = Instant::now();
-        let mut entries = self.entries.write().unwrap();
-        
-        entries.insert(key, CacheEntry {
+        self.entries.insert(key, CacheEntry {
             response: response.to_string(),
             created_at: now,
             expires_at: now + self.ttl,
@@ -57,23 +53,28 @@ impl LocalEmbeddingCache {
     }
 
     pub fn prune(&self) -> usize {
-        let mut entries = self.entries.write().unwrap();
         let now = Instant::now();
-        let initial_len = entries.len();
-        entries.retain(|_, entry| now <= entry.expires_at);
-        initial_len - entries.len()
+        let pruned = AtomicUsize::new(0);
+        self.entries.retain(|_, entry| {
+            let keep = now <= entry.expires_at;
+            if !keep {
+                pruned.fetch_add(1, Ordering::SeqCst);
+            }
+            keep
+        });
+        pruned.into_inner()
     }
 }
 
 pub struct CompressedEmbeddingCache {
-    entries: RwLock<HashMap<String, CacheEntry>>,
+    entries: DashMap<String, CacheEntry>,
     ttl: Duration,
 }
 
 impl CompressedEmbeddingCache {
     pub fn new(ttl: Duration) -> Self {
         CompressedEmbeddingCache {
-            entries: RwLock::new(HashMap::new()),
+            entries: DashMap::new(),
             ttl,
         }
     }
@@ -87,9 +88,7 @@ impl CompressedEmbeddingCache {
 
     pub fn get(&self, prompt: &str) -> Option<String> {
         let key = self.hash_prompt(prompt);
-        let entries = self.entries.read().unwrap();
-        
-        if let Some(entry) = entries.get(&key) {
+        if let Some(entry) = self.entries.get(&key) {
             if Instant::now() > entry.expires_at {
                 return None;
             }
@@ -111,8 +110,7 @@ impl CompressedEmbeddingCache {
         
         match compression::compress_lossless(response) {
             Ok(compressed) => {
-                let mut entries = self.entries.write().unwrap();
-                entries.insert(key, CacheEntry {
+                self.entries.insert(key, CacheEntry {
                     response: compressed,
                     created_at: now,
                     expires_at: now + self.ttl,
@@ -125,11 +123,16 @@ impl CompressedEmbeddingCache {
     }
 
     pub fn prune(&self) -> usize {
-        let mut entries = self.entries.write().unwrap();
         let now = Instant::now();
-        let initial_len = entries.len();
-        entries.retain(|_, entry| now <= entry.expires_at);
-        initial_len - entries.len()
+        let pruned = AtomicUsize::new(0);
+        self.entries.retain(|_, entry| {
+            let keep = now <= entry.expires_at;
+            if !keep {
+                pruned.fetch_add(1, Ordering::SeqCst);
+            }
+            keep
+        });
+        pruned.into_inner()
     }
 }
 
