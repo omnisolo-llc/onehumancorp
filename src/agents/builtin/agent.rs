@@ -1,6 +1,7 @@
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use opentelemetry::{global, KeyValue};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailConfig;
@@ -23,6 +24,7 @@ pub enum AgentEvent {
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
+    pub agent_id: String,
     pub model: String,
     pub server_system_message: String,
     pub developer_instructions: String,
@@ -48,6 +50,7 @@ pub struct AgentRunConfig {
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
+            agent_id: "default-agent".to_string(),
             model: String::new(),
             server_system_message: String::new(),
             developer_instructions: String::new(),
@@ -183,6 +186,10 @@ impl Agent {
             })
             .collect();
 
+        let meter = global::meter("ohc_agent");
+        let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
+        let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
+
         let mut messages: Vec<Message> = Vec::new();
 
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
@@ -259,6 +266,46 @@ impl Agent {
             self.progress.add_tokens(total_tokens);
             global_turn_tokens += output_tokens;
 
+            // Telemetry: Record token usage
+            let model_label = KeyValue::new("model", cfg.model.clone());
+            let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
+            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
+            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+
+            // Cost estimation logic based on model (roughly mapping common API pricing as USD per 1M tokens)
+            let mut input_cost_per_m = 0.0;
+            let mut output_cost_per_m = 0.0;
+
+            let m = cfg.model.to_lowercase();
+            if m.contains("gpt-4o") && !m.contains("mini") {
+                input_cost_per_m = 5.0;
+                output_cost_per_m = 15.0;
+            } else if m.contains("gpt-4-turbo") {
+                input_cost_per_m = 10.0;
+                output_cost_per_m = 30.0;
+            } else if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") {
+                input_cost_per_m = 0.15;
+                output_cost_per_m = 0.60;
+            } else if m.contains("gemini-1.5-pro") {
+                input_cost_per_m = 3.5;
+                output_cost_per_m = 10.5;
+            } else if m.contains("gemini-1.5-flash") {
+                input_cost_per_m = 0.075;
+                output_cost_per_m = 0.30;
+            } else if m.contains("claude-3-5-sonnet") {
+                input_cost_per_m = 3.0;
+                output_cost_per_m = 15.0;
+            } else if m.contains("claude-3-haiku") {
+                input_cost_per_m = 0.25;
+                output_cost_per_m = 1.25;
+            }
+
+            if input_cost_per_m > 0.0 || output_cost_per_m > 0.0 {
+                let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
+                                (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
+                cost_counter.add(turn_cost, &[model_label, agent_label]);
+            }
+
             let stop_reason = resp.stop_reason.as_str();
 
             // Text content from assistant
@@ -290,6 +337,15 @@ impl Agent {
 
             // Add assistant message to history (including tool calls).
             messages.push(resp.message.clone());
+
+            // Telemetry: track individual tool executions
+            let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
+            for tc in &tool_calls {
+                tool_call_counter.add(1, &[
+                    KeyValue::new("agent_id", cfg.agent_id.clone()),
+                    KeyValue::new("tool_name", tc.name.clone())
+                ]);
+            }
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
@@ -1280,6 +1336,34 @@ mod tests {
         assert!(result.is_ok());
         let content = result.unwrap();
         assert_eq!(content, "Better answer");
+    }
+
+    #[tokio::test]
+    async fn test_telemetry_metrics_emission() {
+        // Just verify it compiles and runs correctly with default config
+        // Opentelemetry global meter no-ops in tests unless configured
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Draft answer"),
+                    usage: Usage { input_tokens: 100, output_tokens: 50 },
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        // Specifically setting a model that triggers cost estimation logic
+        cfg.model = "gpt-4o".to_string();
+        cfg.agent_id = "test-agent-telemetry".to_string();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
