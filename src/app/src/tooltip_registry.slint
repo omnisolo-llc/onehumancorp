@@ -19,3 +19,18 @@ export global TooltipRegistry {
         is_visible = false;
     }
 }
+
+export component TooltipElement {
+    in property <string> tooltip_id;
+
+    TouchArea {
+        changed has-hover => {
+            if (self.has-hover) {
+                TooltipRegistry.show_tooltip(root.tooltip_id, root.absolute-position.x + root.width / 2, root.absolute-position.y - 10px);
+            } else {
+                TooltipRegistry.hide_tooltip();
+            }
+        }
+    }
+    @children
+}

@@ -51,6 +51,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
     let _ = setup_wizard_ui.hide();
+    let help_center_ui = app::HelpCenter::new()?;
+    let help_center_handle = help_center_ui.as_weak();
+    let _ = help_center_ui.hide();
+
+    let ai_chat_ui = app::AiHelpChat::new()?;
+    let ai_chat_handle = ai_chat_ui.as_weak();
+    let _ = ai_chat_ui.hide();
+
+    let walkthrough_ui = app::InteractiveWalkthrough::new()?;
+    let walkthrough_handle = walkthrough_ui.as_weak();
+    let _ = walkthrough_ui.hide();
+
+    let video_tutorials_ui = app::VideoTutorials::new()?;
+    let video_tutorials_handle = video_tutorials_ui.as_weak();
+    let _ = video_tutorials_ui.hide();
+
+    let api_docs_ui = app::ApiDocs::new()?;
+    let api_docs_handle = api_docs_ui.as_weak();
+    let _ = api_docs_ui.hide();
+
+    let release_notes_ui = app::ReleaseNotes::new()?;
+    let release_notes_handle = release_notes_ui.as_weak();
+    let _ = release_notes_ui.hide();
+
+    let hc_handle_clone1 = help_center_handle.clone();
+    setup_wizard_ui.on_open_help_center(move || {
+        if let Some(ui) = hc_handle_clone1.upgrade() { let _ = ui.show(); }
+    });
+
+    let ai_handle_clone1 = ai_chat_handle.clone();
+    setup_wizard_ui.on_open_ai_chat(move || {
+        if let Some(ui) = ai_handle_clone1.upgrade() { let _ = ui.show(); }
+    });
+
+
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
     login_ui.on_start_setup_wizard({
@@ -232,6 +267,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
             if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                    match id.as_str() {
+                        "help_center" => "Get assistance and read articles about using OHC.".into(),
+                        "active_helpers" => "The number of AI agents currently working for you.".into(),
+                        _ => "".into()
+                    }
+                });
+
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
@@ -278,7 +321,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
 
-                let dashboard_milestone_handle = dashboard_handle.clone();
+
+                let hc_handle_clone2 = help_center_handle.clone();
+                dashboard.on_open_help_center(move || {
+                    if let Some(ui) = hc_handle_clone2.upgrade() { let _ = ui.show(); }
+                });
+
+                let ai_handle_clone2 = ai_chat_handle.clone();
+                dashboard.on_open_ai_chat(move || {
+                    if let Some(ui) = ai_handle_clone2.upgrade() { let _ = ui.show(); }
+                });
+
+                let walkthrough_handle_clone = walkthrough_handle.clone();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    if let Some(ui) = walkthrough_handle_clone.upgrade() { let _ = ui.show(); }
+                });
+
+                let video_tutorials_handle_clone = video_tutorials_handle.clone();
+                dashboard.on_open_video_tutorials(move || {
+                    if let Some(ui) = video_tutorials_handle_clone.upgrade() { let _ = ui.show(); }
+                });
+
+                let api_docs_handle_clone = api_docs_handle.clone();
+                dashboard.on_open_api_docs(move || {
+                    if let Some(ui) = api_docs_handle_clone.upgrade() { let _ = ui.show(); }
+                });
+
+                let release_notes_handle_clone = release_notes_handle.clone();
+                dashboard.on_open_release_notes(move || {
+                    if let Some(ui) = release_notes_handle_clone.upgrade() { let _ = ui.show(); }
+                });
+
+let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
                     if let Some(ui) = dashboard_milestone_handle.upgrade() {
                         ui.set_show_milestone(false);
@@ -1098,6 +1172,20 @@ mod docs_tests {
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
 
+        let wizard_help = app::HelpCenter::new().unwrap();
+        let wh_handle = wizard_help.as_weak();
+        ui.on_open_help_center(move || { if let Some(ui) = wh_handle.upgrade() { let _ = ui.show(); } });
+
+        let wizard_chat = app::AiHelpChat::new().unwrap();
+        let wc_handle = wizard_chat.as_weak();
+        ui.on_open_ai_chat(move || { if let Some(ui) = wc_handle.upgrade() { let _ = ui.show(); } });
+
+        ui.invoke_open_help_center();
+        assert!(wizard_help.window().is_visible(), "Help Center should open from Setup Wizard floating button");
+
+        ui.invoke_open_ai_chat();
+        assert!(wizard_chat.window().is_visible(), "AI Chat should open from Setup Wizard floating button");
+
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
         ui.invoke_next_step();
@@ -1255,29 +1343,29 @@ mod docs_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
-        dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
+        let help_center = app::HelpCenter::new().unwrap();
+        let hc_handle = help_center.as_weak();
+        dashboard_ui.on_open_help_center(move || { if let Some(ui) = hc_handle.upgrade() { let _ = ui.show(); } });
 
-        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let ai_chat_opened_clone = ai_chat_opened.clone();
-        dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        let ai_handle = ai_chat.as_weak();
+        dashboard_ui.on_open_ai_chat(move || { if let Some(ui) = ai_handle.upgrade() { let _ = ui.show(); } });
 
-        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+        let docs_ui = app::ApiDocs::new().unwrap();
+        let docs_handle = docs_ui.as_weak();
+        dashboard_ui.on_open_api_docs(move || { if let Some(ui) = docs_handle.upgrade() { let _ = ui.show(); } });
 
-        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || { *videos_opened_clone.borrow_mut() = true; });
+        let videos_ui = app::VideoTutorials::new().unwrap();
+        let videos_handle = videos_ui.as_weak();
+        dashboard_ui.on_open_video_tutorials(move || { if let Some(ui) = videos_handle.upgrade() { let _ = ui.show(); } });
 
-        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || { *walkthrough_opened_clone.borrow_mut() = true; });
+        let walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+        let walkthrough_handle = walkthrough_ui.as_weak();
+        dashboard_ui.on_open_interactive_walkthrough(move || { if let Some(ui) = walkthrough_handle.upgrade() { let _ = ui.show(); } });
 
-        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || { *release_notes_opened_clone.borrow_mut() = true; });
+        let release_notes_ui = app::ReleaseNotes::new().unwrap();
+        let release_notes_handle = release_notes_ui.as_weak();
+        dashboard_ui.on_open_release_notes(move || { if let Some(ui) = release_notes_handle.upgrade() { let _ = ui.show(); } });
 
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
@@ -1287,12 +1375,12 @@ mod docs_tests {
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
-        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
+        assert!(help_center.window().is_visible(), "Help Center should be visible");
+        assert!(ai_chat.window().is_visible(), "AI Chat should be visible");
+        assert!(docs_ui.window().is_visible(), "API Docs should be visible");
+        assert!(videos_ui.window().is_visible(), "Video Tutorials should be visible");
+        assert!(walkthrough_ui.window().is_visible(), "Walkthrough should be visible");
+        assert!(release_notes_ui.window().is_visible(), "Release Notes should be visible");
 
         // Verify the individual components instantiate correctly and have their basic properties
         let walkthrough = app::InteractiveWalkthrough::new().unwrap();
@@ -1339,17 +1427,16 @@ mod docs_tests {
         // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
         // To satisfy the E2E requirement securely, we will test the HelpCenter workflow from the Dashboard to ensure the button under the TooltipElement is still clickable.
 
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
-
+        let help_center = app::HelpCenter::new().unwrap();
+        let hc_handle = help_center.as_weak();
         dashboard_ui.on_open_help_center(move || {
-            *help_center_opened_clone.borrow_mut() = true;
+            if let Some(ui) = hc_handle.upgrade() { let _ = ui.show(); }
         });
 
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(help_center.window().is_visible(), "Help Center should be opened via the button");
     }
 
     #[test]
@@ -1606,26 +1693,24 @@ mod dashboard_docs_tests {
 
 
         // 3. Test opening Help Center from Dashboard
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
+        let help_center = app::HelpCenter::new().unwrap();
+        let hc_handle = help_center.as_weak();
         dashboard_ui.on_open_help_center(move || {
-            *help_center_opened_clone.borrow_mut() = true;
-            // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
+            if let Some(ui) = hc_handle.upgrade() { let _ = ui.show(); }
         });
         dashboard_ui.invoke_open_help_center();
-        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+        assert!(help_center.window().is_visible(), "Help Center should be visible");
+
 
         // 4. Test opening AI Help Chat from Dashboard
-        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let ai_chat_opened_clone = ai_chat_opened.clone();
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        let ai_handle = ai_chat.as_weak();
         dashboard_ui.on_open_ai_chat(move || {
-            *ai_chat_opened_clone.borrow_mut() = true;
-            // Verify AiHelpChat component can be instantiated
-            let _ai_chat = app::AiHelpChat::new().unwrap();
+            if let Some(ui) = ai_handle.upgrade() { let _ = ui.show(); }
         });
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+        assert!(ai_chat.window().is_visible(), "AI Help Chat should be visible from Dashboard");
+
 
         // 5. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();

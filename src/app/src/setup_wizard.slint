@@ -70,8 +70,50 @@ export component SetupWizard inherits Window {
     select_template(t) => { website_template = t; step = step + 1; save_state(); }
     select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
     toggle_advanced => { is_advanced = !is_advanced; save_state(); }
+    callback open_help_center();
+    callback open_ai_chat();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    Rectangle {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 28px;
+        background: #0ea5e9;
+        z: 9998;
+
+        Text {
+            text: "?";
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        TouchArea { clicked => { open_help_center(); } }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 88px;
+        width: 120px;
+        height: 56px;
+        border-radius: 28px;
+        background: #10b981;
+        z: 9998;
+
+        Text {
+            text: "Ask anything";
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        TouchArea { clicked => { open_ai_chat(); } }
+    }
 
     VerticalBox {
         spacing: 20px;

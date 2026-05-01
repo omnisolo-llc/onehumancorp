@@ -27,7 +27,34 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 16px;
+                Rectangle {
+                    background: #e2e8f0;
+                    border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text {
+                            text: "How do I add a new product?";
+                            color: #334155;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+                Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        spacing: 8px;
+                        Text {
+                            text: "To add a new product, go to your Dashboard and tap 'Add Product'. You can then upload a photo and enter the price.\n\nRead the full article ->";
+                            color: #0f172a;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
         }
 
         HorizontalBox {

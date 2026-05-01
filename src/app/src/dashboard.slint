@@ -1,6 +1,7 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+import { TooltipRegistry, TooltipElement } from "tooltip_registry.slint";
 
 
 export struct UiPendingApproval {
@@ -193,7 +194,10 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Active AI Helpers"; color: #94a3b8; }
+                            TooltipElement {
+                                tooltip_id: "active_helpers";
+                                Text { text: "Active AI Helpers"; color: #94a3b8; }
+                            }
                             Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                         }
                     }
@@ -273,6 +277,66 @@ export component Dashboard inherits Window {
                     Text { text: role_count.count; font-weight: 700; color: white; horizontal-alignment: center; }
                     Button { text: "+"; width: 44px; height: 44px; }
                 }
+            }
+        }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 28px;
+        background: #0ea5e9;
+        z: 9998;
+
+        Text {
+            text: "?";
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => { open_help_center(); }
+        }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 88px;
+        width: 120px;
+        height: 56px;
+        border-radius: 28px;
+        background: #10b981;
+        z: 9998;
+
+        Text {
+            text: "Ask anything";
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        TouchArea { clicked => { open_ai_chat(); } }
+    }
+
+    if TooltipRegistry.is_visible: Rectangle {
+        x: TooltipRegistry.active_x;
+        y: TooltipRegistry.active_y;
+        background: #1e293b;
+        border-radius: 4px;
+        z: 9999;
+        VerticalBox {
+            padding: 8px;
+            Text {
+                text: TooltipRegistry.active_text;
+                color: white;
+                font-size: 14px;
+                wrap: word-wrap;
             }
         }
     }
