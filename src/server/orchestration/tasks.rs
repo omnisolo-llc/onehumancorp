@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Row};
+use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
