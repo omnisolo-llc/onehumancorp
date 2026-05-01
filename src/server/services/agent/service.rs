@@ -199,8 +199,16 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let hub_clone1 = self.hub.clone();
+        let hub_clone2 = self.hub.clone();
+
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub_clone1.get_agents()),
+            tokio::task::spawn_blocking(move || hub_clone2.get_meetings())
+        );
+        let agents = agents_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let mut msg_count = 0;
         for m in &meetings {
             msg_count += m.transcript.len() as i32;
