@@ -12,6 +12,7 @@ slint = { version = "1.8.0", default-features = false, features = ["backend-wini
 tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
+copypasta = "0.10.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
