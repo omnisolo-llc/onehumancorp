@@ -76,54 +76,63 @@ mod tests {
     fn test_no_pii_logging_statements() {
         use walkdir::WalkDir;
         use std::fs;
+        use std::env;
+        use std::path::PathBuf;
 
         let mut violations = Vec::new();
-        let search_dirs = vec!["src/server", "."];
 
-        let mut found_dir = false;
+        let mut search_dirs = vec![PathBuf::from(".")];
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let mut p = PathBuf::from(workspace_dir);
+            p.push("src/server");
+            search_dirs.push(p);
+        } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+            let mut p = PathBuf::from(runfiles_dir);
+            search_dirs.push(p);
+        }
+
+        let mut checked_files = 0;
+
         for dir in search_dirs {
-            if std::path::Path::new(dir).exists() {
-                // To ensure we don't just find an empty dir, check if there are .rs files
-                let count = WalkDir::new(dir)
-                    .into_iter()
+            if dir.exists() {
+                let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
+                    e.path().components().all(|c| c.as_os_str() != "external")
+                });
+
+                for entry in walker
                     .filter_map(Result::ok)
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
-                    .count();
-
-                if count > 0 {
-                    found_dir = true;
-                    for entry in WalkDir::new(dir)
-                        .into_iter()
-                        .filter_map(Result::ok)
-                        .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
-                    {
-                        let content = fs::read_to_string(entry.path()).unwrap_or_default();
-                        for (i, line) in content.lines().enumerate() {
-                            let lower_line = line.to_lowercase();
-                            if lower_line.contains("println!") ||
-                               lower_line.contains("eprintln!") ||
-                               lower_line.contains("info!") ||
-                               lower_line.contains("error!") ||
-                               lower_line.contains("warn!") ||
-                               lower_line.contains("debug!") ||
-                               lower_line.contains("tracing::")
-                            {
-                                if lower_line.contains("tenant_id") ||
-                                   lower_line.contains("org_id") ||
-                                   lower_line.contains("session_data") ||
-                                   lower_line.contains("session_id") ||
-                                   lower_line.contains("payload") {
-                                    violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
-                                }
+                {
+                    checked_files += 1;
+                    let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                    for (i, line) in content.lines().enumerate() {
+                        let lower_line = line.to_lowercase();
+                        if lower_line.contains("println!") ||
+                           lower_line.contains("eprintln!") ||
+                           lower_line.contains("info!") ||
+                           lower_line.contains("error!") ||
+                           lower_line.contains("warn!") ||
+                           lower_line.contains("debug!") ||
+                           lower_line.contains("tracing::")
+                        {
+                            if lower_line.contains("tenant_id") ||
+                               lower_line.contains("org_id") ||
+                               lower_line.contains("session_data") ||
+                               lower_line.contains("session_id") ||
+                               lower_line.contains("payload") {
+                                violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
                     }
+                }
+
+                if checked_files > 10 {
                     break;
                 }
             }
         }
 
-        assert!(found_dir, "Could not find src/server or current directory with .rs files to run PII leakage test.");
+        assert!(checked_files > 10, "Could not find enough .rs files to run PII leakage test. Checked: {}", checked_files);
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
