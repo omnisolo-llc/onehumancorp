@@ -11,7 +11,8 @@ mod hub;
 mod minimax;
 mod billing;
 mod ultraplan;
-mod autodream;
+#[path = "../agents/builtin/autodream.rs"]
+pub mod autodream;
 mod tasks;
 mod settings;
 mod scheduler;
@@ -23,7 +24,8 @@ mod seeder;
 mod orchestrator;
 mod spawner;
 mod queue;
-mod agents;
+mod workers;
+// Agent modules now live in src/agents/builtin/ (ohc_builtin_agent crate)
 mod domain;
 pub mod pricing;
 pub mod analytics;
@@ -910,10 +912,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
-        crate::db::DbStore::Postgres => crate::agents::memory::VectorRepository::new(db.pool.clone()),
-        crate::db::DbStore::Sqlite(sqlite_pool) => crate::agents::memory::VectorRepository::new_sqlite(sqlite_pool.clone()),
+        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::agents::memory::MemoryConsolidationWorker::new(vector_repo);
+    let consolidation_worker = ohc_builtin_agent::memory_store::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
     // Ensure local database permissions are secure in standalone mode

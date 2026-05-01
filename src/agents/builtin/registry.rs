@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use crate::agents::provider::{
+use crate::provider::{
     Provider, ProviderType, Credentials, ClaudeProvider, GeminiProvider,
     OpenCodeProvider, OpenClawProvider, IronClawProvider, MiniMaxiProvider,
     BuiltinProvider, ScoutProvider
@@ -102,7 +102,7 @@ pub struct ProviderInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agents::provider::Credentials;
+    use crate::provider::Credentials;
 
     #[test]
     fn test_provider_get_credentials() {

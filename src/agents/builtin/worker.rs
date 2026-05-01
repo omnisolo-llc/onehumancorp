@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::agents::plane::Client as PlaneClient;
+use ohc_builtin_agent::plane::Client as PlaneClient;
 use crate::hub::Hub;
-use crate::agents::plane::Issue;
+use ohc_builtin_agent::plane::Issue;
 
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
