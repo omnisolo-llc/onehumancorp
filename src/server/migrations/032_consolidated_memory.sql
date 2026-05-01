@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
     content TEXT NOT NULL,
     embedding VECTOR(1536),
     source_type TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    owner_override BOOLEAN DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_consolidated_memory_embedding ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
