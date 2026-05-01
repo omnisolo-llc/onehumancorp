@@ -79,7 +79,7 @@ rust_test(
     data = glob(["migrations/*.sql", "**/*.rs"]),
     edition = "2024",
     env = {
-        "RUST_TEST_THREADS": "1",
+        "RUST_TEST_THREADS": "4",
     },
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -125,6 +125,7 @@ rust_test(
 
 rust_test(
     name = "crypto_test",
+    size = "small",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
