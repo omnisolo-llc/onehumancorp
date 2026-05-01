@@ -1,4 +1,5 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
+use ohc::orchestration::auth_service_client::AuthServiceClient;
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
@@ -47,6 +48,89 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
 
+    login_ui.on_login({
+        let ui_handle = login_ui_handle.clone();
+        move |username, password| {
+            let handle = ui_handle.clone();
+            let username = username.to_string();
+            let password = password.to_string();
+            tokio::spawn(async move {
+                match AuthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::LoginRequest {
+                            username,
+                            password,
+                            organization_id: String::new(),
+                        });
+                        match client.login(request).await {
+                            Ok(_) => {
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.invoke_start_setup_wizard();
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => {
+                                let err_msg = e.message().to_string();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.set_error_message(err_msg.into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                    Err(e) => println!("Auth connection error: {:?}", e),
+                }
+            });
+        }
+    });
+
+    login_ui.on_register({
+        let ui_handle = login_ui_handle.clone();
+        move |username, password| {
+            let handle = ui_handle.clone();
+            let username = username.to_string();
+            let password = password.to_string();
+            tokio::spawn(async move {
+                match AuthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::CreateUserRequest {
+                            username: username.clone(),
+                            email: username.clone(), // Simplified for now
+                            password,
+                            roles: vec!["admin".to_string()],
+                            organization_id: String::new(),
+                        });
+                        match client.register(request).await {
+                            Ok(_) => {
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.invoke_start_setup_wizard();
+                                    }
+                                }).unwrap();
+                            }
+                            Err(e) => {
+                                let err_msg = e.message().to_string();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.set_error_message(err_msg.into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                    Err(e) => println!("Auth connection error: {:?}", e),
+                }
+            });
+        }
+    });
+
+    login_ui.on_resend_verification(|_| {
+        // Stub for now
+        println!("Resend verification requested");
+    });
+
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
@@ -91,6 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
                         if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
@@ -122,6 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
@@ -359,9 +445,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_generate_product_description({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let name = ui.get_product_name().to_string();
+            let b_type = ui.get_business_type().to_string();
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = format!("Write a catchy 2-sentence product description for a '{}' in a {} business.", name, b_type);
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "wizard-ai".to_string(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        let content = resp.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_product_description(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, product_description| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -378,6 +491,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("website_template".to_string(), website_template.to_string()),
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
+                ("product_description".to_string(), product_description.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
@@ -397,6 +511,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_website_template = website_template.to_string();
             let req_product_name = product_name.to_string();
             let req_product_price = product_price.to_string();
+            let req_product_description = product_description.to_string();
             let req_domain_choice = domain_choice.to_string();
 
             let mut req_selling_categories = Vec::new();
@@ -411,7 +526,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
                             business_type: req_business_type,
-                            company_name: req_company_name,
+                            company_name: req_company_name.clone(),
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
@@ -421,6 +536,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             website_template: req_website_template,
                             first_product_name: req_product_name,
                             first_product_price: req_product_price,
+                            first_product_description: req_product_description,
                             domain_choice: req_domain_choice,
                         });
 
@@ -428,6 +544,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
+                                let share_link = format!("https://{}.ohc.app", req_company_name.to_lowercase().replace(" ", "-"));
+                                println!("Auto-copy shareable link to clipboard: {}", share_link);
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Onboarding Complete!".into());
@@ -822,7 +940,7 @@ mod e2e_tests {
         let launch_called_clone = launch_called.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc, _pd| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
@@ -840,7 +958,8 @@ mod e2e_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
+            ui.get_product_description()
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
@@ -1183,7 +1302,8 @@ mod docs_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
+            ui.get_product_description()
         );
         assert_eq!(ui.get_launching(), true);
 
