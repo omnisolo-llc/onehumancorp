@@ -21,10 +21,10 @@ export component Dashboard inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
+    in property <string> todays_sales: "$0.00";
+    in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
-    in property <int> upcoming_bookings_count: 0;
-    in property <int> team_members_count: 0;
 
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
@@ -40,6 +40,8 @@ export component Dashboard inherits Window {
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
+
+    in-out property <bool> show_quick_actions_hint: false;
 
     Flickable {
     VerticalBox {
@@ -59,7 +61,13 @@ export component Dashboard inherits Window {
         // Quick Actions Navigation
         VerticalBox {
             spacing: 12px;
-            Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
+            }
+            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
                 Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } }
@@ -85,14 +93,15 @@ export component Dashboard inherits Window {
                     border-width: 1px;
                     border-radius: 8px;
                     width: 100%;
+                    min-height: 88px;
 
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Today's Sales"; color: #94a3b8; }
+                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                         }
                     }
                 }
@@ -101,14 +110,15 @@ export component Dashboard inherits Window {
                     border-width: 1px;
                     border-radius: 8px;
                     width: 100%;
+                    min-height: 88px;
 
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Tasks in Progress"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                            Text { text: "New Orders"; color: #94a3b8; }
+                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                         }
                     }
                 }
@@ -122,14 +132,15 @@ export component Dashboard inherits Window {
                     border-width: 1px;
                     border-radius: 8px;
                     width: 100%;
+                    min-height: 88px;
 
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Upcoming Bookings"; color: #94a3b8; }
-                            Text { text: upcoming_bookings_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                            Text { text: "Active AI Helpers"; color: #94a3b8; }
+                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                         }
                     }
                 }
@@ -138,14 +149,15 @@ export component Dashboard inherits Window {
                     border-width: 1px;
                     border-radius: 8px;
                     width: 100%;
+                    min-height: 88px;
 
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Team Members"; color: #94a3b8; }
-                            Text { text: team_members_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                            Text { text: "Tasks in Progress"; color: #94a3b8; }
+                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                         }
                     }
                 }
