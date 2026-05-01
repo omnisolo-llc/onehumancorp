@@ -870,7 +870,7 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = self.hub.get_meetings();
+        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
 
