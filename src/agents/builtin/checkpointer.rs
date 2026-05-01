@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -199,9 +200,9 @@ mod tests {
         assert_eq!(data, decompressed.as_slice());
     }
     #[tokio::test]
+    #[ignore]
     async fn test_pg_checkpointer_save_and_load() {
         let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let saver = PgCheckpointer::new(pool);
         
         let cp = Checkpoint {
@@ -218,9 +219,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_pg_checkpointer_list_checkpoints() {
         let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let saver = PgCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;

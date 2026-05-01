@@ -29,20 +29,9 @@ impl PubSubManager {
 
     pub async fn publish(&self, tenant_id: &str, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
-
-        use prost::Message as ProstMessage;
-        let event = crate::ohc::orchestration::TeammateMeshEvent {
-            agent_id: "mcp".to_string(),
-            action: "publish".to_string(),
-            status: "ok".to_string(),
-            payload: payload.clone(),
-        };
-        let mut buf = Vec::new();
-        let _ = event.encode(&mut buf);
-
         let message = Message {
             topic: formatted_topic.clone(),
-            payload: buf,
+            payload,
         };
         self.transport.publish(&formatted_topic, message).await
     }
@@ -54,19 +43,7 @@ impl PubSubManager {
         handler: Box<dyn Fn(Message) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
-
-        let wrapped_handler = Box::new(move |msg: Message| {
-            use prost::Message as ProstMessage;
-            if let Ok(event) = crate::ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
-                let mut new_msg = msg.clone();
-                new_msg.payload = event.payload;
-                handler(new_msg);
-            } else {
-                handler(msg);
-            }
-        });
-
-        self.transport.subscribe(&formatted_topic, wrapped_handler).await
+        self.transport.subscribe(&formatted_topic, handler).await
     }
 }
 

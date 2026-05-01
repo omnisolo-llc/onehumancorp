@@ -34,7 +34,6 @@ rust_binary(
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:axum",
-        "@crates//:async-nats",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -80,7 +79,7 @@ rust_test(
     data = glob(["migrations/*.sql", "**/*.rs"]),
     edition = "2024",
     env = {
-        "RUST_TEST_THREADS": "1",
+        "RUST_TEST_THREADS": "4",
     },
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -120,7 +119,6 @@ rust_test(
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
         "@crates//:axum",
-        "@crates//:async-nats",
         "@crates//:walkdir",
     ],
 )

@@ -221,14 +221,12 @@ impl MinimaxClient {
     }
 }
 
-#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
     model: String,
 }
 
-#[allow(dead_code)]
 impl LocalLLMClient {
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
@@ -288,13 +286,11 @@ impl LocalLLMClient {
     }
 }
 
-#[allow(dead_code)]
 pub struct ResilientClient {
     primary: MinimaxClient,
     fallback: LocalLLMClient,
 }
 
-#[allow(dead_code)]
 impl ResilientClient {
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {
@@ -324,3 +320,72 @@ impl ResilientClient {
     }
 }
 
+pub struct CachedMinimaxClient {
+    client: MinimaxClient,
+    pool: sqlx::PgPool,
+    redis: Option<redis::Client>,
+}
+
+impl CachedMinimaxClient {
+    pub fn new(client: MinimaxClient, pool: sqlx::PgPool, redis: Option<redis::Client>) -> Self {
+        CachedMinimaxClient { client, pool, redis }
+    }
+
+    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        use sha2::{Sha256, Digest};
+        use redis::AsyncCommands;
+        use sqlx::Row;
+
+        let hash = format!("{:x}", Sha256::digest(prompt.as_bytes()));
+
+        if let Some(ref redis_client) = self.redis {
+            if let Ok(mut con) = redis_client.get_async_connection().await {
+                let redis_key = format!("llm_reason:{}", hash);
+                if let Ok(val) = con.get::<_, String>(&redis_key).await {
+                    return Ok(val);
+                }
+            }
+        }
+
+        let row = sqlx::query("SELECT response FROM llm_reason_cache WHERE prompt_hash = $1")
+            .bind(&hash)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(row) = row {
+            let response: String = row.get("response");
+
+            if let Some(ref redis_client) = self.redis {
+                if let Ok(mut con) = redis_client.get_async_connection().await {
+                    let redis_key = format!("llm_reason:{}", hash);
+                    let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
+                }
+            }
+
+            return Ok(response);
+        }
+
+        let response = self.client.reason(prompt).await?;
+
+        if let Some(ref redis_client) = self.redis {
+            if let Ok(mut con) = redis_client.get_async_connection().await {
+                let redis_key = format!("llm_reason:{}", hash);
+                let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
+            }
+        }
+
+        sqlx::query("INSERT INTO llm_reason_cache (prompt_hash, response) VALUES ($1, $2) ON CONFLICT (prompt_hash) DO NOTHING")
+            .bind(&hash)
+            .bind(&response)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(response)
+    }
+
+    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        self.client.generate_embedding(text).await
+    }
+}

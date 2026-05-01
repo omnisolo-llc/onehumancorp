@@ -4,7 +4,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use sqlx::Row;
@@ -151,7 +153,7 @@ impl TaskQueue for PostgresTaskQueue {
                 updated_at: Utc::now(),
             };
             
-            let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+            let mut payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
                 j.agent_role = role.to_string();
             }
@@ -797,6 +799,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_push_claim() {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
@@ -809,9 +812,7 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect_lazy(&db_url)
-                .unwrap();
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+                .connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             // Initialize schema for test
@@ -853,6 +854,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore] // Requires live database - times out in CI
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
@@ -863,9 +865,7 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect_lazy(&db_url)
-                .unwrap();
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+                .connect(&db_url).await.unwrap();
             let service = TaskQueueService::new(pool.clone());
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();

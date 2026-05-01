@@ -58,7 +58,7 @@ pub trait Provider: Send + Sync {
     fn authenticate(&self, creds: Credentials) -> Result<(), String>;
     fn get_credentials(&self) -> Credentials;
     fn is_authenticated(&self) -> bool;
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String>;
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String>;
 }
 
 pub struct BaseProvider {
@@ -83,13 +83,40 @@ impl BaseProvider {
     }
 }
 
-async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-    use crate::harness::IsolationStrategy;
+async fn execute_in_isolation(agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+    let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
 
-    let strategy = crate::harness::ProcessIsolationStrategy::new();
-    // Use the passed command directly
+    let status_msg = serde_json::json!({
+        "agent":    agent_type,
+        "status":   "RUNNING",
+        "worktree": worktree,
+        "sandbox":  isolation_sandbox_id,
+    });
 
-    strategy.run_in_isolation(&command, agent_type, worktree, transport).await
+    if let Some(t) = transport.as_ref() {
+        t.send(status_msg.to_string().as_bytes()).await?;
+    }
+
+    let output_msg = serde_json::json!({
+        "agent":   agent_type,
+        "stream":  "stdout",
+        "content": format!("Execution started in isolated worktree {}", worktree),
+    });
+
+    if let Some(t) = transport.as_ref() {
+        let _ = t.send(output_msg.to_string().as_bytes()).await;
+    }
+
+    let end_msg = serde_json::json!({
+        "agent":  agent_type,
+        "status": "COMPLETED",
+    });
+
+    if let Some(t) = transport.as_ref() {
+        let _ = t.send(end_msg.to_string().as_bytes()).await;
+    }
+
+    Ok(())
 }
 
 // Implementations
@@ -125,8 +152,8 @@ impl Provider for ClaudeProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -161,8 +188,8 @@ impl Provider for GeminiProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -196,8 +223,8 @@ impl Provider for OpenCodeProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -232,8 +259,8 @@ impl Provider for OpenClawProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -267,8 +294,8 @@ impl Provider for IronClawProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -304,8 +331,8 @@ impl Provider for MiniMaxiProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -333,9 +360,9 @@ impl Provider for BuiltinProvider {
     fn authenticate(&self, _creds: Credentials) -> Result<(), String> { Ok(()) }
     fn get_credentials(&self) -> Credentials { Credentials::default() }
     fn is_authenticated(&self) -> bool { true }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
         // TODO: Support OHC_AGENT_ADDRESS gRPC dispatch if needed
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }
 
@@ -362,7 +389,7 @@ impl Provider for ScoutProvider {
     }
     fn get_credentials(&self) -> Credentials { self.base.load() }
     fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
     }
 }

@@ -29,12 +29,14 @@ pub struct SharedTask {
 
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
+    event_tx: tokio::sync::mpsc::Sender<serde_json::Value>,
 }
 
 impl TaskManager {
-    pub fn new() -> Self {
+    pub fn new(event_tx: tokio::sync::mpsc::Sender<serde_json::Value>) -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
+            event_tx,
         }
     }
 
@@ -194,7 +196,8 @@ mod tests {
     
     #[test]
     fn test_create_and_get_task() {
-        let tm = TaskManager::new();
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         assert_eq!(task.title, "Test Task");
@@ -206,7 +209,8 @@ mod tests {
 
     #[test]
     fn test_claim_task() {
-        let tm = TaskManager::new();
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         let claimed = tm.claim_task(&task.id, "agent1".to_string()).unwrap();
@@ -222,7 +226,8 @@ mod tests {
 
     #[test]
     fn test_review_task() {
-        let tm = TaskManager::new();
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
@@ -238,7 +243,8 @@ mod tests {
 
     #[test]
     fn test_complete_task() {
-        let tm = TaskManager::new();
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();

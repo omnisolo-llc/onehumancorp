@@ -78,7 +78,7 @@ test.describe('Dashboard Core', () => {
 
   test('should show company structure section', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Company Structure')).toBeVisible();
+    await expect(page.locator('text=My Team')).toBeVisible();
   });
 
   test('should display help buttons', async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe('Dashboard Core', () => {
 
   test('should display docs button', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Docs')).toBeVisible();
+    await expect(page.locator('text=Connect Apps')).toBeVisible();
   });
 
   test('should display videos button', async ({ page }) => {

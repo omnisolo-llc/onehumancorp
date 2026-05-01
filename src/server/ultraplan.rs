@@ -9,7 +9,6 @@ use std::io::{Read, Write};
 use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct UltraPlan {
     pub id: String,
     pub mission_id: String,
@@ -19,13 +18,10 @@ pub struct UltraPlan {
     pub updated_at: DateTime<Utc>,
 }
 
-#[allow(dead_code)]
-#[allow(dead_code)]
 pub struct UltraPlanManager {
     plans: RwLock<HashMap<String, UltraPlan>>,
 }
 
-#[allow(dead_code)]
 impl UltraPlanManager {
     pub fn new() -> Self {
         UltraPlanManager {
@@ -57,9 +53,19 @@ impl UltraPlanManager {
         plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
     }
 
+    pub fn update_plan_status(&self, plan_id: &str, new_status: String, state_machine: serde_json::Value) -> Result<(), String> {
+        let mut plans = self.plans.write().unwrap();
+        if let Some(plan) = plans.get_mut(plan_id) {
+            plan.status = new_status;
+            plan.state_machine = state_machine;
+            plan.updated_at = Utc::now();
+            Ok(())
+        } else {
+            Err("ultra plan not found".to_string())
+        }
+    }
 }
 
-#[allow(dead_code)]
 pub fn compress_ultraplan_data(data: &[u8]) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e: std::io::Error| e.to_string())?;
@@ -67,7 +73,6 @@ pub fn compress_ultraplan_data(data: &[u8]) -> Result<String, String> {
     Ok(general_purpose::STANDARD.encode(compressed))
 }
 
-#[allow(dead_code)]
 pub fn decompress_ultraplan_data(base64_str: &str) -> Result<Vec<u8>, String> {
     let decoded = general_purpose::STANDARD.decode(base64_str).map_err(|e| e.to_string())?;
     let mut decoder = GzDecoder::new(&decoded[..]);

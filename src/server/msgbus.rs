@@ -4,24 +4,22 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Message {
     pub topic: String,
+    pub payload: Vec<u8>,
 }
 
 #[async_trait]
-#[allow(dead_code)]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn close(&self) -> Result<(), String>;
 }
 
-#[allow(dead_code)]
 pub struct MemoryBus {
     subs: Mutex<std::collections::HashMap<String, broadcast::Sender<Message>>>,
 }
 
-#[allow(dead_code)]
 impl MemoryBus {
     pub fn new() -> Self {
         MemoryBus {
@@ -61,6 +59,10 @@ impl Bus for MemoryBus {
         
         Ok(cancel)
     }
+
+    async fn close(&self) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 impl Default for MemoryBus {
@@ -89,6 +91,7 @@ mod tests {
         
         let msg = Message {
             topic: "test_topic".to_string(),
+            payload: b"hello".to_vec(),
         };
         
         bus.publish(msg).await.unwrap();

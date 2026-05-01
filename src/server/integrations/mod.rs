@@ -8,5 +8,3 @@ pub mod imessage;
 pub mod jira;
 pub mod obsidian;
 pub mod pubsub;
-pub mod nats;
-pub mod stripe;

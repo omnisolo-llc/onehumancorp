@@ -118,7 +118,7 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
         let run_id = run_id.clone();
 
         join_handles.push(tokio::spawn(async move {
-            let job = Job {
+            let mut job = Job {
                 id: format!("job_{}_{}_{}", name, run_id, i),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
                 agent_role: "test_agent".to_string(),
@@ -175,11 +175,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore] // Requires live database for Hub initialization
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
-            return;
-        }
         bench_dashboard_snapshot().await;
     }
 }

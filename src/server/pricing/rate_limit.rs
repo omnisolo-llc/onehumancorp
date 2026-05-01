@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use redis::{AsyncCommands, Client};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

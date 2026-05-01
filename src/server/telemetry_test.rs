@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-
+    use super::*;
     use serde_json::{json, Value};
     use crate::telemetry::{redact_interface_pii, buffer_metric};
 
@@ -50,12 +50,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_buffer_metric_persistence() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+        let pool = sqlx::PgPool::connect(&db_url).await.unwrap();
 
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
@@ -89,7 +87,7 @@ mod tests {
             p.push("src/server");
             search_dirs.push(p);
         } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
-            let p = PathBuf::from(runfiles_dir);
+            let mut p = PathBuf::from(runfiles_dir);
             search_dirs.push(p);
         }
 

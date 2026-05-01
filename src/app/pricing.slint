@@ -7,8 +7,7 @@ export struct UiPricingTier {
 }
 
 export component Pricing inherits Window {
-    preferred-width: 400px;
-    min-width: 375px;
+    width: 400px;
     height: 600px;
     title: "Pricing & Billing";
 
@@ -45,7 +44,6 @@ export component Pricing inherits Window {
                     Text { text: tier.description; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Select Plan";
-                        height: 44px;
                         clicked => { select_plan(tier.name); }
                     }
                 }

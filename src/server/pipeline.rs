@@ -7,7 +7,6 @@ use crate::hub::Hub;
 use crate::ohc::orchestration::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[allow(dead_code)]
 pub enum PipelineState {
     Implementing,
     Testing,
@@ -16,7 +15,7 @@ pub enum PipelineState {
     Rollback,
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pipeline {
     pub id: String,
     pub branch: String,
@@ -25,25 +24,30 @@ pub struct Pipeline {
     pub created_at: DateTime<Utc>,
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecApprovedEvent {
     pub branch: String,
     pub details: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CIJob {
+    pub command: String,
+    pub branch: String,
+}
 
-#[allow(dead_code)]
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
+    ci_jobs: RwLock<Vec<CIJob>>,
 }
 
-#[allow(dead_code)]
 impl Orchestrator {
     pub fn new(hub: Arc<Hub>) -> Self {
         Orchestrator {
             hub,
             pipelines: RwLock::new(HashMap::new()),
+            ci_jobs: RwLock::new(Vec::new()),
         }
     }
 
@@ -99,11 +103,139 @@ impl Orchestrator {
         Ok(())
     }
 
+    pub fn handle_pr_created(&self, msg: Message) -> Result<(), String> {
+        let branch = msg.content.clone();
+
+        let mut pipelines = self.pipelines.write().unwrap();
+        if let Some(pipeline) = pipelines.get_mut(&branch) {
+            pipeline.state = PipelineState::Testing;
+
+            let job = CIJob {
+                command: format!("bazel test //... --branch={}", branch),
+                branch: branch.clone(),
+            };
+
+            let mut ci_jobs = self.ci_jobs.write().unwrap();
+            ci_jobs.push(job);
+
+            return Ok(());
+        }
+
+        Err("pipeline not found for branch".to_string())
+    }
+
+    pub async fn handle_test_results(&self, msg: Message) -> Result<(), String> {
+        let mut branch = String::new();
+        let mut logs = String::new();
+
+        for part in msg.content.split(',') {
+             let kv: Vec<&str> = part.split('=').collect();
+             if kv.len() == 2 {
+                 match kv[0] {
+                     "branch" => branch = kv[1].to_string(),
+                     "logs" => logs = kv[1].to_string(),
+                     _ => {}
+                 }
+             }
+        }
+
+        if branch.is_empty() {
+            branch = msg.content.clone();
+        }
+
+        let mut pipelines = self.pipelines.write().unwrap();
+        let pipeline = pipelines.get_mut(&branch).ok_or_else(|| "pipeline not found for branch".to_string())?;
+
+        if msg.r#type == "TestsPassed" {
+            pipeline.state = PipelineState::StagingReady;
+
+            let approval_msg = Message {
+                id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+                from_agent: "system-hub".to_string(),
+                to_agent: "ceo-1".to_string(),
+                r#type: "ApprovalNeeded".to_string(),
+                content: format!("branch={},url=https://staging.onehumancorp.com/{}", branch, branch),
+                occurred_at_unix: Utc::now().timestamp(),
+                meeting_id: String::new(),
+            };
+
+            self.hub.clone().publish(approval_msg).map_err(|e| e.to_string())?;
+        } else if msg.r#type == "TestsFailed" {
+            pipeline.state = PipelineState::Implementing;
+            let swe_id = pipeline.agent_id.clone();
+
+            let fail_msg = Message {
+                id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+                from_agent: "system-hub".to_string(),
+                to_agent: swe_id,
+                r#type: "TestsFailed".to_string(),
+                content: format!("branch={},logs={}", branch, logs),
+                occurred_at_unix: Utc::now().timestamp(),
+                meeting_id: String::new(),
+            };
+
+            self.hub.clone().publish(fail_msg).map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn reject_staging(&self, branch: &str, reason: &str) -> Result<(), String> {
+        let mut pipelines = self.pipelines.write().unwrap();
+        let pipeline = pipelines.get_mut(branch).ok_or_else(|| "pipeline not found for branch".to_string())?;
+
+        pipeline.state = PipelineState::Rollback;
+        let swe_id = pipeline.agent_id.clone();
+
+        let reject_msg = Message {
+            id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            from_agent: "ceo-1".to_string(),
+            to_agent: swe_id,
+            r#type: "task".to_string(),
+            content: format!("Rejection on branch {}: {}", branch, reason),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: String::new(),
+        };
+
+        self.hub.clone().publish(reject_msg).map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn approve_for_production(&self, branch: &str) -> Result<(), String> {
+        let mut pipelines = self.pipelines.write().unwrap();
+        let pipeline = pipelines.get_mut(branch).ok_or_else(|| "pipeline not found for branch".to_string())?;
+
+        if pipeline.state != PipelineState::StagingReady {
+            return Err("pipeline is not in STAGING_READY state".to_string());
+        }
+
+        pipeline.state = PipelineState::Deployed;
+
+        let merge_msg = Message {
+            id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            from_agent: "system-hub".to_string(),
+            to_agent: "system-hub".to_string(),
+            r#type: "PRMerged".to_string(),
+            content: format!("branch={}", branch),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: String::new(),
+        };
+
+        self.hub.clone().publish(merge_msg).map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     pub fn get_pipeline_state(&self, branch: &str) -> Result<PipelineState, String> {
         let pipelines = self.pipelines.read().unwrap();
         pipelines.get(branch).map(|p| p.state.clone()).ok_or_else(|| "pipeline not found".to_string())
     }
 
+    pub fn get_ci_jobs(&self) -> Vec<CIJob> {
+        let ci_jobs = self.ci_jobs.read().unwrap();
+        ci_jobs.clone()
+    }
 }
 
 #[cfg(test)]

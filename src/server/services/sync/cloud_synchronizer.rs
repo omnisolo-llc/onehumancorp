@@ -104,7 +104,7 @@ mod tests {
     use std::sync::Mutex;
     use std::collections::HashMap;
 
-    use crate::services::sync::local_repository::LocalMission;
+    use crate::services::sync::local_repository::{LocalMission, MissionPayload};
 
     struct MockLocalRepository {
         pending: Mutex<Vec<LocalMission>>,
