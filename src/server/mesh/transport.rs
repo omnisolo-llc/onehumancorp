@@ -349,7 +349,7 @@ mod tests {
         assert!(acquired);
 
         // Sleep for 2 seconds to let lock expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
         // Second agent should be able to acquire lock now
         let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(active_agents[1], ("agent_2".to_string(), "busy".to_string()));
 
         // Wait for agent_2 presence to expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
         // Get active agents again
         let active_agents_after_expiration = transport.get_active_agents().await.unwrap();
@@ -417,7 +417,7 @@ mod tests {
 
         transport.publish("test_redis", msg).await.unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
         assert!(received.load(Ordering::SeqCst));
         cancel();

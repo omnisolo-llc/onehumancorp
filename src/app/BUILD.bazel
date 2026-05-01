@@ -7,6 +7,8 @@ cargo_build_script(
     data = [
         "src/agent_config.slint",
         "src/walkthrough.slint",
+        "src/tooltip_element.slint",
+        "src/tooltip_registry.slint",
         "src/experiments.slint",
         "src/wizard.slint",
         "src/service_manager.slint",
@@ -76,6 +78,8 @@ rust_binary(
     data = [
         "src/agent_config.slint",
         "src/walkthrough.slint",
+        "src/tooltip_element.slint",
+        "src/tooltip_registry.slint",
         "src/experiments.slint",
         "src/wizard.slint",
         "src/service_manager.slint",
@@ -159,6 +163,8 @@ rust_test(
     data = [
         "src/agent_config.slint",
         "src/walkthrough.slint",
+        "src/tooltip_element.slint",
+        "src/tooltip_registry.slint",
         "src/experiments.slint",
         "src/wizard.slint",
         "src/service_manager.slint",

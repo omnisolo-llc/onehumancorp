@@ -1,5 +1,6 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
 
@@ -52,7 +53,7 @@ export component Dashboard inherits Window {
             Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {} // Spacer
             Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
-            Button { text: "Help"; height: 44px; clicked => { open_help_center(); } }
+            TooltipElement { tooltip-id: "dashboard_help_btn"; Button { text: "Help"; height: 44px; clicked => { open_help_center(); } } }
             Button { text: "Billing"; height: 44px; clicked => { open_billing(); } }
         }
 

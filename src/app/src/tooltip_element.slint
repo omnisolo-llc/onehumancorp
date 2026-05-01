@@ -1,0 +1,14 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+
+export component TooltipElement {
+    in property <string> tooltip-id;
+
+    ta := TouchArea {
+        width: 100%;
+        height: 100%;
+    }
+
+    out property <bool> has-hover: ta.has-hover;
+
+    @children
+}
