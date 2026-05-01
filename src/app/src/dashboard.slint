@@ -167,7 +167,7 @@ export component Dashboard inherits Window {
 
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Action Required: Drafts for Review"; font-size: 20px; font-weight: 700; color: #b91c1c; }
+            Text { text: "Drafts Ready for Review"; font-size: 20px; font-weight: 700; color: #b91c1c; }
 
             for approval in pending_approvals : Rectangle {
                 background: #fef2f2;

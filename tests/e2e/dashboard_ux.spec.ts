@@ -22,6 +22,9 @@ test.describe('Dashboard UX', () => {
     await expect(page.locator('text=New Orders')).toBeVisible();
     await expect(page.locator('text=Active AI Helpers')).toBeVisible();
     await expect(page.locator('text=Tasks in Progress')).toBeVisible();
+
+    // Verify softer wording for drafts
+    await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 });
 
