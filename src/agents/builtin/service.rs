@@ -217,6 +217,8 @@ impl AgentServiceImpl {
             0.0
         };
 
+        let max_task_tokens = if max_tokens > 0 { max_tokens as i32 * 4 } else { 8192 };
+
         AgentRunConfig {
             model,
             server_system_message,
@@ -225,7 +227,7 @@ impl AgentServiceImpl {
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
-            max_task_tokens: 0,
+            max_task_tokens,
             confidence_threshold,
             enable_observation_masking: true,
             guardrails: None,
@@ -370,15 +372,16 @@ impl AgentService for AgentServiceImpl {
         // In-process dispatch when no remote address.
         if sub_req.sub_agent_address.is_empty() {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
+            let max_tokens = if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens };
             let run_cfg = AgentRunConfig {
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
                 developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
                 user_instructions: tokio::fs::read_to_string("AGENTS.md").await.unwrap_or_default(),
-                max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
+                max_tokens,
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
-                max_task_tokens: 0,
+                max_task_tokens: (max_tokens * 4) as i32,
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
                 guardrails: None,

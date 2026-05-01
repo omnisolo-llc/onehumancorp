@@ -216,13 +216,47 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             println!("Worker processing job: {}", job.id);
-                            match self.handler.handle(job.clone()).await {
+
+                            let mut attempts = 0;
+                            let max_attempts = 3;
+                            let timeout_duration = std::time::Duration::from_secs(60);
+                            let mut final_result = Ok(());
+
+                            loop {
+                                attempts += 1;
+                                let fut = self.handler.handle(job.clone());
+
+                                match tokio::time::timeout(timeout_duration, fut).await {
+                                    Ok(Ok(_)) => {
+                                        final_result = Ok(());
+                                        break;
+                                    }
+                                    Ok(Err(e)) => {
+                                        println!("Worker failed to process job: {}, error: {} (attempt {}/{})", job.id, e, attempts, max_attempts);
+                                        final_result = Err(e);
+                                        if attempts >= max_attempts {
+                                            break;
+                                        }
+                                    }
+                                    Err(_) => {
+                                        let e = format!("timeout after {} seconds", timeout_duration.as_secs());
+                                        println!("Worker failed to process job: {}, error: {} (attempt {}/{})", job.id, e, attempts, max_attempts);
+                                        final_result = Err(e);
+                                        if attempts >= max_attempts {
+                                            break;
+                                        }
+                                    }
+                                }
+                                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                            }
+
+                            match final_result {
                                 Ok(_) => {
                                     println!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id).await;
                                 }
                                 Err(e) => {
-                                    println!("Worker failed to process job: {}, error: {}", job.id, e);
+                                    println!("Worker ultimately failed to process job: {}, error: {}", job.id, e);
                                     let _ = self.queue.fail(&job.id, &e).await;
                                 }
                             }
@@ -322,8 +356,33 @@ impl WorkerPool {
                             match res {
                                 Ok(payload) => {
                                     println!("Worker {} processing job", i);
-                                    if let Err(e) = handler.handle(payload).await {
-                                        println!("Worker {} handler failed: {}", i, e);
+
+                                    let mut attempts = 0;
+                                    let max_attempts = 3;
+                                    let timeout_duration = std::time::Duration::from_secs(60);
+
+                                    loop {
+                                        attempts += 1;
+                                        let fut = handler.handle(payload.clone());
+
+                                        match tokio::time::timeout(timeout_duration, fut).await {
+                                            Ok(Ok(_)) => {
+                                                break;
+                                            }
+                                            Ok(Err(e)) => {
+                                                println!("Worker {} handler failed: {} (attempt {}/{})", i, e, attempts, max_attempts);
+                                                if attempts >= max_attempts {
+                                                    break;
+                                                }
+                                            }
+                                            Err(_) => {
+                                                println!("Worker {} handler failed: timeout after {} seconds (attempt {}/{})", i, timeout_duration.as_secs(), attempts, max_attempts);
+                                                if attempts >= max_attempts {
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                                     }
                                 }
                                 Err(e) => {
@@ -437,13 +496,47 @@ impl QueueManager {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
                                 println!("QueueManager dispatched job: {}", job.id);
-                                match handler(job.clone()).await {
+
+                                let mut attempts = 0;
+                                let max_attempts = 3;
+                                let timeout_duration = std::time::Duration::from_secs(60);
+                                let mut final_result = Ok(());
+
+                                loop {
+                                    attempts += 1;
+                                    let fut = handler(job.clone());
+
+                                    match tokio::time::timeout(timeout_duration, fut).await {
+                                        Ok(Ok(_)) => {
+                                            final_result = Ok(());
+                                            break;
+                                        }
+                                        Ok(Err(e)) => {
+                                            println!("Job handler failed: {}, error: {} (attempt {}/{})", job.id, e, attempts, max_attempts);
+                                            final_result = Err(e);
+                                            if attempts >= max_attempts {
+                                                break;
+                                            }
+                                        }
+                                        Err(_) => {
+                                            let e = format!("timeout after {} seconds", timeout_duration.as_secs());
+                                            println!("Job handler failed: {}, error: {} (attempt {}/{})", job.id, e, attempts, max_attempts);
+                                            final_result = Err(e);
+                                            if attempts >= max_attempts {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                                }
+
+                                match final_result {
                                     Ok(_) => {
                                         println!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id).await;
                                     }
                                     Err(e) => {
-                                        println!("Job handler failed: {}, error: {}", job.id, e);
+                                        println!("Job handler ultimately failed: {}, error: {}", job.id, e);
                                         let _ = self.mark_failed(&job.id, &e).await;
                                     }
                                 }
@@ -593,6 +686,9 @@ mod tests {
     impl JobPayloadHandler for MockHandler {
         async fn handle(&self, payload: Vec<u8>) -> Result<(), String> {
             let s = String::from_utf8(payload).unwrap();
+            if s == "fail" {
+                return Err("Simulated failure".to_string());
+            }
             println!("MockHandler received: {}", s);
             Ok(())
         }
@@ -609,6 +705,7 @@ mod tests {
         
         queue.push("test_topic", b"hello".to_vec()).await.unwrap();
         queue.push("test_topic", b"world".to_vec()).await.unwrap();
+        queue.push("test_topic", b"fail".to_vec()).await.unwrap();
         
         tokio::time::sleep(Duration::from_millis(500)).await;
         

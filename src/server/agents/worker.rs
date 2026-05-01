@@ -112,7 +112,7 @@ impl TaskWorker {
                     occurred_at_unix: chrono::Utc::now().timestamp(),
                 };
                 
-                let _ = hub.publish(msg);
+                let _ = hub.clone().publish(msg);
                 
                 println!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
                 
@@ -122,10 +122,61 @@ impl TaskWorker {
                     let role = a.role.clone();
                     let issue_id = issue.id.clone();
                     let agent_id = a.id.clone();
+                    let pc_clone = plane_client.clone();
+                    let hub_clone = hub.clone();
                     
                     tokio::spawn(async move {
-                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
-                            println!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
+                        let mut attempts = 0;
+                        let max_attempts = 3;
+                        let timeout_duration = std::time::Duration::from_secs(60);
+
+                        loop {
+                            attempts += 1;
+                            match tokio::time::timeout(
+                                timeout_duration,
+                                Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role)
+                            ).await {
+                                Ok(Ok(())) => {
+                                    break;
+                                }
+                                Ok(Err(e)) => {
+                                    println!("builtin agent dispatch error: {}, agent_id: {} (attempt {}/{})", e, agent_id, attempts, max_attempts);
+                                    if attempts >= max_attempts {
+                                        let _ = pc_clone.update_issue_status(&issue_id, "paused").await;
+
+                                        let msg = crate::ohc::orchestration::Message {
+                                            id: format!("err-{}", issue_id),
+                                            from_agent: "SYSTEM".to_string(),
+                                            to_agent: "OWNER".to_string(),
+                                            r#type: "Notification".to_string(),
+                                            content: format!("Agent {} paused due to unavailable API or repeated failures: {}", agent_id, e),
+                                            meeting_id: "".to_string(),
+                                            occurred_at_unix: chrono::Utc::now().timestamp(),
+                                        };
+                                        let _ = hub_clone.clone().publish(msg);
+                                        break;
+                                    }
+                                }
+                                Err(_) => {
+                                    println!("builtin agent dispatch timeout: agent_id: {} (attempt {}/{})", agent_id, attempts, max_attempts);
+                                    if attempts >= max_attempts {
+                                        let _ = pc_clone.update_issue_status(&issue_id, "paused").await;
+
+                                        let msg = crate::ohc::orchestration::Message {
+                                            id: format!("err-{}", issue_id),
+                                            from_agent: "SYSTEM".to_string(),
+                                            to_agent: "OWNER".to_string(),
+                                            r#type: "Notification".to_string(),
+                                            content: format!("Agent {} paused due to timeout", agent_id),
+                                            meeting_id: "".to_string(),
+                                            occurred_at_unix: chrono::Utc::now().timestamp(),
+                                        };
+                                        let _ = hub_clone.clone().publish(msg);
+                                        break;
+                                    }
+                                }
+                            }
+                            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                         }
                     });
                 }
@@ -158,6 +209,9 @@ impl TaskWorker {
         
         let mut last_content = String::new();
         while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
+            if !event.error.is_empty() {
+                return Err(event.error);
+            }
             if !event.content.is_empty() {
                 last_content = event.content;
             }
