@@ -102,6 +102,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_check_password({
+        let ui_handle = setup_wizard_handle.clone();
+        move |pw| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let len = pw.len();
+                let mut strength = 0;
+                if len > 0 { strength = 1; }
+                if len > 5 { strength = 2; }
+                if len > 8 { strength = 3; }
+                ui.set_password_strength(strength);
+            }
+        }
+    });
+
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
         move || {
@@ -808,6 +822,7 @@ mod e2e_tests {
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
+        ui.set_admin_name("Maya Smith".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
@@ -829,6 +844,7 @@ mod e2e_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+        assert_eq!(ui.get_admin_name(), "Maya Smith");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_sell_digital(), false);
@@ -1177,10 +1193,25 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 4: Payments -> Step 5
+        // First test skip preference, then revert to online
+        ui.invoke_select_payment_pref("skip".into());
+        assert_eq!(ui.get_payment_pref(), "skip");
+        // Revert back so step count stays normal
+        ui.set_step(4);
         ui.invoke_select_payment_pref("online".into());
+        assert_eq!(ui.get_payment_pref(), "online");
 
         // Step 5: Admin -> Step 6
+        // Test password strength
+        ui.invoke_check_password("123".into());
+        assert_eq!(ui.get_password_strength(), 1);
+        ui.invoke_check_password("1234567".into());
+        assert_eq!(ui.get_password_strength(), 2);
+        ui.invoke_check_password("123456789".into());
+        assert_eq!(ui.get_password_strength(), 3);
+
         ui.set_admin_email("admin@e2e.test".into());
+        ui.set_admin_name("Maya Smith".into());
         ui.invoke_next_step();
 
         // Step 6: Template -> Step 7
@@ -1226,6 +1257,7 @@ mod docs_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+        assert_eq!(ui.get_admin_name(), "Maya Smith");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
@@ -1466,10 +1498,12 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
+        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
+            assert_eq!(can_write_descriptions, true);
+            assert_eq!(can_send_updates, true);
             assert_eq!(frequency, "Daily");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -1481,6 +1515,8 @@ mod docs_tests {
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
+        ui.set_can_write_descriptions(true);
+        ui.set_can_send_updates(true);
         ui.invoke_next_step();
 
         // Step 2: Frequency -> Step 3
@@ -1492,12 +1528,16 @@ mod docs_tests {
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
+            ui.get_can_write_descriptions(),
+            ui.get_can_send_updates(),
             ui.get_frequency()
         );
 
         assert_eq!(ui.get_step(), 3);
         assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_can_write_descriptions(), true);
+        assert_eq!(ui.get_can_send_updates(), true);
         assert_eq!(ui.get_frequency(), "Daily");
         assert_eq!(ui.get_show_toast(), true);
         assert!(*publish_success.borrow());
