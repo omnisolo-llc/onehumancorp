@@ -548,7 +548,8 @@ mod e2e_tests {
         ];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
-        ui.set_pending_approvals(pending_model.into());
+        ui.set_pending_approvals(pending_model.clone().into());
+        ui.set_has_pending_approvals(pending_model.iter().count() > 0);
 
         assert_eq!(ui.get_pending_approvals().row_count(), 1);
 
@@ -1457,7 +1458,8 @@ mod cost_transparency_e2e_tests {
             }
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
+        dashboard_ui.set_pending_approvals(pending_model.clone().into());
+        dashboard_ui.set_has_pending_approvals(pending_model.iter().count() > 0);
     }
 
     #[test]
@@ -1509,7 +1511,8 @@ mod cost_transparency_e2e_tests {
         ];
 
         let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
-        dashboard_ui.set_mesh_messages(messages_model.into());
+        dashboard_ui.set_mesh_messages(messages_model.clone().into());
+        // dashboard_ui.set_messages_empty(messages_model.iter().count() == 0);
     }
 
     #[test]

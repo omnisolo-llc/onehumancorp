@@ -27,6 +27,7 @@ export component Dashboard inherits Window {
     in property <int> tasks_in_progress_count: 0;
 
     in property <[UiPendingApproval]> pending_approvals;
+    in property <bool> has_pending_approvals: false;
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
@@ -165,7 +166,7 @@ export component Dashboard inherits Window {
         }
 
 
-        if (pending_approvals.length > 0) : VerticalBox {
+        if (has_pending_approvals) : VerticalBox {
             spacing: 16px;
             Text { text: "Action Required: Drafts for Review"; font-size: 20px; font-weight: 700; color: #b91c1c; }
 
