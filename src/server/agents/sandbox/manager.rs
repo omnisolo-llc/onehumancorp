@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
