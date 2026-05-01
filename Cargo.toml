@@ -12,6 +12,10 @@ path = "src/server/main.rs"
 name = "ohc-builtin-agent"
 path = "src/agents/builtin/main.rs"
 
+[lib]
+name = "ohc_builtin_agent"
+path = "src/agents/builtin/lib.rs"
+
 [dependencies]
 tokio = { workspace = true }
 tokio-stream = { version = "0.1", features = ["full"] }

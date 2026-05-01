@@ -19,8 +19,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .compile_protos(
-            &["../proto/hub.proto", "../proto/agent_service.proto", "../proto/organization.proto"],
-            &["../proto", "../.."],
+            &["src/proto/hub.proto", "src/proto/agent_service.proto", "src/proto/organization.proto"],
+            &["src/proto", "."],
         )?;
     Ok(())
 }
