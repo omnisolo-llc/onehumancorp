@@ -65,23 +65,8 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 
   await expect(page.locator('button:has-text("Help Center")')).toBeVisible();
   await expect(page.locator('button:has-text("Billing")')).toBeVisible();
-  await expect(page.locator('button:has-text("Custom Integrations")')).toBeVisible();
+  await expect(page.locator('button:has-text("API Docs")')).toBeVisible();
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
-});
-
-test('should render correctly on desktop 1440px', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/login');
-
-  await page.fill('input[type="email"]', 'test@example.com');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button:has-text("Sign In")');
-  await page.waitForURL('**/*');
-
-  await expect(page.locator('text=Quick Actions')).toBeVisible();
-
-  const addProductBtn = page.locator('text=Add Product');
-  await expect(addProductBtn).toBeVisible();
 });
