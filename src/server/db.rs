@@ -29,7 +29,7 @@ impl DB {
     }
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Running migrations...");
+        tracing::info!("Running migrations...");
 
         sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
             .execute(&self.pool)

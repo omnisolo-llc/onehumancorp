@@ -44,7 +44,7 @@ impl TaskWorker {
                     };
                     
                     if let Some(issue) = issue {
-                        println!("Worker {}: processing issue {}", worker_id, issue.id);
+                        tracing::info!("Worker {}: processing issue {}", worker_id, issue.id);
                         Self::process_issue_internal(issue, plane_client.clone(), hub.clone()).await;
                     } else {
                         break; // Channel closed
@@ -68,7 +68,7 @@ impl TaskWorker {
                                 let dispatch_count = workers.min(issues.len());
                                 for issue in issues.into_iter().take(dispatch_count) {
                                     if let Err(_) = task_tx.send(issue).await {
-                                        println!("agent task worker: task channel full, dropping issue dispatch");
+                                        tracing::info!("agent task worker: task channel full, dropping issue dispatch");
                                         break;
                                     }
                                 }
@@ -84,10 +84,10 @@ impl TaskWorker {
     }
 
     async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
-        println!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
+        tracing::info!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
-            println!("failed to update plane issue status: {}", e);
+            tracing::info!("failed to update plane issue status: {}", e);
             return;
         }
         
@@ -114,10 +114,10 @@ impl TaskWorker {
                 
                 let _ = hub.publish(msg);
                 
-                println!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
+                tracing::info!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
                 
                 if a.provider_type == "builtin" || a.provider_type.is_empty() {
-                    println!("agent task worker: dispatching to builtin Rust agent via gRPC: {}", a.id);
+                    tracing::info!("agent task worker: dispatching to builtin Rust agent via gRPC: {}", a.id);
                     let payload_str = payload.to_string();
                     let role = a.role.clone();
                     let issue_id = issue.id.clone();
@@ -125,7 +125,7 @@ impl TaskWorker {
                     
                     tokio::spawn(async move {
                         if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
-                            println!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
+                            tracing::info!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
                         }
                     });
                 }
@@ -136,7 +136,7 @@ impl TaskWorker {
         }
         
         if !agent_found {
-            println!("agent task worker: issue marked in_progress but no available agents to delegate to");
+            tracing::info!("agent task worker: issue marked in_progress but no available agents to delegate to");
         }
     }
 
@@ -163,7 +163,7 @@ impl TaskWorker {
             }
         }
         
-        println!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
+        tracing::info!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
         Ok(())
     }
 }

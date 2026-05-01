@@ -40,7 +40,7 @@ impl SandboxViolationStore for InMemoryViolationStore {
         let capability = capability.to_string();
         let session_id = session_id.to_string();
         crate::record_telemetry(move || {
-             println!("Telemetry: Sandbox violation - capability_denied, session={}, capability={}", session_id, capability);
+             tracing::info!("Telemetry: Sandbox violation - capability_denied, session={}, capability={}", session_id, capability);
         });
         
         Ok(())

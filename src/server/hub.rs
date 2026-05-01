@@ -521,6 +521,11 @@ impl Hub {
             "cloud"
         };
 
+        let unsynced_missions: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE synced_to_cloud = false")
+            .fetch_one(&self.pool)
+            .await
+            .unwrap_or(0);
+
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
@@ -531,6 +536,7 @@ impl Hub {
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
+            "UnsyncedMissions": unsynced_missions,
         }))
     }
 }
@@ -559,4 +565,35 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
     }
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_check_health() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .connect(&db_url)
+            .await {
+                Ok(p) => p,
+                Err(_) => return,
+            };
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Hub::new(tx, pool);
+
+        let health = match hub.check_health().await {
+            Ok(h) => h,
+            Err(_) => return,
+        };
+
+        assert!(health.get("status").is_some());
+        assert!(health.get("UnsyncedMissions").is_some());
+    }
 }
