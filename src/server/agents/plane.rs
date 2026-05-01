@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};

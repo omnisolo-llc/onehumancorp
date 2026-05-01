@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use redis::AsyncCommands;
 use std::time::Duration;
 use uuid::Uuid;
