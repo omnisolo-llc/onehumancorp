@@ -4,10 +4,12 @@ use crate::auth::{User, UserRepository};
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
+#[allow(dead_code)]
 pub struct PgUserRepository {
     pool: PgPool,
 }
 
+#[allow(dead_code)]
 impl PgUserRepository {
     pub fn new(pool: PgPool) -> Self {
         PgUserRepository { pool }
