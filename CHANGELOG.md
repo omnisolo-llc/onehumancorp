@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
+### Cloud Scaling Improvements
+- 🎥 Lens Audit: Softer Draft Wording (#8901)
+
+### Privacy/Offline Improvements
+- 🎥 Lens Audit: Softer Draft Wording (#8901)
+
 ## v0.4.16 (Cloud) / v0.4.16+1 (Standalone)
 ### Cloud Scaling Improvements
 - [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
