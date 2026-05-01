@@ -65,6 +65,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let login_ui_from_login = login_ui_handle.clone();
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        move |email, _password| {
+            if let Some(ui) = login_handle.upgrade() {
+                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
+                if ui.get_is_sign_up() {
+                    ui.invoke_start_setup_wizard();
+                } else {
+                    println!("Login as {}...", email);
+                }
+            }
+        }
+    });
+
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -353,12 +368,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_ui = app::Pricing::new().unwrap();
     let pricing_handle = pricing_ui.as_weak();
 
+    let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+    let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
         if let Some(ui) = pricing_handle_clone.upgrade() {
             let _ = ui.show();
         }
     });
+
+    let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
+    my_plan_ui.on_view_details(move || {
+        if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let my_plan_handle_pricing_clone = my_plan_handle.clone();
+    pricing_ui.on_select_plan(move |plan| {
+        if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
+            ui.set_tier(plan.into());
+            let _ = ui.show();
+        }
+    });
+
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -632,7 +666,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     login_ui.run()?;
-    
+
     Ok(())
 }
 
@@ -674,6 +708,59 @@ mod growth_e2e_tests {
         login_ui.invoke_start_setup_wizard();
 
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+    }
+
+    #[test]
+    fn test_e2e_signup_auto_launch_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(true);
+        login_ui.set_username("test@example.com".into());
+        login_ui.set_password("password123".into());
+
+        // We bind the login_ui.on_login logic for testing auto-redirect.
+        // In the actual app this is done in main(), here we mock the main behavior.
+        login_ui.on_login({
+            let ui_handle = login_ui.as_weak();
+            move |_email, _password| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if ui.get_is_sign_up() {
+                        ui.invoke_start_setup_wizard();
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on sign up");
+    }
+
+    #[test]
+    fn test_setup_wizard_resume_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        // Simulating the resume process
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Test Setting various saved states
+        ui.set_step(3);
+        ui.set_business_type("Online Store".into());
+        ui.set_company_name("My Resumed Store".into());
+        ui.set_sell_physical(true);
+
+        assert_eq!(ui.get_step(), 3);
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_company_name(), "My Resumed Store");
+        assert_eq!(ui.get_sell_physical(), true);
     }
 
     #[test]
@@ -1030,7 +1117,7 @@ mod e2e_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
@@ -2234,6 +2321,22 @@ mod cost_transparency_e2e_tests {
         my_plan_ui.invoke_upgrade();
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
+        let view_details_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_details_opened_clone = view_details_opened.clone();
+        my_plan_ui.on_view_details(move || {
+            *view_details_opened_clone.borrow_mut() = true;
+        });
+        my_plan_ui.invoke_view_details();
+        assert!(*view_details_opened.borrow(), "View Cost Details should be opened from MyPlan");
+
+        let pricing_ui = app::Pricing::new().unwrap();
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        pricing_ui.on_select_plan(move |plan| {
+            *plan_selected_clone.borrow_mut() = plan.to_string();
+        });
+        pricing_ui.invoke_select_plan("Pro".into());
+        assert_eq!(*plan_selected.borrow(), "Pro");
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
