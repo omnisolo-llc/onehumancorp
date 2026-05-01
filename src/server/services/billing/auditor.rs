@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 use crate::pricing::calculator::{self, CostConfig};
-use opentelemetry::{global, KeyValue};
 
 pub struct AuditEvent {
     pub agent_id: String,
@@ -65,10 +64,6 @@ impl CostAuditor {
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
-
-        let meter = global::meter("ohc_cost");
-        let cost_counter = meter.f64_counter("ohc_llm_cost_usd_total").build();
-        cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         cost
     }
@@ -150,10 +145,6 @@ impl CostAuditor {
         *total_cost += total;
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
-
-        let meter = global::meter("ohc_cost");
-        let cost_counter = meter.f64_counter("ohc_infra_cost_usd_total").build();
-        cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
