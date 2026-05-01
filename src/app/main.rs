@@ -1271,6 +1271,12 @@ mod docs_tests {
             *copied_link_clone.borrow_mut() = link.to_string();
         });
 
+        let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let signup_opened_clone = signup_opened.clone();
+        ui.on_open_ohc_signup(move || {
+            *signup_opened_clone.borrow_mut() = true;
+        });
+
         ui.on_upload_logo(|| {});
         ui.on_generate_logo(|| {});
         ui.on_generate_description(|| {});
@@ -1310,6 +1316,9 @@ mod docs_tests {
 
         ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
         assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
+
+        ui.invoke_open_ohc_signup();
+        assert!(*signup_opened.borrow(), "Viral storefront footer click should be successfully invoked");
     }
 
     #[test]
