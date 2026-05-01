@@ -346,6 +346,42 @@ mod growth_e2e_tests {
 
 #[cfg(test)]
 mod e2e_tests {
+
+    #[test]
+    fn test_e2e_swarm_memory_walkthrough() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let swarm_memory_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let swarm_memory_opened_clone = swarm_memory_opened.clone();
+        dashboard_ui.on_open_swarm_memory(move || {
+            *swarm_memory_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_swarm_memory();
+        assert!(*swarm_memory_opened.borrow(), "Swarm Memory should be opened from Dashboard");
+
+        let swarm_memory_ui = app::SwarmMemory::new().unwrap();
+
+        assert_eq!(swarm_memory_ui.get_show_walkthrough(), false, "Walkthrough should be hidden initially");
+
+        swarm_memory_ui.set_show_walkthrough(true);
+        assert_eq!(swarm_memory_ui.get_show_walkthrough(), true, "Walkthrough should be visible after clicking");
+    }
     use slint::Model;
     use super::*;
 

@@ -1,6 +1,48 @@
-import { VerticalBox } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component VectorMemoryVisualizer {
-    VerticalBox {
+    Rectangle {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border-color: rgba(255, 255, 255, 0.1);
+        border-width: 1px;
+
+        VerticalBox {
+            padding: 16px;
+            spacing: 12px;
+
+            Text {
+                text: "Vector Memory Observability";
+                font-family: "Outfit";
+                font-size: 16px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            Rectangle {
+                height: 100px;
+                background: rgba(248, 250, 252, 0.5);
+                border-radius: 8px;
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 15px;
+
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 8px;
+                        Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #8b5cf6; }
+                        Text { text: "System"; font-family: "Inter"; font-size: 12px; color: #64748b; }
+                    }
+
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 8px;
+                        Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #3b82f6; }
+                        Text { text: "Tasks"; font-family: "Inter"; font-size: 12px; color: #64748b; }
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,4 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { VectorMemoryVisualizer } from "./vector_memory_visualizer.slint";
+import { SwarmVelocity } from "./swarm_velocity.slint";
+import { AutodreamWalkthrough } from "./autodream_walkthrough.slint";
 
 export component SwarmMemory inherits Window {
     width: 900px;
@@ -96,11 +99,21 @@ export component SwarmMemory inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 10px;
-                    Text { text: "[ Swarm Velocity Chart ]"; color: #64748b; horizontal-alignment: center; }
-                    Text { text: "[ Vector Memory Visualizer ]"; color: #64748b; horizontal-alignment: center; }
-                    Button { text: "View Walkthrough"; clicked => { view_walkthrough(); } }
+                    SwarmVelocity {
+                        active_threads: "5";
+                        avg_latency: "12ms";
+                        completion_rate: "99%";
+                    }
+                    VectorMemoryVisualizer {}
+                    Button { text: "View Walkthrough"; clicked => { show_walkthrough = true; view_walkthrough(); } }
                 }
             }
         }
+    }
+
+    in-out property <bool> show_walkthrough: false;
+
+    if show_walkthrough: AutodreamWalkthrough {
+        on_close => { show_walkthrough = false; }
     }
 }
