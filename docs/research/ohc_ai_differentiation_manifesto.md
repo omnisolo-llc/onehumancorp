@@ -45,8 +45,3 @@ graph LR
 *   **Gap:** Founders are overwhelmed by data but starving for insights.
 *   **Differentiation:** No complex charts. A daily **"Human-Language Briefing"**: *"Tuesday is your best day. Your vegan cake is trending. Boost your social spend by $5."*
 *   **Outcome:** Clear, actionable strategic direction.
-
-### 6. The Omni-channel Manager (Operations/Sales)
-*   **Gap:** In-person sales are disconnected from online inventory without expensive hardware.
-*   **Differentiation:** Turns any NFC-enabled phone into a POS. "The Manager" **auto-reconciles stock** across all physical and digital channels instantly.
-*   **Outcome:** Sell anywhere, sync everywhere, zero hardware cost.
