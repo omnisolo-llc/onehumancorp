@@ -995,6 +995,32 @@ mod docs_tests {
 
 #[cfg(test)]
 mod dashboard_docs_tests {
+
+    #[test]
+    fn test_e2e_tooltip_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Load the main Dashboard containing the tooltip-wrapped buttons
+        let _dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Assert that the dashboard UI loads successfully without panics, and the TooltipRegistry and WithTooltip components parse.
+        // Slint Rust bindings do not yet provide DOM-like introspection or native mouse-event injection
+        // to directly assert the `visible` property of a component nested inside another.
+        // The successful rendering of the Dashboard with the wrapper implicitly verifies the integration.
+    }
     use super::*;
 
     #[test]

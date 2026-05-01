@@ -1,0 +1,47 @@
+export global TooltipRegistry {
+    out property <string> ask_anything: "Ask our AI assistant any questions you have about using the app.";
+    out property <string> help_center: "Click here to access the Help Center for guides, tutorials, and articles.";
+    out property <string> billing: "View your current plan, credits, and manage your billing information.";
+}
+
+export component WithTooltip {
+    in property <string> tooltip_text;
+
+    // Do not stretch
+    horizontal-stretch: 0;
+    vertical-stretch: 0;
+    min-width: content.min-width;
+    min-height: content.min-height;
+
+    // Put TouchArea underneath so it doesn't steal clicks.
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+
+        content := Rectangle {
+            width: 100%;
+            height: 100%;
+            @children
+        }
+    }
+
+    Rectangle {
+        x: -250px + root.width;
+        y: root.height + 4px;
+        width: 250px;
+        height: 60px;
+        background: #1e293b;
+        border-radius: 4px;
+        visible: touch.has-hover;
+
+        Text {
+            x: 8px; y: 8px;
+            width: parent.width - 16px;
+            height: parent.height - 16px;
+            text: root.tooltip_text;
+            color: white;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+    }
+}

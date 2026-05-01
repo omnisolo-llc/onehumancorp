@@ -1,5 +1,7 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipRegistry, WithTooltip } from "tooltip.slint";
+
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
 
@@ -44,9 +46,9 @@ export component Dashboard inherits Window {
             spacing: 16px;
             Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
-            Button { text: "?"; clicked => { open_help_center(); } }
-            Button { text: "Billing & Credits"; }
+            WithTooltip { tooltip_text: TooltipRegistry.ask_anything; Button { text: "Ask anything"; clicked => { open_ai_chat(); } } }
+            WithTooltip { tooltip_text: TooltipRegistry.help_center; Button { text: "?"; clicked => { open_help_center(); } } }
+            WithTooltip { tooltip_text: TooltipRegistry.billing; Button { text: "Billing & Credits"; } }
         }
 
         // Stat Cards
