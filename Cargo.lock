@@ -4155,6 +4155,7 @@ dependencies = [
  "hex",
  "hmac",
  "jsonwebtoken",
+ "libsqlite3-sys",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",

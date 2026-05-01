@@ -75,11 +75,6 @@ if [ -n "$anthropic_key" ]; then
     update_env "ANTHROPIC_API_KEY" "$anthropic_key"
 fi
 
-read -p "Gemini API Key (leave blank to skip): " gemini_key
-if [ -n "$gemini_key" ]; then
-    update_env "GEMINI_API_KEY" "$gemini_key"
-fi
-
 # 5. Database Settings (if applicable)
 if [ "$multitenant" = "true" ]; then
     echo -e "\n${BOLD}Cloud Mode Database Configuration:${RESET}"
