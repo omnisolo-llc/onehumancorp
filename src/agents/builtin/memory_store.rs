@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
@@ -431,5 +432,66 @@ mod tests {
         repo.prune_stale(now - chrono::Duration::days(30)).await.unwrap();
         let search_stale = repo.semantic_search("org1", &vec![4.0, 5.0, 6.0], 10).await.unwrap();
         assert_eq!(search_stale.len(), 0); // record3 deleted
+    }
+}
+
+
+#[async_trait]
+pub trait LongTermMemory: Send + Sync {
+    /// Retrieve relevant past conversations or state based on a query
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+    
+    /// Store a new piece of memory (e.g., an architectural decision or summary)
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
+}
+
+/// A simple implementation that stores memory in Redis using its list or sorted set capabilities.
+/// In a production system, this would likely use Redis Vector Search (RediSearch) or a dedicated vector DB.
+pub struct RedisMemoryStore {
+    client: redis::Client,
+    namespace: String,
+}
+
+impl RedisMemoryStore {
+    pub fn new(redis_url: &str, namespace: &str) -> Result<Self, String> {
+        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+        Ok(Self {
+            client,
+            namespace: namespace.to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl LongTermMemory for RedisMemoryStore {
+    async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let key = format!("{}:memory", self.namespace);
+        
+        // Simple LRANGE to get recent memories. 
+        // Real implementation would embed the query and use FT.SEARCH
+        let results: Vec<String> = redis::cmd("LRANGE")
+            .arg(&key)
+            .arg(0)
+            .arg((limit.max(1) - 1) as i64)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+            
+        Ok(results)
+    }
+
+    async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let key = format!("{}:memory", self.namespace);
+        
+        let _: () = redis::cmd("LPUSH")
+            .arg(&key)
+            .arg(content)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+            
+        Ok(())
     }
 }
