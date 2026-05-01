@@ -901,62 +901,6 @@ mod docs_tests {
         ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
         assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
     }
-
-    #[test]
-    fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-
-        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
-        // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
-        // But we can verify it doesn't crash on Dashboard creation.
-        // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
-        // To satisfy the E2E requirement securely, we will test the HelpCenter workflow from the Dashboard to ensure the button under the TooltipElement is still clickable.
-
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
-
-        dashboard_ui.on_open_help_center(move || {
-            *help_center_opened_clone.borrow_mut() = true;
-        });
-
-        // Simulate clicking the help center button.
-        dashboard_ui.invoke_open_help_center();
-
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
-    }
-
-    #[test]
-    fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
-    }
-    #[test]
-    fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
-    }
-    #[test]
-    fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::InteractiveWalkthrough::new().unwrap();
-    }
-    #[test]
-    fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::AiHelpChat::new().unwrap();
-    }
-    #[test]
-    fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::VideoTutorials::new().unwrap();
-    }
-    #[test]
-    fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
-    }
     #[test]
     fn test_e2e_agent_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1116,7 +1060,56 @@ mod docs_tests {
         assert!(*add_provider_called.borrow(), "Add provider callback should have been triggered after navigating from Dashboard");
     }
 
-}
+
+    #[test]
+    fn test_e2e_documentation_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            if email == "test@example.com" && password == "password123" {
+                *login_successful_clone.borrow_mut() = true;
+            }
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let hc_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let hc_opened_clone = hc_opened.clone();
+        dashboard_ui.on_open_help_center(move || {
+            *hc_opened_clone.borrow_mut() = true;
+            let hc = app::HelpCenter::new().unwrap();
+            hc.set_search_query("test".into());
+            assert_eq!(hc.get_search_query(), "test");
+        });
+        dashboard_ui.invoke_open_help_center();
+        assert!(*hc_opened.borrow(), "Help Center should be opened from Dashboard");
+
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+            let ai_chat = app::AiHelpChat::new().unwrap();
+            ai_chat.set_user_input("hello".into());
+            assert_eq!(ai_chat.get_user_input(), "hello");
+        });
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+
+        let iw = app::InteractiveWalkthrough::new().unwrap();
+        iw.set_current_step(2);
+        assert_eq!(iw.get_current_step(), 2);
+
+        app::VideoTutorials::new().unwrap();
+        app::ReleaseNotes::new().unwrap();
+        app::ApiDocs::new().unwrap();
+    }
 
 #[cfg(test)]
 mod dashboard_docs_tests {
@@ -1327,4 +1320,5 @@ mod cost_transparency_e2e_tests {
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
     }
+}
 }

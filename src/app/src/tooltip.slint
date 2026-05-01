@@ -1,0 +1,54 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+
+export component Tooltip {
+    in property <string> text: TooltipRegistry.active_text;
+    in property <length> x_pos: TooltipRegistry.active_x;
+    in property <length> y_pos: TooltipRegistry.active_y;
+    in property <bool> is_visible: TooltipRegistry.is_visible;
+
+    visible: is_visible;
+    x: x_pos;
+    y: y_pos;
+
+    Rectangle {
+        background: #1A1A33;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: #4D4DFF;
+        drop-shadow-blur: 10px;
+        drop-shadow-color: #00000080;
+
+        HorizontalLayout {
+            padding: 8px;
+            Text {
+                text: root.text;
+                color: white;
+                font-family: "Inter";
+                font-size: 14px;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+export component TooltipElement {
+    in property <string> tooltip_id;
+
+    TouchArea {
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                // not sure how long-press is modeled
+            }
+        }
+
+        // This is a sibling touch area for tooltip handling
+        // Hover state
+        has-hover => {
+            if (self.has-hover) {
+                TooltipRegistry.show_tooltip(root.tooltip_id, self.absolute-position-x, self.absolute-position-y + self.height);
+            } else {
+                TooltipRegistry.hide_tooltip();
+            }
+        }
+    }
+}
