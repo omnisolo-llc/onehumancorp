@@ -9,6 +9,7 @@ export component GrowBusiness inherits Window {
     in-out property <string> selected_strategy: "";
     in-out property <bool> is_advanced: false;
     callback execute(string);
+    callback save_state();
 
     background: #f8fafc;
 
@@ -22,7 +23,7 @@ export component GrowBusiness inherits Window {
             CheckBox {
                 text: "Expert Mode";
                 checked: is_advanced;
-                toggled => { is_advanced = !is_advanced; }
+                toggled => { is_advanced = !is_advanced; save_state(); }
             }
         }
 

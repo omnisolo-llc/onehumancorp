@@ -153,6 +153,135 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let agent_config_ui = app::AgentConfig::new()?;
+    let agent_config_handle = agent_config_ui.as_weak();
+    let init_agent_config_handle = agent_config_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+    agent_config_ui.on_save_state({
+        let ui_handle = agent_config_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
+    let prompt_tuning_ui = app::PromptTuning::new()?;
+    let prompt_tuning_handle = prompt_tuning_ui.as_weak();
+    let init_prompt_tuning_handle = prompt_tuning_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+    prompt_tuning_ui.on_save_state({
+        let ui_handle = prompt_tuning_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
+    let website_builder_ui = app::WebsiteBuilder::new()?;
+    let website_builder_handle = website_builder_ui.as_weak();
+    let init_website_builder_handle = website_builder_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+    website_builder_ui.on_save_state({
+        let ui_handle = website_builder_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
+    let grow_business_ui = app::GrowBusiness::new()?;
+    let grow_business_handle = grow_business_ui.as_weak();
+    let init_grow_business_handle = grow_business_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+    grow_business_ui.on_save_state({
+        let ui_handle = grow_business_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
+    Box::leak(Box::new(agent_config_ui));
+    Box::leak(Box::new(prompt_tuning_ui));
+    Box::leak(Box::new(website_builder_ui));
+    Box::leak(Box::new(grow_business_ui));
+
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
 
@@ -1197,8 +1326,15 @@ mod tests {
 
         let ui = app::PromptTuning::new().unwrap();
 
+        ui.on_save_state(|| {});
+
         // Step 0: Tone -> Step 1
         assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        ui.invoke_save_state();
+        assert_eq!(ui.get_is_advanced(), true);
+
         ui.set_tone("Concise".into());
         ui.invoke_next_step();
 
@@ -1476,8 +1612,14 @@ mod docs_tests {
         ui.on_generate_logo(|| {});
         ui.on_generate_description(|| {});
         ui.on_upload_photo(|| {});
+        ui.on_save_state(|| {});
 
         assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        ui.invoke_save_state();
+        assert_eq!(ui.get_is_advanced(), true);
+
         ui.set_selected_template("E-commerce".into());
         ui.set_step(1);
 
@@ -1667,6 +1809,9 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::AgentConfig::new().unwrap();
+
+        ui.on_save_state(|| {});
+
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
@@ -1680,6 +1825,11 @@ mod docs_tests {
 
         // Step 0: Choose Agent -> Step 1
         assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        ui.invoke_save_state();
+        assert_eq!(ui.get_is_advanced(), true);
+
         ui.set_selected_agent("Customer Support".into());
         ui.invoke_next_step();
 
@@ -1757,12 +1907,19 @@ mod docs_tests {
         let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let execute_success_clone = execute_success.clone();
 
+        ui.on_save_state(|| {});
+
         ui.on_execute(move |strategy| {
             assert_eq!(strategy, "Add 5 more products");
             *execute_success_clone.borrow_mut() = true;
         });
 
         assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        ui.invoke_save_state();
+        assert_eq!(ui.get_is_advanced(), true);
+
         ui.set_selected_strategy("Add 5 more products".into());
         ui.set_step(1);
         assert_eq!(ui.get_step(), 1);
