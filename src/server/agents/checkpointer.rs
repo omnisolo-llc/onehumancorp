@@ -159,13 +159,17 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
         data
     };
 
-    let decoded = STANDARD.decode(decode_input).map_err(|e| e.to_string())?;
+    let decoded = match STANDARD.decode(decode_input) {
+        Ok(d) => d,
+        Err(_) => return Ok(data.to_vec()), // fallback to original data
+    };
     
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
-    Ok(decompressed)
+    match decoder.read_to_end(&mut decompressed) {
+        Ok(_) => Ok(decompressed),
+        Err(_) => Ok(data.to_vec()), // fallback to original data
+    }
 }
 
 #[cfg(test)]
@@ -199,6 +203,14 @@ mod tests {
         let decompressed = decompress_data(b64.as_bytes()).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
+
+    #[test]
+    fn test_decompress_legacy_uncompressed_data() {
+        let legacy_json = b"{\"step\": 1, \"data\": \"some uncompressed value\"}";
+        let decompressed = decompress_data(legacy_json).unwrap();
+        assert_eq!(legacy_json.to_vec(), decompressed);
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_pg_checkpointer_save_and_load() {
