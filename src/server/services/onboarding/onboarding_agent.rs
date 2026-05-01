@@ -18,7 +18,7 @@ impl OnboardingAgent {
         let company_name = req.company_name.clone();
 
         if !req.first_product_name.is_empty() {
-             self.create_product(&org_id, &req.first_product_name, &req.first_product_description, &req.first_product_price, &business_type).await?;
+             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await?;
         } else {
              self.generate_initial_products(&org_id, &business_type).await?;
         }
@@ -69,7 +69,7 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, description: &str, price_str: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
@@ -81,7 +81,7 @@ impl OnboardingAgent {
             .bind(id)
             .bind(org_id)
             .bind(name)
-            .bind(if description.is_empty() { "Added during onboarding" } else { description })
+            .bind("Added during onboarding")
             .bind(price_cents)
             .bind(strategy)
             .bind(json!({}))
@@ -204,7 +204,6 @@ mod tests {
             website_template: "Modern".to_string(),
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
-            first_product_description: "A delicious test cake".to_string(),
             domain_choice: "subdomain".to_string(),
         };
 
