@@ -4,20 +4,24 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Message {
     pub topic: String,
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
+#[allow(dead_code)]
 pub struct MemoryBus {
     subs: Mutex<std::collections::HashMap<String, broadcast::Sender<Message>>>,
 }
 
+#[allow(dead_code)]
 impl MemoryBus {
     pub fn new() -> Self {
         MemoryBus {
