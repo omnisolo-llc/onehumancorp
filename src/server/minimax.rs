@@ -1,3 +1,4 @@
+
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -86,6 +87,7 @@ struct MessageContent {
 }
 
 impl MinimaxClient {
+    #[allow(dead_code)]
     pub fn new(api_key: String) -> Self {
         MinimaxClient {
             api_key,
@@ -93,6 +95,7 @@ impl MinimaxClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let cb = get_circuit_breaker();
         if !cb.allow() {
@@ -158,6 +161,7 @@ impl MinimaxClient {
         Err(format!("failed after 5 retries: {}", last_err))
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         let cb = get_circuit_breaker();
         if !cb.allow() {
@@ -221,6 +225,7 @@ impl MinimaxClient {
     }
 }
 
+#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -228,6 +233,7 @@ pub struct LocalLLMClient {
 }
 
 impl LocalLLMClient {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
@@ -239,6 +245,7 @@ impl LocalLLMClient {
         LocalLLMClient { endpoint, embed_endpoint, model }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
@@ -262,6 +269,7 @@ impl LocalLLMClient {
         Ok(response.to_string())
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
@@ -286,12 +294,14 @@ impl LocalLLMClient {
     }
 }
 
+#[allow(dead_code)]
 pub struct ResilientClient {
     primary: MinimaxClient,
     fallback: LocalLLMClient,
 }
 
 impl ResilientClient {
+    #[allow(dead_code)]
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {
             primary,
@@ -299,6 +309,7 @@ impl ResilientClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         match self.primary.reason(prompt).await {
             Ok(res) => Ok(res),
@@ -309,6 +320,7 @@ impl ResilientClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         match self.primary.generate_embedding(text).await {
             Ok(res) => Ok(res),
@@ -320,6 +332,7 @@ impl ResilientClient {
     }
 }
 
+#[allow(dead_code)]
 pub struct CachedMinimaxClient {
     client: MinimaxClient,
     pool: sqlx::PgPool,
@@ -327,10 +340,12 @@ pub struct CachedMinimaxClient {
 }
 
 impl CachedMinimaxClient {
+    #[allow(dead_code)]
     pub fn new(client: MinimaxClient, pool: sqlx::PgPool, redis: Option<redis::Client>) -> Self {
         CachedMinimaxClient { client, pool, redis }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         use sha2::{Sha256, Digest};
         use redis::AsyncCommands;
@@ -339,7 +354,7 @@ impl CachedMinimaxClient {
         let hash = format!("{:x}", Sha256::digest(prompt.as_bytes()));
         
         if let Some(ref redis_client) = self.redis {
-            if let Ok(mut con) = redis_client.get_async_connection().await {
+            if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 if let Ok(val) = con.get::<_, String>(&redis_key).await {
                     return Ok(val);
@@ -357,7 +372,7 @@ impl CachedMinimaxClient {
             let response: String = row.get("response");
             
             if let Some(ref redis_client) = self.redis {
-                if let Ok(mut con) = redis_client.get_async_connection().await {
+                if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
                     let redis_key = format!("llm_reason:{}", hash);
                     let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
                 }
@@ -369,7 +384,7 @@ impl CachedMinimaxClient {
         let response = self.client.reason(prompt).await?;
 
         if let Some(ref redis_client) = self.redis {
-            if let Ok(mut con) = redis_client.get_async_connection().await {
+            if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
             }
@@ -385,6 +400,7 @@ impl CachedMinimaxClient {
         Ok(response)
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         self.client.generate_embedding(text).await
     }

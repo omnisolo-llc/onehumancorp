@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::{json, Value};
     use crate::telemetry::{redact_interface_pii, buffer_metric};
 

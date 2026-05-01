@@ -1,15 +1,18 @@
 use std::sync::Arc;
+
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Message {
     pub topic: String,
     pub payload: Vec<u8>,
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
@@ -73,6 +76,7 @@ impl Default for MemoryBus {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
     

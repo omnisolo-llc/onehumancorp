@@ -1,8 +1,8 @@
+use chrono::Utc;
 use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use crate::orchestration::tasks::TaskDecompositionService;
 use crate::tasks::SharedTask;
-use chrono::Utc;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {

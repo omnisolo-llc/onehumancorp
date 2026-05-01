@@ -1067,8 +1067,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ohc::orchestration::*;
-    use crate::ohc::agent::service::*;
     use tonic::Request;
 
     // Helper to create a dummy hub and service for testing

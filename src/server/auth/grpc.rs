@@ -1,3 +1,4 @@
+
 use tonic::{Request, Status};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -10,11 +11,13 @@ enum AuthMode {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AuthConfig {
     mode: AuthMode,
 }
 
 impl AuthConfig {
+    #[allow(dead_code)]
     pub fn from_env() -> Self {
         if std::env::var("OHC_AGENT_AUTH_DISABLED").unwrap_or_default() == "true" {
             return AuthConfig { mode: AuthMode::Disabled };
@@ -120,6 +123,7 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()>, Status> + Clone {
     move |req: Request<()>| {
         cfg.authenticate(&req)?;

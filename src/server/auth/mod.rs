@@ -1,3 +1,4 @@
+
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -97,6 +98,7 @@ pub struct OIDCConfig {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait UserRepository: Send + Sync {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;

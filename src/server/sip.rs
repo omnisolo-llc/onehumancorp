@@ -1,3 +1,4 @@
+
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -7,6 +8,7 @@ use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct CapabilityPlugin {
     pub plugin_id: String,
     pub name: String,
@@ -17,6 +19,7 @@ pub struct CapabilityPlugin {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct EpisodicMemory {
     pub memory_id: String,
     pub context: String,
@@ -26,6 +29,7 @@ pub struct EpisodicMemory {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct MessageModel {
     id: String,
     from_agent: String,
@@ -36,6 +40,7 @@ struct MessageModel {
     occurred_at_unix: i64,
 }
 
+#[allow(dead_code)]
 pub struct SipDB {
     pool: PgPool,
     org_id: String,
@@ -53,6 +58,7 @@ impl SipDB {
         }
     }
 
+    #[allow(dead_code)]
     fn get_cache(&self, key: &str) -> Option<String> {
         let expirations = self.cache_expirations.read().unwrap();
         if let Some(exp) = expirations.get(key) {
@@ -70,6 +76,7 @@ impl SipDB {
         cache.get(key).cloned()
     }
 
+    #[allow(dead_code)]
     fn set_cache(&self, key: String, value: String) {
         let mut cache = self.local_cache.write().unwrap();
         let mut expirations = self.cache_expirations.write().unwrap();
@@ -77,6 +84,7 @@ impl SipDB {
         expirations.insert(key, Instant::now());
     }
 
+    #[allow(dead_code)]
     fn invalidate_cache(&self, key: &str) {
         let mut cache = self.local_cache.write().unwrap();
         let mut expirations = self.cache_expirations.write().unwrap();
@@ -84,6 +92,7 @@ impl SipDB {
         expirations.remove(key);
     }
 
+    #[allow(dead_code)]
     pub async fn sync_memory(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
         let cache_key = format!("sip:memory:{}:{}", self.org_id, key);
         if let Some(val) = self.get_cache(&cache_key) {
@@ -104,6 +113,7 @@ impl SipDB {
         Ok(value)
     }
 
+    #[allow(dead_code)]
     pub async fn update_memory(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
         sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
             .bind(key)
@@ -117,6 +127,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_pending_missions(&self, role: &str) -> Result<Vec<crate::ohc::orchestration::Message>, sqlx::Error> {
         let query = if role == "ANY" {
             "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY updated_at ASC LIMIT 500"
@@ -174,6 +185,7 @@ impl SipDB {
         Ok(missions)
     }
 
+    #[allow(dead_code)]
     pub async fn complete_mission(&self, mission_id: &str) -> Result<(), sqlx::Error> {
         let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
@@ -188,6 +200,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn heartbeat(&self, agent_id: &str, role: &str, status: &str) -> Result<(), sqlx::Error> {
         sqlx::query("INSERT INTO agent_status (agent_id, role, status, last_heartbeat, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP")
             .bind(agent_id)
@@ -200,6 +213,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn register_capability_plugin(&self, plugin: CapabilityPlugin) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at, organization_id)
@@ -221,6 +235,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_capability_plugins(&self, status: &str) -> Result<Vec<CapabilityPlugin>, sqlx::Error> {
         let query = if status.is_empty() {
             "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE organization_id = $1"
@@ -256,6 +271,7 @@ impl SipDB {
         Ok(plugins)
     }
 
+    #[allow(dead_code)]
     pub async fn store_episodic_memory(&self, memory: EpisodicMemory) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id)
@@ -275,6 +291,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_episodic_memories_by_plugin(&self, plugin: &str) -> Result<Vec<EpisodicMemory>, sqlx::Error> {
         let query = if plugin.is_empty() {
             "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE organization_id = $1"
@@ -309,6 +326,7 @@ impl SipDB {
         Ok(memories)
     }
 
+    #[allow(dead_code)]
     pub async fn prune_buffered_metrics(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let threshold_time = Utc::now() - age_threshold;
         
@@ -355,6 +373,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn sync_buffered_metrics(&self, remote_endpoint: &str, batch_size: usize) -> Result<usize, sqlx::Error> {
         let batch_size = if batch_size == 0 { 500 } else { batch_size };
         
@@ -406,6 +425,7 @@ impl SipDB {
         Ok(records.len())
     }
 
+    #[allow(dead_code)]
     pub async fn sync_context_sync(&self, remote_endpoint: &str) -> Result<usize, sqlx::Error> {
         let rows = sqlx::query("SELECT memory_id, context FROM swarm_memory_embeddings WHERE organization_id = $1 ORDER BY created_at ASC LIMIT 100")
             .bind(&self.org_id)
@@ -452,6 +472,7 @@ impl SipDB {
         Ok(records.len())
     }
 
+    #[allow(dead_code)]
     pub async fn sync_missions(&self, remote_endpoint: &str) -> Result<usize, sqlx::Error> {
         let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY updated_at ASC LIMIT 100")
             .bind(&self.org_id)
@@ -502,6 +523,7 @@ impl SipDB {
         Ok(records.len())
     }
 
+    #[allow(dead_code)]
     pub async fn burst_mission(&self, mission_id: &str, remote_endpoint: &str) -> Result<(), sqlx::Error> {
         let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id")
             .bind(mission_id)
@@ -537,6 +559,7 @@ impl SipDB {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: Vec<f32>) -> Result<(), sqlx::Error> {
         let mut bytes = Vec::with_capacity(embedding.len() * 4);
         for f in embedding {

@@ -1,7 +1,9 @@
+
 use async_trait::async_trait;
 use crate::queue::{Job, TaskJobHandler, TaskQueue};
 use std::sync::Arc;
 
+#[allow(dead_code)]
 pub struct SubAgentWorker {
     queue: Arc<dyn TaskQueue>,
 }

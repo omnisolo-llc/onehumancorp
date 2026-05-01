@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::sync::RwLock;
 use chrono::{DateTime, Utc};
@@ -36,6 +37,7 @@ pub struct CIJob {
     pub branch: String,
 }
 
+#[allow(dead_code)]
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
@@ -103,6 +105,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn handle_pr_created(&self, msg: Message) -> Result<(), String> {
         let branch = msg.content.clone();
         
@@ -124,6 +127,7 @@ impl Orchestrator {
         Err("pipeline not found for branch".to_string())
     }
 
+    #[allow(dead_code)]
     pub async fn handle_test_results(&self, msg: Message) -> Result<(), String> {
         let mut branch = String::new();
         let mut logs = String::new();
@@ -180,6 +184,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn reject_staging(&self, branch: &str, reason: &str) -> Result<(), String> {
         let mut pipelines = self.pipelines.write().unwrap();
         let pipeline = pipelines.get_mut(branch).ok_or_else(|| "pipeline not found for branch".to_string())?;
@@ -202,6 +207,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn approve_for_production(&self, branch: &str) -> Result<(), String> {
         let mut pipelines = self.pipelines.write().unwrap();
         let pipeline = pipelines.get_mut(branch).ok_or_else(|| "pipeline not found for branch".to_string())?;
@@ -232,6 +238,7 @@ impl Orchestrator {
         pipelines.get(branch).map(|p| p.state.clone()).ok_or_else(|| "pipeline not found".to_string())
     }
 
+    #[allow(dead_code)]
     pub fn get_ci_jobs(&self) -> Vec<CIJob> {
         let ci_jobs = self.ci_jobs.read().unwrap();
         ci_jobs.clone()

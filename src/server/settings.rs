@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};
@@ -92,6 +93,7 @@ impl Store {
         self.data.read().unwrap().clone()
     }
 
+    #[allow(dead_code)]
     pub fn update(&self, settings: AppSettings) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         *data = settings;

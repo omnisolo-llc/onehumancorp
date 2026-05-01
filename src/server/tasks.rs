@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};
@@ -27,6 +28,7 @@ pub struct SharedTask {
     pub proposed_content: Option<String>,
 }
 
+#[allow(dead_code)]
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     event_tx: tokio::sync::mpsc::Sender<serde_json::Value>,

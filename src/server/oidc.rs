@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+
+use serde::Deserialize;
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation, Algorithm};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -14,6 +15,7 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct JWK {
     kid: String,
     kty: String,
@@ -24,11 +26,13 @@ struct JWK {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct JWKSet {
     keys: Vec<JWK>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OIDCDiscovery {
     issuer: String,
     jwks_uri: String,
@@ -193,7 +197,6 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::IpAddr;
 
     #[test]
     fn test_is_blocked_ip() {

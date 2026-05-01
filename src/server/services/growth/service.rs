@@ -1,5 +1,5 @@
-use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
+use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::growth_service_server::GrowthService;
 use std::sync::RwLock;
 use std::collections::HashMap;
@@ -466,7 +466,6 @@ impl GrowthService for MyGrowthService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ohc::orchestration::*;
 
     #[tokio::test]
     #[ignore]

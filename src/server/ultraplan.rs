@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};
@@ -53,6 +54,7 @@ impl UltraPlanManager {
         plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
     }
 
+    #[allow(dead_code)]
     pub fn update_plan_status(&self, plan_id: &str, new_status: String, state_machine: serde_json::Value) -> Result<(), String> {
         let mut plans = self.plans.write().unwrap();
         if let Some(plan) = plans.get_mut(plan_id) {

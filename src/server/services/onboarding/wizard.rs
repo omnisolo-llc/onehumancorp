@@ -42,12 +42,12 @@ impl InteractiveWizard {
     }
 
 
-    pub fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
+    pub fn save_onboarding_state(&self, _org_id: &str, _user_id: &str, _step: i32, _state_json: &str) -> Result<(), String> {
         // Here we would use sqlx to persist to the onboarding_state table
         Ok(())
     }
 
-    pub fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+    pub fn get_onboarding_state(&self, _org_id: &str) -> Result<String, String> {
         // Return dummy json for now
         Ok(r#"{"step": 0}"#.to_string())
     }
@@ -61,7 +61,11 @@ impl InteractiveWizard {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::services::onboarding::wizard::InteractiveWizard;
+    use crate::services::onboarding::provisioner;
+
+
+
     use std::fs;
 
     #[test]

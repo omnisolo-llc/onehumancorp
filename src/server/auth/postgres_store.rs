@@ -1,14 +1,17 @@
+
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::auth::{User, UserRepository};
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
+#[allow(dead_code)]
 pub struct PgUserRepository {
     pool: PgPool,
 }
 
 impl PgUserRepository {
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         PgUserRepository { pool }
     }
