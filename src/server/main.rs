@@ -1,4 +1,4 @@
-pub mod mesh;
+pub use ohc_builtin_agent::mesh;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -926,6 +926,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
+
+    // Initialize TeammateMesh
+    let teammate_mesh = std::sync::Arc::new(ohc_builtin_agent::mesh::TeammateMeshClient::new(mesh_transport.clone()));
+
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+        if let Err(e) = ohc_builtin_agent::start_builtin_agent(&addr, &agent_id, teammate_mesh.clone()).await {
+            eprintln!("Failed to start in-process builtin agent: {}", e);
+        } else {
+            println!("Successfully started in-process builtin agent at {}", addr);
+        }
+    }
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))

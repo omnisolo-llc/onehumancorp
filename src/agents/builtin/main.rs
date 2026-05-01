@@ -2,6 +2,8 @@ use ohc_builtin_agent::{
     auth::auth_mode_from_env,
     proto::agent_service_server::{AgentServiceServer, AgentService},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
+    mesh::{TeammateMesh, TeammateMeshClient},
+    mesh::transport::Message as MeshMessage,
 };
 use std::{env, net::SocketAddr};
 use tonic::transport::Server;
@@ -92,71 +94,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
     
-    let redis_url_clone = redis_url.clone();
-    tokio::spawn(async move {
-        tracing::info!("Connecting to Redis at {}", redis_url_clone);
-        let client = match redis::Client::open(redis_url_clone.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to open Redis client: {}", e);
-                return;
-            }
-        };
+    let mesh_client = ohc_builtin_agent::mesh::create_teammate_mesh(Some(&redis_url)).await;
 
-        let mut con = match client.get_multiplexed_async_connection().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis connection: {}", e);
-                return;
-            }
-        };
+    // Subscribe to tasks via TeammateMesh instead of raw Redis
+    let mesh_client_for_run = mesh_client.clone();
+    let svc_for_mesh = svc.clone();
 
-        let mut pubsub = match client.get_async_pubsub().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis pubsub connection: {}", e);
-                return;
-            }
-        };
+    let handler = Box::new(move |msg: MeshMessage| {
+        if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&msg.payload[..]) {
+            tracing::info!("Received job from Mesh: {}", req.task_id);
 
-        if let Err(e) = pubsub.subscribe("agent_jobs").await {
-            tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
-            return;
-        }
+            let svc = svc_for_mesh.clone();
+            let mesh = mesh_client_for_run.clone();
 
-        tracing::info!("Subscribed to Redis channel 'agent_jobs'");
-        let mut stream = pubsub.on_message();
-        while let Some(msg) = stream.next().await {
-            let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
-            if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
-                tracing::info!("Received job from Redis: {}", req.task_id);
-
-                let svc = svc_for_redis.clone();
-                let mut con_inner = con.clone();
-
-                tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
-                        Ok(resp) => {
-                            let mut stream = resp.into_inner();
-                            while let Some(Ok(evt)) = stream.next().await {
-                                let mut buf = Vec::new();
-                                if prost::Message::encode(&evt, &mut buf).is_ok() {
-                                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                                        .arg("agent_events")
-                                        .arg(buf)
-                                        .query_async(&mut con_inner)
-                                        .await;
+            tokio::spawn(async move {
+                match svc.run_task(tonic::Request::new(req)).await {
+                    Ok(resp) => {
+                        let mut stream = resp.into_inner();
+                        while let Some(Ok(evt)) = stream.next().await {
+                            let mut buf = Vec::new();
+                            if prost::Message::encode(&evt, &mut buf).is_ok() {
+                                if let Err(e) = mesh.publish_coordination(buf).await {
+                                    tracing::error!("Failed to publish agent_events via Mesh: {}", e);
                                 }
                             }
                         }
-                        Err(e) => {
-                            tracing::error!("Error running task from Redis: {}", e);
-                        }
                     }
-                });
-            }
+                    Err(e) => {
+                        tracing::error!("Error running task from Mesh: {}", e);
+                    }
+                }
+            });
         }
     });
+
+    // We hold onto cancel to keep the subscription alive.
+    // Box::leak is an easy way to keep it alive for the static lifespan of the agent.
+    match mesh_client.subscribe_tasks(handler).await {
+        Ok(cancel) => {
+            tracing::info!("Subscribed to Mesh channel for tasks");
+            Box::leak(cancel);
+        }
+        Err(e) => {
+            tracing::error!("Failed to subscribe to mesh tasks: {}", e);
+            return Err(e.into());
+        }
+    };
 
     Server::builder()
         .add_service(AgentServiceServer::new(SharedAgentService(svc)))
