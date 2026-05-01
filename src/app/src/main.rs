@@ -88,14 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                     }
                 }).unwrap();
             }
@@ -119,14 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             tokio::spawn(async move {
@@ -361,7 +347,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -375,14 +361,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), website_template.to_string()),
-                ("product_name".to_string(), product_name.to_string()),
-                ("product_price".to_string(), product_price.to_string()),
-                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -392,10 +371,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_company_description = company_description.to_string();
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
-            let req_website_template = website_template.to_string();
-            let req_product_name = product_name.to_string();
-            let req_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let req_website_template = "".to_string();
+            let req_product_name = "".to_string();
+            let req_product_price = "".to_string();
+            let req_domain_choice = "".to_string();
 
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
@@ -785,20 +764,6 @@ mod e2e_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
-        assert_eq!(ui.get_step(), 7);
-
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        // Step 8: Domain -> Step 9
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
@@ -809,11 +774,6 @@ mod e2e_tests {
         assert_eq!(ui.get_sell_services(), false);
         assert_eq!(ui.get_sell_food(), false);
         assert_eq!(ui.get_sell_subscriptions(), false);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
-
     }
 }
 
@@ -1120,37 +1080,23 @@ mod docs_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
+        assert_eq!(ui.get_step(), 6);
 
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.invoke_next_step();
-
-        // Step 8: Domain -> Step 9
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
-        // Step 9: Launch -> Step 10
+        // Step 6: Launch -> Step 7
         ui.invoke_launch(
             ui.get_business_type(),
             ui.get_company_name(),
             ui.get_company_description(),
             ui.get_payment_pref(),
-            ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_admin_email()
         );
         assert_eq!(ui.get_launching(), true);
 
         // Simulate background launch completing
         ui.set_launching(false);
-        ui.set_step(10);
+        ui.set_step(7);
 
-        // Step 10: Go to Dashboard
+        // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
         ui.on_go_to_dashboard(move || {
@@ -1165,10 +1111,6 @@ mod docs_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 
     #[test]
