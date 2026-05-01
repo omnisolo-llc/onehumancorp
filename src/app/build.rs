@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_slint_path = std::path::Path::new(&manifest_dir).join("src/app.slint");
     slint_build::compile(&app_slint_path).unwrap();
 
-    let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
+    let protoc_path = std::path::PathBuf::from(std::env::var("PROTOC").unwrap_or_else(|_| "../../../protobuf+/protoc".to_string()));
     // SAFETY: This is only called at build time and does not concurrently access env
     unsafe { std::env::set_var("PROTOC", protoc_path) };
 

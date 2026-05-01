@@ -47,8 +47,29 @@ test.describe('Login', () => {
 
   test('should allow password visibility toggle', async ({ page }) => {
     await page.goto('/login');
-    const passwordInput = page.locator('input[type="password"]');
-    const toggleButton = page.locator('button:has-text("Show")');
+    const passwordInput = page.locator('input[type="password"]').first();
+    const toggleButton = page.locator('button:has-text("Show")').first();
+    await expect(toggleButton).toBeVisible();
+
+    // Fill in a test password
+    await passwordInput.fill('secret123');
+    await expect(passwordInput).toHaveValue('secret123');
+
+    // Click toggle button
+    await toggleButton.click();
+
+    // The button text should change to Hide
+    const hideButton = page.locator('button:has-text("Hide")').first();
+    await expect(hideButton).toBeVisible();
+
+    // Type should now be text
+    const textInput = page.locator('input[type="text"]').last();
+    await expect(textInput).toHaveValue('secret123');
+
+    // Click toggle button again
+    await hideButton.click();
+
+    // The button text should change back to Show
     await expect(toggleButton).toBeVisible();
   });
 });

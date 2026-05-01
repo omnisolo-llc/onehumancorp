@@ -15,12 +15,14 @@ export component Login inherits Window {
 
     in-out property <string> username: "";
     in-out property <string> password: "";
+    in-out property <bool> show_password <=> password_input.show_password;
 
     callback login(string, string);
     callback oauth_login(string);
     callback open_settings();
     callback resend_verification(string);
     callback start_setup_wizard();
+
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -63,7 +65,7 @@ export component Login inherits Window {
                     text <=> username;
                 }
 
-                PasswordInput {
+                password_input := PasswordInput {
                     placeholder-text: "Password";
                     text <=> password;
                 }

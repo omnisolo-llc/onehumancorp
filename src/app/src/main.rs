@@ -701,8 +701,12 @@ mod e2e_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::Login::new().unwrap();
 
-        // The toggle state in the encapsulated component is internal to Slint
-        // but we can set the password property
+        // Ensure show_password property works natively on the UI instance
+        assert_eq!(ui.get_show_password(), false);
+
+        ui.set_show_password(true);
+        assert_eq!(ui.get_show_password(), true);
+
         ui.set_password("secret".into());
         assert_eq!(ui.get_password(), "secret");
     }
