@@ -44,79 +44,207 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let setup_wizard_ui = app::SetupWizard::new()?;
-    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
 
-    let init_ui_handle = setup_wizard_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_ui_handle.upgrade() {
-                        if let Some(step_str) = state.get("step") {
-                            if let Ok(step) = step_str.parse::<i32>() {
-                                ui.set_step(step);
-                            }
-                        }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
-                    }
-                }).unwrap();
+    login_ui.on_login({
+        let handle = login_ui_handle.clone();
+        move |username, password| {
+            if let Some(ui) = handle.upgrade() {
+                let _ = ui.hide();
             }
-        }
-    });
 
-    setup_wizard_ui.on_save_state({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
-            ]);
+            // Launch SetupWizard
+            let setup_wizard_ui = app::SetupWizard::new().unwrap();
+            let setup_wizard_handle = setup_wizard_ui.as_weak();
 
+            let init_ui_handle = setup_wizard_handle.clone();
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                        let state = resp.into_inner().state;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = init_ui_handle.upgrade() {
+                                if let Some(step_str) = state.get("step") {
+                                    if let Ok(step) = step_str.parse::<i32>() {
+                                        ui.set_step(step);
+                                    }
+                                }
+                                if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                                if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                                if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                                if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                                if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                                if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                                if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                                if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                                if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                                if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                                if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                                if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
+                                if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                                if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                                if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                                if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                                if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                                if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
+                                if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                            }
+                        }).unwrap();
+                    }
                 }
             });
+
+            setup_wizard_ui.on_save_state({
+                let ui_handle = setup_wizard_handle.clone();
+                move || {
+                    let ui = ui_handle.unwrap();
+                    let state = std::collections::HashMap::from([
+                        ("step".to_string(), ui.get_step().to_string()),
+                        ("business_type".to_string(), ui.get_business_type().to_string()),
+                        ("company_name".to_string(), ui.get_company_name().to_string()),
+                        ("company_description".to_string(), ui.get_company_description().to_string()),
+                        ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                        ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                        ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                        ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                        ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                        ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                        ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                        ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                        ("website_template".to_string(), ui.get_website_template().to_string()),
+                        ("product_name".to_string(), ui.get_product_name().to_string()),
+                        ("product_price".to_string(), ui.get_product_price().to_string()),
+                        ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                        ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                        ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                        ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                        ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                    ]);
+
+                    tokio::spawn(async move {
+                        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                            let _ = client.save_wizard_state(request).await;
+                        }
+                    });
+                }
+            });
+
+            setup_wizard_ui.on_go_to_dashboard({
+                let ui_handle = setup_wizard_handle.clone();
+                move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        let _ = ui.hide();
+                    }
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        let _ = dashboard.show();
+                        Box::leak(Box::new(dashboard));
+                    }
+                }
+            });
+
+            setup_wizard_ui.on_launch({
+                let ui_handle = setup_wizard_handle.clone();
+                move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+                    let ui = ui_handle.unwrap();
+                    let state = std::collections::HashMap::from([
+                        ("business_type".to_string(), business_type.to_string()),
+                        ("company_name".to_string(), company_name.to_string()),
+                        ("company_description".to_string(), company_description.to_string()),
+                        ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                        ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                        ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                        ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                        ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                        ("payment_pref".to_string(), payment_pref.to_string()),
+                        ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                        ("admin_email".to_string(), admin_email.to_string()),
+                        ("website_template".to_string(), website_template.to_string()),
+                        ("product_name".to_string(), product_name.to_string()),
+                        ("product_price".to_string(), product_price.to_string()),
+                        ("domain_choice".to_string(), domain_choice.to_string()),
+                        ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                        ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                        ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                        ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                    ]);
+
+                    let handle_clone = ui_handle.clone();
+
+                    let req_business_type = business_type.to_string();
+                    let req_company_name = company_name.to_string();
+                    let req_company_description = company_description.to_string();
+                    let req_payment_pref = payment_pref.to_string();
+                    let req_admin_email = admin_email.to_string();
+                    let req_website_template = website_template.to_string();
+                    let req_product_name = product_name.to_string();
+                    let req_product_price = product_price.to_string();
+                    let req_domain_choice = domain_choice.to_string();
+
+                    let mut req_selling_categories = Vec::new();
+                    if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
+                    if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
+                    if ui.get_sell_services() { req_selling_categories.push("services".to_string()); }
+                    if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
+                    if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
+
+                    tokio::spawn(async move {
+                        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            Ok(mut client) => {
+                                let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
+                                    business_type: req_business_type,
+                                    company_name: req_company_name,
+                                    company_description: req_company_description,
+                                    payment_pref: req_payment_pref,
+                                    admin_email: req_admin_email,
+                                    selling_categories: req_selling_categories,
+                                    website_template: req_website_template,
+                                    first_product_name: req_product_name,
+                                    first_product_price: req_product_price,
+                                    domain_choice: req_domain_choice,
+                                });
+
+                                match client.start_onboarding(onboarding_request).await {
+                                    Ok(resp) => {
+                                        let r = resp.into_inner();
+                                        let msg = r.message.clone();
+                                        slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = handle_clone.upgrade() {
+                                                ui.set_launch_status("Onboarding Complete!".into());
+                                                ui.set_launch_details(msg.into());
+                                                ui.set_step(10); // Go to checklist
+                                            }
+                                        }).unwrap();
+                                    }
+                                    Err(e) => {
+                                        let err_msg = e.to_string();
+                                        slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = handle_clone.upgrade() {
+                                                ui.set_launch_status("Onboarding Failed".into());
+                                                ui.set_launch_details(err_msg.into());
+                                            }
+                                        }).unwrap();
+                                    }
+                                }
+
+                                let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                    state,
+                                });
+                                if let Err(e) = client.save_wizard_state(request).await {
+                                    println!("Failed to save wizard state: {:?}", e);
+                                }
+                            }
+                            Err(e) => {
+                                println!("Could not connect to server: {:?}", e);
+                            }
+                        }
+                    });
+                }
+            });
+
+            let _ = setup_wizard_ui.show();
+            Box::leak(Box::new(setup_wizard_ui));
         }
     });
 
@@ -183,119 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_go_to_dashboard({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let _ = ui.hide();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    setup_wizard_ui.on_launch({
-        let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), business_type.to_string()),
-                ("company_name".to_string(), company_name.to_string()),
-                ("company_description".to_string(), company_description.to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), payment_pref.to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), website_template.to_string()),
-                ("product_name".to_string(), product_name.to_string()),
-                ("product_price".to_string(), product_price.to_string()),
-                ("domain_choice".to_string(), domain_choice.to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
-            ]);
-
-            let handle_clone = ui_handle.clone();
-
-            let req_business_type = business_type.to_string();
-            let req_company_name = company_name.to_string();
-            let req_company_description = company_description.to_string();
-            let req_payment_pref = payment_pref.to_string();
-            let req_admin_email = admin_email.to_string();
-            let req_website_template = website_template.to_string();
-            let req_product_name = product_name.to_string();
-            let req_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
-
-            let mut req_selling_categories = Vec::new();
-            if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
-            if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
-            if ui.get_sell_services() { req_selling_categories.push("services".to_string()); }
-            if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
-            if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
-
-            tokio::spawn(async move {
-                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    Ok(mut client) => {
-                        let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
-                            business_type: req_business_type,
-                            company_name: req_company_name,
-                            company_description: req_company_description,
-                            payment_pref: req_payment_pref,
-                            admin_email: req_admin_email,
-                            selling_categories: req_selling_categories,
-                            website_template: req_website_template,
-                            first_product_name: req_product_name,
-                            first_product_price: req_product_price,
-                            domain_choice: req_domain_choice,
-                        });
-
-                        match client.start_onboarding(onboarding_request).await {
-                            Ok(resp) => {
-                                let r = resp.into_inner();
-                                let msg = r.message.clone();
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(ui) = handle_clone.upgrade() {
-                                        ui.set_launch_status("Onboarding Complete!".into());
-                                        ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // Go to checklist
-                                    }
-                                }).unwrap();
-                            }
-                            Err(e) => {
-                                let err_msg = e.to_string();
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(ui) = handle_clone.upgrade() {
-                                        ui.set_launch_status("Onboarding Failed".into());
-                                        ui.set_launch_details(err_msg.into());
-                                    }
-                                }).unwrap();
-                            }
-                        }
-
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        }
-                    }
-                    Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
-                    }
-                }
-            });
-        }
-    });
-
-    setup_wizard_ui.run()?;
+    login_ui.run()?;
     
     Ok(())
 }
