@@ -10,6 +10,8 @@ struct CircuitBreaker {
     reset_timeout: Duration,
 }
 
+#[allow(dead_code)]
+
 impl CircuitBreaker {
     fn new(max_failures: usize, reset_timeout: Duration) -> Self {
         CircuitBreaker {
@@ -49,11 +51,14 @@ impl CircuitBreaker {
 
 static GLOBAL_PLANE_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 
+#[allow(dead_code)]
+
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_PLANE_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(30)))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Issue {
     pub id: String,
     pub name: String,
@@ -63,9 +68,12 @@ pub struct Issue {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct IssueListResponse {
     results: Vec<Issue>,
 }
+
+#[allow(dead_code)]
 
 pub struct Client {
     pub base_url: String,
@@ -75,6 +83,8 @@ pub struct Client {
     http_client: reqwest::Client,
     cb: &'static CircuitBreaker,
 }
+
+#[allow(dead_code)]
 
 impl Client {
     pub fn new_from_env() -> Self {

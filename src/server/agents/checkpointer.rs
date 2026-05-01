@@ -15,6 +15,7 @@ pub struct Checkpoint {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
+    #[allow(dead_code)]
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
@@ -32,6 +33,7 @@ impl PgCheckpointer {
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
+    #[allow(dead_code)]
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let row = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"

@@ -15,34 +15,54 @@ pub enum Status {
     WaitingForTools,
 }
 
+#[allow(dead_code)]
+
 pub const EVENT_TASK: &str = "task";
+#[allow(dead_code)]
 pub const EVENT_STATUS: &str = "status";
+#[allow(dead_code)]
 pub const EVENT_HANDOFF: &str = "handoff";
+#[allow(dead_code)]
 pub const EVENT_CODE_REVIEWED: &str = "CodeReviewed";
+#[allow(dead_code)]
 pub const EVENT_TESTS_PASSED: &str = "TestsPassed";
+#[allow(dead_code)]
 pub const EVENT_SPEC_APPROVED: &str = "SpecApproved";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_RAISED: &str = "BlockerRaised";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_CLEARED: &str = "BlockerCleared";
+#[allow(dead_code)]
 pub const EVENT_PR_CREATED: &str = "PRCreated";
+#[allow(dead_code)]
 pub const EVENT_PR_MERGED: &str = "PRMerged";
+#[allow(dead_code)]
 pub const EVENT_DESIGN_REVIEWED: &str = "DesignReviewed";
+#[allow(dead_code)]
 pub const EVENT_APPROVAL_NEEDED: &str = "ApprovalNeeded";
+
+#[allow(dead_code)]
 
 pub const AVAILABLE_MCP_BUNDLES: &[&str] = &[
     "github",
 ];
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
     async fn receive(&self) -> Result<Vec<u8>, String>;
     async fn close(&self) -> Result<(), String>;
 }
 
+#[allow(dead_code)]
+
 pub struct InProcessTransport<R, W> {
     reader: tokio::sync::Mutex<tokio::io::BufReader<R>>,
     writer: tokio::sync::Mutex<W>,
 }
+
+#[allow(dead_code)]
 
 impl<R, W> InProcessTransport<R, W>
 where
@@ -91,11 +111,15 @@ where
     }
 }
 
+#[allow(dead_code)]
+
 pub struct RedisPubSubTransport {
     client: redis::Client,
     publish_chan: String,
     pubsub: tokio::sync::Mutex<redis::aio::PubSub>,
 }
+
+#[allow(dead_code)]
 
 impl RedisPubSubTransport {
     pub async fn new(client: redis::Client, publish_chan: &str, subscribe_chan: &str) -> Result<Self, String> {
@@ -133,6 +157,8 @@ impl Transport for RedisPubSubTransport {
         Ok(())
     }
 }
+
+#[allow(dead_code)]
 
 pub trait AgentExt {
     fn base_system_prompt(&self) -> String;

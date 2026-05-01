@@ -15,6 +15,7 @@ use sqlx::PgPool;
 
 pub enum ExecutionEvent {
     Stdout(String),
+    #[allow(dead_code)]
     Stderr(String),
     ExitCode(i32),
     Error(String),

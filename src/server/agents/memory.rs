@@ -13,9 +13,13 @@ pub struct EmbeddingRecord {
     pub created_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
+
 pub struct VectorRepository {
     pool: sqlx::PgPool,
 }
+
+#[allow(dead_code)]
 
 impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {

@@ -11,6 +11,7 @@ pub struct CapabilityProfile {
 
 pub trait SandboxViolationStore: Send + Sync {
     fn log_violation(&self, session_id: &str, capability: &str, tool_name: &str) -> Result<(), String>;
+    #[allow(dead_code)]
     fn get_violations(&self, session_id: &str) -> Result<Vec<String>, String>;
 }
 
@@ -44,6 +45,8 @@ impl SandboxViolationStore for InMemoryViolationStore {
         
         Ok(())
     }
+
+    #[allow(dead_code)]
 
     fn get_violations(&self, session_id: &str) -> Result<Vec<String>, String> {
         let violations = self.violations.read().unwrap();

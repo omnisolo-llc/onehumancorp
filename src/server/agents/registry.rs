@@ -11,6 +11,8 @@ pub struct Registry {
     providers: RwLock<HashMap<ProviderType, Arc<dyn Provider>>>,
 }
 
+#[allow(dead_code)]
+
 impl Registry {
     pub fn new() -> Self {
         Registry {

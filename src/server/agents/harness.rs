@@ -22,6 +22,7 @@ pub struct Policy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[allow(dead_code)]
 pub struct Config {
     #[serde(rename = "defaultPolicy")]
     pub default_policy: Policy,
@@ -60,6 +61,8 @@ impl BwrapRunner {
     pub fn new(validator: Arc<ASTValidator>) -> Self {
         BwrapRunner { validator }
     }
+
+    #[allow(dead_code)]
 
     pub fn is_bwrap_available(&self) -> bool {
         std::process::Command::new("bwrap")
@@ -141,6 +144,8 @@ impl BwrapRunner {
         args
     }
 
+    #[allow(dead_code)]
+
     pub async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
         self.validator.validate(command)?;
 
@@ -170,17 +175,22 @@ impl BwrapRunner {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ResultModel {
     pub stdout: String,
     pub stderr: String,
     pub exit_code: i32,
 }
 
+#[allow(dead_code)]
+
 pub struct Manager {
     config: Config,
     validator: Arc<ASTValidator>,
     runner: Arc<BwrapRunner>,
 }
+
+#[allow(dead_code)]
 
 impl Manager {
     pub fn new(config: Config) -> Self {
@@ -203,6 +213,8 @@ impl Manager {
 pub trait CapabilityStore: Send + Sync {
     async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String>;
 }
+
+#[allow(dead_code)]
 
 pub struct DBCapabilityStore {
     pub pool: sqlx::PgPool,

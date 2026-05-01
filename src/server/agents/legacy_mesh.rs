@@ -65,6 +65,8 @@ impl DistributedLock {
     }
 }
 
+#[allow(dead_code)]
+
 pub struct Mission {
     pub mission_id: String,
     pub title: String,

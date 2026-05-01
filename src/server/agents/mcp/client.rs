@@ -91,6 +91,8 @@ impl MCPClient {
         response.result.ok_or_else(|| "missing result in MCP response".to_string())
     }
 
+    #[allow(dead_code)]
+
     pub async fn list_tools(&self) -> Result<Value, String> {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
