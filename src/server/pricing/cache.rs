@@ -54,15 +54,17 @@ impl LocalEmbeddingCache {
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let pruned = AtomicUsize::new(0);
-        self.entries.retain(|_, entry| {
-            let keep = now <= entry.expires_at;
-            if !keep {
-                pruned.fetch_add(1, Ordering::SeqCst);
-            }
-            keep
-        });
-        pruned.into_inner()
+        let expired_keys: Vec<String> = self.entries.iter()
+            .filter(|entry| now > entry.value().expires_at)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        let pruned = expired_keys.len();
+        for key in expired_keys {
+            self.entries.remove(&key);
+        }
+
+        pruned
     }
 }
 
@@ -124,15 +126,17 @@ impl CompressedEmbeddingCache {
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let pruned = AtomicUsize::new(0);
-        self.entries.retain(|_, entry| {
-            let keep = now <= entry.expires_at;
-            if !keep {
-                pruned.fetch_add(1, Ordering::SeqCst);
-            }
-            keep
-        });
-        pruned.into_inner()
+        let expired_keys: Vec<String> = self.entries.iter()
+            .filter(|entry| now > entry.value().expires_at)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        let pruned = expired_keys.len();
+        for key in expired_keys {
+            self.entries.remove(&key);
+        }
+
+        pruned
     }
 }
 
