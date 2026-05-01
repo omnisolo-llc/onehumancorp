@@ -1354,7 +1354,12 @@ mod cost_transparency_e2e_tests {
 
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        // if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        // Use backend logic to circumvent winit display panic in headless env
+        let display_var = std::env::var("DISPLAY").unwrap_or_default();
+        let wayland_var = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
+        if display_var.is_empty() && wayland_var.is_empty() { return; }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1386,6 +1391,19 @@ mod cost_transparency_e2e_tests {
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
+        // Assert properties to make sure new plain-language labels exist and work
+        dashboard_ui.set_todays_sales("$125.50".into());
+        dashboard_ui.set_new_orders_count(3);
+        dashboard_ui.set_active_helpers_count(2);
+        dashboard_ui.set_tasks_in_progress_count(1);
+
+        assert_eq!(dashboard_ui.get_todays_sales(), "$125.50");
+        assert_eq!(dashboard_ui.get_new_orders_count(), 3);
+
+        // Assert toggling Quick Actions Hint via ? icon logic
+        assert!(!dashboard_ui.get_show_quick_actions_hint());
+        dashboard_ui.set_show_quick_actions_hint(true);
+        assert!(dashboard_ui.get_show_quick_actions_hint());
 
         let pending_tasks = vec![
             app::UiPendingApproval {
