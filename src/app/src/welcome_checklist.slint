@@ -9,6 +9,9 @@ export component WelcomeChecklist inherits Window {
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     callback go_to_dashboard();
+    callback go_to_add_products();
+    callback go_to_connect_instagram();
+    callback go_to_share_link();
 
     VerticalBox {
         alignment: center;
@@ -37,17 +40,32 @@ export component WelcomeChecklist inherits Window {
                 HorizontalBox {
                     spacing: 10px;
                     Text { text: "○"; color: white; }
-                    Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        clicked => { root.go_to_add_products(); }
+                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                    }
                 }
                 HorizontalBox {
                     spacing: 10px;
                     Text { text: "○"; color: white; }
-                    Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        clicked => { root.go_to_connect_instagram(); }
+                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                    }
                 }
                 HorizontalBox {
                     spacing: 10px;
                     Text { text: "○"; color: white; }
-                    Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        clicked => { root.go_to_share_link(); }
+                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                    }
                 }
 
                 Button {
