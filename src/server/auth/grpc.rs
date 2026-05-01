@@ -7,7 +7,6 @@ enum AuthMode {
     Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
-    OAuth { jwks_uri: String, audience: String, issuer: String },
 }
 
 #[derive(Debug, Clone)]
@@ -24,15 +23,6 @@ impl AuthConfig {
             let h = hmac_token(&tok);
             return AuthConfig { mode: AuthMode::Token(h) };
         }
-        if let (Ok(jwks_uri), Ok(audience), Ok(issuer)) = (
-            std::env::var("OHC_OAUTH_JWKS_URI"),
-            std::env::var("OHC_OAUTH_AUDIENCE"),
-            std::env::var("OHC_OAUTH_ISSUER"),
-        ) {
-            return AuthConfig {
-                mode: AuthMode::OAuth { jwks_uri, audience, issuer }
-            };
-        }
         // Default: SPIFFE mode
         AuthConfig {
             mode: AuthMode::SPIFFE {
@@ -46,7 +36,6 @@ impl AuthConfig {
             AuthMode::Disabled => Ok(()),
             AuthMode::Token(expected_hash) => self.check_token(req, expected_hash),
             AuthMode::SPIFFE { allowed_id } => self.check_spiffe(req, allowed_id.as_deref()),
-            AuthMode::OAuth { jwks_uri, audience, issuer } => self.check_oauth(req, jwks_uri.as_str(), audience.as_str(), issuer.as_str()),
         }
     }
 
@@ -94,47 +83,6 @@ impl AuthConfig {
         }
 
         Ok(())
-    }
-
-    fn check_oauth(&self, req: &Request<()>, _jwks_uri: &str, audience: &str, issuer: &str) -> Result<(), Status> {
-        let md = req.metadata();
-        let auth_header = md.get("authorization")
-            .ok_or_else(|| Status::unauthenticated("missing authorization header"))?;
-
-        let auth_str = auth_header.to_str()
-            .map_err(|_| Status::unauthenticated("invalid authorization header"))?;
-
-        if !auth_str.starts_with("Bearer ") {
-            return Err(Status::unauthenticated("authorization must be Bearer token"));
-        }
-
-        let token = &auth_str["Bearer ".len()..];
-
-        if token.split('.').count() != 3 {
-            return Err(Status::unauthenticated("invalid jwt token format"));
-        }
-
-        let cfg = crate::oidc::OIDCConfig {
-            issuer_url: issuer.to_string(),
-            client_id: audience.to_string(),
-            enabled: true,
-        };
-
-        // We must block on the async validation because interceptors are synchronous.
-        let handle = tokio::runtime::Handle::try_current()
-            .map_err(|_| Status::internal("no tokio runtime context"))?;
-
-        let token_str = token.to_string();
-        let result = tokio::task::block_in_place(move || {
-            handle.block_on(async {
-                crate::oidc::validate_oidc_token(&token_str, &cfg).await
-            })
-        });
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Status::unauthenticated(format!("invalid oauth token: {}", e))),
-        }
     }
 }
 

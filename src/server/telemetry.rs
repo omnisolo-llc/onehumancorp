@@ -63,12 +63,7 @@ fn is_sensitive_key(key: &str) -> bool {
     k.contains("token") ||
     k.contains("auth") ||
     k.contains("cookie") ||
-    k.contains("credential") ||
-    k.contains("tenant_id") ||
-    k.contains("org_id") ||
-    k.contains("session_id") ||
-    k.contains("session_data") ||
-    k.contains("payload")
+    k.contains("credential")
 }
 
 fn is_email(s: &str) -> bool {

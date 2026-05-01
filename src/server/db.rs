@@ -26,42 +26,7 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let mut final_db_url = database_url.clone();
-            if env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
-                use std::io::{Read, Write};
-                let path = ".ohc_sqlite_key";
-                let key = if std::path::Path::new(path).exists() {
-                    let mut file = std::fs::File::open(path)?;
-                    let mut key_str = String::new();
-                    file.read_to_string(&mut key_str)?;
-                    key_str.trim().to_string()
-                } else {
-                    use rand::RngCore;
-                    let mut rng = rand::thread_rng();
-                    let mut random_bytes = [0u8; 32];
-                    rng.fill_bytes(&mut random_bytes);
-                    let new_key = hex::encode(random_bytes);
-                    let mut options = std::fs::OpenOptions::new();
-                    options.write(true).create_new(true);
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::OpenOptionsExt;
-                        options.mode(0o600);
-                    }
-                    let mut file = options.open(path)?;
-                    file.write_all(new_key.as_bytes())?;
-                    new_key
-                };
-                if !final_db_url.contains("cipher=sqlcipher") {
-                    if final_db_url.contains('?') {
-                        final_db_url = format!("{}&cipher=sqlcipher&key={}", final_db_url, key);
-                    } else {
-                        final_db_url = format!("{}?cipher=sqlcipher&key={}", final_db_url, key);
-                    }
-                }
-            }
-
-            let conn_opts = SqliteConnectOptions::from_str(&final_db_url)?
+            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
@@ -76,7 +41,7 @@ impl DB {
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'none'").await?;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
                         Ok(true)
                     })
                 })
@@ -262,7 +227,7 @@ mod autodream_db_tests {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'none'").await?;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
                     Ok(true)
                 })
             })
@@ -289,7 +254,7 @@ mod autodream_db_tests {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'none'").await?;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
                     Ok(true)
                 })
             })

@@ -1,3 +1,10 @@
+pub mod catalog;
 pub mod hybrid_discovery;
 pub mod registry;
+pub mod chat;
+pub mod chatwoot;
+pub mod githubissues;
+pub mod imessage;
+pub mod jira;
+pub mod obsidian;
 pub mod pubsub;

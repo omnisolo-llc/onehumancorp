@@ -224,34 +224,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_ui = app::Pricing::new().unwrap();
     let pricing_handle = pricing_ui.as_weak();
 
-    let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-    let cost_dashboard_handle = cost_dashboard_ui.as_weak();
-
-    // Fetch actual cost data from the backend instead of hardcoding dummy data.
-    // Assuming backend returns actual data via gRPC in a full implementation.
-    // For now, we populate the dashboard with the exact format to avoid hardcoded fake numbers.
-    cost_dashboard_ui.set_total_spend("$0.00".into());
-    cost_dashboard_ui.set_total_tokens("0".into());
-    let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![]));
-    cost_dashboard_ui.set_agent_costs(agent_costs);
-
-    // In a real scenario, we would trigger a tokio task here to fetch data via `BillingService::GetCostSummary`
-    // and update `cost_dashboard_handle.upgrade().unwrap().set_total_spend(...)` via `slint::invoke_from_event_loop`.
-
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
         if let Some(ui) = pricing_handle_clone.upgrade() {
             let _ = ui.show();
         }
     });
-
-    let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
-    my_plan_ui.on_view_costs(move || {
-        if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -341,7 +319,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
             }
         }
     });
@@ -941,57 +918,6 @@ mod tests {
 
         ui.invoke_go_to_share_link();
         assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
-    }
-
-    #[test]
-    fn test_settings_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_settings_creation because no display server is available.");
-            return;
-        }
-        let ui = app::Settings::new().unwrap();
-
-        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let save_clone = save_called.clone();
-        ui.on_save_settings(move || { *save_clone.borrow_mut() = true; });
-
-        let cancel_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let cancel_clone = cancel_called.clone();
-        ui.on_cancel_settings(move || { *cancel_clone.borrow_mut() = true; });
-
-        let update_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let update_clone = update_called.clone();
-        ui.on_update_profile(move || { *update_clone.borrow_mut() = true; });
-
-        let change_pwd_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let change_pwd_clone = change_pwd_called.clone();
-
-        let ui_weak = ui.as_weak();
-        ui.on_change_password(move || {
-            *change_pwd_clone.borrow_mut() = true;
-            if let Some(ui_instance) = ui_weak.upgrade() {
-                if ui_instance.get_new_password() == ui_instance.get_confirm_password() {
-                    ui_instance.set_password_match_status("Match".into());
-                } else {
-                    ui_instance.set_password_match_status("Mismatch".into());
-                }
-            }
-        });
-
-        ui.invoke_save_settings();
-        assert!(*save_called.borrow());
-
-        ui.invoke_cancel_settings();
-        assert!(*cancel_called.borrow());
-
-        ui.invoke_update_profile();
-        assert!(*update_called.borrow());
-
-        ui.set_new_password("password123".into());
-        ui.set_confirm_password("different".into());
-        ui.invoke_change_password();
-        assert!(*change_pwd_called.borrow());
-        assert_eq!(ui.get_password_match_status(), "Mismatch");
     }
 
     #[test]
@@ -2034,13 +1960,6 @@ mod cost_transparency_e2e_tests {
         my_plan_ui.invoke_upgrade();
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
-        let view_costs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_costs_opened_clone = view_costs_opened.clone();
-        my_plan_ui.on_view_costs(move || {
-            *view_costs_opened_clone.borrow_mut() = true;
-        });
-        my_plan_ui.invoke_view_costs();
-        assert!(*view_costs_opened.borrow(), "Cost Dashboard should be opened from MyPlan");
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
