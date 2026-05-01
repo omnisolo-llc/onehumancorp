@@ -920,7 +920,15 @@ mod tests {
     #[test]
     fn test_integrations_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Integrations::new().unwrap();
+        let ui = app::Integrations::new().unwrap();
+
+        let tool = app::UiMcpTool {
+            id: "1".into(),
+            name: "test".into(),
+            description: "test".into(),
+        };
+
+        ui.set_tools(std::rc::Rc::new(slint::VecModel::from(vec![tool])).into());
     }
     #[test]
     fn test_security_creation() {
@@ -1415,10 +1423,12 @@ mod docs_tests {
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_agent("Customer Support".into());
         ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
         ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 2);
 
         // Step 2: Frequency -> Step 3
         ui.set_frequency_value(2.0); // 2.0 maps to "Daily"

@@ -20,7 +20,7 @@ test.describe('Dashboard UX', () => {
     await expect(page.locator('text=Dashboard').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=New Orders')).toBeVisible();
-    await expect(page.locator('text=Active AI Helpers')).toBeVisible();
+    await expect(page.locator('text=Active Assistants')).toBeVisible();
     await expect(page.locator('text=Tasks in Progress')).toBeVisible();
 
     // Verify softer wording for drafts
@@ -65,7 +65,7 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 
   await expect(page.locator('button:has-text("Help Center")')).toBeVisible();
   await expect(page.locator('button:has-text("Billing")')).toBeVisible();
-  await expect(page.locator('button:has-text("API Docs")')).toBeVisible();
+  await expect(page.locator('button:has-text("Developer Tools")')).toBeVisible();
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
