@@ -1,8 +1,8 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox, ComboBox, TextEdit } from "std-widgets.slint";
 
 export component Settings inherits Window {
     width: 500px;
-    height: 700px;
+    height: 1200px;
     title: "Settings";
 
     property <bool> standalone_mode: true;
@@ -14,15 +14,83 @@ export component Settings inherits Window {
     in-out property <string> user_role;
     in-out property <bool> local_service_running: true;
 
+    in-out property <bool> email_notifications: false;
+    in-out property <bool> push_notifications: false;
+    in-out property <string> timezone: "";
+    in-out property <string> language: "";
+    in-out property <string> theme: "";
+    in-out property <string> date_format: "";
+    in-out property <string> bio: "";
+    in-out property <string> phone_number: "";
+
+    in-out property <string> current_password: "";
+    in-out property <string> new_password: "";
+    in-out property <string> confirm_password: "";
+    in-out property <string> password_match_status: "";
+
     callback start_stop_service();
     callback run_doctor();
     callback trigger_hybrid_sync();
+
+    callback save_settings();
+    callback cancel_settings();
+    callback update_profile();
+    callback change_password();
 
     background: #f8fafc;
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        Text { text: "General"; font-weight: 700; color: #1e293b; font-size: 20px; }
+
+        HorizontalBox {
+            Text { text: "Timezone"; }
+            ComboBox { model: ["UTC", "PST"]; current-value <=> timezone; }
+        }
+
+        HorizontalBox {
+            Text { text: "Language"; }
+            ComboBox { model: ["English", "Spanish"]; current-value <=> language; }
+        }
+
+        HorizontalBox {
+            Text { text: "Theme"; }
+            ComboBox { model: ["Light", "Dark"]; current-value <=> theme; }
+        }
+
+        HorizontalBox {
+            Text { text: "Date Format"; }
+            ComboBox { model: ["MM/DD/YYYY", "DD/MM/YYYY"]; current-value <=> date_format; }
+        }
+
+        Text { text: "Notification"; font-weight: 700; color: #1e293b; font-size: 20px; }
+        CheckBox { text: "Email"; checked <=> email_notifications; }
+        CheckBox { text: "Push"; checked <=> push_notifications; }
+
+        HorizontalBox {
+            Button { text: "Save"; clicked => { save_settings(); } }
+            Button { text: "Cancel"; clicked => { cancel_settings(); } }
+        }
+
+        Text { text: "Profile"; font-weight: 700; color: #1e293b; font-size: 20px; }
+        Text { text: "Photo / Avatar"; }
+        LineEdit { placeholder-text: "Photo URL or File"; }
+
+        LineEdit { placeholder-text: "Name"; text <=> user_name; }
+        TextEdit { text <=> bio; }
+        LineEdit { placeholder-text: "Email"; text <=> user_email; }
+        LineEdit { placeholder-text: "Phone"; text <=> phone_number; }
+
+        Button { text: "Update"; clicked => { update_profile(); } }
+
+        Text { text: "Password / Security"; font-weight: 700; color: #1e293b; font-size: 20px; }
+        LineEdit { placeholder-text: "Current Password"; text <=> current_password; }
+        LineEdit { placeholder-text: "New Password"; text <=> new_password; }
+        LineEdit { placeholder-text: "Confirm Password"; text <=> confirm_password; }
+        Text { text: password_match_status; }
+        Button { text: "Change"; clicked => { change_password(); } }
 
         // User Info
         Rectangle {
