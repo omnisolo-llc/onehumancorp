@@ -149,6 +149,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    attach_setup_wizard_handlers(&setup_wizard_ui);
+
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1257,6 +1259,7 @@ mod docs_tests {
 
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
+        attach_setup_wizard_handlers(&ui);
 
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
@@ -2191,4 +2194,147 @@ mod cost_transparency_e2e_tests {
         assert_eq!(*plan_selected.borrow(), "Pro");
     }
 
+}
+
+fn attach_setup_wizard_handlers(ui: &app::SetupWizard) {
+    let setup_wizard_handle = ui.as_weak();
+
+    ui.on_save_state({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+            ]);
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
+    ui.on_next_step({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_step(ui.get_step() + 1);
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_select_business_type({
+        let ui_handle = setup_wizard_handle.clone();
+        move |t| {
+            let ui = ui_handle.unwrap();
+            ui.set_business_type(t);
+            ui.set_step(ui.get_step() + 1);
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_sell_physical({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_sell_physical(!ui.get_sell_physical());
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_sell_digital({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_sell_digital(!ui.get_sell_digital());
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_sell_services({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_sell_services(!ui.get_sell_services());
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_sell_food({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_sell_food(!ui.get_sell_food());
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_sell_subscriptions({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_sell_subscriptions(!ui.get_sell_subscriptions());
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_select_payment_pref({
+        let ui_handle = setup_wizard_handle.clone();
+        move |pref| {
+            let ui = ui_handle.unwrap();
+            ui.set_payment_pref(pref);
+            ui.set_step(ui.get_step() + 1);
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_select_template({
+        let ui_handle = setup_wizard_handle.clone();
+        move |t| {
+            let ui = ui_handle.unwrap();
+            ui.set_website_template(t);
+            ui.set_step(ui.get_step() + 1);
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_select_domain({
+        let ui_handle = setup_wizard_handle.clone();
+        move |d| {
+            let ui = ui_handle.unwrap();
+            ui.set_domain_choice(d);
+            ui.set_step(ui.get_step() + 1);
+            ui.invoke_save_state();
+        }
+    });
+
+    ui.on_toggle_advanced({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_is_advanced(!ui.get_is_advanced());
+            ui.invoke_save_state();
+        }
+    });
 }
