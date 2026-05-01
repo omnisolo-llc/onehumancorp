@@ -74,7 +74,14 @@ impl MeshTransport for MemoryTransport {
         let now = std::time::Instant::now();
 
         // Remove expired locks
-        self.locks.retain(|_, (_, expires_at)| *expires_at > now);
+        let expired_keys: Vec<String> = self.locks.iter()
+            .filter(|entry| entry.value().1 <= now)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        for key in expired_keys {
+            self.locks.remove(&key);
+        }
 
         let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
         use dashmap::mapref::entry::Entry;
@@ -104,7 +111,14 @@ impl MeshTransport for MemoryTransport {
         let now = std::time::Instant::now();
 
         // Remove expired
-        self.presence.retain(|_, (_, expires_at)| *expires_at > now);
+        let expired_keys: Vec<String> = self.presence.iter()
+            .filter(|entry| entry.value().1 <= now)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        for key in expired_keys {
+            self.presence.remove(&key);
+        }
 
         let agents = self.presence.iter()
             .map(|entry| (entry.key().clone(), entry.value().0.clone()))
