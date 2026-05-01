@@ -1,0 +1,22 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "mesh",
+    srcs = [
+        "lib.rs",
+        "transport.rs",
+    ],
+    crate_name = "ohc_mesh",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:redis",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tokio-stream",
+    ],
+)

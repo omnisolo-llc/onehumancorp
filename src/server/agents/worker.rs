@@ -3,19 +3,22 @@ use tokio::sync::Mutex;
 use crate::agents::plane::Client as PlaneClient;
 use crate::hub::Hub;
 use crate::agents::plane::Issue;
+use ohc_mesh::transport::{MeshTransport, Message};
 
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
     hub: Arc<Hub>,
+    transport: Arc<dyn MeshTransport>,
     poll_interval: std::time::Duration,
     num_workers: usize,
 }
 
 impl TaskWorker {
-    pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>) -> Self {
+    pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>, transport: Arc<dyn MeshTransport>) -> Self {
         TaskWorker {
             plane_client,
             hub,
+            transport,
             poll_interval: std::time::Duration::from_secs(30),
             num_workers: 3,
         }
@@ -35,6 +38,7 @@ impl TaskWorker {
             let worker_id = i;
             let plane_client = self.plane_client.clone();
             let hub = self.hub.clone();
+            let transport = self.transport.clone();
             
             let handle = tokio::spawn(async move {
                 loop {
@@ -45,7 +49,7 @@ impl TaskWorker {
                     
                     if let Some(issue) = issue {
                         println!("Worker {}: processing issue {}", worker_id, issue.id);
-                        Self::process_issue_internal(issue, plane_client.clone(), hub.clone()).await;
+                        Self::process_issue_internal(issue, plane_client.clone(), hub.clone(), transport.clone()).await;
                     } else {
                         break; // Channel closed
                     }
@@ -83,7 +87,7 @@ impl TaskWorker {
         });
     }
 
-    async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
+    async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>, transport: Arc<dyn MeshTransport>) {
         println!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
@@ -124,7 +128,7 @@ impl TaskWorker {
                     let agent_id = a.id.clone();
                     
                     tokio::spawn(async move {
-                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
+                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role, transport.clone()).await {
                             println!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
                         }
                     });
@@ -140,30 +144,24 @@ impl TaskWorker {
         }
     }
 
-    async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str) -> Result<(), String> {
-        let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
-        
-        let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
-            .await
-            .map_err(|e| format!("connect to builtin agent at {}: {}", address, e))?;
-            
+    async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str, transport: Arc<dyn MeshTransport>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
         let req = crate::ohc::agent::service::RunTaskRequest {
+            task_id: format!("task-{}", chrono::Utc::now().timestamp_nanos()),
             task: payload.to_string(),
             department: role.to_string(),
             ..Default::default()
         };
         
-        let response = client.run_task(req).await.map_err(|e| e.to_string())?;
-        let mut stream = response.into_inner();
+        let mut buf = Vec::new();
+        req.encode(&mut buf).map_err(|e| e.to_string())?;
         
-        let mut last_content = String::new();
-        while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
-            if !event.content.is_empty() {
-                last_content = event.content;
-            }
-        }
+        transport.publish("agent_jobs", Message {
+            topic: "agent_jobs".to_string(),
+            payload: buf,
+        }).await?;
         
-        println!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
+        println!("builtin agent task dispatched via MeshTransport: {}", description);
         Ok(())
     }
 }

@@ -1,4 +1,3 @@
-pub mod mesh;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -908,7 +907,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     autodream_worker.start();
 
     // Start Mesh API server
-    let mesh_transport = mesh::transport::create_transport(
+    let mesh_transport = ohc_mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
@@ -918,9 +917,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
 
-        .with_state(mesh_transport);
+        .with_state(mesh_transport.clone());
 
-    let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
+
+    // Listen for agent_sync requests to support hybrid mode state handoff
+    let sync_hub = hub.clone();
+    let sync_transport = mesh_transport.clone();
+    let sync_transport_for_sub = sync_transport.clone();
+    let _ = sync_transport.subscribe("agent_sync", Box::new(move |msg| {
+        let sync_transport = sync_transport_for_sub.clone();
+        let agent_id = String::from_utf8_lossy(&msg.payload).to_string();
+        tracing::info!("Received state sync request for agent: {}", agent_id);
+
+        let mut pending_jobs = Vec::new();
+        let tasks = sync_hub.task_manager().poll_tasks(&agent_id, 100);
+        for task in tasks {
+            pending_jobs.push(task);
+        }
+
+        let transport = sync_transport.clone();
+        tokio::spawn(async move {
+            use prost::Message as ProstMessage;
+            for task in pending_jobs {
+                let req = crate::ohc::agent::service::RunTaskRequest {
+                    task_id: task.id.clone(),
+                    task: task.description.unwrap_or_default(),
+                    department: "agent".to_string(),
+                    ..Default::default()
+                };
+
+                let mut buf = Vec::new();
+                if req.encode(&mut buf).is_ok() {
+                    let _ = transport.publish("agent_jobs", ohc_mesh::transport::Message {
+                        topic: "agent_jobs".to_string(),
+                        payload: buf,
+                    }).await;
+                }
+            }
+        });
+    })).await;
+let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
         println!("Mesh WebSocket server listening on {}", mesh_addr);

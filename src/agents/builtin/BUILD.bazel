@@ -32,9 +32,11 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/mesh",
         "@crates//:chrono",
         "@crates//:hmac",
         "@crates//:once_cell",
+        "@crates//:prost",
         "@crates//:regex",
         "@crates//:serde",
         "@crates//:serde_json",
@@ -114,6 +116,7 @@ rust_binary(
     deps = [
         ":core",
         ":ohc_builtin_agent_lib",
+        "//src/mesh",
     ] + [
         "@crates//:base64",
         "@crates//:chrono",

@@ -234,3 +234,57 @@ mod tests {
         assert_eq!(evt.event_type, SubagentEventType::Spawned);
     }
 }
+
+
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TeammateMeshEvent {
+    #[prost(string, tag = "1")]
+    pub agent_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub action: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub status: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "4")]
+    pub payload: ::prost::alloc::vec::Vec<u8>,
+}
+
+impl SubagentLifecycleEvent {
+    pub fn into_mesh_message(self, channel: &str) -> ohc_mesh::transport::Message {
+        use prost::Message;
+        let action = match self.event_type {
+            SubagentEventType::Spawned => "spawned",
+            SubagentEventType::Heartbeat => "heartbeat",
+            SubagentEventType::Completed => "completed",
+            SubagentEventType::Failed => "failed",
+            SubagentEventType::Killed => "killed",
+            SubagentEventType::Unspecified => "unspecified",
+        }.to_string();
+
+        let status = if let Some(ref notif) = self.notification {
+            notif.status.clone()
+        } else {
+            action.clone()
+        };
+
+        let inner_json = serde_json::json!({
+            "task_id": self.task_id,
+            "parent_task_id": self.parent_task_id,
+            "timestamp_ms": self.timestamp_ms,
+        }).to_string();
+
+        let event = TeammateMeshEvent {
+            agent_id: self.task_id.clone(),
+            action,
+            status,
+            payload: inner_json.into_bytes(),
+        };
+
+        let mut buf = Vec::new();
+        event.encode(&mut buf).unwrap();
+
+        ohc_mesh::transport::Message {
+            topic: channel.to_string(),
+            payload: buf,
+        }
+    }
+}

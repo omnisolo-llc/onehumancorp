@@ -1,5 +1,6 @@
+pub mod transport;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message};
+use crate::transport::{MeshTransport, Message};
 
 pub struct LocalTeammateMesh {
     transport: Arc<dyn MeshTransport>,

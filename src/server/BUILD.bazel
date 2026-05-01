@@ -28,6 +28,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":build_script",
+        "//src/mesh",
         "@crates//:aes-gcm",
         "@crates//:axum",
         "@crates//:base64",
@@ -77,6 +78,7 @@ rust_test(
     ],
     deps = [
         ":build_script",
+        "//src/mesh",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:bcrypt",

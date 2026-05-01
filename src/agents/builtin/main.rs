@@ -90,73 +90,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 
-    let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
-    
-    let redis_url_clone = redis_url.clone();
+        let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
+    let standalone = env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let transport = ohc_mesh::transport::create_transport(
+        Some(redis_url.as_str()),
+        standalone
+    ).await.expect("Failed to create MeshTransport in builtin agent");
+
+    // State Handoff: Publish a sync request to the mesh on startup.
+    // The server listens to "agent_sync" and will re-publish any pending tasks for this agent
+    // to "agent_jobs", guaranteeing no missed tasks during mode switches.
+    let agent_id_for_sync = agent_id.clone();
+    let transport_for_sync = transport.clone();
     tokio::spawn(async move {
-        tracing::info!("Connecting to Redis at {}", redis_url_clone);
-        let client = match redis::Client::open(redis_url_clone.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to open Redis client: {}", e);
-                return;
-            }
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let sync_msg = ohc_mesh::transport::Message {
+            topic: "agent_sync".to_string(),
+            payload: agent_id_for_sync.into_bytes(),
         };
-
-        let mut con = match client.get_multiplexed_async_connection().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis connection: {}", e);
-                return;
-            }
-        };
-
-        let mut pubsub = match client.get_async_pubsub().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis pubsub connection: {}", e);
-                return;
-            }
-        };
-
-        if let Err(e) = pubsub.subscribe("agent_jobs").await {
-            tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
-            return;
-        }
-
-        tracing::info!("Subscribed to Redis channel 'agent_jobs'");
-        let mut stream = pubsub.on_message();
-        while let Some(msg) = stream.next().await {
-            let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
-            if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
-                tracing::info!("Received job from Redis: {}", req.task_id);
-
-                let svc = svc_for_redis.clone();
-                let mut con_inner = con.clone();
-
-                tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
-                        Ok(resp) => {
-                            let mut stream = resp.into_inner();
-                            while let Some(Ok(evt)) = stream.next().await {
-                                let mut buf = Vec::new();
-                                if prost::Message::encode(&evt, &mut buf).is_ok() {
-                                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                                        .arg("agent_events")
-                                        .arg(buf)
-                                        .query_async(&mut con_inner)
-                                        .await;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!("Error running task from Redis: {}", e);
-                        }
-                    }
-                });
-            }
+        if let Err(e) = transport_for_sync.publish("agent_sync", sync_msg).await {
+            tracing::warn!("Failed to publish state synchronization request: {}", e);
+        } else {
+            tracing::info!("Published state synchronization request to MeshTransport");
         }
     });
+
+    let transport_clone = transport.clone();
+    let transport_for_sub = transport.clone();
+
+    let _ = transport_for_sub.subscribe("agent_jobs", Box::new(move |msg| {
+        let payload = msg.payload;
+        if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
+            tracing::info!("Received job from MeshTransport: {}", req.task_id);
+
+            let svc = svc_for_redis.clone();
+            let transport_inner = transport_clone.clone();
+
+            tokio::spawn(async move {
+                match svc.run_task(tonic::Request::new(req)).await {
+                    Ok(resp) => {
+                        let mut stream = resp.into_inner();
+                        while let Some(Ok(evt)) = stream.next().await {
+                            let mut buf = Vec::new();
+                            if prost::Message::encode(&evt, &mut buf).is_ok() {
+                                let _ = transport_inner.publish("agent_events", ohc_mesh::transport::Message {
+                                    topic: "agent_events".to_string(),
+                                    payload: buf,
+                                }).await;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Error running task from MeshTransport: {}", e);
+                    }
+                }
+            });
+        }
+    })).await.expect("Failed to subscribe to agent_jobs");
 
     Server::builder()
         .add_service(AgentServiceServer::new(SharedAgentService(svc)))

@@ -3,7 +3,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ohc_mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
@@ -76,7 +76,7 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use crate::mesh::transport::MemoryTransport;
+    use ohc_mesh::transport::MemoryTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
