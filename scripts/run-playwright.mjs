@@ -58,7 +58,7 @@ async function main() {
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
+    env: { ...process.env, SLINT_ENABLE_ACCESSIBILITY: '1', DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
   });
 
   await setTimeout(2000); // Give server time to start

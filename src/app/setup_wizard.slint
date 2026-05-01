@@ -455,11 +455,22 @@ export component SetupWizard inherits Window {
                     height: 120px;
                 }
 
-                GlassCard {
+                if (!launching) : GlassCard {
                     height: 54px;
                     background: rgba(168, 85, 247, 1.0);
                     VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { generate_instant_preview(); } }
+                    TouchArea { clicked => {
+                        launching = true;
+                        launch_status = "The Promoter is designing your storefront...";
+                        launch_details = "AI is drafting the tagline and template...";
+                        generate_instant_preview();
+                    } }
+                }
+
+                if (launching) : GlassCard {
+                    height: 54px;
+                    background: rgba(168, 85, 247, 0.4);
+                    VerticalBox { alignment: center; Text { text: "The Promoter is designing your storefront..."; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 }
             }
 

@@ -31,6 +31,9 @@ export component Dashboard inherits Window {
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
+    in property <string> morning_briefing_title: "";
+    in property <string> morning_briefing_text: "";
+
     in-out property <bool> show_milestone: false;
     in property <string> milestone_title: "";
     in property <string> milestone_message: "";
@@ -135,6 +138,36 @@ export component Dashboard inherits Window {
                 Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
                 Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
                 Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+            }
+        }
+
+        // Morning Briefing
+        if (morning_briefing_title != "") : GlassCard {
+            border-color: #6366f1;
+            border-width: 1px;
+            background: rgba(99, 102, 241, 0.1);
+
+            VerticalBox {
+                padding: 20px;
+                spacing: 12px;
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Text { text: "☀️"; font-size: 24px; vertical-alignment: center; }
+                    Text { text: "Morning Briefing"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                }
+
+                Text { text: morning_briefing_title; font-size: 16px; font-weight: 700; color: white; }
+                Text { text: morning_briefing_text; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+
+                HorizontalBox {
+                    alignment: start;
+                    Button {
+                        text: "Add your first product";
+                        height: 44px;
+                        clicked => { action_add_product(); }
+                    }
+                }
             }
         }
 

@@ -375,6 +375,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.set_morning_briefing_title("Good morning! Your business is looking great.".into());
+                dashboard.set_morning_briefing_text("You have 2 new orders to review. Consider adding a new product to keep the momentum going!".into());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -385,16 +387,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = setup_wizard_handle.clone();
         move || {
             if let Some(ui) = ui_weak.upgrade() {
-                // Here we would normally call an AI endpoint.
-                // For now, we simulate the extraction as requested by the test and the design doc.
-                ui.set_company_name("AI Generated Store".into());
-                ui.set_business_type("Online Store".into());
-                ui.set_website_template("Modern".into());
-                ui.set_product_name("AI Fast Product".into());
-                ui.set_domain_choice("subdomain".into());
-                ui.set_admin_email("admin@ai-generated.test".into());
-                ui.set_payment_pref("online".into());
-                ui.set_step(9); // Skip straight to Review & Launch
+                let ui_for_timer = ui.as_weak();
+                tokio::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui_inner) = ui_for_timer.upgrade() {
+                            ui_inner.set_company_name("AI Generated Store".into());
+                            ui_inner.set_business_type("Online Store".into());
+                            ui_inner.set_website_template("Modern".into());
+                            ui_inner.set_product_name("AI Fast Product".into());
+                            ui_inner.set_domain_choice("subdomain".into());
+                            ui_inner.set_admin_email("admin@ai-generated.test".into());
+                            ui_inner.set_payment_pref("online".into());
+                            ui_inner.set_launching(false);
+                            ui_inner.set_step(9); // Skip straight to Review & Launch
+                        }
+                    });
+                });
             }
         }
     });
@@ -1340,6 +1349,14 @@ mod docs_tests {
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
         assert_eq!(ui.get_domain_choice(), "subdomain");
+
+        // Verify Morning Briefing is populated upon Dashboard transition
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_morning_briefing_title("Good morning! Your business is looking great.".into());
+        dashboard_ui.set_morning_briefing_text("You have 2 new orders to review. Consider adding a new product to keep the momentum going!".into());
+
+        assert_eq!(dashboard_ui.get_morning_briefing_title(), "Good morning! Your business is looking great.");
+        assert_eq!(dashboard_ui.get_morning_briefing_text(), "You have 2 new orders to review. Consider adding a new product to keep the momentum going!");
     }
 
     #[test]
