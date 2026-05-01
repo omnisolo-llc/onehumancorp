@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Walkthrough inherits Window {
     width: 600px;
     height: 500px;
-    title: "AutoDream Sync Walkthrough";
+    title: "Cloud Sync Setup";
 
     property <int> current_step: 0;
 
@@ -14,7 +14,7 @@ export component Walkthrough inherits Window {
         padding: 24px;
         alignment: center;
 
-        Text { text: "Interactive Guide: Sync Lifecycle"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "How Cloud Backup Works"; font-size: 24px; font-weight: 700; color: #1e293b; }
 
         Rectangle {
             background: white;
@@ -28,26 +28,26 @@ export component Walkthrough inherits Window {
                 spacing: 16px;
                 
                 Text {
-                    text: current_step == 0 ? "1. Generate & Insert Vector" :
-                          current_step == 1 ? "2. Query Pending Vectors" :
-                          current_step == 2 ? "3. Return Batched Vectors" :
-                          current_step == 3 ? "4. Push over mTLS" :
-                          current_step == 4 ? "5. Upsert to Global" :
-                          current_step == 5 ? "6. Acknowledge Success" :
-                          "7. Update sync_status";
+                    text: current_step == 0 ? "1. Save Locally" :
+                          current_step == 1 ? "2. Check for Updates" :
+                          current_step == 2 ? "3. Gather New Data" :
+                          current_step == 3 ? "4. Securely Upload" :
+                          current_step == 4 ? "5. Save to Cloud" :
+                          current_step == 5 ? "6. Confirm Save" :
+                          "7. Mark as Backed Up";
                     font-size: 20px;
                     font-weight: 700;
                     color: #0284c7;
                 }
                 
                 Text {
-                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
-                          current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
-                          current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
-                          current_step == 3 ? "Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS." :
-                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories)." :
-                          current_step == 5 ? "Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon." :
-                          "Sync Daemon updates the local records in SQLite, marking them as sync_status='synced'.";
+                    text: current_step == 0 ? "Your app saves new information to your phone or computer first." :
+                          current_step == 1 ? "The app checks if there's any new information that hasn't been backed up yet." :
+                          current_step == 2 ? "The app gathers all your recent changes together." :
+                          current_step == 3 ? "Your changes are safely sent to your private cloud storage." :
+                          current_step == 4 ? "Your data is securely saved in the cloud so you can access it from any device." :
+                          current_step == 5 ? "The cloud confirms everything was saved correctly." :
+                          "Your app marks the information as safely backed up!";
                     color: #1e293b;
                     wrap: word-wrap;
                 }
@@ -61,13 +61,13 @@ export component Walkthrough inherits Window {
                         spacing: 12px;
                         Text { text: "🔄"; color: #0284c7; }
                         Text {
-                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local SQLite DB" :
-                                  current_step == 1 ? "Sync Daemon -> Local SQLite DB" :
-                                  current_step == 2 ? "Local SQLite DB -> Sync Daemon" :
-                                  current_step == 3 ? "Sync Daemon -> Cloud API Gateway" :
-                                  current_step == 4 ? "Cloud API Gateway -> Cloud PostgreSQL" :
-                                  current_step == 5 ? "Cloud API Gateway -> Sync Daemon" :
-                                  "Sync Daemon -> Local SQLite DB";
+                            text: current_step == 0 ? "App -> Local Storage" :
+                                  current_step == 1 ? "Background Saver -> Local Storage" :
+                                  current_step == 2 ? "Local Storage -> Background Saver" :
+                                  current_step == 3 ? "Background Saver -> Cloud" :
+                                  current_step == 4 ? "Cloud -> Cloud Database" :
+                                  current_step == 5 ? "Cloud -> Background Saver" :
+                                  "Background Saver -> Local Storage";
                             color: #0284c7;
                             wrap: word-wrap;
                         }

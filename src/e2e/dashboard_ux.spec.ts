@@ -70,3 +70,20 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
+
+test.describe('Dashboard UI Plain Language', () => {
+  test('should use Developer Tools instead of API Docs', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    await page.waitForURL('**/*');
+    const menuBtn = page.locator('button:has-text("Menu")');
+    await expect(menuBtn).toBeVisible();
+    await menuBtn.click();
+
+    await expect(page.locator('button:has-text("API Docs")')).not.toBeVisible();
+    await expect(page.locator('button:has-text("Developer Tools")')).toBeVisible();
+  });
+});
