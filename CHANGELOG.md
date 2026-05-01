@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
 ## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🎥 Lens Audit: Softer Draft Wording (#8901)

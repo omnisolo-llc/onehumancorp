@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
+- Scaling (Cloud): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+- Privacy/Offline (Standalone): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
 ## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
 - Scaling (Cloud): 🎥 Lens Audit: Softer Draft Wording (#8901)
 - Privacy/Offline (Standalone): 🎥 Lens Audit: Softer Draft Wording (#8901)
