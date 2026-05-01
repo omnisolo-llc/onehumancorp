@@ -81,7 +81,7 @@ test.describe('Integrations Page', () => {
 
   test('should show integration usage stats', async ({ page }) => {
     await page.goto('/integrations');
-    const stats = page.locator('text=/usage|requests|api.*calls/i').first();
+    const stats = page.locator('text=/usage|requests|integration.*calls/i').first();
     await expect(stats).toBeVisible();
   });
 

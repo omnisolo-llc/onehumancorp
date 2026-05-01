@@ -86,21 +86,21 @@ test.describe('Security Settings', () => {
     }
   });
 
-  test('should show API keys section', async ({ page }) => {
+  test('should show Custom Account Keys section', async ({ page }) => {
     await page.goto('/security');
-    await expect(page.locator('text=/api.*key|key/i')).toBeVisible();
+    await expect(page.locator('text=/custom.*account.*key|key/i')).toBeVisible();
   });
 
-  test('should create API key', async ({ page }) => {
+  test('should create Custom Account Key', async ({ page }) => {
     await page.goto('/security');
     const createBtn = page.locator('button:has-text("Create"), button:has-text("New Key")').first();
     if (await createBtn.isVisible()) {
       await createBtn.click();
-      await expect(page.locator('text=/api.*key|generated/i')).toBeVisible();
+      await expect(page.locator('text=/custom.*account.*key|generated/i')).toBeVisible();
     }
   });
 
-  test('should revoke API key', async ({ page }) => {
+  test('should revoke Custom Account Key', async ({ page }) => {
     await page.goto('/security');
     const apiKeyItem = page.locator('[class*="key"]').first();
     await apiKeyItem.hover();
