@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+- Scaling (Cloud): Fix Bazel test execution time warning for `server_test` (#8941)
+- Privacy/Offline (Standalone): Fix Bazel test execution time warning for `server_test` (#8941)
+
 ## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
 - Scaling (Cloud): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
 - Privacy/Offline (Standalone): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
