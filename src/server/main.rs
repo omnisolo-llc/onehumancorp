@@ -306,32 +306,10 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let state = req.state;
 
-        let (state_json, org_id, user_id, step) = {
-            let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-            for (k, v) in state {
-                wizard_state.insert(k, serde_json::Value::String(v));
-            }
-
-            let json = serde_json::to_value(&*wizard_state).unwrap_or(serde_json::json!({}));
-            let org = wizard_state.get("organization_id").and_then(|v| v.as_str()).unwrap_or("pending_org").to_string();
-            let usr = wizard_state.get("admin_email").and_then(|v| v.as_str()).unwrap_or("pending_user").to_string();
-            let stp: i32 = wizard_state.get("step").and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0);
-            (json, org, usr, stp)
-        };
-
-        let pool = self.hub.pool.clone();
+        let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
         
-        // Wait for DB operation to ensure persistence
-        if let Err(e) = sqlx::query("INSERT INTO onboarding_state (organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4) ON CONFLICT (organization_id) DO UPDATE SET current_step = EXCLUDED.current_step, user_id = EXCLUDED.user_id, state_json = onboarding_state.state_json || EXCLUDED.state_json, updated_at = CURRENT_TIMESTAMP")
-            .bind(&org_id)
-            .bind(&user_id)
-            .bind(step)
-            .bind(state_json)
-            .execute(&pool)
-            .await
-        {
-            return Err(tonic::Status::internal(format!("Failed to persist wizard state to DB: {}", e)));
+        for (k, v) in state {
+            wizard_state.insert(k, serde_json::Value::String(v));
         }
 
         Ok(tonic::Response::new(SaveWizardStateResponse {
