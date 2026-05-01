@@ -10,6 +10,7 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+use slint::Model;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -314,6 +315,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                let dashboard_handle_for_stream = dashboard_handle.clone();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::EventStreamRequest {
+                            topic: "agent_activity".to_string(),
+                        });
+                        if let Ok(response) = client.stream_mesh_events(request).await {
+                            let mut stream = response.into_inner();
+                            while let Ok(Some(event)) = stream.message().await {
+                                let content = String::from_utf8_lossy(&event.payload).to_string();
+                                let msg_id = event.event_id.clone();
+                                let handle_clone = dashboard_handle_for_stream.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_clone.upgrade() {
+                                        let mut current_messages: Vec<app::UiMeshMessage> = ui.get_mesh_messages().iter().collect();
+                                        current_messages.push(app::UiMeshMessage {
+                                            id: msg_id.into(),
+                                            content: content.into(),
+                                        });
+                                        ui.set_mesh_messages(slint::ModelRc::new(slint::VecModel::from(current_messages)).into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                });
+
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
@@ -1799,8 +1828,7 @@ mod cost_transparency_e2e_tests {
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
-
-        // Populate mock agent activity messages
+        // Populate mock agent activity messages for E2E testing
         let mock_messages = vec![
             app::UiMeshMessage {
                 id: "msg-1".into(),
