@@ -102,6 +102,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_check_password({
+        let ui_handle = setup_wizard_handle.clone();
+        move |pw| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let len = pw.len();
+                let mut strength = 0;
+                if len > 0 { strength = 1; }
+                if len > 5 { strength = 2; }
+                if len > 8 { strength = 3; }
+                ui.set_password_strength(strength);
+            }
+        }
+    });
+
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
         move || {
@@ -1177,9 +1191,23 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 4: Payments -> Step 5
+        // First test skip preference, then revert to online
+        ui.invoke_select_payment_pref("skip".into());
+        assert_eq!(ui.get_payment_pref(), "skip");
+        // Revert back so step count stays normal
+        ui.set_step(4);
         ui.invoke_select_payment_pref("online".into());
+        assert_eq!(ui.get_payment_pref(), "online");
 
         // Step 5: Admin -> Step 6
+        // Test password strength
+        ui.invoke_check_password("123".into());
+        assert_eq!(ui.get_password_strength(), 1);
+        ui.invoke_check_password("1234567".into());
+        assert_eq!(ui.get_password_strength(), 2);
+        ui.invoke_check_password("123456789".into());
+        assert_eq!(ui.get_password_strength(), 3);
+
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
