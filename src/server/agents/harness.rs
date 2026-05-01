@@ -52,13 +52,18 @@ impl ASTValidator {
     }
 }
 
-pub struct BwrapRunner {
+#[async_trait]
+pub trait HarnessBackend: Send + Sync {
+    async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String>;
+}
+
+pub struct LocalBackend {
     validator: Arc<ASTValidator>,
 }
 
-impl BwrapRunner {
+impl LocalBackend {
     pub fn new(validator: Arc<ASTValidator>) -> Self {
-        BwrapRunner { validator }
+        LocalBackend { validator }
     }
 
     pub fn is_bwrap_available(&self) -> bool {
@@ -141,7 +146,11 @@ impl BwrapRunner {
         args
     }
 
-    pub async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
+}
+
+#[async_trait]
+impl HarnessBackend for LocalBackend {
+    async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
         self.validator.validate(command)?;
 
         if self.is_bwrap_available() {
@@ -169,6 +178,26 @@ impl BwrapRunner {
     }
 }
 
+pub struct DockerBackend;
+
+impl DockerBackend {
+    pub fn new() -> Self {
+        DockerBackend
+    }
+}
+
+#[async_trait]
+impl HarnessBackend for DockerBackend {
+    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
+        // Mock implementation for spinning up a container per agent session
+        Ok(ResultModel {
+            stdout: format!("Mock Docker Execution: {}", command),
+            stderr: "".to_string(),
+            exit_code: 0,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResultModel {
     pub stdout: String,
@@ -176,26 +205,38 @@ pub struct ResultModel {
     pub exit_code: i32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BackendType {
+    Local,
+    Docker,
+}
+
 pub struct Manager {
     config: Config,
     validator: Arc<ASTValidator>,
-    runner: Arc<BwrapRunner>,
+    local_backend: Arc<dyn HarnessBackend>,
+    docker_backend: Arc<dyn HarnessBackend>,
 }
 
 impl Manager {
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
-        let runner = Arc::new(BwrapRunner::new(validator.clone()));
+        let local_backend = Arc::new(LocalBackend::new(validator.clone()));
+        let docker_backend = Arc::new(DockerBackend::new());
         Manager {
             config,
             validator,
-            runner,
+            local_backend,
+            docker_backend,
         }
     }
 
-    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>) -> Result<ResultModel, String> {
+    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType) -> Result<ResultModel, String> {
         let policy = policy.unwrap_or(&self.config.default_policy);
-        self.runner.execute(command, policy).await
+        match backend_type {
+            BackendType::Local => self.local_backend.execute(command, policy).await,
+            BackendType::Docker => self.docker_backend.execute(command, policy).await,
+        }
     }
 }
 
@@ -292,7 +333,7 @@ mod tests {
     #[test]
     fn test_get_bwrap_args() {
         let validator = Arc::new(ASTValidator::new());
-        let runner = BwrapRunner::new(validator);
+        let runner = LocalBackend::new(validator);
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
             read_only_paths: vec!["/etc".to_string()],
@@ -315,7 +356,7 @@ mod tests {
     #[test]
     fn test_policy_allow_read_deny_write() {
         let validator = Arc::new(ASTValidator::new());
-        let runner = BwrapRunner::new(validator);
+        let runner = LocalBackend::new(validator);
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
             deny_write: vec!["/tmp/protected".to_string()],
@@ -328,5 +369,21 @@ mod tests {
         // In test environment /opt might not exist, so we just check it was handled.
         // Same for deny_write.
         assert!(args.contains(&"ls".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_manager_routing() {
+        let config = Config::default();
+        let manager = Manager::new(config);
+        let command = "echo routing_test";
+
+        let local_res = manager.execute_with_policy(command, None, BackendType::Local).await.unwrap();
+        // Since bwrap is not guaranteed to be available in tests, it might be a simulated output.
+        // We will just check it executes without error.
+        assert!(local_res.exit_code == 0 || local_res.exit_code == -1);
+
+        let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
+        assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
+        assert_eq!(docker_res.exit_code, 0);
     }
 }
