@@ -14,7 +14,6 @@ export component MyPlan inherits Window {
     in-out property <string> estimated_bill: "$124.50";
 
     callback upgrade();
-    callback view_costs();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -50,7 +49,6 @@ export component MyPlan inherits Window {
                 Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: white; }
                 Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: white; }
                 Text { text: "Estimated Next Bill: " + estimated_bill; color: white; }
-                Button { text: "View Cost Details"; clicked => { view_costs(); } }
             }
         }
     }
