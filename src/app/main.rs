@@ -808,6 +808,7 @@ mod e2e_tests {
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
+        ui.set_admin_name("Maya Smith".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
@@ -829,6 +830,7 @@ mod e2e_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+        assert_eq!(ui.get_admin_name(), "Maya Smith");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_sell_digital(), false);
@@ -1181,6 +1183,7 @@ mod docs_tests {
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
+        ui.set_admin_name("Maya Smith".into());
         ui.invoke_next_step();
 
         // Step 6: Template -> Step 7
@@ -1226,6 +1229,7 @@ mod docs_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+        assert_eq!(ui.get_admin_name(), "Maya Smith");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
