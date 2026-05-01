@@ -1,9 +1,9 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
-export component CustomIntegrations inherits Window {
+export component ApiDocs inherits Window {
     width: 800px;
     height: 600px;
-    title: "Custom Integrations";
+    title: "API Reference (Advanced)";
     background: #f8fafc;
 
     VerticalBox {
@@ -11,7 +11,7 @@ export component CustomIntegrations inherits Window {
         spacing: 20px;
 
         Text {
-            text: "Custom Integrations";
+            text: "Developer API";
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
@@ -29,7 +29,7 @@ export component CustomIntegrations inherits Window {
 
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Products List"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #334155; }
                     Rectangle {
                         background: #1e293b; border-radius: 8px; // dark theme for code
                         VerticalBox {

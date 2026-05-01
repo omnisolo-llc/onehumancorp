@@ -153,7 +153,7 @@ impl TaskQueue for PostgresTaskQueue {
                 updated_at: Utc::now(),
             };
             
-            let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+            let mut payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
                 j.agent_role = role.to_string();
             }
