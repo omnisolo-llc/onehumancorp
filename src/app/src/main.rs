@@ -333,18 +333,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    welcome_checklist_ui.on_go_to_share_link({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
+    if let Ok(ctx) = copypasta::ClipboardContext::new() {
+        let ctx = std::rc::Rc::new(std::cell::RefCell::new(ctx));
+        let ctx_clone = ctx.clone();
+        welcome_checklist_ui.on_go_to_share_link({
+            let handle = welcome_checklist_handle.clone();
+            move || {
+                if let Ok(mut ctx) = ctx_clone.try_borrow_mut() {
+                    use copypasta::ClipboardProvider;
+                    let _ = ctx.set_contents("https://mybusiness.ohc.app".to_string());
+                }
+                if let Some(ui) = handle.upgrade() {
+                    ui.hide().unwrap();
+                }
+                if let Ok(referrals) = app::Referrals::new() {
+                    referrals.show().unwrap();
+                    Box::leak(Box::new(referrals));
+                }
             }
-            if let Ok(referrals) = app::Referrals::new() {
-                referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
+        });
+    } else {
+        welcome_checklist_ui.on_go_to_share_link({
+            let handle = welcome_checklist_handle.clone();
+            move || {
+                if let Some(ui) = handle.upgrade() {
+                    ui.hide().unwrap();
+                }
+                if let Ok(referrals) = app::Referrals::new() {
+                    referrals.show().unwrap();
+                    Box::leak(Box::new(referrals));
+                }
             }
-        }
-    });
+        });
+    }
 
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
@@ -358,6 +379,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    if let Ok(ctx) = copypasta::ClipboardContext::new() {
+        let ctx = std::rc::Rc::new(std::cell::RefCell::new(ctx));
+
+        let ctx_clone2 = ctx.clone();
+        if let Ok(website_builder) = app::WebsiteBuilder::new() {
+            website_builder.on_copy_to_clipboard(move |link| {
+                use copypasta::ClipboardProvider;
+                if let Ok(mut ctx) = ctx_clone2.try_borrow_mut() {
+                    let _ = ctx.set_contents(link.to_string());
+                }
+            });
+            Box::leak(Box::new(website_builder));
+        }
+
+        let ctx_clone3 = ctx.clone();
+        if let Ok(business_share) = app::BusinessShare::new() {
+            let bs_handle = business_share.as_weak();
+            business_share.on_copy_link(move || {
+                use copypasta::ClipboardProvider;
+                if let Ok(mut ctx) = ctx_clone3.try_borrow_mut() {
+                    let link = if let Some(ui) = bs_handle.upgrade() { ui.get_share_link().to_string() } else { "https://mybusiness.ohc.app".to_string() };
+                    let _ = ctx.set_contents(link);
+                }
+            });
+            Box::leak(Box::new(business_share));
+        }
+    }
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
