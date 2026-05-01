@@ -211,9 +211,9 @@ impl McpService for MyMcpService {
             let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) \
                          VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) \
                          ON CONFLICT (id) DO UPDATE SET \
-                             status = CASE WHEN $4 THEN EXCLUDED.status ELSE agent_missions.status END, \
-                             payload = CASE WHEN $4 THEN EXCLUDED.payload ELSE agent_missions.payload END, \
-                             updated_at = CASE WHEN $4 THEN CURRENT_TIMESTAMP ELSE agent_missions.updated_at END";
+                             status = CASE WHEN $4 OR agent_missions.status != EXCLUDED.status THEN EXCLUDED.status ELSE agent_missions.status END, \
+                             payload = CASE WHEN $4 OR agent_missions.payload != EXCLUDED.payload THEN EXCLUDED.payload ELSE agent_missions.payload END, \
+                             updated_at = CASE WHEN $4 OR agent_missions.status != EXCLUDED.status OR agent_missions.payload != EXCLUDED.payload THEN CURRENT_TIMESTAMP ELSE agent_missions.updated_at END";
             
             sqlx::query(query)
                 .bind(&m.id)
@@ -249,9 +249,9 @@ impl McpService for MyMcpService {
         let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
                      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
                      ON CONFLICT (memory_id) DO UPDATE SET \
-                         context = EXCLUDED.context, \
-                         vector_embedding = EXCLUDED.vector_embedding, \
-                         source_plugin = EXCLUDED.source_plugin";
+                         context = CASE WHEN swarm_memory_embeddings.context != EXCLUDED.context THEN EXCLUDED.context ELSE swarm_memory_embeddings.context END, \
+                         vector_embedding = CASE WHEN swarm_memory_embeddings.vector_embedding != EXCLUDED.vector_embedding THEN EXCLUDED.vector_embedding ELSE swarm_memory_embeddings.vector_embedding END, \
+                         source_plugin = CASE WHEN swarm_memory_embeddings.source_plugin != EXCLUDED.source_plugin THEN EXCLUDED.source_plugin ELSE swarm_memory_embeddings.source_plugin END";
         
         sqlx::query(query)
             .bind(&req.memory_id)
