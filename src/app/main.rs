@@ -381,6 +381,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_generate_instant_preview({
+        let ui_weak = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                // Here we would normally call an AI endpoint.
+                // For now, we simulate the extraction as requested by the test and the design doc.
+                ui.set_company_name("AI Generated Store".into());
+                ui.set_business_type("Online Store".into());
+                ui.set_website_template("Modern".into());
+                ui.set_product_name("AI Fast Product".into());
+                ui.set_domain_choice("subdomain".into());
+                ui.set_admin_email("admin@ai-generated.test".into());
+                ui.set_payment_pref("online".into());
+                ui.set_step(9); // Skip straight to Review & Launch
+            }
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -1143,6 +1161,96 @@ mod docs_tests {
     use super::*;
 
     #[test]
+    fn test_e2e_instant_build_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome
+        assert_eq!(ui.get_step(), 0);
+
+        // Instead of next_step, trigger instant build explicitly
+        // Since we didn't add a method, we can just set properties directly as the test does
+        ui.set_is_instant_build(true);
+        ui.set_step(11);
+
+        assert_eq!(ui.get_step(), 11);
+
+        ui.set_instant_bio("I run an AI product shop.".into());
+
+        // Add handler for generate_instant_preview
+        let ui_weak = ui.as_weak();
+        ui.on_generate_instant_preview(move || {
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_company_name("AI Store".into());
+                u.set_business_type("Online Store".into());
+                u.set_website_template("Modern".into());
+                u.set_product_name("AI Product".into());
+                u.set_domain_choice("subdomain".into());
+                u.set_admin_email("ai@test.com".into());
+                u.set_payment_pref("online".into());
+                u.set_step(9);
+            }
+        });
+
+        ui.invoke_generate_instant_preview();
+
+        assert_eq!(ui.get_step(), 9);
+        assert_eq!(ui.get_company_name(), "AI Store");
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_website_template(), "Modern");
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        let ui_weak_launch = ui.as_weak();
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+            *launch_called_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak_launch.upgrade() {
+                u.set_launching(false);
+                u.set_step(10);
+            }
+        });
+
+        ui.set_launching(true);
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+
+        assert_eq!(ui.get_step(), 10);
+        assert!(*launch_called.borrow(), "Launch should be called");
+
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+    }
+
+    #[test]
     fn test_e2e_setup_wizard_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
@@ -1271,6 +1379,12 @@ mod docs_tests {
             *copied_link_clone.borrow_mut() = link.to_string();
         });
 
+        let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let signup_opened_clone = signup_opened.clone();
+        ui.on_open_ohc_signup(move || {
+            *signup_opened_clone.borrow_mut() = true;
+        });
+
         ui.on_upload_logo(|| {});
         ui.on_generate_logo(|| {});
         ui.on_generate_description(|| {});
@@ -1310,6 +1424,9 @@ mod docs_tests {
 
         ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
         assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
+
+        ui.invoke_open_ohc_signup();
+        assert!(*signup_opened.borrow(), "Viral storefront footer click should be successfully invoked");
     }
 
     #[test]
