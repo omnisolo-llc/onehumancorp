@@ -1,5 +1,6 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipRegistry, TooltipElement } from "tooltip_registry.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
 
@@ -193,7 +194,10 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Active AI Helpers"; color: #94a3b8; }
+                            Rectangle {
+                                Text { text: "Active AI Helpers"; color: #94a3b8; }
+                                TooltipElement { tooltip_id: "active_ai_helpers"; }
+                            }
                             Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                         }
                     }
@@ -210,7 +214,10 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Tasks in Progress"; color: #94a3b8; }
+                            Rectangle {
+                                Text { text: "Tasks in Progress"; color: #94a3b8; }
+                                TooltipElement { tooltip_id: "tasks_in_progress"; }
+                            }
                             Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                         }
                     }
@@ -255,7 +262,10 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Rectangle {
+            Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            TooltipElement { tooltip_id: "company_structure"; }
+        }
         
         VerticalBox {
             spacing: 10px;
@@ -277,4 +287,28 @@ export component Dashboard inherits Window {
         }
     }
 }
+
+    if (TooltipRegistry.is_visible) : Rectangle {
+        x: TooltipRegistry.active_x < parent.width / 2 ? TooltipRegistry.active_x : TooltipRegistry.active_x - self.width;
+        y: TooltipRegistry.active_y;
+        width: 250px;
+        background: #1e293b;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: #334155;
+        drop-shadow-color: rgba(0, 0, 0, 0.5);
+        drop-shadow-blur: 10px;
+        drop-shadow-offset-y: 4px;
+
+        VerticalBox {
+            padding: 12px;
+            Text {
+                text: TooltipRegistry.active_text;
+                color: white;
+                font-family: "Inter";
+                font-size: 14px;
+                wrap: word-wrap;
+            }
+        }
+    }
 }

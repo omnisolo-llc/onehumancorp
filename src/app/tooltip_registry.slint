@@ -19,3 +19,24 @@ export global TooltipRegistry {
         is_visible = false;
     }
 }
+
+export component TooltipElement inherits TouchArea {
+    in property <string> tooltip_id: "";
+
+    pointer-event(event) => {
+        if (event.kind == PointerEventKind.down) {
+            TooltipRegistry.show_tooltip(root.tooltip_id, root.absolute-position.x, root.absolute-position.y + root.height);
+        } else if (event.kind == PointerEventKind.up) {
+            TooltipRegistry.hide_tooltip();
+        }
+    }
+
+    // Slint 1.x has `has-hover` which we can use to toggle visibility
+    changed has-hover => {
+        if (root.has-hover) {
+            TooltipRegistry.show_tooltip(root.tooltip_id, root.absolute-position.x, root.absolute-position.y + root.height);
+        } else {
+            TooltipRegistry.hide_tooltip();
+        }
+    }
+}

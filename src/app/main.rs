@@ -15,6 +15,20 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+
+fn setup_tooltip_registry(dashboard: &app::Dashboard) {
+    dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "active_ai_helpers" => "Shows the number of AI agents currently working. They handle tasks in the background.".into(),
+            "tasks_in_progress" => "The number of active background jobs. This includes sending emails or generating reports.".into(),
+            "swarm_observability" => "A real-time view of what your AI agents are doing. It helps you monitor their tasks.".into(),
+            "company_structure" => "An overview of roles filled by AI or humans. This helps you manage your team.".into(),
+            "help_center_btn" => "Find guides, videos, and tutorials. You can also chat with our AI support agent.".into(),
+            _ => "".into()
+        }
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -232,6 +246,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard);
+
+                let help_center = app::HelpCenter::new().unwrap();
+                dashboard.on_open_help_center(move || {
+                    let _ = help_center.show();
+                });
+
+                let ai_chat = app::AiHelpChat::new().unwrap();
+                dashboard.on_open_ai_chat(move || {
+                    let _ = ai_chat.show();
+                });
+
+                let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    let _ = walkthrough.show();
+                });
+
+                let videos = app::VideoTutorials::new().unwrap();
+                dashboard.on_open_video_tutorials(move || {
+                    let _ = videos.show();
+                });
+
+                let api_docs = app::ApiDocs::new().unwrap();
+                dashboard.on_open_api_docs(move || {
+                    let _ = api_docs.show();
+                });
+
+                let release_notes = app::ReleaseNotes::new().unwrap();
+                dashboard.on_open_release_notes(move || {
+                    let _ = release_notes.show();
+                });
+
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
@@ -312,6 +358,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard);
+
+                let help_center = app::HelpCenter::new().unwrap();
+                dashboard.on_open_help_center(move || {
+                    let _ = help_center.show();
+                });
+
+                let ai_chat = app::AiHelpChat::new().unwrap();
+                dashboard.on_open_ai_chat(move || {
+                    let _ = ai_chat.show();
+                });
+
+                let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    let _ = walkthrough.show();
+                });
+
+                let videos = app::VideoTutorials::new().unwrap();
+                dashboard.on_open_video_tutorials(move || {
+                    let _ = videos.show();
+                });
+
+                let api_docs = app::ApiDocs::new().unwrap();
+                dashboard.on_open_api_docs(move || {
+                    let _ = api_docs.show();
+                });
+
+                let release_notes = app::ReleaseNotes::new().unwrap();
+                dashboard.on_open_release_notes(move || {
+                    let _ = release_notes.show();
+                });
+
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -326,6 +404,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard);
+
+                let help_center = app::HelpCenter::new().unwrap();
+                dashboard.on_open_help_center(move || {
+                    let _ = help_center.show();
+                });
+
+                let ai_chat = app::AiHelpChat::new().unwrap();
+                dashboard.on_open_ai_chat(move || {
+                    let _ = ai_chat.show();
+                });
+
+                let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    let _ = walkthrough.show();
+                });
+
+                let videos = app::VideoTutorials::new().unwrap();
+                dashboard.on_open_video_tutorials(move || {
+                    let _ = videos.show();
+                });
+
+                let api_docs = app::ApiDocs::new().unwrap();
+                dashboard.on_open_api_docs(move || {
+                    let _ = api_docs.show();
+                });
+
+                let release_notes = app::ReleaseNotes::new().unwrap();
+                dashboard.on_open_release_notes(move || {
+                    let _ = release_notes.show();
+                });
+
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -353,6 +463,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard);
+
+                let help_center = app::HelpCenter::new().unwrap();
+                dashboard.on_open_help_center(move || {
+                    let _ = help_center.show();
+                });
+
+                let ai_chat = app::AiHelpChat::new().unwrap();
+                dashboard.on_open_ai_chat(move || {
+                    let _ = ai_chat.show();
+                });
+
+                let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    let _ = walkthrough.show();
+                });
+
+                let videos = app::VideoTutorials::new().unwrap();
+                dashboard.on_open_video_tutorials(move || {
+                    let _ = videos.show();
+                });
+
+                let api_docs = app::ApiDocs::new().unwrap();
+                dashboard.on_open_api_docs(move || {
+                    let _ = api_docs.show();
+                });
+
+                let release_notes = app::ReleaseNotes::new().unwrap();
+                dashboard.on_open_release_notes(move || {
+                    let _ = release_notes.show();
+                });
+
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1296,6 +1438,9 @@ mod docs_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+
+
+
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
@@ -1357,6 +1502,17 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "active_ai_helpers" => "Shows the number of AI agents currently working. They handle tasks in the background.".into(),
+                "tasks_in_progress" => "The number of active background jobs. This includes sending emails or generating reports.".into(),
+                "swarm_observability" => "A real-time view of what your AI agents are doing. It helps you monitor their tasks.".into(),
+                "company_structure" => "An overview of roles filled by AI or humans. This helps you manage your team.".into(),
+                "help_center_btn" => "Find guides, videos, and tutorials. You can also chat with our AI support agent.".into(),
+                _ => "".into()
+            }
+        });
+
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1379,6 +1535,9 @@ mod docs_tests {
         // But we can verify it doesn't crash on Dashboard creation.
         // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
         // To satisfy the E2E requirement securely, we will test the HelpCenter workflow from the Dashboard to ensure the button under the TooltipElement is still clickable.
+
+
+
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
@@ -1647,6 +1806,9 @@ mod dashboard_docs_tests {
 
 
         // 3. Test opening Help Center from Dashboard
+
+
+
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || {
@@ -1668,8 +1830,50 @@ mod dashboard_docs_tests {
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
+
         // 5. Test Interactive Walkthrough
-        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        });
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+
+        // 6. Test Video Tutorials
+        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let videos_opened_clone = videos_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || {
+            *videos_opened_clone.borrow_mut() = true;
+            let _videos = app::VideoTutorials::new().unwrap();
+        });
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+
+        // 7. Test API Documentation
+        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let api_docs_opened_clone = api_docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || {
+            *api_docs_opened_clone.borrow_mut() = true;
+            let _api_docs = app::ApiDocs::new().unwrap();
+        });
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+
+        // 8. Test Release Notes
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+            let _release_notes = app::ReleaseNotes::new().unwrap();
+        });
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+
+
+
+
     }
 }
 
