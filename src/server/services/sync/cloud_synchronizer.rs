@@ -104,6 +104,7 @@ mod tests {
     use std::sync::Mutex;
     use std::collections::HashMap;
 
+    #[allow(unused_imports)]
     use crate::services::sync::local_repository::{LocalMission, MissionPayload};
 
     struct MockLocalRepository {

@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
+#[allow(unused_imports)]
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
+#[allow(unused_imports)]
 use futures::StreamExt;
 use std::process::Stdio;
 use std::time::Instant;

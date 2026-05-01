@@ -3,6 +3,7 @@ use sqlx::Row;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[allow(dead_code)]
 pub struct EmbeddingRecord {
     pub id: String,
     pub tenant_id: String,
@@ -31,6 +32,7 @@ impl VectorRepository {
         VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
     }
 
+    #[allow(dead_code)]
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
@@ -261,16 +263,19 @@ impl MemoryConsolidationWorker {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait OHCMemory: Send + Sync {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String>;
     async fn read(&self, namespace: &str, key: &str) -> Result<Vec<u8>, String>;
 }
 
+#[allow(dead_code)]
 pub struct FileBasedMemory {
     base_dir: std::path::PathBuf,
 }
 
 impl FileBasedMemory {
+    #[allow(dead_code)]
     pub fn new<P: AsRef<std::path::Path>>(base_dir: P) -> Self {
         FileBasedMemory {
             base_dir: base_dir.as_ref().to_path_buf(),

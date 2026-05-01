@@ -1,8 +1,10 @@
+#[allow(unused_imports)]
 use sqlx::{PgPool, SqlitePool, Row};
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
 use chrono::Utc;
+#[allow(unused_imports)]
 use std::collections::HashSet;
 
 pub struct TaskDecompositionService {
@@ -110,7 +112,9 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
-                let mut skip = false;
+                #[allow(unused_variables)]
+                #[allow(unused_variables)]
+                let skip = false;
                 let deps_val: serde_json::Value = row.get("dependencies");
                 let deps: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 

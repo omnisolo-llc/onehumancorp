@@ -4,6 +4,8 @@ use crate::hub::Hub;
 use crate::tasks::SharedTask;
 
 #[async_trait]
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub trait TaskOrchestrator: Send + Sync {
     async fn receive_high_level_request(&self, org_id: &str, title: &str) -> Result<String, String>;
     async fn enqueue_task(&self, task: SharedTask, depends_on: Vec<String>) -> Result<SharedTask, String>;
@@ -11,11 +13,15 @@ pub trait TaskOrchestrator: Send + Sync {
     async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String>;
 }
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub struct DefaultTaskOrchestrator {
     hub: Arc<Hub>,
 }
 
 impl DefaultTaskOrchestrator {
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn new(hub: Arc<Hub>) -> Self {
         DefaultTaskOrchestrator { hub }
     }
@@ -98,6 +104,8 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
     }
 }
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub fn start_token_burn_forecaster(
     _hub: Arc<Hub>,
     tick_duration: std::time::Duration,

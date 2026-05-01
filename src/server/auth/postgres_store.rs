@@ -4,11 +4,15 @@ use crate::auth::{User, UserRepository};
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub struct PgUserRepository {
     pool: PgPool,
 }
 
 impl PgUserRepository {
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         PgUserRepository { pool }
     }
@@ -16,6 +20,8 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
+    #[allow(unused_variables)]
+    #[allow(unused_variables)]
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         

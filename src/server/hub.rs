@@ -574,6 +574,7 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     use tokio::sync::mpsc;
+    #[allow(unused_imports)]
     use sqlx::PgPool;
 
     #[tokio::test]

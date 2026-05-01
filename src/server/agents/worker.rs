@@ -23,7 +23,7 @@ impl TaskWorker {
         }
     }
 
-    pub async fn start(&self, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
+    pub async fn start(&self, shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
         self.start_with_workers(self.num_workers, shutdown_rx).await;
     }
 

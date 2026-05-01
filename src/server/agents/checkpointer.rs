@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+#[allow(unused_imports)]
 use std::sync::Arc;
 use sqlx::Row;
 
@@ -17,6 +18,7 @@ pub struct Checkpoint {
 pub trait CheckpointSaver: Send + Sync {
     #[allow(dead_code)]
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
+    #[allow(dead_code)]
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
 }
@@ -26,6 +28,7 @@ pub struct PgCheckpointer {
 }
 
 impl PgCheckpointer {
+    #[allow(dead_code)]
     pub fn new(pool: sqlx::PgPool) -> Self {
         PgCheckpointer { pool }
     }
@@ -125,6 +128,7 @@ impl CheckpointSaver for PgCheckpointer {
     }
 }
 
+#[allow(dead_code)]
 fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     use flate2::write::GzEncoder;
     use flate2::Compression;

@@ -7,7 +7,9 @@ use std::{env, net::SocketAddr};
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+#[allow(unused_imports)]
 use prost::Message;
+#[allow(unused_imports)]
 use tokio_stream::StreamExt;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_sdk::{

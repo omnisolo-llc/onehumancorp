@@ -2,6 +2,7 @@
 
 // Trivial change to force rebuild
 use async_trait::async_trait;
+#[allow(unused_imports)]
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 use redis::AsyncCommands;

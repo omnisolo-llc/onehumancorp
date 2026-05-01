@@ -4,8 +4,10 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+#[allow(unused_imports)]
 use std::collections::HashMap;
 use std::sync::Arc;
+#[allow(unused_imports)]
 use std::sync::RwLock;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -153,7 +155,7 @@ impl TaskQueue for PostgresTaskQueue {
                 updated_at: Utc::now(),
             };
             
-            let mut payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+            let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
                 j.agent_role = role.to_string();
             }

@@ -114,6 +114,7 @@ mod tests {
         let out = session.run_stateful_command("echo hello").await.unwrap();
         assert!(out.contains("hello"));
 
+        #[allow(unused_variables)]
         let out = session.run_stateful_command("export FOO=bar").await.unwrap();
         let out = session.run_stateful_command("echo $FOO").await.unwrap();
         assert!(out.contains("bar"));

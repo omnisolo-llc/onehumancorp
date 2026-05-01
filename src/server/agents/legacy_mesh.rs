@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+#[allow(unused_imports)]
 use redis::AsyncCommands;
 use std::time::Duration;
 use uuid::Uuid;
@@ -21,6 +22,8 @@ impl DistributedLock {
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
+        #[allow(deprecated)]
+        #[allow(deprecated)]
         let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
         
@@ -48,6 +51,8 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
+        #[allow(deprecated)]
+        #[allow(deprecated)]
         let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then

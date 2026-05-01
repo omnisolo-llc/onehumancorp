@@ -133,6 +133,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+#[allow(unused_imports)]
 use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
 use ohc::orchestration::*;
 
@@ -173,6 +174,8 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received ConfigWizard request in wizard service");
@@ -184,6 +187,8 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received PromptTuning request in wizard service");
@@ -1065,7 +1070,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
     use crate::ohc::orchestration::*;
+    #[allow(unused_imports)]
     use crate::ohc::agent::service::*;
     use tonic::Request;
 

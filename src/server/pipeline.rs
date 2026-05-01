@@ -7,6 +7,7 @@ use crate::hub::Hub;
 use crate::ohc::orchestration::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(dead_code)]
 pub enum PipelineState {
     Implementing,
     Testing,
@@ -16,6 +17,7 @@ pub enum PipelineState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Pipeline {
     pub id: String,
     pub branch: String,
@@ -25,24 +27,29 @@ pub struct Pipeline {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct SpecApprovedEvent {
     pub branch: String,
     pub details: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct CIJob {
     pub command: String,
     pub branch: String,
 }
 
+#[allow(dead_code)]
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
+    #[allow(dead_code)]
     ci_jobs: RwLock<Vec<CIJob>>,
 }
 
 impl Orchestrator {
+    #[allow(dead_code)]
     pub fn new(hub: Arc<Hub>) -> Self {
         Orchestrator {
             hub,
@@ -103,6 +110,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn handle_pr_created(&self, msg: Message) -> Result<(), String> {
         let branch = msg.content.clone();
         

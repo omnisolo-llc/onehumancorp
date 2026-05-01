@@ -19,6 +19,8 @@ impl SyncService for MySyncService {
         &self,
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         let md = request.metadata().clone();
         let md = request.metadata().clone();
         let req = request.into_inner();
@@ -81,7 +83,11 @@ impl SyncService for MySyncService {
         &self,
         request: Request<PowerSyncPushRequest>,
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         let md = request.metadata().clone();
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         let req = request.into_inner();
         println!("PowerSync received push request.");
 
@@ -170,6 +176,8 @@ impl SyncService for MySyncService {
         &self,
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
+        #[allow(unused_variables)]
+        #[allow(unused_variables)]
         let md = request.metadata().clone();
         let req = request.into_inner();
         let payloads = req.payloads;

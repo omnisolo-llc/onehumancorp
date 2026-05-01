@@ -20,6 +20,7 @@ pub struct InMemoryViolationStore {
 }
 
 impl InMemoryViolationStore {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         InMemoryViolationStore {
             violations: RwLock::new(HashMap::new()),
@@ -58,6 +59,7 @@ pub struct CapabilityAuthorizer {
 }
 
 impl CapabilityAuthorizer {
+    #[allow(dead_code)]
     pub fn new(store: Option<Box<dyn SandboxViolationStore>>) -> Self {
         let store = store.unwrap_or_else(|| Box::new(InMemoryViolationStore::new()));
         CapabilityAuthorizer {

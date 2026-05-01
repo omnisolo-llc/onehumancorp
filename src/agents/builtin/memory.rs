@@ -1,7 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
 use std::sync::Arc;
 use sqlx::PgPool;
+#[allow(unused_imports)]
 use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

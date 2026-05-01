@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use std::collections::HashMap;
+#[allow(unused_imports)]
 use std::sync::{Arc, Mutex};
 use redis::{AsyncCommands, Client};
 
@@ -54,6 +56,8 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
+        #[allow(deprecated)]
+        #[allow(deprecated)]
         let mut conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
 
@@ -66,6 +70,8 @@ impl RedisRateLimiter {
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
+        #[allow(deprecated)]
+        #[allow(deprecated)]
         let mut conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
@@ -77,6 +83,8 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+        #[allow(deprecated)]
+        #[allow(deprecated)]
         let mut conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 

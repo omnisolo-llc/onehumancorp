@@ -221,6 +221,8 @@ impl MinimaxClient {
     }
 }
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -228,6 +230,8 @@ pub struct LocalLLMClient {
 }
 
 impl LocalLLMClient {
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
@@ -286,12 +290,16 @@ impl LocalLLMClient {
     }
 }
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub struct ResilientClient {
     primary: MinimaxClient,
     fallback: LocalLLMClient,
 }
 
 impl ResilientClient {
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {
             primary,
@@ -320,6 +328,8 @@ impl ResilientClient {
     }
 }
 
+#[allow(dead_code)]
+#[allow(dead_code)]
 pub struct CachedMinimaxClient {
     client: MinimaxClient,
     pool: sqlx::PgPool,
@@ -327,6 +337,8 @@ pub struct CachedMinimaxClient {
 }
 
 impl CachedMinimaxClient {
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn new(client: MinimaxClient, pool: sqlx::PgPool, redis: Option<redis::Client>) -> Self {
         CachedMinimaxClient { client, pool, redis }
     }
@@ -339,6 +351,8 @@ impl CachedMinimaxClient {
         let hash = format!("{:x}", Sha256::digest(prompt.as_bytes()));
         
         if let Some(ref redis_client) = self.redis {
+            #[allow(deprecated)]
+            #[allow(deprecated)]
             if let Ok(mut con) = redis_client.get_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 if let Ok(val) = con.get::<_, String>(&redis_key).await {
@@ -357,6 +371,8 @@ impl CachedMinimaxClient {
             let response: String = row.get("response");
             
             if let Some(ref redis_client) = self.redis {
+                #[allow(deprecated)]
+                #[allow(deprecated)]
                 if let Ok(mut con) = redis_client.get_async_connection().await {
                     let redis_key = format!("llm_reason:{}", hash);
                     let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
@@ -369,6 +385,8 @@ impl CachedMinimaxClient {
         let response = self.client.reason(prompt).await?;
 
         if let Some(ref redis_client) = self.redis {
+            #[allow(deprecated)]
+            #[allow(deprecated)]
             if let Ok(mut con) = redis_client.get_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;

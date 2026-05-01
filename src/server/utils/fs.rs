@@ -4,6 +4,7 @@ use std::path::Path;
 use rand::Rng;
 use rand::distributions::Alphanumeric;
 use std::os::unix::fs::OpenOptionsExt;
+#[allow(unused_imports)]
 use std::os::unix::fs::PermissionsExt;
 
 /// WriteFileAtomic writes data to a file atomically by writing to a temporary file first

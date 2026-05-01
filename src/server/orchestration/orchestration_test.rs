@@ -1,13 +1,18 @@
+#[allow(unused_imports)]
 use crate::db::{DB, DbStore};
+#[allow(unused_imports)]
 use std::sync::Arc;
+#[allow(unused_imports)]
 use crate::orchestration::tasks::TaskDecompositionService;
+#[allow(unused_imports)]
 use crate::tasks::SharedTask;
+#[allow(unused_imports)]
 use chrono::Utc;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    let mut db_builder = DB::new().await;
+    let db_builder = DB::new().await;
     if db_builder.is_err() {
         println!("Skipping task decomposition service DB test");
         return;
@@ -157,7 +162,7 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    let mut db_builder = DB::new().await;
+    let db_builder = DB::new().await;
     if db_builder.is_err() {
         println!("Skipping task decomposition dag DB test");
         return;
