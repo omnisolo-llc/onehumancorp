@@ -1,0 +1,15 @@
+{
+  "title": "Cost Transparency Dashboard",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "LLM Token Cost USD",
+      "targets": [
+        {
+          "expr": "sum by(agent_id) (rate(ohc_llm_cost_usd_total[5m]))",
+          "legendFormat": "{{agent_id}}"
+        }
+      ]
+    }
+  ]
+}
