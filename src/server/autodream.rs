@@ -258,7 +258,7 @@ impl AutoDreamWorker {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
                             .bind(&mem_id)
                             .bind("system") // Placeholder since we don't have org_id in yml name
                             .bind("system_agent")
