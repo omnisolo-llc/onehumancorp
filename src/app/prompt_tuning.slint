@@ -24,6 +24,7 @@ export component PromptTuning inherits Window {
     callback add_example();
     callback save_prompt();
     callback next_step();
+    callback save_state();
 
     next_step => { step = step + 1; }
 
@@ -44,7 +45,7 @@ export component PromptTuning inherits Window {
                 CheckBox {
                     text: "Expert Mode";
                     checked: is_advanced;
-                    toggled => { is_advanced = !is_advanced; }
+                    toggled => { is_advanced = !is_advanced; save_state(); }
                 }
             }
 
