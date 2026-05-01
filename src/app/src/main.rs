@@ -219,6 +219,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let add_product_called_clone = add_product_called.clone();
+                dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+                let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let view_orders_called_clone = view_orders_called.clone();
+                dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+                let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let check_messages_called_clone = check_messages_called.clone();
+                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+                let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let see_analytics_called_clone = see_analytics_called.clone();
+                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let share_store_called_clone = share_store_called.clone();
+                dashboard.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
             }
@@ -427,6 +443,22 @@ mod e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         let pending_tasks = vec![
             app::UiPendingApproval {
@@ -965,6 +997,22 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
@@ -1156,6 +1204,22 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
@@ -1204,6 +1268,22 @@ mod dashboard_docs_tests {
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1255,6 +1335,22 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         let pending_tasks = vec![
             app::UiPendingApproval {
@@ -1286,6 +1382,22 @@ mod cost_transparency_e2e_tests {
 
         // Navigate to Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
 
         // Populate mock agent activity messages
         let mock_messages = vec![
@@ -1321,6 +1433,22 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
         let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let billing_opened_clone = billing_opened.clone();
         dashboard_ui.on_open_billing(move || {
