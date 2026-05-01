@@ -9,8 +9,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     slint_build::compile(&app_slint_path).unwrap();
 
     let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
-    // SAFETY: This is only called at build time and does not concurrently access env
-    unsafe { std::env::set_var("PROTOC", protoc_path) };
+    if protoc_path.exists() {
+        unsafe { std::env::set_var("PROTOC", &protoc_path) };
+        println!("cargo:warning=Set PROTOC to {:?}", std::env::var("PROTOC"));
+    }
 
     tonic_build::configure()
         .compile_protos(

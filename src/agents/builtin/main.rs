@@ -1,4 +1,4 @@
-use ohc_builtin_agent::{
+use crate::{
     auth::auth_mode_from_env,
     proto::agent_service_server::{AgentServiceServer, AgentService},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut stream = pubsub.on_message();
         while let Some(msg) = stream.next().await {
             let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
-            if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
+            if let Ok(req) = crate::proto::RunTaskRequest::decode(&payload[..]) {
                 tracing::info!("Received job from Redis: {}", req.task_id);
 
                 let svc = svc_for_redis.clone();

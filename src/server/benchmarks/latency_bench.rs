@@ -118,7 +118,7 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
         let run_id = run_id.clone();
 
         join_handles.push(tokio::spawn(async move {
-            let mut job = Job {
+            let job = Job {
                 id: format!("job_{}_{}_{}", name, run_id, i),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
                 agent_role: "test_agent".to_string(),

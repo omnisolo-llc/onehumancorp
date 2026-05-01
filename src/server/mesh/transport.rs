@@ -176,7 +176,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        use redis::AsyncCommands;
+
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -194,7 +194,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        use redis::AsyncCommands;
+
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -237,7 +237,7 @@ impl MeshTransport for RedisTransport {
         let mut keys: Vec<String> = Vec::new();
         {
             let mut iter: redis::AsyncIter<String> = conn.scan_match("presence:*").await.map_err(|e| e.to_string())?;
-            use tokio_stream::StreamExt;
+
             while let Some(key) = iter.next_item().await {
                 keys.push(key);
             }
