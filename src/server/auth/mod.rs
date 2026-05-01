@@ -594,7 +594,7 @@ impl AuthService for Arc<Store> {
         let claims = self.as_ref().validate_token(token).await
             .map_err(|e| Status::unauthenticated(e))?;
 
-        let user = self.as_ref().get_user(&claims.sub, "")
+        let user = self.as_ref().get_user(&claims.sub, &claims.organization_id.unwrap_or_default())
             .ok_or_else(|| Status::not_found("user not found"))?;
 
         Ok(Response::new(UserProto {
