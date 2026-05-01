@@ -600,19 +600,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_in_mem_job_queue_worker_pool() {
-        let queue = Arc::new(InMemJobQueue::new());
-        let handler = Arc::new(MockHandler);
-        let pool = WorkerPool::new(queue.clone(), "test_topic".to_string(), 3, handler);
-        
-        let (tx, _) = tokio::sync::broadcast::channel(1);
-        pool.start(tx.clone()).await;
-        
-        queue.push("test_topic", b"hello".to_vec()).await.unwrap();
-        queue.push("test_topic", b"world".to_vec()).await.unwrap();
-        
-        tokio::time::sleep(Duration::from_millis(500)).await;
-        
-        let _ = tx.send(());
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let queue = Arc::new(InMemJobQueue::new());
+            let handler = Arc::new(MockHandler);
+            let pool = WorkerPool::new(queue.clone(), "test_topic".to_string(), 3, handler);
+
+            let (tx, _) = tokio::sync::broadcast::channel(1);
+            pool.start(tx.clone()).await;
+
+            queue.push("test_topic", b"hello".to_vec()).await.unwrap();
+            queue.push("test_topic", b"world".to_vec()).await.unwrap();
+
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            let _ = tx.send(());
+        }).await.expect("Test timed out");
     }
 
     #[tokio::test]
