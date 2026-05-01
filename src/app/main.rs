@@ -604,7 +604,7 @@ mod growth_e2e_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
-        // Mock wiring for action_share_store since we don't have the main closure here
+        // Test wiring for action_share_store since we don't have the main closure here
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
 
@@ -630,14 +630,14 @@ mod growth_e2e_tests {
         ]));
         referrals_ui.set_referrals(referral_data);
 
-        // Test link generation mock
+        // Test link generation test
         let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
         let new_link_generated_clone = new_link_generated.clone();
         referrals_ui.on_generate_new_link(move || {
             *new_link_generated_clone.borrow_mut() = true;
         });
 
-        // Test link sharing mock
+        // Test link sharing test
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
@@ -1724,7 +1724,7 @@ mod docs_tests {
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
 
-        // Mock navigating to AiConfig from Dashboard
+        // Test navigating to AiConfig from Dashboard
         dashboard_ui.on_open_ai_chat(move || {
             let ui = app::AiConfig::new().unwrap();
             let provider_called = add_provider_called_clone.clone();
@@ -1917,8 +1917,8 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Populate mock agent activity messages
-        let mock_messages = vec![
+        // Populate test agent activity messages
+        let test_messages = vec![
             app::UiMeshMessage {
                 id: "msg-1".into(),
                 content: "✅ Your Support Agent replied to 3 customers".into(),
@@ -1929,7 +1929,7 @@ mod cost_transparency_e2e_tests {
             }
         ];
 
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
+        let messages_model = slint::ModelRc::new(slint::VecModel::from(test_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
     }
 
