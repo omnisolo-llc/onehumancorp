@@ -92,9 +92,9 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Billing')).toBeVisible();
   });
 
-  test('should display guides button', async ({ page }) => {
+  test('should display docs button', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Guides')).toBeVisible();
+    await expect(page.locator('text=Docs')).toBeVisible();
   });
 
   test('should display videos button', async ({ page }) => {
