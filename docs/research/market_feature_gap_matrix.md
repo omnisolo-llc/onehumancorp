@@ -8,6 +8,8 @@
 | **Design** | Template-Heavy | AI-Assisted | Generative | **Vibe-Based (Instant)** |
 | **Discovery** | Legacy SEO | Standard SEO | AI Visibility (GEO) | **Proactive GEO Agent** |
 | **Operations** | App-Store Dependent | Built-in | CRM-centric | **Event-Mesh Integrated** |
+| **Omni-channel** | Hardware-centric | Service-centric | Web-only | **Zero-Hardware POS** |
+| **Global Access** | standard L10n | standard L10n | English-first | **AI-Native Inclusive** |
 
 ## Mermaid Analysis: Competitive Positioning
 
