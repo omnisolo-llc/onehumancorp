@@ -1330,7 +1330,7 @@ mod docs_tests {
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*docs_opened.borrow(), "Connect Apps should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
