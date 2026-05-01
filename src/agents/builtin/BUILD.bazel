@@ -6,6 +6,7 @@ cargo_build_script(
     srcs = ["build.rs"],
     data = [
         "//src/proto:agent_service.proto",
+        "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
     edition = "2024",

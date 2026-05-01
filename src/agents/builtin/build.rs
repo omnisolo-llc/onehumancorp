@@ -2,6 +2,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../proto/agent_service.proto");
+    println!("cargo:rerun-if-changed=../../proto/hub.proto");
 
     let protoc_path = std::env::var("PROTOC").unwrap_or_else(|_| {
         let default_bazel_path = std::path::PathBuf::from("../../../../protobuf+/protoc");
@@ -19,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_server(true)
         .build_client(true)
         .compile_protos(
-            &["../../proto/agent_service.proto"],
+            &["../../proto/agent_service.proto", "../../proto/hub.proto"],
             &["../../proto"],
         )?;
     Ok(())

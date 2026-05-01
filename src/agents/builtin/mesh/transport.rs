@@ -419,12 +419,11 @@ impl MeshTransport for RedisTransport {
         let mut conn = self.publish_conn.lock().await;
         use redis::AsyncCommands;
 
-        let key = "mesh:presence";
+        let key = format!("mesh:presence:{}", agent_id);
 
         let mut pipe = redis::pipe();
         pipe.atomic()
-            .cmd("HSET").arg(key).arg(agent_id).arg(status)
-            .cmd("EXPIRE").arg(key).arg(ttl_seconds);
+            .cmd("SET").arg(&key).arg(status).arg("EX").arg(ttl_seconds);
 
         let _: () = pipe.query_async(&mut *conn).await.map_err(|e| e.to_string())?;
 
@@ -432,13 +431,32 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let mut keys = Vec::new();
+        {
+            let mut conn = self.publish_conn.lock().await;
+            use redis::AsyncCommands;
+            let mut iter: redis::AsyncIter<String> = conn.scan_match("mesh:presence:*").await.map_err(|e| e.to_string())?;
+            while let Some(key) = iter.next_item().await {
+                keys.push(key);
+            }
+        }
+
+        let mut agents = Vec::new();
+        if keys.is_empty() {
+            return Ok(agents);
+        }
+
         let mut conn = self.publish_conn.lock().await;
         use redis::AsyncCommands;
+        let statuses: Vec<Option<String>> = conn.mget(&keys).await.unwrap_or_default();
 
-        let key = "mesh:presence";
-        let hash: std::collections::HashMap<String, String> = conn.hgetall(key).await.unwrap_or_default();
+        for (key, status_opt) in keys.into_iter().zip(statuses.into_iter()) {
+            if let Some(status) = status_opt {
+                let agent_id = key.trim_start_matches("mesh:presence:").to_string();
+                agents.push((agent_id, status));
+            }
+        }
 
-        let agents = hash.into_iter().collect();
         Ok(agents)
     }
 }
@@ -663,6 +681,26 @@ mod tests {
         let active_agents_after_expiration = transport.get_active_agents().await.unwrap();
         assert_eq!(active_agents_after_expiration.len(), 1);
         assert_eq!(active_agents_after_expiration[0], ("agent_1".to_string(), "online".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn test_redis_transport_presence() {
+        let transport = RedisTransport::new("redis://localhost:6379").await;
+        if transport.is_err() {
+            return;
+        }
+        let transport = transport.unwrap();
+
+        transport.register_presence("agent_x", "online", 5).await.unwrap();
+        transport.register_presence("agent_y", "busy", 5).await.unwrap();
+
+        let mut active_agents = transport.get_active_agents().await.unwrap();
+        active_agents.sort();
+
+        // Could be more depending on concurrent tests, but let's assert it contains ours
+        assert!(active_agents.iter().any(|(id, status)| id == "agent_x" && status == "online"));
+        assert!(active_agents.iter().any(|(id, status)| id == "agent_y" && status == "busy"));
     }
 
     #[tokio::test]

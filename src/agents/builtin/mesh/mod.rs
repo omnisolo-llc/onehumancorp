@@ -11,6 +11,7 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn sync_handoff_state(&self, context: Vec<u8>) -> Result<(), String>;
 }
 
 pub struct TeammateMeshClient {
@@ -26,25 +27,96 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:tasks", Message {
-            topic: "mesh:tasks".to_string(),
+        use prost::Message as ProstMessage;
+        let event = crate::proto::orchestration::TeammateMeshEvent {
+            agent_id: "builtin".to_string(),
+            action: "task".to_string(),
+            status: "pending".to_string(),
             payload,
-        }).await
+        };
+        let mut buf = Vec::new();
+        let _ = event.encode(&mut buf);
+
+        let msg = Message {
+            topic: "mesh:tasks".to_string(),
+            payload: buf,
+        };
+
+        let mut retries = 0;
+        let mut delay = std::time::Duration::from_millis(100);
+        loop {
+            if let Ok(_) = self.transport.publish("mesh:tasks", msg.clone()).await {
+                return Ok(());
+            }
+            retries += 1;
+            if retries >= 3 {
+                return Err("Failed to publish task after 3 retries".to_string());
+            }
+            tokio::time::sleep(delay).await;
+            delay *= 2;
+        }
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let event = crate::proto::orchestration::TeammateMeshEvent {
+            agent_id: "builtin".to_string(),
+            action: "coordination".to_string(),
+            status: "pending".to_string(),
+            payload,
+        };
+        let mut buf = Vec::new();
+        let _ = event.encode(&mut buf);
+
         self.transport.publish("mesh:coordination", Message {
             topic: "mesh:coordination".to_string(),
-            payload,
+            payload: buf,
         }).await
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:tasks", handler).await
+        let wrapped_handler = Box::new(move |msg: Message| {
+            use prost::Message as ProstMessage;
+            if let Ok(event) = crate::proto::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+                let mut new_msg = msg.clone();
+                new_msg.payload = event.payload;
+                handler(new_msg);
+            } else {
+                handler(msg);
+            }
+        });
+        self.transport.subscribe("mesh:tasks", wrapped_handler).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:coordination", handler).await
+        let wrapped_handler = Box::new(move |msg: Message| {
+            use prost::Message as ProstMessage;
+            if let Ok(event) = crate::proto::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+                let mut new_msg = msg.clone();
+                new_msg.payload = event.payload;
+                handler(new_msg);
+            } else {
+                handler(msg);
+            }
+        });
+        self.transport.subscribe("mesh:coordination", wrapped_handler).await
+    }
+
+    async fn sync_handoff_state(&self, context: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let event = crate::proto::orchestration::TeammateMeshEvent {
+            agent_id: "builtin".to_string(),
+            action: "sync".to_string(),
+            status: "ok".to_string(),
+            payload: context,
+        };
+        let mut buf = Vec::new();
+        let _ = event.encode(&mut buf);
+
+        self.transport.publish("mesh:sync", Message {
+            topic: "mesh:sync".to_string(),
+            payload: buf,
+        }).await
     }
 }
 
@@ -102,6 +174,30 @@ mod tests {
 
         assert!(tasks_received.load(Ordering::SeqCst), "Should receive task message");
         assert!(coord_received.load(Ordering::SeqCst), "Should receive coordination message");
+    }
+
+
+    #[tokio::test]
+    async fn test_teammate_mesh_sync_handoff() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+
+        let sync_received = Arc::new(AtomicBool::new(false));
+        let sync_received_clone = sync_received.clone();
+
+        let _cancel = transport.subscribe("mesh:sync", Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(event) = crate::proto::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+                if event.action == "sync" && event.payload == b"context_data" {
+                    sync_received_clone.store(true, Ordering::SeqCst);
+                }
+            }
+        })).await.unwrap();
+
+        mesh.sync_handoff_state(b"context_data".to_vec()).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+        assert!(sync_received.load(Ordering::SeqCst), "Should receive sync message");
     }
 
     #[tokio::test]
