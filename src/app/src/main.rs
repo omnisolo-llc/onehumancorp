@@ -357,6 +357,8 @@ mod e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::Dashboard::new().unwrap();
+        ui.set_todays_sales("$420.00".into());
+        ui.set_todays_orders(12);
 
         let pending_tasks = vec![
             app::UiPendingApproval {
@@ -854,6 +856,8 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_todays_sales("$420.00".into());
+        dashboard_ui.set_todays_orders(12);
 
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
@@ -1045,6 +1049,8 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_todays_sales("$420.00".into());
+        dashboard_ui.set_todays_orders(12);
 
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
@@ -1093,6 +1099,8 @@ mod dashboard_docs_tests {
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_todays_sales("$420.00".into());
+        dashboard_ui.set_todays_orders(12);
 
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1144,6 +1152,8 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_todays_sales("$420.00".into());
+        dashboard_ui.set_todays_orders(12);
 
         let pending_tasks = vec![
             app::UiPendingApproval {

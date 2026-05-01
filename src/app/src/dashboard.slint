@@ -21,8 +21,8 @@ export component Dashboard inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    in property <int> active_agents_count: 0;
-    in property <int> active_tasks_count: 0;
+    in property <string> todays_sales: "$0.00";
+    in property <int> todays_orders: 0;
     in property <int> scheduled_calls_count: 0;
     in property <int> team_members_count: 0;
 
@@ -67,8 +67,8 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Active Agents"; color: #94a3b8; }
-                            Text { text: active_agents_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Today's Sales"; color: #94a3b8; }
+                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                         }
                     }
                 }
@@ -83,8 +83,8 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Current Tasks"; color: #94a3b8; }
-                            Text { text: active_tasks_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                            Text { text: "Today's Orders"; color: #94a3b8; }
+                            Text { text: todays_orders; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                         }
                     }
                 }
