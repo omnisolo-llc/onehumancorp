@@ -26,13 +26,36 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
+            let clean_url = database_url.split('?').next().unwrap_or(&database_url);
+            let mut conn_opts = SqliteConnectOptions::from_str(clean_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
+
+            // Extract the key from the URI if cipher is specified
+            // E.g., sqlite://ohc-standalone.db?cipher=sqlcipher&key=my_secret_key
+            if database_url.contains("cipher=sqlcipher") {
+                if let Some(key_param) = database_url.split('&').find(|p| p.starts_with("key=")) {
+                    let key = key_param.trim_start_matches("key=").to_string();
+                    conn_opts = conn_opts.pragma("key", key);
+                }
+            }
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .connect_with(conn_opts)
                 .await?;
+
+            // Secure local SQLite file permissions (0600)
+            if let Some(file_path) = database_url.split('?').next().unwrap().strip_prefix("sqlite://") {
+                if std::path::Path::new(file_path).exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let mut perms = std::fs::metadata(file_path)?.permissions();
+                        perms.set_mode(0o600);
+                        std::fs::set_permissions(file_path, perms)?;
+                    }
+                }
+            }
 
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {

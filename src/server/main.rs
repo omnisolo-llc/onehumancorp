@@ -1271,3 +1271,6 @@ mod wizard_tests {
         let _ = service.reset_wizard_state(req).await;
     }
 }
+
+#[cfg(test)]
+mod local_db_security_test;
