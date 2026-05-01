@@ -9,6 +9,8 @@ export component SetupWizard inherits Window {
 
     in-out property <int> step: 0;
 
+    in-out property <bool> show_saved_indicator: false;
+
     // State
     in-out property <string> business_type: "";
     in-out property <string> company_name: "";
@@ -62,17 +64,23 @@ export component SetupWizard inherits Window {
     callback generate_company_description();
     callback generate_product_description();
 
-    next_step => { step = step + 1; save_state(); }
-    select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
-    toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
-    toggle_sell_digital => { sell_digital = !sell_digital; save_state(); }
-    toggle_sell_services => { sell_services = !sell_services; save_state(); }
-    toggle_sell_food => { sell_food = !sell_food; save_state(); }
-    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
-    select_template(t) => { website_template = t; step = step + 1; save_state(); }
-    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
-    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
+    next_step => { step = step + 1; show_saved_indicator = true; save_state(); }
+    select_business_type(t) => { business_type = t; step = step + 1; show_saved_indicator = true; save_state(); }
+    toggle_sell_physical => { sell_physical = !sell_physical; show_saved_indicator = true; save_state(); }
+    toggle_sell_digital => { sell_digital = !sell_digital; show_saved_indicator = true; save_state(); }
+    toggle_sell_services => { sell_services = !sell_services; show_saved_indicator = true; save_state(); }
+    toggle_sell_food => { sell_food = !sell_food; show_saved_indicator = true; save_state(); }
+    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; show_saved_indicator = true; save_state(); }
+    select_payment_pref(p) => { payment_pref = p; step = step + 1; show_saved_indicator = true; save_state(); }
+    select_template(t) => { website_template = t; step = step + 1; show_saved_indicator = true; save_state(); }
+    select_domain(d) => { domain_choice = d; step = step + 1; show_saved_indicator = true; save_state(); }
+    toggle_advanced => { is_advanced = !is_advanced; show_saved_indicator = true; save_state(); }
+
+    Timer {
+        interval: 3s;
+        running: show_saved_indicator;
+        triggered => { show_saved_indicator = false; }
+    }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -248,7 +256,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Est. time to first payment: Instant setup"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); } }
                 }
@@ -257,7 +265,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Tap to pay on phone (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Est. time to first payment: 1-2 days for card reader"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); } }
                 }
@@ -266,7 +274,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Online & In-person"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Est. time to first payment: Instant (Online)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); } }
                 }
@@ -360,7 +368,7 @@ export component SetupWizard inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    Text { text: "Item Code (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
                     Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
@@ -384,7 +392,7 @@ export component SetupWizard inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    Text { text: "Custom Website Address"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
                 }
 
@@ -423,7 +431,7 @@ export component SetupWizard inherits Window {
                         Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        if (is_advanced) : Text { text: "K8s Tenant: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                        if (is_advanced) : Text { text: "System ID: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
                     }
                 }
 

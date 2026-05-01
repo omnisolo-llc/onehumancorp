@@ -159,13 +159,17 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
         data
     };
 
-    let decoded = STANDARD.decode(decode_input).map_err(|e| e.to_string())?;
+    let decoded = match STANDARD.decode(decode_input) {
+        Ok(d) => d,
+        Err(_) => return Ok(data.to_vec()),
+    };
     
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
-    Ok(decompressed)
+    match decoder.read_to_end(&mut decompressed) {
+        Ok(_) => Ok(decompressed),
+        Err(_) => Ok(data.to_vec()),
+    }
 }
 
 #[cfg(test)]
@@ -180,6 +184,13 @@ mod tests {
         assert_eq!(data, decompressed.as_slice());
     }
     
+    #[test]
+    fn test_decompress_legacy_uncompressed() {
+        let data = b"{\"step\":1,\"data\":\"uncompressed data\"}";
+        let decompressed = decompress_data(data).unwrap();
+        assert_eq!(data, decompressed.as_slice());
+    }
+
     #[test]
     fn test_decompress_unquoted() {
         let data = b"Hello, world!";
