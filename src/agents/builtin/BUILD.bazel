@@ -33,6 +33,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/agents/builtin/llm",
         "@crates//:chrono",
         "@crates//:hmac",
         "@crates//:once_cell",
