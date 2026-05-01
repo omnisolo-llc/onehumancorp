@@ -25,11 +25,9 @@ impl MyAgentManagerService {
         let hub_clone2 = self.hub.clone();
 
         let (agents, meetings) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
+            async move { hub_clone1.get_agents() },
+            async move { hub_clone2.get_meetings() }
         );
-        let agents = agents.unwrap_or_else(|_| vec![]);
-        let meetings = meetings.unwrap_or_else(|_| vec![]);
         
         let costs = Summary {
             total_cost_usd: 100.0,

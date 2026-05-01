@@ -1,9 +1,5 @@
 # Release Notes
 
-## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
-- Scaling (Cloud): 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
-- Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
-
 ## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
 - Scaling (Cloud): Fix Bazel test execution time warning for `server_test` (#8941)
 - Privacy/Offline (Standalone): Fix Bazel test execution time warning for `server_test` (#8941)

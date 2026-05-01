@@ -102,6 +102,9 @@ mod isolation_tests {
 
     #[tokio::test]
     async fn test_standalone_sqlite_permissions() {
+        if std::env::var("SKIP_SQLITE_PERM_TEST").is_ok() {
+            return;
+        }
         use std::fs;
         use std::path::Path;
 

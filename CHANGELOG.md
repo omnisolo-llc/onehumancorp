@@ -1,12 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
-### Cloud Scaling Improvements
-- 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
-
-### Privacy/Offline Improvements
-- 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
-
 ## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix Bazel test execution time warning for `server_test` (#8941)

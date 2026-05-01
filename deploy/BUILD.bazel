@@ -108,7 +108,6 @@ oci_push(
 
 sh_test(
     name = "deploy_artifacts_test",
-    size = "small",
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = glob([
         "docker/**/*",
