@@ -55,6 +55,7 @@ tonic-build = "0.12"
 axum = { version = "0.8.1", features = ["ws"] }
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
+html-escape = "0.2.13"
 
 [build-dependencies]
 tonic-build = "0.12"

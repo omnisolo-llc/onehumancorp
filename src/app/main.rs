@@ -266,6 +266,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    let bs_link_clone = business_share_handle.clone();
+                    business_share_ui.on_copy_link(move || {
+                        if let Some(ui) = bs_link_clone.upgrade() {
+                            let link = ui.get_share_link();
+                            if let Ok(mut ctx) = copypasta::ClipboardContext::new() {
+                                use copypasta::ClipboardProvider;
+                                let _ = ctx.set_contents(link.to_string());
+                                println!("Share link copied to clipboard: {}", link);
+                            } else {
+                                println!("Share link copied: {}", link);
+                            }
+                        }
+                    });
+
+                    let bs_ig_clone = business_share_handle.clone();
+                    business_share_ui.on_share_to_instagram(move || {
+                        if let Some(_) = bs_ig_clone.upgrade() {
+                            let url = "https://instagram.com/direct/inbox";
+                            let _ = open::that(url);
+                            println!("Opened Instagram: {}", url);
+                        }
+                    });
+
+                    let bs_x_clone = business_share_handle.clone();
+                    business_share_ui.on_share_to_x(move || {
+                        if let Some(ui) = bs_x_clone.upgrade() {
+                            let link = ui.get_share_link();
+                            let msg = format!("Check out my store! {}", link);
+                            let url = format!("https://twitter.com/intent/tweet?text={}", urlencoding::encode(&msg));
+                            let _ = open::that(url);
+                            println!("Opened X: {}", msg);
+                        }
+                    });
+
+                    let bs_wa_clone = business_share_handle.clone();
+                    business_share_ui.on_share_to_whatsapp(move || {
+                        if let Some(ui) = bs_wa_clone.upgrade() {
+                            let link = ui.get_share_link();
+                            let msg = format!("Check out my store! {}", link);
+                            let url = format!("https://wa.me/?text={}", urlencoding::encode(&msg));
+                            let _ = open::that(url);
+                            println!("Opened WhatsApp: {}", msg);
+                        }
+                    });
+
                     // Keep strong reference alive indefinitely on the main thread via Box::leak
                     Box::leak(Box::new(business_share_ui));
                 } else {
@@ -620,6 +665,71 @@ mod growth_e2e_tests {
 
         referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
         assert!(*link_shared.borrow(), "share_link should be invoked");
+    }
+
+    #[test]
+    fn test_cuj_share_business_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        // Start from Login
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Navigate to Dashboard
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+
+        let business_share_ui = app::BusinessShare::new().unwrap();
+        let business_share_handle = business_share_ui.as_weak();
+
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+            if let Some(ui) = business_share_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+
+        // Assert on BusinessShare UI capabilities
+        let share_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_wa_called_clone = share_wa_called.clone();
+        business_share_ui.on_share_to_whatsapp(move || {
+            *share_wa_called_clone.borrow_mut() = true;
+        });
+
+        let share_ig_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_ig_called_clone = share_ig_called.clone();
+        business_share_ui.on_share_to_instagram(move || {
+            *share_ig_called_clone.borrow_mut() = true;
+        });
+
+        let share_x_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_x_called_clone = share_x_called.clone();
+        business_share_ui.on_share_to_x(move || {
+            *share_x_called_clone.borrow_mut() = true;
+        });
+
+        business_share_ui.invoke_share_to_whatsapp();
+        assert!(*share_wa_called.borrow(), "WhatsApp share intent should be invoked");
+
+        business_share_ui.invoke_share_to_instagram();
+        assert!(*share_ig_called.borrow(), "Instagram share intent should be invoked");
+
+        business_share_ui.invoke_share_to_x();
+        assert!(*share_x_called.borrow(), "X share intent should be invoked");
     }
 
     #[test]
@@ -1865,6 +1975,10 @@ mod cost_transparency_e2e_tests {
         let share_to_x_called_clone = share_to_x_called.clone();
         business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
 
+        let share_to_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_wa_called_clone = share_to_wa_called.clone();
+        business_share_ui.on_share_to_whatsapp(move || { *share_to_wa_called_clone.borrow_mut() = true; });
+
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
         business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
@@ -1881,6 +1995,9 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_share_to_x();
         assert!(*share_to_x_called.borrow());
+
+        business_share_ui.invoke_share_to_whatsapp();
+        assert!(*share_to_wa_called.borrow());
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());

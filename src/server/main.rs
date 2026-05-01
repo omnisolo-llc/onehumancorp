@@ -888,6 +888,50 @@ impl HubService for MyHubService {
     }
 }
 
+pub async fn share_preview_handler(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> axum::response::Html<String> {
+    let raw_title = params.get("title").cloned().unwrap_or_else(|| "My Awesome Store".to_string());
+    let raw_description = params.get("desc").cloned().unwrap_or_else(|| "The best place to buy things".to_string());
+    let raw_image = params.get("img").cloned().unwrap_or_else(|| "https://mybusiness.ohc.app/og-image.png".to_string());
+    let raw_url = params.get("url").cloned().unwrap_or_else(|| "https://mybusiness.ohc.app".to_string());
+
+    let title_text = html_escape::encode_text(&raw_title);
+    let title_attr = html_escape::encode_double_quoted_attribute(&raw_title);
+    let description = html_escape::encode_double_quoted_attribute(&raw_description);
+    let image = html_escape::encode_double_quoted_attribute(&raw_image);
+    let url = html_escape::encode_double_quoted_attribute(&raw_url);
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="3;url={url}" />
+    <title>{title_text}</title>
+    <meta property="og:title" content="{title_attr}" />
+    <meta property="og:description" content="{description}" />
+    <meta property="og:image" content="{image}" />
+    <meta property="og:url" content="{url}" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{title_attr}" />
+    <meta name="twitter:description" content="{description}" />
+    <meta name="twitter:image" content="{image}" />
+</head>
+<body>
+    <h1>Redirecting to {title_text}...</h1>
+</body>
+</html>"#,
+        title_text = title_text,
+        title_attr = title_attr,
+        description = description,
+        image = image,
+        url = url,
+    );
+
+    axum::response::Html(html)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize database
@@ -980,6 +1024,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+
+        .route("/share", axum::routing::get(share_preview_handler))
 
         .with_state(mesh_transport);
 
@@ -1139,6 +1185,32 @@ mod tests {
         let resp = service.publish_teammate_mesh_event(req).await;
         assert!(resp.is_ok());
         assert!(resp.unwrap().into_inner().success);
+    }
+
+    #[tokio::test]
+    async fn test_share_preview_handler_xss_mitigation() {
+        use axum::extract::Query;
+        use std::collections::HashMap;
+
+        let mut params = HashMap::new();
+        params.insert("title".to_string(), "<script>alert(1)</script>".to_string());
+        params.insert("desc".to_string(), "\"><script>alert(2)</script>".to_string());
+        params.insert("url".to_string(), "\"><img src=x onerror=alert(3)>".to_string());
+
+        let res = super::share_preview_handler(Query(params)).await;
+        let body = res.0;
+
+        // Ensure tags are properly escaped and literal scripts are neutralized
+        assert!(!body.contains("<script>alert(1)</script>"));
+        assert!(body.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+
+        // Ensure double quotes in properties are escaped
+        assert!(!body.contains("\"><script>alert(2)</script>"));
+        assert!(body.contains("&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;"));
+
+        // Ensure URL block is safely escaped
+        assert!(body.contains(&format!("<meta http-equiv=\"refresh\" content=\"3;url={}\" />", html_escape::encode_double_quoted_attribute("\"><img src=x onerror=alert(3)>"))));
+        assert!(!body.contains("\"><img src=x onerror=alert(3)>"));
     }
 
     #[tokio::test]
