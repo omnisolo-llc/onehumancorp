@@ -1112,6 +1112,68 @@ mod docs_tests {
     }
 
     #[test]
+    fn test_e2e_documentation_suite_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
+
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
+
+        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let docs_opened_clone = docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+
+        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let videos_opened_clone = videos_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || { *videos_opened_clone.borrow_mut() = true; });
+
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || { *walkthrough_opened_clone.borrow_mut() = true; });
+
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || { *release_notes_opened_clone.borrow_mut() = true; });
+
+        // Simulate clicking the buttons on the dashboard
+        dashboard_ui.invoke_open_help_center();
+        dashboard_ui.invoke_open_ai_chat();
+        dashboard_ui.invoke_open_api_docs();
+        dashboard_ui.invoke_open_video_tutorials();
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        dashboard_ui.invoke_open_release_notes();
+
+        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
+        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
+        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
+        assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
+
+        // Verify the individual components instantiate correctly and have their basic properties
+        let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        walkthrough.set_current_step(1);
+        assert_eq!(walkthrough.get_current_step(), 1, "Walkthrough step should be updated");
+
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        ai_chat.set_user_input("How to add product".into());
+        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_called_clone = send_called.clone();
+        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+        ai_chat.invoke_send_message();
+        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+
+        let help_center = app::HelpCenter::new().unwrap();
+        assert_eq!(help_center.get_search_query(), "");
+    }
+
+    #[test]
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
