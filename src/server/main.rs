@@ -99,18 +99,19 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
-        if let Ok(spiffe_id_str) = spiffe_id.to_str() {
-             match crate::auth::parse_spiffe_id(spiffe_id_str) {
-                 Ok((_org_id, _agent_id)) => {
-                     println!("Authenticated SPIFFE ID successfully.");
-                 }
-                 Err(e) => return Err(tonic::Status::permission_denied(e)),
-             }
-        } else {
-             return Err(tonic::Status::invalid_argument("invalid x-spiffe-id header"));
+    let spiffe_id = req.metadata().get("x-spiffe-id")
+        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+
+    let spiffe_id_str = spiffe_id.to_str()
+        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
+
+    match crate::auth::parse_spiffe_id(spiffe_id_str) {
+        Ok((_org_id, _agent_id)) => {
+            println!("Authenticated SPIFFE ID successfully.");
         }
+        Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
+
     Ok(req)
 }
 
