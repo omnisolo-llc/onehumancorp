@@ -803,7 +803,7 @@ mod e2e_tests {
         assert_eq!(ui.get_step(), 4);
 
         // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
+        ui.invoke_select_payment_pref("skip".into());
         assert_eq!(ui.get_step(), 5);
 
         // Step 5: Admin -> Step 6
@@ -829,7 +829,7 @@ mod e2e_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
+        assert_eq!(ui.get_payment_pref(), "skip");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_sell_digital(), false);
         assert_eq!(ui.get_sell_services(), false);
@@ -1177,7 +1177,7 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
+        ui.invoke_select_payment_pref("skip".into());
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
@@ -1226,7 +1226,7 @@ mod docs_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
+        assert_eq!(ui.get_payment_pref(), "skip");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
