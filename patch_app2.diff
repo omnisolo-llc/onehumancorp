@@ -1,0 +1,4 @@
+<<<<<<< SEARCH
+export { TooltipElement } from "./tooltip_element.slint";
+=======
+>>>>>>> REPLACE

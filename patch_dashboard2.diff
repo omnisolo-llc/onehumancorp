@@ -1,0 +1,16 @@
+<<<<<<< SEARCH
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+
+
+export struct UiPendingApproval {
+=======
+import { TooltipElement } from "tooltip_element.slint";
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+
+
+export struct UiPendingApproval {
+>>>>>>> REPLACE

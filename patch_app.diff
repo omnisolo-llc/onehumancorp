@@ -1,0 +1,8 @@
+<<<<<<< SEARCH
+export { HelpCenter } from "./help_center.slint";
+import { Button, VerticalBox } from "std-widgets.slint";
+=======
+export { HelpCenter } from "./help_center.slint";
+export { TooltipElement } from "./tooltip_element.slint";
+import { Button, VerticalBox } from "std-widgets.slint";
+>>>>>>> REPLACE

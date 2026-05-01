@@ -14,7 +14,7 @@ export component TooltipElement inherits Rectangle {
 
     @children
 
-    property <bool> update_tooltip: {
+    changed ta.has-hover => {
         if (ta.has-hover) {
             TooltipRegistry.show_tooltip(tooltip_id, self.absolute-position.x, self.absolute-position.y + self.height);
         } else {
@@ -22,6 +22,5 @@ export component TooltipElement inherits Rectangle {
             // but for simplicity we hide.
             TooltipRegistry.hide_tooltip();
         }
-        return true;
-    };
+    }
 }
