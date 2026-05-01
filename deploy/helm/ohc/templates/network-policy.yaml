@@ -18,6 +18,11 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-ohc-core
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: controller
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
