@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -307,32 +306,10 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let state = req.state;
 
-        let (state_json, org_id, user_id, step) = {
-            let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-            for (k, v) in state {
-                wizard_state.insert(k, serde_json::Value::String(v));
-            }
-
-            let json = serde_json::to_value(&*wizard_state).unwrap_or(serde_json::json!({}));
-            let org = wizard_state.get("organization_id").and_then(|v| v.as_str()).unwrap_or("pending_org").to_string();
-            let usr = wizard_state.get("admin_email").and_then(|v| v.as_str()).unwrap_or("pending_user").to_string();
-            let stp: i32 = wizard_state.get("step").and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0);
-            (json, org, usr, stp)
-        };
-
-        let pool = self.hub.pool.clone();
+        let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
         
-        // Wait for DB operation to ensure persistence
-        if let Err(e) = sqlx::query("INSERT INTO onboarding_state (organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4) ON CONFLICT (organization_id) DO UPDATE SET current_step = EXCLUDED.current_step, user_id = EXCLUDED.user_id, state_json = onboarding_state.state_json || EXCLUDED.state_json, updated_at = CURRENT_TIMESTAMP")
-            .bind(&org_id)
-            .bind(&user_id)
-            .bind(step)
-            .bind(state_json)
-            .execute(&pool)
-            .await
-        {
-            return Err(tonic::Status::internal(format!("Failed to persist wizard state to DB: {}", e)));
+        for (k, v) in state {
+            wizard_state.insert(k, serde_json::Value::String(v));
         }
 
         Ok(tonic::Response::new(SaveWizardStateResponse {
@@ -975,30 +952,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true",
-        None
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
 
     // Start Builtin Agent
-    let sync_transport = mesh_transport.clone();
-    let hub_clone = hub.clone();
-    tokio::spawn(async move {
-        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
-            use prost::Message;
-            if let Ok(evt) = crate::ohc::agent::service::RunTaskEvent::decode(&msg.payload[..]) {
-                if evt.r#type == crate::ohc::agent::service::EventType::TaskComplete as i32 {
-                    println!("Main Server: Received task completion event from agent for task {}", evt.task_id);
-                    let _ = hub_clone.task_manager().complete_task(&evt.task_id, "builtin_agent", evt.content.clone());
-                }
-            }
-        });
-        if let Err(e) = sync_transport.subscribe("agent_sync", handler).await {
-            eprintln!("Failed to subscribe to 'agent_sync': {}", e);
-        } else {
-            println!("Main Server subscribed to 'agent_sync'");
-        }
-    });
-
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
