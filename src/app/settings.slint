@@ -13,6 +13,7 @@ export component Settings inherits Window {
     in-out property <string> org_id;
     in-out property <string> user_role;
     in-out property <bool> local_service_running: true;
+    in-out property <bool> show_expert_mode_hint: false;
 
     callback start_stop_service();
     callback run_doctor();
@@ -109,11 +110,25 @@ export component Settings inherits Window {
         }
 
         // Other Settings
-        HorizontalBox {
-            Text { text: "Expert Mode"; color: #1e293b; }
-            CheckBox {
-                checked: expert_mode;
-                toggled => { expert_mode = !expert_mode; }
+        VerticalBox {
+            spacing: 8px;
+            HorizontalBox {
+                Text { text: "Expert Mode"; color: #1e293b; vertical-alignment: center; }
+                Button {
+                    text: "?"; width: 44px; height: 44px;
+                    clicked => { show_expert_mode_hint = !show_expert_mode_hint; }
+                }
+                Rectangle {} // spacer
+                CheckBox {
+                    checked: expert_mode;
+                    toggled => { expert_mode = !expert_mode; }
+                }
+            }
+            if (show_expert_mode_hint) : Text {
+                text: "Expert mode turns on advanced features like direct API access and detailed network logs.";
+                color: #64748b;
+                font-size: 14px;
+                wrap: word-wrap;
             }
         }
 

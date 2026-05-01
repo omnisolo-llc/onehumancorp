@@ -11,6 +11,7 @@ export component BusinessShare inherits Window {
     in property <string> business_name: "My Awesome Store";
     in property <string> business_tagline: "The best place to buy things";
     in property <string> share_link: "ohc://share?b=123";
+    in-out property <bool> show_share_hint: false;
 
     callback copy_link();
     callback share_to_instagram();
@@ -21,10 +22,23 @@ export component BusinessShare inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        HorizontalBox {
-            Text { text: "Share Your Store"; font-size: 24px; font-weight: 700; color: white; vertical-alignment: center; }
-            Rectangle {}
-            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        VerticalBox {
+            spacing: 8px;
+            HorizontalBox {
+                Text { text: "Share Your Store"; font-size: 24px; font-weight: 700; color: white; vertical-alignment: center; }
+                Button {
+                    text: "?"; width: 44px; height: 44px;
+                    clicked => { show_share_hint = !show_share_hint; }
+                }
+                Rectangle {}
+                Button { text: "Close"; height: 44px; clicked => { close(); } }
+            }
+            if (show_share_hint) : Text {
+                text: "Use these buttons to copy a link to your store or post it directly to your social media pages so customers can find you.";
+                color: #cbd5e1;
+                font-size: 14px;
+                wrap: word-wrap;
+            }
         }
 
         // OpenGraph Preview
