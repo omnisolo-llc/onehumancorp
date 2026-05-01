@@ -78,6 +78,7 @@ impl BaseProvider {
     }
 }
 
+#[allow(dead_code)]
 async fn execute_in_isolation(agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
     let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
 

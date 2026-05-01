@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
@@ -16,6 +15,7 @@ use sqlx::PgPool;
 pub enum ExecutionEvent {
     Stdout(String),
     Stderr(String),
+#[allow(dead_code)]
     ExitCode(i32),
     Error(String),
 }

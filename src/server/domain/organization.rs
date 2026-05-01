@@ -4,6 +4,7 @@ use crate::ohc::organization::RoleProfile;
 use crate::ohc::common::Role;
 use chrono::{DateTime, Utc};
 
+#[allow(dead_code)]
 pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-eng", id);

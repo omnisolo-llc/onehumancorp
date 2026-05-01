@@ -18,6 +18,7 @@ pub struct Job {
     pub attempts: i32,
     pub max_attempts: i32,
     pub run_after: DateTime<Utc>,
+#[allow(dead_code)]
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

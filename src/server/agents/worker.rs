@@ -4,6 +4,7 @@ use crate::agents::plane::Client as PlaneClient;
 use crate::hub::Hub;
 use crate::agents::plane::Issue;
 
+#[allow(dead_code)]
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
     hub: Arc<Hub>,
@@ -21,11 +22,12 @@ impl TaskWorker {
         }
     }
 
-    pub async fn start(&self, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
+#[allow(unused_mut)]
+    pub async fn start(&self, shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
         self.start_with_workers(self.num_workers, shutdown_rx).await;
     }
 
-    pub async fn start_with_workers(&self, workers: usize, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
+    pub async fn start_with_workers(&self, workers: usize, shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
         let (task_tx, task_rx) = tokio::sync::mpsc::channel::<Issue>(100);
         let task_rx = Arc::new(Mutex::new(task_rx));
         

@@ -39,6 +39,7 @@ pub struct CIJob {
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
+#[allow(dead_code)]
     ci_jobs: RwLock<Vec<CIJob>>,
 }
 

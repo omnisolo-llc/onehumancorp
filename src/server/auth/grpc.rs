@@ -15,6 +15,7 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
+#[allow(dead_code)]
     pub fn from_env() -> Self {
         if std::env::var("OHC_AGENT_AUTH_DISABLED").unwrap_or_default() == "true" {
             return AuthConfig { mode: AuthMode::Disabled };

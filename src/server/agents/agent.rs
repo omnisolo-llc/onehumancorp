@@ -1,11 +1,11 @@
 // Trivial change to force rebuild
 use async_trait::async_trait;
-use std::sync::Arc;
 use tokio_stream::StreamExt;
 use redis::AsyncCommands;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Status {
+#[allow(dead_code)]
     IDLE,
     ACTIVE,
     #[serde(rename = "IN_MEETING")]
@@ -16,30 +16,45 @@ pub enum Status {
 }
 
 pub const EVENT_TASK: &str = "task";
+#[allow(dead_code)]
 pub const EVENT_STATUS: &str = "status";
+#[allow(dead_code)]
 pub const EVENT_HANDOFF: &str = "handoff";
+#[allow(dead_code)]
 pub const EVENT_CODE_REVIEWED: &str = "CodeReviewed";
+#[allow(dead_code)]
 pub const EVENT_TESTS_PASSED: &str = "TestsPassed";
+#[allow(dead_code)]
 pub const EVENT_SPEC_APPROVED: &str = "SpecApproved";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_RAISED: &str = "BlockerRaised";
+#[allow(dead_code)]
 pub const EVENT_BLOCKER_CLEARED: &str = "BlockerCleared";
+#[allow(dead_code)]
 pub const EVENT_PR_CREATED: &str = "PRCreated";
+#[allow(dead_code)]
 pub const EVENT_PR_MERGED: &str = "PRMerged";
+#[allow(dead_code)]
 pub const EVENT_DESIGN_REVIEWED: &str = "DesignReviewed";
+#[allow(dead_code)]
 pub const EVENT_APPROVAL_NEEDED: &str = "ApprovalNeeded";
+#[allow(dead_code)]
 
 pub const AVAILABLE_MCP_BUNDLES: &[&str] = &[
+#[allow(dead_code)]
     "github",
 ];
 
 #[async_trait]
 pub trait Transport: Send + Sync {
+#[allow(dead_code)]
     async fn send(&self, message: &[u8]) -> Result<(), String>;
     async fn receive(&self) -> Result<Vec<u8>, String>;
     async fn close(&self) -> Result<(), String>;
 }
 
 pub struct InProcessTransport<R, W> {
+#[allow(dead_code)]
     reader: tokio::sync::Mutex<tokio::io::BufReader<R>>,
     writer: tokio::sync::Mutex<W>,
 }
@@ -50,6 +65,7 @@ where
     W: tokio::io::AsyncWrite + Unpin + Send + 'static,
 {
     pub fn new(reader: R, writer: W) -> Self {
+#[allow(dead_code)]
         InProcessTransport {
             reader: tokio::sync::Mutex::new(tokio::io::BufReader::new(reader)),
             writer: tokio::sync::Mutex::new(writer),
@@ -92,6 +108,7 @@ where
 }
 
 pub struct RedisPubSubTransport {
+#[allow(dead_code)]
     client: redis::Client,
     publish_chan: String,
     pubsub: tokio::sync::Mutex<redis::aio::PubSub>,

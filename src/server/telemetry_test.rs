@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::{json, Value};
     use crate::telemetry::{redact_interface_pii, buffer_metric};
 
@@ -88,6 +87,7 @@ mod tests {
             search_dirs.push(p);
         } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let mut p = PathBuf::from(runfiles_dir);
+#[allow(unused_mut)]
             search_dirs.push(p);
         }
 

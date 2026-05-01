@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
@@ -7,6 +6,7 @@ use async_trait::async_trait;
 pub struct Message {
     pub topic: String,
     pub payload: Vec<u8>,
+#[allow(dead_code)]
 }
 
 #[async_trait]
@@ -14,6 +14,7 @@ pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
     async fn close(&self) -> Result<(), String>;
+#[allow(dead_code)]
 }
 
 pub struct MemoryBus {

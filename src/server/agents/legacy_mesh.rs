@@ -1,4 +1,3 @@
-use redis::AsyncCommands;
 use std::time::Duration;
 use uuid::Uuid;
 use sqlx::Row;
@@ -19,7 +18,7 @@ impl DistributedLock {
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
         
         loop {
@@ -46,7 +45,7 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
@@ -67,6 +66,7 @@ impl DistributedLock {
 
 pub struct Mission {
     pub mission_id: String,
+#[allow(dead_code)]
     pub title: String,
     pub status: String,
     pub assigned_agent: Option<String>,

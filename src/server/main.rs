@@ -133,7 +133,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
+use ohc::orchestration::growth_service_server::{GrowthServiceServer};
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -1044,8 +1044,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ohc::orchestration::*;
-    use crate::ohc::agent::service::*;
     use tonic::Request;
 
     // Helper to create a dummy hub and service for testing

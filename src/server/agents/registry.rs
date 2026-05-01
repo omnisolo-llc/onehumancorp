@@ -90,6 +90,7 @@ impl Registry {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[allow(dead_code)]
 pub struct ProviderInfo {
     pub r#type: ProviderType,
     pub description: String,
