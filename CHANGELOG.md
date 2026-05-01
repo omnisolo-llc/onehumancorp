@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
+### Cloud Scaling Improvements
+- 🤖 Implementer: Harness Upgrade - [Error Handling (Compounding Error Prevention)] (#9064)
+
+### Privacy/Offline Improvements
+- 🤖 Implementer: Harness Upgrade - [Error Handling (Compounding Error Prevention)] (#9064)
+
 ## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
