@@ -26,9 +26,30 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
+            // Standalone Mode Hardening: Ensure proper file permissions (0600) on Unix
+            #[cfg(unix)]
+            {
+                if let Some(path_str) = database_url.strip_prefix("sqlite:") {
+                    let path = Path::new(path_str.split('?').next().unwrap_or(path_str));
+                    if !path.exists() {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        std::fs::OpenOptions::new()
+                            .create(true)
+                            .write(true)
+                            .mode(0o600)
+                            .open(path)?;
+                    }
+                }
+            }
+
+            let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
+
+            // SQLCipher Encryption: Support encrypted SQLite if key is provided
+            if let Ok(key) = env::var("OHC_SQLITE_KEY") {
+                conn_opts = conn_opts.pragma("key", key);
+            }
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .connect_with(conn_opts)

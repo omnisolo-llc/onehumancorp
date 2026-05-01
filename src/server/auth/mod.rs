@@ -11,6 +11,10 @@ use tonic::{Request, Response, Status};
 pub mod postgres_store;
 pub mod grpc;
 pub mod orchestration;
+
+#[cfg(test)]
+pub mod isolation_test;
+
 use crate::ohc::orchestration::auth_service_server::AuthService;
 use crate::ohc::orchestration::*;
 
