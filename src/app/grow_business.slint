@@ -20,7 +20,7 @@ export component GrowBusiness inherits Window {
             Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             CheckBox {
-                text: "Expert Mode";
+                text: "Show Advanced Options";
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; }
             }
@@ -47,7 +47,7 @@ export component GrowBusiness inherits Window {
             
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Advanced Target KPIs"; font-weight: 700; color: #1e293b; }
+                Text { text: "Advanced Target Goal"; font-weight: 700; color: #1e293b; }
                 LineEdit {
                     placeholder-text: "Conversion Target (%)";
                 }

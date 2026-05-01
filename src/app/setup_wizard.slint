@@ -36,7 +36,7 @@ export component SetupWizard inherits Window {
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
     in-out property <string> product_description: "";
-    in-out property <string> product_sku: "";
+    in-out property <string> item_code: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
     in-out property <string> custom_dns_target: "";
@@ -93,7 +93,7 @@ export component SetupWizard inherits Window {
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
-                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "Show Advanced Options"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 TouchArea {
                     width: 20px;
                     height: 20px;
@@ -363,8 +363,8 @@ export component SetupWizard inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
+                    Text { text: "Item Code (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> item_code; height: 44px; }
                     Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
                 }
@@ -387,7 +387,7 @@ export component SetupWizard inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    Text { text: "Website Address Target"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
                 }
 
@@ -426,7 +426,7 @@ export component SetupWizard inherits Window {
                         Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        if (is_advanced) : Text { text: "K8s Tenant: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                        if (is_advanced) : Text { text: "Account ID: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
                     }
                 }
 

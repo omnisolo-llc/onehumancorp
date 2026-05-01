@@ -178,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                        if let Some(val) = state.get("item_code") { ui.set_item_code(val.into()); }
                         if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                         if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                     }
@@ -210,7 +210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("item_code".to_string(), ui.get_item_code().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
@@ -494,7 +494,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_description".to_string(), product_description.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("item_code".to_string(), ui.get_item_code().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
@@ -2103,5 +2103,48 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+    }
+}
+
+#[cfg(test)]
+mod e2e_jargon_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_jargon_elimination_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        // Start from login screen
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |username, password| {
+            if username == "maya" && password == "cakes123" {
+                *login_successful_clone.borrow_mut() = true;
+            }
+        });
+
+        login_ui.set_username("maya".into());
+        login_ui.set_password("cakes123".into());
+        login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+
+        assert!(*login_successful.borrow(), "Login should succeed");
+
+        // Navigate to Setup Wizard
+        let setup_ui = app::SetupWizard::new().unwrap();
+        setup_ui.set_step(2);
+        assert_eq!(setup_ui.get_is_advanced(), false);
+
+        // Click on "Show Advanced Options" (previously Expert Mode)
+        setup_ui.invoke_toggle_advanced();
+        assert_eq!(setup_ui.get_is_advanced(), true);
+
+        // Verify the properties representing the fields renamed from jargon exist and work
+        setup_ui.set_item_code("BAKE-1".into()); // Previously product_sku
+        assert_eq!(setup_ui.get_item_code(), "BAKE-1");
+
+        setup_ui.set_custom_dns_target("my-cake-shop.ohc.app".into()); // Re-worded in UI
+        assert_eq!(setup_ui.get_custom_dns_target(), "my-cake-shop.ohc.app");
     }
 }
