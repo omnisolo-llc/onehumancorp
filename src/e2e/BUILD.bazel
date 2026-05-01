@@ -1,6 +1,8 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//src/e2e:playwright_tests.bzl", "define_playwright_tests")
 
-# Shell script wrapper for running playwright tests via docker compose
+# Shell script wrapper for running ALL playwright tests via docker compose
+# (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
     name = "run_playwright_e2e",
     srcs = ["run_playwright.sh"],
@@ -11,3 +13,8 @@ sh_binary(
     ],
     visibility = ["//visibility:public"],
 )
+
+# Per-spec Playwright test targets, included in `bazel test //...`.
+# Run all:   bazel test //src/e2e:playwright
+# Run one:   bazel test //src/e2e:playwright_app_spec_ts
+define_playwright_tests()
