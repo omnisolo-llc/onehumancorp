@@ -41,6 +41,12 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   // Verify First-Time User Tour ? icon toggle
   const questionMarkBtn = page.locator('button:has-text("?")');
   await expect(questionMarkBtn).toBeVisible();
+
+  // Verify tap targets are appropriately sized (>= 44px)
+  const box = await questionMarkBtn.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+
   await questionMarkBtn.click();
   await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
 
