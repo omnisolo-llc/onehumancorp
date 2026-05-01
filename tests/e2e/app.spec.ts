@@ -36,6 +36,67 @@ test.describe('Business Setup Wizard', () => {
     // Verify we can proceed through steps
     await expect(page.locator('text=What do you sell')).toBeVisible();
   });
+
+  test('should reach Welcome Checklist and show interactive items', async ({ page }) => {
+    // E2E Standard: Start from home page, login via UI
+    await page.goto('/');
+
+    // Simulate login
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    // Navigate to business setup
+    await page.goto('/business-setup');
+
+    // Navigate through steps to reach Step 10
+    // Step 0: Welcome
+    await page.locator('button:has-text("Get Started →")').click();
+
+    // Step 1: Type
+    await page.locator('text=Online Store').click(); // Simulating selecting type, though the exact Slint dom mapping might vary. Just clicking Next.
+    await page.locator('button:has-text("Next →")').click();
+
+    // Step 2: Name
+    await page.locator('input').first().fill('Test Company');
+    await page.locator('button:has-text("Next →")').click();
+
+    // Step 3: What do you sell
+    await page.locator('text=Physical Products').click();
+    await page.locator('button:has-text("Next →")').click();
+
+    // Step 4: Payments
+    await page.locator('text=Online Payments').click();
+    // Next happens automatically on select usually, or we click next
+
+    // Step 5: Admin
+    await page.locator('input').first().fill('admin@test.com');
+    await page.locator('button:has-text("Next →")').click();
+
+    // Step 6: Template
+    await page.locator('text=Modern').click();
+
+    // Step 7: Product
+    await page.locator('input').first().fill('My Product');
+    await page.locator('button:has-text("Next →")').click();
+
+    // Step 8: Domain
+    await page.locator('text=Free OHC Domain').click();
+
+    // Step 9: Launch
+    await page.locator('button:has-text("Launch My Business →")').click();
+
+    // Wait for launch to complete (status updates)
+    await expect(page.locator('text=Onboarding Complete!')).toBeVisible({ timeout: 15000 });
+
+    // Ensure we are now at Step 10 by checking for the checklist items.
+    // Assert the presence of the checklist text strictly.
+    await expect(page.locator('text=You\'re set up! Here\'s what to do next:')).toBeVisible();
+    await expect(page.locator('text=Add 3 more products')).toBeVisible();
+    await expect(page.locator('text=Connect Instagram')).toBeVisible();
+    await expect(page.locator('text=Share your link with a friend')).toBeVisible();
+  });
 });
 
 test.describe('Login', () => {

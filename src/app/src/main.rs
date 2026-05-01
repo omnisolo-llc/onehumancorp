@@ -212,6 +212,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_go_to_add_products({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            println!("Navigating to Add Products flow...");
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let _ = dashboard.show();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_connect_instagram({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            println!("Navigating to Connect Instagram flow...");
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let _ = dashboard.show();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_share_link({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            println!("Navigating to Share Link flow...");
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let _ = dashboard.show();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
     setup_wizard_ui.on_go_to_dashboard({
         let ui_handle = setup_wizard_handle.clone();
         move || {
@@ -676,7 +718,23 @@ mod tests {
             println!("Skipping test_welcome_checklist_creation because no display server is available.");
             return;
         }
-        app::WelcomeChecklist::new().unwrap();
+        let ui = app::WelcomeChecklist::new().unwrap();
+        let clicked = std::rc::Rc::new(std::cell::RefCell::new(0));
+
+        let clicked_clone1 = clicked.clone();
+        ui.on_go_to_add_products(move || { *clicked_clone1.borrow_mut() += 1; });
+
+        let clicked_clone2 = clicked.clone();
+        ui.on_go_to_connect_instagram(move || { *clicked_clone2.borrow_mut() += 1; });
+
+        let clicked_clone3 = clicked.clone();
+        ui.on_go_to_share_link(move || { *clicked_clone3.borrow_mut() += 1; });
+
+        ui.invoke_go_to_add_products();
+        ui.invoke_go_to_connect_instagram();
+        ui.invoke_go_to_share_link();
+
+        assert_eq!(*clicked.borrow(), 3, "All callbacks should have been invoked");
     }
 
     #[test]
@@ -972,13 +1030,30 @@ mod docs_tests {
         ui.set_launching(false);
         ui.set_step(10);
 
-        // Step 10: Go to Dashboard
+        // Step 10: Go to Dashboard and checklist callbacks
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
         ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
+
+        let actions_triggered = std::rc::Rc::new(std::cell::RefCell::new(0));
+
+        let act_clone1 = actions_triggered.clone();
+        ui.on_go_to_add_products(move || { *act_clone1.borrow_mut() += 1; });
+
+        let act_clone2 = actions_triggered.clone();
+        ui.on_go_to_connect_instagram(move || { *act_clone2.borrow_mut() += 1; });
+
+        let act_clone3 = actions_triggered.clone();
+        ui.on_go_to_share_link(move || { *act_clone3.borrow_mut() += 1; });
+
+        ui.invoke_go_to_add_products();
+        ui.invoke_go_to_connect_instagram();
+        ui.invoke_go_to_share_link();
         ui.invoke_go_to_dashboard();
+
+        assert_eq!(*actions_triggered.borrow(), 3, "Interactive checklist actions should execute successfully");
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         // Final state verification
