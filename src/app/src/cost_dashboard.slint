@@ -10,8 +10,8 @@ export struct UiAgentCost {
 }
 
 export component CostDashboard inherits Window {
-    width: 500px;
-    height: 600px;
+    width: 375px;
+    height: 800px;
     title: "Cost & Token Usage";
 
     in-out property <string> total_spend: "$0.00";
@@ -27,18 +27,18 @@ export component CostDashboard inherits Window {
         HorizontalBox {
             Text { text: "Cost & Token Usage"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Refresh"; }
+            Button { text: "Refresh"; height: 44px; }
         }
 
         // Summary Cards
-        HorizontalBox {
+        VerticalBox {
             spacing: 16px;
             
             GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
-                width: 220px;
+                width: 100%;
                 
                 VerticalBox {
                     padding: 16px;
@@ -50,7 +50,7 @@ export component CostDashboard inherits Window {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
-                width: 220px;
+                width: 100%;
                 
                 VerticalBox {
                     padding: 16px;
@@ -74,7 +74,7 @@ export component CostDashboard inherits Window {
                 for ac in agent_costs : VerticalBox {
                     spacing: 4px;
                     HorizontalBox {
-                        Text { text: ac.name; color: white; }
+                        Text { text: ac.name; color: white; wrap: word-wrap; }
                         Rectangle {}
                         Text { text: ac.cost; color: white; }
                     }

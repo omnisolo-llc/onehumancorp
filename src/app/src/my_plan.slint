@@ -2,8 +2,8 @@ import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component MyPlan inherits Window {
-    width: 500px;
-    height: 400px;
+    width: 375px;
+    height: 800px;
     title: "My Plan";
 
     in-out property <string> tier: "Pro Tier";
@@ -33,7 +33,7 @@ export component MyPlan inherits Window {
                 spacing: 8px;
                 Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
                 Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Button { text: "Upgrade"; clicked => { upgrade(); } }
+                Button { text: "Upgrade"; height: 44px; clicked => { upgrade(); } }
             }
         }
 
