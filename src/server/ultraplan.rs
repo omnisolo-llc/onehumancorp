@@ -53,17 +53,6 @@ impl UltraPlanManager {
         plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
     }
 
-    pub fn update_plan_status(&self, plan_id: &str, new_status: String, state_machine: serde_json::Value) -> Result<(), String> {
-        let mut plans = self.plans.write().unwrap();
-        if let Some(plan) = plans.get_mut(plan_id) {
-            plan.status = new_status;
-            plan.state_machine = state_machine;
-            plan.updated_at = Utc::now();
-            Ok(())
-        } else {
-            Err("ultra plan not found".to_string())
-        }
-    }
 }
 
 pub fn compress_ultraplan_data(data: &[u8]) -> Result<String, String> {
