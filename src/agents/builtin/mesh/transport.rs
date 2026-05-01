@@ -22,18 +22,11 @@ pub trait MeshTransport: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
-
-    async fn ping_agent(&self, agent_id: &str) -> Result<bool, String>;
-
-    // State Handoff
-    async fn sync_handoff(&self, mission_id: &str, payload: Vec<u8>, status: &str) -> Result<(), String>;
-    async fn pull_handoffs(&self) -> Result<Vec<(String, Vec<u8>, String)>, String>;
 }
 
 pub struct MemoryTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
-    presence: DashMap<String, (String, std::time::Instant)>,
-    handoffs: DashMap<String, (Vec<u8>, String)>,
+    presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
     locks: DashMap<String, (String, std::time::Instant)>, // resource -> (owner, expires_at)
 }
 
@@ -42,7 +35,6 @@ impl MemoryTransport {
         MemoryTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
-            handoffs: DashMap::new(),
             locks: DashMap::new(),
         }
     }
@@ -133,324 +125,6 @@ impl MeshTransport for MemoryTransport {
             .collect();
 
         Ok(agents)
-    }
-
-    async fn ping_agent(&self, agent_id: &str) -> Result<bool, String> {
-        let now = std::time::Instant::now();
-        if let Some(entry) = self.presence.get(agent_id) {
-            if entry.value().1 > now {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    async fn sync_handoff(&self, mission_id: &str, payload: Vec<u8>, status: &str) -> Result<(), String> {
-        self.handoffs.insert(mission_id.to_string(), (payload, status.to_string()));
-        Ok(())
-    }
-
-    async fn pull_handoffs(&self) -> Result<Vec<(String, Vec<u8>, String)>, String> {
-        let mut results = Vec::new();
-        for entry in self.handoffs.iter() {
-            results.push((entry.key().clone(), entry.value().0.clone(), entry.value().1.clone()));
-        }
-        Ok(results)
-    }
-}
-
-
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool, Row};
-use tokio::sync::OnceCell;
-
-static IPC_POOL: OnceCell<SqlitePool> = OnceCell::const_new();
-
-
-pub struct IpcTransport {
-    pool: SqlitePool,
-}
-
-impl IpcTransport {
-    pub async fn new() -> Result<Self, String> {
-        let pool = IPC_POOL.get_or_init(|| async {
-            let db_path = std::env::var("OHC_STANDALONE_DB").unwrap_or_else(|_| "sqlite://standalone.db".to_string());
-            Self::init_pool(&db_path).await
-        }).await;
-
-        Ok(IpcTransport {
-            pool: pool.clone(),
-        })
-    }
-
-    pub async fn new_for_test(db_url: &str) -> Result<Self, String> {
-        let pool = Self::init_pool(db_url).await;
-        Ok(IpcTransport { pool })
-    }
-
-    async fn init_pool(db_path: &str) -> SqlitePool {
-        // Ensure the database file exists
-        if db_path.starts_with("sqlite://") && db_path != "sqlite::memory:" {
-            let file_path = db_path.replace("sqlite://", "");
-            if !std::path::Path::new(&file_path).exists() {
-                if let Some(parent) = std::path::Path::new(&file_path).parent() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-                let _ = std::fs::File::create(&file_path);
-            }
-        }
-
-        let pool = SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect(db_path)
-            .await
-            .unwrap_or_else(|_| {
-                SqlitePoolOptions::new()
-                    .max_connections(5)
-                    .connect_lazy(db_path)
-                    .unwrap()
-            });
-
-        // Initialize schema
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mesh_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                topic TEXT NOT NULL,
-                payload BLOB NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"
-        ).execute(&pool).await.expect("Failed to initialize mesh_messages table");
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mesh_locks (
-                resource TEXT PRIMARY KEY,
-                owner TEXT NOT NULL,
-                expires_at INTEGER NOT NULL
-            )"
-        ).execute(&pool).await.expect("Failed to initialize mesh_locks table");
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mesh_presence (
-                agent_id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
-                expires_at INTEGER NOT NULL
-            )"
-        ).execute(&pool).await.expect("Failed to initialize mesh_presence table");
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mesh_handoff (
-                mission_id TEXT PRIMARY KEY,
-                payload BLOB NOT NULL,
-                status TEXT NOT NULL,
-                synced_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"
-        ).execute(&pool).await.expect("Failed to initialize mesh_handoff table");
-
-        pool
-    }
-}
-#[async_trait]
-impl MeshTransport for IpcTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
-        use prost::Message as ProstMessage;
-        let mut buf = Vec::new();
-        message.encode(&mut buf).map_err(|e| e.to_string())?;
-
-        // Reliable publish with exponential backoff retries for local IPC
-        let mut retries = 3;
-        let mut delay = 50;
-        loop {
-            match sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES ($1, $2)")
-                .bind(topic)
-                .bind(&buf)
-                .execute(&self.pool)
-                .await
-            {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    if retries == 0 {
-                        return Err(e.to_string());
-                    }
-                    retries -= 1;
-                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-                    delay *= 2;
-                }
-            }
-        }
-    }
-
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let topic_str = topic.to_string();
-        let pool = self.pool.clone();
-
-        let worker = tokio::spawn(async move {
-            let mut last_id: i64 = 0;
-            // Get current max id to only receive new messages
-            if let Ok(row) = sqlx::query("SELECT MAX(id) as max_id FROM mesh_messages").fetch_one(&pool).await {
-                last_id = row.try_get("max_id").unwrap_or(0);
-            }
-
-            loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-                let result = sqlx::query("SELECT id, payload FROM mesh_messages WHERE topic = $1 AND id > $2 ORDER BY id ASC")
-                    .bind(&topic_str)
-                    .bind(last_id)
-                    .fetch_all(&pool)
-                    .await;
-
-                if let Ok(rows) = result {
-                    for row in rows {
-                        let id: i64 = row.get("id");
-                        last_id = std::cmp::max(last_id, id);
-
-                        let payload: Vec<u8> = row.get("payload");
-                        use prost::Message as ProstMessage;
-                        if let Ok(msg) = Message::decode(&payload[..]) {
-                            handler(msg);
-                        }
-                    }
-                }
-            }
-        });
-
-        let cancel = Box::new(move || {
-            worker.abort();
-        });
-
-        Ok(cancel)
-    }
-
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        let expires_at = now + ttl_seconds;
-
-        // Clean up expired locks first
-        let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= $1")
-            .bind(now as i64)
-            .execute(&self.pool)
-            .await;
-
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        let row: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM mesh_locks WHERE resource = $1")
-            .bind(resource)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if row.is_some() {
-            let _ = tx.rollback().await;
-            return Ok(false);
-        }
-
-        let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, $3)")
-            .bind(resource)
-            .bind(owner)
-            .bind(expires_at as i64)
-            .execute(&mut *tx)
-            .await;
-
-        match result {
-            Ok(_) => {
-                let _ = tx.commit().await;
-                Ok(true)
-            }
-            Err(_) => {
-                let _ = tx.rollback().await;
-                Ok(false)
-            }
-        }
-    }
-
-    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        let _ = sqlx::query("DELETE FROM mesh_locks WHERE resource = $1 AND owner = $2")
-            .bind(resource)
-            .bind(owner)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(())
-    }
-
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        let expires_at = now + ttl_seconds;
-
-        let _ = sqlx::query(
-            "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES ($1, $2, $3)
-             ON CONFLICT(agent_id) DO UPDATE SET status = excluded.status, expires_at = excluded.expires_at"
-        )
-        .bind(agent_id)
-        .bind(status)
-        .bind(expires_at as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        Ok(())
-    }
-
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-
-        // Clean up expired presence
-        let _ = sqlx::query("DELETE FROM mesh_presence WHERE expires_at <= $1")
-            .bind(now as i64)
-            .execute(&self.pool)
-            .await;
-
-        let rows = sqlx::query("SELECT agent_id, status FROM mesh_presence")
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let mut agents = Vec::new();
-        for row in rows {
-            agents.push((row.get("agent_id"), row.get("status")));
-        }
-
-        Ok(agents)
-    }
-
-    async fn ping_agent(&self, agent_id: &str) -> Result<bool, String> {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        let row: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM mesh_presence WHERE agent_id = $1 AND expires_at > $2")
-            .bind(agent_id)
-            .bind(now as i64)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(row.is_some())
-    }
-
-    async fn sync_handoff(&self, mission_id: &str, payload: Vec<u8>, status: &str) -> Result<(), String> {
-        sqlx::query(
-            "INSERT INTO mesh_handoff (mission_id, payload, status) VALUES ($1, $2, $3)
-             ON CONFLICT(mission_id) DO UPDATE SET payload = excluded.payload, status = excluded.status, synced_at = CURRENT_TIMESTAMP"
-        )
-        .bind(mission_id)
-        .bind(payload)
-        .bind(status)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-        Ok(())
-    }
-
-    async fn pull_handoffs(&self) -> Result<Vec<(String, Vec<u8>, String)>, String> {
-        let rows = sqlx::query("SELECT mission_id, payload, status FROM mesh_handoff")
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let mut handoffs = Vec::new();
-        use sqlx::Row;
-        for row in rows {
-            handoffs.push((row.get("mission_id"), row.get("payload"), row.get("status")));
-        }
-
-        Ok(handoffs)
     }
 }
 
@@ -585,53 +259,9 @@ impl MeshTransport for RedisTransport {
         let agents = hash.into_iter().collect();
         Ok(agents)
     }
-
-    async fn ping_agent(&self, agent_id: &str) -> Result<bool, String> {
-        let mut conn = self.publish_conn.lock().await;
-        use redis::AsyncCommands;
-        let key = "mesh:presence";
-        let status: Option<String> = conn.hget(key, agent_id).await.map_err(|e| e.to_string())?;
-        Ok(status.is_some())
-    }
-
-    async fn sync_handoff(&self, mission_id: &str, payload: Vec<u8>, status: &str) -> Result<(), String> {
-        let mut conn = self.publish_conn.lock().await;
-        use redis::AsyncCommands;
-        use base64::{Engine as _, engine::general_purpose::STANDARD};
-
-        let key = "mesh:handoff";
-        let data = serde_json::json!({
-            "payload": STANDARD.encode(&payload),
-            "status": status
-        }).to_string();
-
-        let _: () = conn.hset(key, mission_id, data).await.map_err(|e| e.to_string())?;
-        Ok(())
-    }
-
-    async fn pull_handoffs(&self) -> Result<Vec<(String, Vec<u8>, String)>, String> {
-        let mut conn = self.publish_conn.lock().await;
-        use redis::AsyncCommands;
-        use base64::{Engine as _, engine::general_purpose::STANDARD};
-
-        let key = "mesh:handoff";
-        let hash: std::collections::HashMap<String, String> = conn.hgetall(key).await.unwrap_or_default();
-
-        let mut handoffs = Vec::new();
-        for (mission_id, data_str) in hash {
-            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
-                if let (Some(payload_b64), Some(status)) = (data["payload"].as_str(), data["status"].as_str()) {
-                    if let Ok(payload) = STANDARD.decode(payload_b64) {
-                        handoffs.push((mission_id, payload, status.to_string()));
-                    }
-                }
-            }
-        }
-        Ok(handoffs)
-    }
 }
 
-pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool, standalone_url_override: Option<&str>) -> Result<Arc<dyn MeshTransport>, String> {
+pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
     if is_cloud {
         if let Some(url) = redis_url {
             match RedisTransport::new(url).await {
@@ -648,18 +278,16 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool, standalon
         }
     }
 
-    // Standalone fallback: we use IpcTransport
-    let ipc_res = match standalone_url_override {
-        Some(url) => IpcTransport::new_for_test(url).await,
-        None => IpcTransport::new().await,
-    };
-    match ipc_res {
-        Ok(t) => {
-            println!("Initialized IpcTransport (Standalone)");
-            return Ok(Arc::new(t));
-        },
-        Err(e) => {
-            println!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+    // Standalone fallback
+    if let Some(url) = redis_url {
+        match RedisTransport::new(url).await {
+            Ok(t) => {
+                println!("Initialized RedisTransport (Standalone)");
+                return Ok(Arc::new(t));
+            },
+            Err(e) => {
+                println!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+            }
         }
     }
 
@@ -699,96 +327,22 @@ mod tests {
         cancel();
     }
 
-
-    #[tokio::test]
-    async fn test_ipc_transport_pubsub() {
-        let temp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!("{}/test_ipc_pubsub_{}.db", temp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros());
-        let _db_url = format!("sqlite://{}", db_path);
-        let transport = IpcTransport::new_for_test(&_db_url).await.unwrap();
-
-
-
-
-
-        let received = Arc::new(AtomicBool::new(false));
-        let received_clone = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if msg.topic == "ipc_topic" && msg.payload == b"hello ipc" {
-                received_clone.store(true, Ordering::SeqCst);
-            }
-        });
-
-        let cancel = transport.subscribe("ipc_topic", handler).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
-
-        let msg = Message {
-            topic: "ipc_topic".to_string(),
-            payload: b"hello ipc".to_vec(),
-        };
-
-        transport.publish("ipc_topic", msg).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-        assert!(received.load(Ordering::SeqCst));
-        cancel();
-    }
-
-    #[tokio::test]
-    async fn test_ipc_transport_locking() {
-        let temp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!("{}/test_ipc_lock_{}.db", temp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros());
-        let _db_url = format!("sqlite://{}", db_path);
-        let transport = IpcTransport::new_for_test(&_db_url).await.unwrap();
-
-
-
-
-
-        // Test lock acquisition
-        let acquired = transport.acquire_lock("ipc_resource", "agent_1", 10).await.unwrap();
-        assert!(acquired);
-
-        // Test mutual exclusion
-        let acquired_again = transport.acquire_lock("ipc_resource", "agent_2", 10).await.unwrap();
-        assert!(!acquired_again);
-
-        // Test lock release
-        transport.release_lock("ipc_resource", "agent_1").await.unwrap();
-
-        // Test lock acquisition after release
-        let acquired_after_release = transport.acquire_lock("ipc_resource", "agent_2", 10).await.unwrap();
-        assert!(acquired_after_release);
-    }
-
     #[tokio::test]
     async fn test_create_transport_standalone() {
-        let temp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!("{}/test_create_standalone_{}.db", temp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros());
-        let _db_url = format!("sqlite://{}", db_path);
-
-        let _transport = create_transport(None, false, Some(&_db_url)).await.unwrap();
+        let transport = create_transport(None, false).await.unwrap();
         // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
 
     #[tokio::test]
     async fn test_create_transport_redis_fails() {
-        let temp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!("{}/test_create_redis_fails_{}.db", temp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros());
-        let _db_url = format!("sqlite://{}", db_path);
-
-
         // Provide invalid url
-        let transport = create_transport(Some("redis://localhost:9999"), false, Some(&_db_url)).await;
-        // In standalone, it should fallback to Memory (now Ipc), so it's Ok
+        let transport = create_transport(Some("redis://localhost:9999"), false).await;
+        // In standalone, it should fallback to Memory, so it's Ok
         assert!(transport.is_ok());
 
         // In cloud, it should err
-        let transport = create_transport(Some("redis://localhost:9999"), true, Some(&_db_url)).await;
+        let transport = create_transport(Some("redis://localhost:9999"), true).await;
         assert!(transport.is_err());
     }
 

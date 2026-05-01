@@ -68,7 +68,6 @@ message RunTaskEvent {
   EventType type = 1;
   // Present for TEXT_CHUNK and TASK_COMPLETE.
   string content = 2;
-  string task_id = 9;
   // Present for TOOL_CALL.
   string tool_name = 3;
   string tool_args_json = 4;
