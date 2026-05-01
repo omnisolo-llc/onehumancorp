@@ -735,4 +735,28 @@ mod tests {
             assert_eq!(claim_3.id, task_id_child);
         }
     }
+
+    #[test]
+    fn test_shared_task_model_properties() {
+        let now = chrono::Utc::now();
+        let model = SharedTaskModel {
+            id: "t1".to_string(),
+            organization_id: "org1".to_string(),
+            parent_id: None,
+            epic_id: None,
+            title: "T1".to_string(),
+            status: "PENDING".to_string(),
+            assigned_agent: Some("agent_1".to_string()),
+            payload: serde_json::json!({"test": 123}),
+            dependencies: serde_json::json!([]),
+            created_at: now,
+            updated_at: now,
+        };
+
+        assert_eq!(model.id, "t1");
+        assert_eq!(model.organization_id, "org1");
+        assert_eq!(model.assigned_agent, Some("agent_1".to_string()));
+        assert_eq!(model.status, "PENDING");
+        assert_eq!(model.payload["test"], 123);
+    }
 }

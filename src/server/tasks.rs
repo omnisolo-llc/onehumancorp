@@ -258,4 +258,74 @@ mod tests {
         assert_eq!(payload["result"], "Success result");
         assert!(payload["completed_at"].is_string());
     }
+
+    #[test]
+    fn test_task_manager_edge_cases() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
+
+        // Test fetching non-existent task
+        assert!(tm.get_task("nonexistent").is_err());
+
+        // Test update status of non-existent task
+        assert!(tm.update_task_status("nonexistent", "COMPLETED".to_string()).is_err());
+
+        // Test claim non-existent task
+        let claim_res = tm.claim_task("nonexistent", "agent1".to_string());
+        assert!(claim_res.is_ok()); // Returns Ok(None)
+        assert!(claim_res.unwrap().is_none());
+
+        // Test poll tasks limits
+        for i in 0..5 {
+            tm.create_task("org1".to_string(), "mission1".to_string(), format!("Task {}", i), "Desc".to_string(), "P1".to_string()).unwrap();
+        }
+
+        let polled = tm.poll_tasks("agent_poller", 3);
+        assert_eq!(polled.len(), 3);
+        assert_eq!(polled[0].assigned_agent_id, Some("agent_poller".to_string()));
+
+        // Test approve task
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Approve Me".to_string(), "Desc".to_string(), "P1".to_string()).unwrap();
+        tm.approve_task(&task.id, true).unwrap();
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.status, "APPROVED");
+        assert_eq!(fetched.approval_status, Some("APPROVED".to_string()));
+
+        tm.approve_task(&task.id, false).unwrap();
+        let fetched2 = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched2.status, "REJECTED");
+        assert_eq!(fetched2.approval_status, Some("REJECTED".to_string()));
+    }
+
+    #[test]
+    fn test_shared_task_serialization() {
+        let task = SharedTask {
+            id: "123".to_string(),
+            organization_id: "org1".to_string(),
+            mission_id: "m1".to_string(),
+            parent_plan_id: "p1".to_string(),
+            dependencies: vec!["dep1".to_string()],
+            title: "T1".to_string(),
+            description: Some("D1".to_string()),
+            assigned_agent_id: Some("agent1".to_string()),
+            status: "PENDING".to_string(),
+            priority: "P1".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(1),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+
+        let json = serde_json::to_string(&task).unwrap();
+        assert!(json.contains("agent1"));
+        let decoded: SharedTask = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.assigned_agent_id, Some("agent1".to_string()));
+        assert_eq!(decoded.id, "123");
+    }
 }
