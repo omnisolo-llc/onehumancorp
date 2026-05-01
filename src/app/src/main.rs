@@ -218,6 +218,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
             }
+
+    let my_plan_ui = app::MyPlan::new().unwrap();
+    let my_plan_handle = my_plan_ui.as_weak();
+
+    let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle = pricing_ui.as_weak();
+
+    let pricing_handle_clone = pricing_handle.clone();
+    my_plan_ui.on_upgrade(move || {
+        if let Some(ui) = pricing_handle_clone.upgrade() {
+            let _ = ui.show();
+        }
+    });
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -272,8 +285,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+
+                let my_plan_handle_clone = my_plan_handle.clone();
+                dashboard.on_open_billing(move || {
+                    if let Some(ui) = my_plan_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
+
+                Box::leak(Box::new(my_plan_ui));
+                Box::leak(Box::new(pricing_ui));
             }
         }
     });
