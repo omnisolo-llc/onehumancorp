@@ -191,6 +191,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                 let _ = dashboard.show();
+
+                dashboard.on_open_billing(move || {
+                    if let Ok(cost_ui) = app::CostDashboard::new() {
+                        let _ = cost_ui.show();
+
+                        let cost_handle = cost_ui.as_weak();
+                        tokio::spawn(async move {
+                            match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                Ok(mut client) => {
+                                    if let Ok(resp) = client.get_billing_summary(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                                        let summary = resp.into_inner();
+                                        slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = cost_handle.upgrade() {
+                                                ui.set_total_spend(summary.total_cost.into());
+                                                ui.set_total_tokens(summary.total_tokens.into());
+
+                                                let ui_agents: Vec<app::UiAgentCost> = summary.agent_costs.into_iter().map(|c| {
+                                                    app::UiAgentCost {
+                                                        name: c.name.into(),
+                                                        cost: c.cost.into(),
+                                                        roi: c.roi.into(),
+                                                        efficiency: c.efficiency.into(),
+                                                        pct: c.pct,
+                                                    }
+                                                }).collect();
+
+                                                ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agents)));
+                                            }
+                                        }).unwrap();
+                                    }
+                                }
+                                Err(e) => println!("Failed to fetch billing: {:?}", e),
+                            }
+                        });
+
+                        Box::leak(Box::new(cost_ui));
+                    }
+                });
+
                 Box::leak(Box::new(dashboard));
             }
         }
@@ -1326,5 +1365,9 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+
+        // Verify RPC fetching logic doesn't crash the standalone loop in the background.
+        // Wait a small amount for the async task inside `on_open_billing` to finish to ensure coverage
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }

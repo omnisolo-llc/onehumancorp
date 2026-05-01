@@ -30,6 +30,29 @@ pub struct CostAuditor {
 }
 
 impl CostAuditor {
+    pub fn get_total_cost_value(&self) -> f64 {
+        *self.total_cost.lock().unwrap()
+    }
+
+    pub fn get_total_output_tokens(&self) -> i64 {
+        let tokens = self.agent_output_tokens.lock().unwrap();
+        tokens.values().sum()
+    }
+
+    pub fn get_agent_metrics_snapshot(&self) -> Vec<(String, f64, f64, i64)> {
+        let costs = self.agent_costs.lock().unwrap();
+        let revenues = self.agent_revenues.lock().unwrap();
+        let tokens = self.agent_output_tokens.lock().unwrap();
+
+        let mut snapshot = Vec::new();
+        for (agent_id, cost) in costs.iter() {
+            let revenue = revenues.get(agent_id).unwrap_or(&0.0);
+            let output_tokens = tokens.get(agent_id).unwrap_or(&0);
+            snapshot.push((agent_id.clone(), *cost, *revenue, *output_tokens));
+        }
+        snapshot
+    }
+
     pub fn new(config: CostConfig) -> Self {
         CostAuditor {
             config,
