@@ -100,20 +100,55 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         }
     }
 
-    let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+    let key = if let Some(key) = &cfg.sqlite_encryption_key {
         if !key.is_empty() {
-            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+            key.clone()
         } else {
-            "sqlite://ohc-standalone.db".to_string()
+            get_or_create_local_key()
         }
     } else {
-        "sqlite://ohc-standalone.db".to_string()
+        get_or_create_local_key()
     };
+
+    let sqlite_url = format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key);
     cfg.database_url = Some(sqlite_url);
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
     cfg
+}
+
+#[cfg(feature = "standalone")]
+fn get_or_create_local_key() -> String {
+    use std::io::{Read, Write};
+    let path = ".ohc_sqlite_key";
+
+    if std::path::Path::new(path).exists() {
+        let mut file = std::fs::File::open(path).expect("failed to open existing .ohc_sqlite_key file");
+        let mut key = String::new();
+        file.read_to_string(&mut key).expect("failed to read existing .ohc_sqlite_key file");
+        return key.trim().to_string();
+    }
+
+    use rand::RngCore;
+    let mut rng = rand::thread_rng();
+    let mut random_bytes = [0u8; 32];
+    rng.fill_bytes(&mut random_bytes);
+    let key = hex::encode(random_bytes);
+
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+
+    let mut file = options.open(path).expect("failed to create secure .ohc_sqlite_key file");
+    file.write_all(key.as_bytes()).expect("failed to write key to .ohc_sqlite_key file");
+
+    key
 }
 
 #[cfg(not(feature = "standalone"))]
