@@ -1798,6 +1798,18 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        let email_marketing_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let email_marketing_called_clone = email_marketing_called.clone();
+
+        let email_marketing_ui = app::EmailMarketing::new().unwrap();
+        let email_marketing_handle = email_marketing_ui.as_weak();
+
+        dashboard_ui.on_action_open_email_marketing(move || {
+            *email_marketing_called_clone.borrow_mut() = true;
+            if let Some(ui) = email_marketing_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
 
 
         // Populate mock agent activity messages
@@ -1849,6 +1861,18 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        let email_marketing_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let email_marketing_called_clone = email_marketing_called.clone();
+
+        let email_marketing_ui = app::EmailMarketing::new().unwrap();
+        let email_marketing_handle = email_marketing_ui.as_weak();
+
+        dashboard_ui.on_action_open_email_marketing(move || {
+            *email_marketing_called_clone.borrow_mut() = true;
+            if let Some(ui) = email_marketing_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
 
         // Assert milestones defaults and logic
         assert!(!dashboard_ui.get_show_milestone());
@@ -1909,6 +1933,60 @@ mod cost_transparency_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_email_marketing_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let email_marketing_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let email_marketing_called_clone = email_marketing_called.clone();
+
+        let email_marketing_ui = app::EmailMarketing::new().unwrap();
+        let email_marketing_handle = email_marketing_ui.as_weak();
+
+        dashboard_ui.on_action_open_email_marketing(move || {
+            *email_marketing_called_clone.borrow_mut() = true;
+            if let Some(ui) = email_marketing_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        dashboard_ui.invoke_action_open_email_marketing();
+        assert!(*email_marketing_called.borrow(), "Email Marketing should be invoked from Dashboard");
+
+        assert_eq!(email_marketing_ui.get_step(), 0);
+        assert_eq!(email_marketing_ui.get_selected_contacts(), "All Customers");
+        assert_eq!(email_marketing_ui.get_selected_template(), "New Arrivals");
+        assert_eq!(email_marketing_ui.get_open_rate(), 45.2);
+
+        let ui_weak = email_marketing_ui.as_weak();
+        email_marketing_ui.on_generate_preview(move |template| {
+            if template == "Flash Sale" {
+                ui_weak.unwrap().set_email_preview_text("Don't miss our flash sale!".into());
+            } else {
+                ui_weak.unwrap().set_email_preview_text("Check out our new arrivals!".into());
+            }
+        });
+
+        email_marketing_ui.set_selected_template("Flash Sale".into());
+        email_marketing_ui.invoke_generate_preview("Flash Sale".into());
+
+        assert_eq!(email_marketing_ui.get_email_preview_text(), "Don't miss our flash sale!");
+    }
+
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
@@ -1941,6 +2019,18 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        let email_marketing_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let email_marketing_called_clone = email_marketing_called.clone();
+
+        let email_marketing_ui = app::EmailMarketing::new().unwrap();
+        let email_marketing_handle = email_marketing_ui.as_weak();
+
+        dashboard_ui.on_action_open_email_marketing(move || {
+            *email_marketing_called_clone.borrow_mut() = true;
+            if let Some(ui) = email_marketing_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
 
         let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let billing_opened_clone = billing_opened.clone();
@@ -2005,5 +2095,45 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+    }
+}
+
+#[cfg(test)]
+slint::include_modules!();
+
+mod email_marketing_tests {
+    use super::*;
+    use crate::EmailMarketing;
+
+    #[test]
+    fn test_email_marketing_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_email_marketing_creation because no display server is available.");
+            return;
+        }
+        let ui = EmailMarketing::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_selected_contacts(), "All Customers");
+        assert_eq!(ui.get_selected_template(), "New Arrivals");
+    }
+
+    #[test]
+    fn test_email_marketing_callbacks() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_email_marketing_callbacks because no display server is available.");
+            return;
+        }
+        let ui = EmailMarketing::new().unwrap();
+
+        let ui_weak = ui.as_weak();
+        ui.on_generate_preview(move |template| {
+            if template == "Flash Sale" {
+                ui_weak.unwrap().set_email_preview_text("Don't miss our flash sale!".into());
+            }
+        });
+
+        ui.invoke_generate_preview("Flash Sale".into());
+        assert_eq!(ui.get_email_preview_text(), "Don't miss our flash sale!");
     }
 }

@@ -1,0 +1,157 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+
+export component EmailMarketing inherits Window {
+    title: "Email Marketing";
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_contacts: "All Customers";
+    in-out property <string> selected_template: "New Arrivals";
+    in-out property <string> email_preview_text: "";
+    in-out property <float> open_rate: 45.2;
+
+    callback generate_preview(string);
+
+    VerticalBox {
+        alignment: start;
+        spacing: 20px;
+        padding: 20px;
+
+        Text {
+            text: "Email Marketing Campaigns";
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        if (root.width <= 768px): VerticalBox {
+            spacing: 20px;
+
+            VerticalBox {
+                spacing: 15px;
+
+                Text { text: "1. Select Contacts"; font-weight: 600; }
+                ComboBox {
+                    model: ["All Customers", "VIPs", "Recent Buyers"];
+                    current-value: root.selected_contacts;
+                    selected(val) => { root.selected_contacts = val; }
+                }
+
+                Text { text: "2. Choose Template"; font-weight: 600; }
+                ComboBox {
+                    model: ["New Arrivals", "Flash Sale", "Thank You"];
+                    current-value: root.selected_template;
+                    selected(val) => { root.selected_template = val; }
+                }
+
+                Button {
+                    text: "Generate AI Preview";
+                    height: 44px;
+                    clicked => { root.generate_preview(root.selected_template); }
+                }
+            }
+
+            VerticalBox {
+                spacing: 10px;
+
+                Text { text: "Preview"; font-weight: 600; }
+                Rectangle {
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #cccccc;
+                    background: #f9f9f9;
+                    min-height: 200px;
+
+                    ScrollView {
+                        VerticalBox {
+                            padding: 15px;
+                            Text {
+                                text: root.email_preview_text == "" ? "Select a template and generate a preview to see your AI-crafted email here." : root.email_preview_text;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    text: "Send Campaign";
+                    height: 44px;
+                    primary: true;
+                    enabled: root.email_preview_text != "";
+                    clicked => { /* Handle send campaign */ }
+                }
+
+                Text {
+                    text: "Last campaign open rate: " + root.open_rate + "%";
+                    font-size: 14px;
+                    color: #666;
+                }
+            }
+        }
+
+        if (root.width > 768px): HorizontalBox {
+            alignment: space-between;
+
+            VerticalBox {
+                width: 45%;
+                spacing: 15px;
+
+                Text { text: "1. Select Contacts"; font-weight: 600; }
+                ComboBox {
+                    model: ["All Customers", "VIPs", "Recent Buyers"];
+                    current-value: root.selected_contacts;
+                    selected(val) => { root.selected_contacts = val; }
+                }
+
+                Text { text: "2. Choose Template"; font-weight: 600; }
+                ComboBox {
+                    model: ["New Arrivals", "Flash Sale", "Thank You"];
+                    current-value: root.selected_template;
+                    selected(val) => { root.selected_template = val; }
+                }
+
+                Button {
+                    text: "Generate AI Preview";
+                    height: 44px;
+                    clicked => { root.generate_preview(root.selected_template); }
+                }
+
+                Text {
+                    text: "Last campaign open rate: " + root.open_rate + "%";
+                    font-size: 14px;
+                    color: #666;
+                }
+            }
+
+            VerticalBox {
+                width: 50%;
+                spacing: 10px;
+
+                Text { text: "Preview"; font-weight: 600; }
+                Rectangle {
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #cccccc;
+                    background: #f9f9f9;
+                    min-height: 200px;
+
+                    ScrollView {
+                        VerticalBox {
+                            padding: 15px;
+                            Text {
+                                text: root.email_preview_text == "" ? "Select a template and generate a preview to see your AI-crafted email here." : root.email_preview_text;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    text: "Send Campaign";
+                    height: 44px;
+                    primary: true;
+                    enabled: root.email_preview_text != "";
+                    clicked => { /* Handle send campaign */ }
+                }
+            }
+        }
+    }
+}
