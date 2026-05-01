@@ -258,6 +258,8 @@ message StartOnboardingRequest {
   string first_product_name = 8;
   string first_product_price = 9;
   string domain_choice = 10;
+  string admin_name = 11;
+  string admin_password = 12;
 }
 
 message StartOnboardingResponse {
