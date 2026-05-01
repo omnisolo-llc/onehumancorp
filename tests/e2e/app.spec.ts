@@ -64,3 +64,32 @@ test.describe('Agent Management', () => {
     await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
 });
+
+test.describe('Cost Management & Billing', () => {
+  test('should verify Cost Transparency Dashboard', async ({ page }) => {
+    // Navigate to Login first and authenticate
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    // Check that we're on the dashboard
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    // Click on "Billing & Credits" to open My Plan
+    const billingButton = page.locator('button:has-text("Billing & Credits")');
+    await billingButton.click();
+
+    // Verify My Plan elements
+    await expect(page.locator('text=My Plan')).toBeVisible();
+    await expect(page.locator('text=Usage This Month')).toBeVisible();
+
+    // Test upgrading
+    const upgradeButton = page.locator('button:has-text("Upgrade")');
+    await upgradeButton.click();
+
+    // Should navigate to Pricing Page
+    await expect(page.locator('text=Pricing & Billing')).toBeVisible();
+    await expect(page.locator('text=Select Plan')).first().toBeVisible();
+  });
+});

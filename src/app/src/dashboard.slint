@@ -33,6 +33,7 @@ export component Dashboard inherits Window {
     callback open_help_center();
     callback open_ai_chat();
     callback approve_task(string);
+    callback open_billing();
 
     Flickable {
     VerticalBox {
@@ -46,7 +47,7 @@ export component Dashboard inherits Window {
             Rectangle {}
             Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
             Button { text: "?"; clicked => { open_help_center(); } }
-            Button { text: "Billing & Credits"; }
+            Button { text: "Billing & Credits"; clicked => { open_billing(); } }
         }
 
         // Stat Cards

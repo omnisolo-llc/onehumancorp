@@ -1059,12 +1059,24 @@ message AnalyticsSummaryResponse {
   int64 token_velocity = 8;
 }
 
+message CostAnalyticsResponse {
+  string total_spend = 1;
+  string total_tokens = 2;
+  string tier = 3;
+  string total_actions = 4;
+  string action_limit = 5;
+  string used_storage = 6;
+  string limit_storage = 7;
+  string estimated_bill = 8;
+}
+
 service OrgService {
   rpc GetDomains(EmptyRequest) returns (DomainsResponse);
   rpc GetSettings(EmptyRequest) returns (SettingsResponse);
   rpc UpdateSettings(UpdateSettingsRequest) returns (SettingsResponse);
   rpc GetMarketplaceItems(EmptyRequest) returns (MarketplaceItemsResponse);
   rpc GetAnalytics(EmptyRequest) returns (AnalyticsSummaryResponse);
+  rpc GetCostAnalytics(EmptyRequest) returns (CostAnalyticsResponse);
 }
 
 message ProtoSchedule {

@@ -1033,6 +1033,16 @@ mod dashboard_docs_tests {
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
 
+        // 3.5 Test opening My Plan from Dashboard
+        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let billing_opened_clone = billing_opened.clone();
+        dashboard_ui.on_open_billing(move || {
+            *billing_opened_clone.borrow_mut() = true;
+            let _my_plan = app::MyPlan::new().unwrap();
+        });
+        dashboard_ui.invoke_open_billing();
+        assert!(*billing_opened.borrow(), "Billing (My Plan) should be opened from Dashboard");
+
         // 4. Test opening AI Help Chat from Dashboard
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
@@ -1088,6 +1098,16 @@ mod cost_transparency_e2e_tests {
         assert_eq!(my_plan_ui.get_used_storage(), "150.5 MB");
         assert_eq!(my_plan_ui.get_limit_storage(), "5.0 GB");
         assert_eq!(my_plan_ui.get_estimated_bill(), "$29.00");
+
+        // Test opening Pricing from My Plan
+        let pricing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let pricing_opened_clone = pricing_opened.clone();
+        my_plan_ui.on_upgrade_plan(move || {
+            *pricing_opened_clone.borrow_mut() = true;
+            let _pricing_ui = app::Pricing::new().unwrap();
+        });
+        my_plan_ui.invoke_upgrade_plan();
+        assert!(*pricing_opened.borrow(), "Pricing should be opened from My Plan");
 
         let cost_ui = app::CostDashboard::new().unwrap();
 

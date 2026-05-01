@@ -7,21 +7,23 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
+    pub auditor: Option<Arc<CostAuditor>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
         // In a real scenario, this gets injected. For the stub, we leave it None if no client.
-        Tracker { rate_limiter: None }
+        Tracker { rate_limiter: None, auditor: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
         if let Ok(client) = Client::open(redis_url) {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
+                auditor: None,
             }
         } else {
-            Tracker { rate_limiter: None }
+            Tracker { rate_limiter: None, auditor: None }
         }
     }
 

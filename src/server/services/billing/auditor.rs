@@ -209,6 +209,21 @@ impl CostAuditor {
             false
         }
     }
+
+    pub fn get_total_cost(&self) -> f64 {
+        let total_cost = self.total_cost.lock().unwrap();
+        *total_cost
+    }
+
+    pub fn get_total_output_tokens(&self) -> i64 {
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        agent_output_tokens.values().sum()
+    }
+
+    pub fn get_total_actions(&self) -> i32 {
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        agent_output_tokens.len() as i32
+    }
 }
 
 #[cfg(test)]
