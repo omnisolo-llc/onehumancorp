@@ -1,4 +1,3 @@
-pub mod mesh;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -12,7 +11,8 @@ mod hub;
 mod minimax;
 mod billing;
 mod ultraplan;
-mod autodream;
+#[path = "../agents/builtin/autodream.rs"]
+pub mod autodream;
 mod tasks;
 mod settings;
 mod scheduler;
@@ -24,7 +24,8 @@ mod seeder;
 mod orchestrator;
 mod spawner;
 mod queue;
-mod agents;
+mod workers;
+// Agent modules now live in src/agents/builtin/ (ohc_builtin_agent crate)
 mod domain;
 pub mod pricing;
 pub mod analytics;
@@ -34,6 +35,7 @@ mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub mod utils;
+pub mod orchestration;
 pub mod storage;
 #[cfg(test)]
 pub mod benchmarks;
@@ -99,18 +101,19 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
-        if let Ok(spiffe_id_str) = spiffe_id.to_str() {
-             match crate::auth::parse_spiffe_id(spiffe_id_str) {
-                 Ok((_org_id, _agent_id)) => {
-                     println!("Authenticated SPIFFE ID successfully.");
-                 }
-                 Err(e) => return Err(tonic::Status::permission_denied(e)),
-             }
-        } else {
-             return Err(tonic::Status::invalid_argument("invalid x-spiffe-id header"));
+    let spiffe_id = req.metadata().get("x-spiffe-id")
+        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+
+    let spiffe_id_str = spiffe_id.to_str()
+        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
+
+    match crate::auth::parse_spiffe_id(spiffe_id_str) {
+        Ok((_org_id, _agent_id)) => {
+            println!("Authenticated SPIFFE ID successfully.");
         }
+        Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
+
     Ok(req)
 }
 
@@ -869,7 +872,7 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = self.hub.get_meetings();
+        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
 
@@ -907,11 +910,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    // Start Memory Consolidation Worker
+    let vector_repo = std::sync::Arc::new(match &db.store {
+        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+    });
+    let consolidation_worker = ohc_builtin_agent::memory_store::MemoryConsolidationWorker::new(vector_repo);
+    consolidation_worker.start();
+
+    // Ensure local database permissions are secure in standalone mode
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        // Initialize local tables required for standalone mode
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    agent_id TEXT,
+                    content TEXT NOT NULL,
+                    embedding VECTOR(1536),
+                    source_type TEXT NOT NULL,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let db_path = "ohc-standalone.db";
+        if std::path::Path::new(db_path).exists() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(db_path)?.permissions();
+                perms.set_mode(0o600);
+                std::fs::set_permissions(db_path, perms)?;
+            }
+        }
+    }
+
     // Start Mesh API server
-    let mesh_transport = mesh::transport::create_transport(
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
+
+    // Start Builtin Agent
+    let builtin_transport = mesh_transport.clone();
+    tokio::spawn(async move {
+        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+        let cfg = ohc_builtin_agent::service::AgentConfig {
+            llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+            model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
+            llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+            system_prompt: std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
+            max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
+            max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
+        };
+        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+        svc_impl.init_memory().await;
+        let svc = std::sync::Arc::new(svc_impl);
+        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+    });
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))

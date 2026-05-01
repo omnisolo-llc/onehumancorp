@@ -5,7 +5,9 @@ use tokio::fs;
 
 use super::{Tool, ToolExecutor};
 
-struct EditExecutor;
+struct EditExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for EditExecutor {
@@ -21,9 +23,11 @@ impl ToolExecutor for EditExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("edit: new_str is required".to_string()))?;
 
-        let content = fs::read_to_string(path)
+        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let content = fs::read_to_string(&actual_path)
             .await
-            .map_err(|e| format!("edit: read {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: read {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Ensure exactly one occurrence.
         let count = content.matches(old_str).count();
@@ -49,12 +53,13 @@ impl ToolExecutor for EditExecutor {
     }
 }
 
-pub fn edit_tool() -> Tool {
+pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Edit".to_string(),
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
             The old_str must appear exactly once in the file."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -73,6 +78,6 @@ pub fn edit_tool() -> Tool {
             },
             "required": ["path", "old_str", "new_str"]
         }),
-        execute: Arc::new(EditExecutor),
+        execute: Arc::new(EditExecutor { working_dir }),
     }
 }

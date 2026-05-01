@@ -1,5 +1,32 @@
 # Release Notes
 
+## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+- Scaling (Cloud): Fix Bazel test execution time warning for `server_test` (#8941)
+- Privacy/Offline (Standalone): Fix Bazel test execution time warning for `server_test` (#8941)
+
+## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
+- Scaling (Cloud): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+- Privacy/Offline (Standalone): 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
+## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
+- Scaling (Cloud): 🎥 Lens Audit: Softer Draft Wording (#8901)
+- Privacy/Offline (Standalone): 🎥 Lens Audit: Softer Draft Wording (#8901)
+
+## v0.4.16 (Cloud) / v0.4.16+1 (Standalone)
+- Scaling (Cloud): [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+- Privacy/Offline (Standalone): [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+
+## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
+- Scaling (Cloud): Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
+- Privacy/Offline (Standalone): Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
+
+## v0.4.14 (Cloud) / v0.4.14+1 (Standalone)
+- Scaling (Cloud): Refactored Teammate Mesh transport to use Protobuf serialization for interop improvements.
+
+## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+- Scaling (Cloud): Implemented Hybrid Distributed MeshLock Implementation, abstracted SKIP LOCKED for sqlite and added chaos tests, implemented observability metrics for AutoDream and Task Claim Contention, and implemented OS-level SandboxManager using bwrap and sandbox-exec.
+- Privacy/Offline (Standalone): Added viral storefront link growth feature, added referral loop to User Management, implemented AI agent department draft-for-review approval workflow, hardened application for multi-tenant and local standalone, implemented high-fidelity 11-step onboarding wizard, and removed tooltips from the app to improve reliability.
+
 ## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
 - Privacy/Offline (Standalone): Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
 

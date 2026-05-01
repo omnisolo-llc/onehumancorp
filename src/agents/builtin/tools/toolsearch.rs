@@ -60,6 +60,7 @@ pub fn toolsearch_tool() -> Tool {
     Tool {
         name: "ToolSearch".to_string(),
         description: "Search available tools by name or description.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {

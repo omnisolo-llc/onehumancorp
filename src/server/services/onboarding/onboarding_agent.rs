@@ -25,6 +25,43 @@ impl OnboardingAgent {
 
         self.seed_default_agents(&org_id).await?;
 
+        let user_id = format!("usr-{}", uuid::Uuid::new_v4());
+        let email = req.admin_email.clone();
+        let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
+        let password = req.admin_password.clone();
+
+        let password_hash = if !password.is_empty() {
+            tokio::task::spawn_blocking(move || {
+                bcrypt::hash(&password, bcrypt::DEFAULT_COST).map_err(|e| format!("Failed to hash password: {}", e))
+            }).await.map_err(|e| e.to_string())??
+        } else {
+            "".to_string()
+        };
+
+        let roles_json = serde_json::to_string(&vec!["admin"]).unwrap_or_default();
+        let now = chrono::Utc::now();
+        let oidc_subject = "";
+
+        sqlx::query(
+            r#"
+            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#
+        )
+        .bind(&user_id)
+        .bind(&username)
+        .bind(&email)
+        .bind(&password_hash)
+        .bind(&roles_json)
+        .bind(true)
+        .bind(&org_id)
+        .bind(&oidc_subject)
+        .bind(now)
+        .bind(now)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
@@ -163,6 +200,8 @@ mod tests {
             selling_categories: vec!["physical".to_string(), "digital".to_string()],
             payment_pref: "online".to_string(),
             admin_email: "admin@test.com".to_string(),
+            admin_name: "Admin User".to_string(),
+            admin_password: "password123".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
@@ -193,5 +232,16 @@ mod tests {
         for role in expected_roles {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
+
+        let users = sqlx::query("SELECT username, email, roles FROM users WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&agent.db.pool)
+            .await
+            .unwrap();
+
+        assert_eq!(users.len(), 1);
+        assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
+        assert_eq!(users[0].get::<String, _>("username"), "Admin User");
+        assert!(users[0].get::<String, _>("roles").contains("admin"));
     }
 }

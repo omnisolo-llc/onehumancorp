@@ -3,10 +3,12 @@ use axum::{
     response::IntoResponse,
 };
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
+use prost::Message as ProstMessage;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 #[derive(Deserialize)]
 pub struct ConnectQuery {
@@ -39,8 +41,10 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
 
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&msg) {
-                if sender.send(WsMessage::Text(json.into())).await.is_err() {
+            let mut buf = Vec::new();
+            if msg.encode(&mut buf).is_ok() {
+                let text = STANDARD.encode(&buf);
+                if sender.send(WsMessage::Text(text.into())).await.is_err() {
                     break;
                 }
             }
@@ -52,8 +56,10 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let WsMessage::Text(text) = msg {
-                if let Ok(mesh_msg) = serde_json::from_str::<MeshMessage>(&text) {
-                    let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
+                if let Ok(buf) = STANDARD.decode(text.as_str()) {
+                    if let Ok(mesh_msg) = MeshMessage::decode(&buf[..]) {
+                        let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
+                    }
                 }
             }
         }
@@ -76,7 +82,7 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use crate::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
@@ -109,8 +115,10 @@ mod tests {
             topic: "test_chan".to_string(),
             payload: b"ws_test".to_vec(),
         };
-        let json = serde_json::to_string(&test_msg).unwrap();
-        ws_stream.send(TungsteniteMessage::Text(json.into())).await.unwrap();
+        let mut buf = Vec::new();
+        test_msg.encode(&mut buf).unwrap();
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&buf);
+        ws_stream.send(TungsteniteMessage::Text(b64.into())).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -125,7 +133,8 @@ mod tests {
         for _ in 0..2 {
             if let Some(Ok(msg)) = ws_stream.next().await {
                 if let TungsteniteMessage::Text(text) = msg {
-                    let received_mesh_msg: MeshMessage = serde_json::from_str(&text).unwrap();
+                    let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
+                    let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
                     if received_mesh_msg.payload == b"srv_test" {
                         assert_eq!(received_mesh_msg.topic, "test_chan");
                         found = true;

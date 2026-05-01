@@ -99,6 +99,7 @@ message SubAgentRequest {
   // Optional remote gRPC endpoint for the sub-agent (host:port).
   // When empty, the receiving agent executes the request in-process via goroutine.
   string sub_agent_address = 8;
+  string working_dir = 11;
   // Preferred configuration surface for sub-agent execution.
   AgentRuntimeConfig runtime_config = 9;
   // Toolset configuration for the sub-agent.

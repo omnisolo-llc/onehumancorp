@@ -20,9 +20,14 @@ impl MyAgentManagerService {
         }
     }
 
-    fn get_snapshot(&self) -> DashboardSnapshot {
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+    async fn get_snapshot(&self) -> DashboardSnapshot {
+        let hub_clone1 = self.hub.clone();
+        let hub_clone2 = self.hub.clone();
+
+        let (agents, meetings) = tokio::join!(
+            async move { hub_clone1.get_agents() },
+            async move { hub_clone2.get_meetings() }
+        );
         
         let costs = Summary {
             total_cost_usd: 100.0,
@@ -70,7 +75,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.register_agent(agent);
 
-        Ok(Response::new(self.get_snapshot()))
+        Ok(Response::new(self.get_snapshot().await))
     }
 
     async fn fire_agent(
@@ -84,7 +89,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.fire_agent(&req.agent_id);
 
-        Ok(Response::new(self.get_snapshot()))
+        Ok(Response::new(self.get_snapshot().await))
     }
 
     async fn delegate_task(
@@ -101,7 +106,7 @@ impl AgentManagerService for MyAgentManagerService {
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
 
-        Ok(Response::new(self.get_snapshot()))
+        Ok(Response::new(self.get_snapshot().await))
     }
 
     async fn get_agent_providers(
@@ -131,7 +136,7 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
-        let agents = self.hub.get_agents();
+        let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         let now = Utc::now();
         let identities = agents.into_iter().map(|a| AgentIdentity {
             agent_id: a.id.clone(),
@@ -192,8 +197,8 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+        let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         let mut msg_count = 0;
         for m in &meetings {
             msg_count += m.transcript.len() as i32;
@@ -233,6 +238,6 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot()))
+        Ok(Response::new(self.get_snapshot().await))
     }
 }

@@ -90,73 +90,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 
+    let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
     
-    let redis_url_clone = redis_url.clone();
-    tokio::spawn(async move {
-        tracing::info!("Connecting to Redis at {}", redis_url_clone);
-        let client = match redis::Client::open(redis_url_clone.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to open Redis client: {}", e);
-                return;
-            }
-        };
-
-        let mut con = match client.get_multiplexed_async_connection().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis connection: {}", e);
-                return;
-            }
-        };
-
-        let mut pubsub = match client.get_async_pubsub().await {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to get Redis pubsub connection: {}", e);
-                return;
-            }
-        };
-
-        if let Err(e) = pubsub.subscribe("agent_jobs").await {
-            tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
-            return;
+    match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
+        Ok(transport) => {
+            ohc_builtin_agent::start_builtin_agent(transport, svc_for_redis).await;
         }
-
-        tracing::info!("Subscribed to Redis channel 'agent_jobs'");
-        let mut stream = pubsub.on_message();
-        while let Some(msg) = stream.next().await {
-            let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
-            if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
-                tracing::info!("Received job from Redis: {}", req.task_id);
-
-                let svc = svc_for_redis.clone();
-                let mut con_inner = con.clone();
-
-                tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
-                        Ok(resp) => {
-                            let mut stream = resp.into_inner();
-                            while let Some(Ok(evt)) = stream.next().await {
-                                let mut buf = Vec::new();
-                                if prost::Message::encode(&evt, &mut buf).is_ok() {
-                                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                                        .arg("agent_events")
-                                        .arg(buf)
-                                        .query_async(&mut con_inner)
-                                        .await;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!("Error running task from Redis: {}", e);
-                        }
-                    }
-                });
-            }
+        Err(e) => {
+            tracing::error!("Failed to create mesh transport: {}", e);
         }
-    });
+    }
 
     Server::builder()
         .add_service(AgentServiceServer::new(SharedAgentService(svc)))
