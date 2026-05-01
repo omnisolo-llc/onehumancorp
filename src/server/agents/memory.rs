@@ -432,4 +432,70 @@ mod tests {
         let search_stale = repo.semantic_search("org1", &vec![4.0, 5.0, 6.0], 10).await.unwrap();
         assert_eq!(search_stale.len(), 0); // record3 deleted
     }
+
+
+    #[tokio::test]
+    async fn test_resolve_conflicts_and_prune_postgres() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "".to_string());
+        if db_url.is_empty() { return; }
+
+        let pool = match sqlx::PgPool::connect(&db_url).await {
+            Ok(p) => p,
+            Err(_) => return, // Skip if postgres is not running locally
+        };
+
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&pool).await;
+
+        let repo = std::sync::Arc::new(VectorRepository::new(pool.clone()));
+
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(40);
+
+        // Use a unique tenant to isolate test
+        let tenant = uuid::Uuid::new_v4().to_string();
+
+        let emb = vec![1.0, 2.0, 3.0];
+        let record1 = EmbeddingRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant.clone(),
+            agent_id: "agent1".to_string(),
+            content: "content 1".to_string(),
+            embedding: emb.clone(),
+            source_type: "TEXT".to_string(),
+            created_at: old_time,
+        };
+        let record2 = EmbeddingRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant.clone(),
+            agent_id: "agent1".to_string(),
+            content: "content 2".to_string(),
+            embedding: emb.clone(),
+            source_type: "TEXT".to_string(),
+            created_at: now,
+        };
+        let record_stale = EmbeddingRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant.clone(),
+            agent_id: "agent1".to_string(),
+            content: "stale summary".to_string(),
+            embedding: vec![4.0, 5.0, 6.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+        repo.upsert(&record_stale).await.unwrap();
+
+        repo.resolve_conflicts().await.unwrap();
+
+        let search_res = repo.semantic_search(&tenant, &emb, 10).await.unwrap();
+        assert_eq!(search_res.len(), 1);
+        assert_eq!(search_res[0].id, record2.id);
+
+        repo.prune_stale(now - chrono::Duration::days(30)).await.unwrap();
+        let search_stale = repo.semantic_search(&tenant, &vec![4.0, 5.0, 6.0], 10).await.unwrap();
+        assert_eq!(search_stale.len(), 0);
+    }
+
 }

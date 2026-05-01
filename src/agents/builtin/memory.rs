@@ -55,16 +55,17 @@ impl PgVectorMemoryStore {
 
         // If the database doesn't have pgvector, this query might fail.
         // We fallback to time-based ordering if it does.
+        // Cross-Department Context Sharing: Also search `consolidated_memory`
         let query = if !embedding.is_empty() {
-            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
-             FROM swarm_memory_embeddings \
-             WHERE organization_id = $1 \
-             ORDER BY vector_embedding <=> $2::vector \
+            "SELECT id as memory_id, content as context, NULL as embedding, source_type as source_plugin, created_at, tenant_id as organization_id \
+             FROM consolidated_memory \
+             WHERE tenant_id = $1 \
+             ORDER BY embedding <=> $2::vector \
              LIMIT $3"
         } else {
-            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
-             FROM swarm_memory_embeddings \
-             WHERE organization_id = $1 \
+            "SELECT id as memory_id, content as context, NULL as embedding, source_type as source_plugin, created_at, tenant_id as organization_id \
+             FROM consolidated_memory \
+             WHERE tenant_id = $1 \
              ORDER BY created_at DESC LIMIT $2"
         };
 

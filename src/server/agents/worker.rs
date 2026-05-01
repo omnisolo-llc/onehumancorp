@@ -9,15 +9,19 @@ use crate::agents::plane::Issue;
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
     hub: Arc<Hub>,
+    vector_repo: Option<Arc<crate::agents::memory::VectorRepository>>,
+    embedding_client: Option<Arc<crate::minimax::CachedMinimaxClient>>,
     poll_interval: std::time::Duration,
     num_workers: usize,
 }
 
 impl TaskWorker {
-    pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>) -> Self {
+    pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>, vector_repo: Option<Arc<crate::agents::memory::VectorRepository>>, embedding_client: Option<Arc<crate::minimax::CachedMinimaxClient>>) -> Self {
         TaskWorker {
             plane_client,
             hub,
+            vector_repo,
+            embedding_client,
             poll_interval: std::time::Duration::from_secs(30),
             num_workers: 3,
         }
@@ -37,6 +41,8 @@ impl TaskWorker {
             let worker_id = i;
             let plane_client = self.plane_client.clone();
             let hub = self.hub.clone();
+            let vector_repo = self.vector_repo.clone();
+            let embedding_client = self.embedding_client.clone();
             
             let handle = tokio::spawn(async move {
                 loop {
@@ -47,7 +53,7 @@ impl TaskWorker {
                     
                     if let Some(issue) = issue {
                         println!("Worker {}: processing issue {}", worker_id, issue.id);
-                        Self::process_issue_internal(issue, plane_client.clone(), hub.clone()).await;
+                        Self::process_issue_internal(issue, plane_client.clone(), hub.clone(), vector_repo.clone(), embedding_client.clone()).await;
                     } else {
                         break; // Channel closed
                     }
@@ -85,7 +91,7 @@ impl TaskWorker {
         });
     }
 
-    async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
+    async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>, vector_repo: Option<Arc<crate::agents::memory::VectorRepository>>, embedding_client: Option<Arc<crate::minimax::CachedMinimaxClient>>) {
         println!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
@@ -98,10 +104,40 @@ impl TaskWorker {
         
         for a in agents {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
+                let mut directive = "Please resolve the attached issue descriptor.".to_string();
+                if let Some(repo) = &vector_repo {
+                    let mut embedding = vec![0.1; 1536];
+                    if let Some(client) = &embedding_client {
+                        if let Ok(real_embedding) = client.generate_embedding(&issue.name).await {
+                            embedding = real_embedding;
+                        }
+                    }
+                    if let Ok(memories) = repo.semantic_search(&a.organization_id, &embedding, 3).await {
+                        if !memories.is_empty() {
+                            directive.push_str("\n\nCross-Department Context:\n");
+                            for mem in memories {
+                                directive.push_str(&format!("- [{}] {}\n", mem.source_type, mem.content));
+                            }
+                        }
+                    }
+
+                    // Also store this new context for other departments
+                    let record = crate::agents::memory::EmbeddingRecord {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: a.organization_id.clone(),
+                        agent_id: a.id.clone(),
+                        content: format!("Issue: {}", issue.name),
+                        embedding: embedding,
+                        source_type: "ISSUE".to_string(),
+                        created_at: chrono::Utc::now(),
+                    };
+                    let _ = repo.upsert(&record).await;
+                }
+
                 let payload = serde_json::json!({
                     "issue_id":   issue.id,
                     "issue_name": issue.name,
-                    "directive":  "Please resolve the attached issue descriptor.",
+                    "directive":  directive,
                 });
                 
                 let msg = crate::ohc::orchestration::Message {

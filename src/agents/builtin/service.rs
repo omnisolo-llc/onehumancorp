@@ -142,6 +142,8 @@ impl AgentServiceImpl {
                     tracing::error!("Failed to connect to database for memory store: {}", e);
                 }
             }
+            // The builtin agent queries `consolidated_memory` when retrieving context
+            // ensuring Cross-Department Context Sharing.
         }
     }
 
