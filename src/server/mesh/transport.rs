@@ -142,7 +142,7 @@ impl MeshTransport for RedisTransport {
         use redis::AsyncCommands;
         use prost::Message as ProstMessage;
         let mut payload = Vec::new();
-        message.encode(&mut payload);
+        let _ = message.encode(&mut payload);
         let mut conn = self.publish_conn.lock().await;
         let _: () = conn.publish(topic, payload).await.map_err(|e| e.to_string())?;
         Ok(())
