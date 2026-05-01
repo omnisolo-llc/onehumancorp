@@ -1,6 +1,8 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+import { TooltipButton } from "tooltip_button.slint";
+import { Tooltip } from "tooltip.slint";
 
 
 export struct UiPendingApproval {
@@ -62,13 +64,13 @@ export component Dashboard inherits Window {
             spacing: 16px;
             Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {} // Spacer
-            Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
-            Button { text: "Help"; height: 44px; clicked => { open_help_center(); } }
-            Button { text: "Billing"; height: 44px; clicked => { open_billing(); } }
-            Button { text: "Docs"; height: 44px; clicked => { open_api_docs(); } }
-            Button { text: "Videos"; height: 44px; clicked => { open_video_tutorials(); } }
-            Button { text: "Tour"; height: 44px; clicked => { open_interactive_walkthrough(); } }
-            Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); } }
+            TooltipButton { text: "Ask AI"; height: 44px; tooltip_id: "btn_ask_ai"; clicked => { open_ai_chat(); } }
+            TooltipButton { text: "Help"; height: 44px; tooltip_id: "btn_help"; clicked => { open_help_center(); } }
+            TooltipButton { text: "Billing"; height: 44px; tooltip_id: "btn_billing"; clicked => { open_billing(); } }
+            TooltipButton { text: "Docs"; height: 44px; tooltip_id: "btn_docs"; clicked => { open_api_docs(); } }
+            TooltipButton { text: "Videos"; height: 44px; tooltip_id: "btn_videos"; clicked => { open_video_tutorials(); } }
+            TooltipButton { text: "Tour"; height: 44px; tooltip_id: "btn_tour"; clicked => { open_interactive_walkthrough(); } }
+            TooltipButton { text: "What's New"; height: 44px; tooltip_id: "btn_whats_new"; clicked => { open_release_notes(); } }
         }
 
         if (show_milestone) : GlassCard {
@@ -106,7 +108,7 @@ export component Dashboard inherits Window {
                 alignment: start;
                 spacing: 8px;
                 Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-                Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
+                TooltipButton { text: "?"; width: 44px; height: 44px; tooltip_id: "btn_quick_actions_hint"; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
             }
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
@@ -263,5 +265,7 @@ export component Dashboard inherits Window {
             }
         }
     }
+
+    Tooltip {}
 }
 }

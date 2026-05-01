@@ -1,0 +1,23 @@
+import { TooltipRegistry } from "tooltip_registry.slint";
+
+export component Tooltip {
+    Rectangle {
+        visible: TooltipRegistry.is_visible;
+        x: min(TooltipRegistry.active_x, parent.width - self.width - 8px);
+        y: min(TooltipRegistry.active_y, parent.height - self.height - 8px);
+        background: #334155;
+        border-radius: 4px;
+        width: min(tooltip_text.preferred-width + 16px, 300px);
+        height: tooltip_text.preferred-height + 16px;
+
+        tooltip_text := Text {
+            x: 8px;
+            y: 8px;
+            width: parent.width - 16px;
+            text: TooltipRegistry.active_text;
+            color: white;
+            font-size: 14px;
+            wrap: word-wrap;
+        }
+    }
+}

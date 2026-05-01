@@ -74,6 +74,10 @@ export component AgentStatusIndicatorWindow inherits Window {
 export { GrowBusiness } from "./grow_business.slint";
 export { Meetings, UiMeeting } from "./meetings.slint";
 export { Skills, UiSkill } from "./skills.slint";
+export { TooltipRegistry } from "./tooltip_registry.slint";
+import { Tooltip } from "./tooltip.slint";
+export { Tooltip } from "./tooltip.slint";
+export { TooltipButton } from "./tooltip_button.slint";
 
 export component AppWindow inherits Window {
     width: 400px;
@@ -92,4 +96,6 @@ export component AppWindow inherits Window {
             text: "Click me";
         }
     }
+
+    Tooltip {}
 }

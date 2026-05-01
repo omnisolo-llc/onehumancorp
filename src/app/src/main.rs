@@ -15,6 +15,22 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+fn setup_tooltip_registry(tooltip_registry: &app::TooltipRegistry) {
+    tooltip_registry.on_request_tooltip_text(|id: slint::SharedString| -> slint::SharedString {
+        match id.as_str() {
+            "btn_ask_ai" => "Ask the AI Help Assistant questions about using OHC. Get instant answers 24/7.".into(),
+            "btn_help" => "Open the Help Center for step-by-step guides and articles. Find out how to manage your store.".into(),
+            "btn_billing" => "View your subscription plan, invoices, and payment history. Upgrade or downgrade your account here.".into(),
+            "btn_docs" => "Read the Developer API documentation. This is for advanced users writing custom code integrations.".into(),
+            "btn_videos" => "Watch short tutorial videos to learn how to use OHC features. Learn visually in under 90 seconds.".into(),
+            "btn_tour" => "Take an interactive walkthrough of your store. Great for getting set up quickly.".into(),
+            "btn_whats_new" => "Read the latest release notes and updates to OHC. See what new features we just added.".into(),
+            "btn_quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+            _ => "".into(),
+        }
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -43,6 +59,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    // Initialize the main application window (which imports TooltipRegistry)
+    let app_window = app::AppWindow::new()?;
+    setup_tooltip_registry(&app_window.global::<app::TooltipRegistry>());
+    // We intentionally do not call `app_window.run()` or `show()` here because
+    // the standalone flow relies on `Login` as the root entry point.
+    // However, the global registry is now bound correctly to the Slint engine via a window that includes it.
 
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
@@ -219,6 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard.global::<app::TooltipRegistry>());
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
@@ -289,6 +313,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard.global::<app::TooltipRegistry>());
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -303,6 +328,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard.global::<app::TooltipRegistry>());
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -330,6 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_tooltip_registry(&dashboard.global::<app::TooltipRegistry>());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -536,6 +563,7 @@ mod growth_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
 
         // Mock wiring for action_share_store since we don't have the main closure here
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -650,6 +678,7 @@ mod e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1231,6 +1260,7 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
@@ -1293,6 +1323,7 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1501,6 +1532,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1565,6 +1597,7 @@ mod dashboard_docs_tests {
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1637,6 +1670,7 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1697,6 +1731,7 @@ mod cost_transparency_e2e_tests {
 
         // Navigate to Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1748,6 +1783,7 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -1840,6 +1876,7 @@ mod cost_transparency_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_tooltip_registry(&dashboard_ui.global::<app::TooltipRegistry>());
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
