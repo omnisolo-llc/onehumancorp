@@ -78,6 +78,7 @@ impl MCPClient {
         })
     }
 
+    #[allow(dead_code)]
     pub fn with_hybrid_tool(mut self, pool: sqlx::PgPool) -> Self {
         self.hybrid_tool = Some(HybridContextTool::new(pool));
         self

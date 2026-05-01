@@ -41,6 +41,7 @@ impl Registry {
         providers.get(&t).cloned()
     }
 
+    #[allow(dead_code)]
     pub fn all(&self) -> Vec<Arc<dyn Provider>> {
         let providers = self.providers.read().unwrap();
         let mut out: Vec<Arc<dyn Provider>> = Vec::new();
@@ -79,6 +80,7 @@ impl Registry {
         p.authenticate(creds)
     }
 
+    #[allow(dead_code)]
     pub fn infos(&self) -> Vec<ProviderInfo> {
         self.all().iter().map(|p| ProviderInfo {
             r#type: p.provider_type(),
@@ -89,6 +91,7 @@ impl Registry {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProviderInfo {
     pub r#type: ProviderType,

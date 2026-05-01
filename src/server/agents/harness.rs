@@ -213,7 +213,6 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
 }
@@ -225,7 +224,6 @@ impl Manager {
         let docker_backend = Arc::new(DockerBackend::new());
         Manager {
             config,
-            validator,
             local_backend,
             docker_backend,
         }
@@ -245,10 +243,12 @@ pub trait CapabilityStore: Send + Sync {
     async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String>;
 }
 
+#[allow(dead_code)]
 pub struct DBCapabilityStore {
     pub pool: sqlx::PgPool,
 }
 
+#[allow(dead_code)]
 #[async_trait]
 impl CapabilityStore for DBCapabilityStore {
     async fn get_capabilities(&self, session_id: &str) -> Result<Option<String>, String> {

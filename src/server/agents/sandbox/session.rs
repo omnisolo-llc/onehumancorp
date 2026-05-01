@@ -5,6 +5,7 @@ use tokio::sync::RwLock;
 use regex::Regex;
 
 pub struct ShellSession {
+    #[allow(dead_code)]
     pub session_id: String,
     pub sandbox_dir: PathBuf,
     pub memory_dir: PathBuf,
