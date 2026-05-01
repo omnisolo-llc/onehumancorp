@@ -921,6 +921,57 @@ mod tests {
     }
 
     #[test]
+    fn test_settings_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_settings_creation because no display server is available.");
+            return;
+        }
+        let ui = app::Settings::new().unwrap();
+
+        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_clone = save_called.clone();
+        ui.on_save_settings(move || { *save_clone.borrow_mut() = true; });
+
+        let cancel_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let cancel_clone = cancel_called.clone();
+        ui.on_cancel_settings(move || { *cancel_clone.borrow_mut() = true; });
+
+        let update_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let update_clone = update_called.clone();
+        ui.on_update_profile(move || { *update_clone.borrow_mut() = true; });
+
+        let change_pwd_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let change_pwd_clone = change_pwd_called.clone();
+
+        let ui_weak = ui.as_weak();
+        ui.on_change_password(move || {
+            *change_pwd_clone.borrow_mut() = true;
+            if let Some(ui_instance) = ui_weak.upgrade() {
+                if ui_instance.get_new_password() == ui_instance.get_confirm_password() {
+                    ui_instance.set_password_match_status("Match".into());
+                } else {
+                    ui_instance.set_password_match_status("Mismatch".into());
+                }
+            }
+        });
+
+        ui.invoke_save_settings();
+        assert!(*save_called.borrow());
+
+        ui.invoke_cancel_settings();
+        assert!(*cancel_called.borrow());
+
+        ui.invoke_update_profile();
+        assert!(*update_called.borrow());
+
+        ui.set_new_password("password123".into());
+        ui.set_confirm_password("different".into());
+        ui.invoke_change_password();
+        assert!(*change_pwd_called.borrow());
+        assert_eq!(ui.get_password_match_status(), "Mismatch");
+    }
+
+    #[test]
     fn test_login_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_login_creation because no display server is available.");
