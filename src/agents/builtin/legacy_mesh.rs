@@ -127,7 +127,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_claim_mission_no_db() {
-        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'none'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let res = claim_mission(&pool, "agent-1").await;
         // Should fail because table doesn't exist or connection fails on execution!
         assert!(res.is_err());
