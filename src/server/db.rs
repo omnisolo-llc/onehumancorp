@@ -27,8 +27,38 @@ impl DB {
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             let conn_opts = SqliteConnectOptions::from_str(&database_url)?
-                .create_if_missing(true)
-                .extension("sqlite_vec");
+                .create_if_missing(true);
+
+            // Security: Ensure standalone SQLite DB has restricted permissions BEFORE opening
+            if let Some(path_str) = database_url.strip_prefix("sqlite://") {
+                let path_without_query = path_str.split('?').next().unwrap_or(path_str);
+                if !path_without_query.is_empty() && path_without_query != ":memory:" {
+                    let path = Path::new(path_without_query);
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        if !path.exists() {
+                            // Pre-create file with 0600
+                            let _ = std::fs::OpenOptions::new()
+                                .write(true)
+                                .create(true)
+                                .mode(0o600)
+                                .open(path);
+                        } else if let Ok(metadata) = std::fs::metadata(path) {
+                            use std::os::unix::fs::PermissionsExt;
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = std::fs::set_permissions(path, perms);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Note: sqlite_vec might fail to load in some restricted environments,
+            // but it is required for RAG features.
+            let conn_opts = conn_opts.extension("sqlite_vec");
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .connect_with(conn_opts)
