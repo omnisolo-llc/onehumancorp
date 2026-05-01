@@ -92,7 +92,7 @@ impl TaskWorker {
         }
         
         let mut agent_found = false;
-        let agents = hub.get_agents();
+        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { eprintln!("Failed to get agents: {}", e); Vec::new() });
         
         for a in agents {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
