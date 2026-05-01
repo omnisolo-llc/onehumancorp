@@ -16,7 +16,7 @@ mod tests {
     use super::*;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
-    use crate::agents::legacy_mesh::DistributedLock;
+    use ohc_builtin_agent::legacy_mesh::DistributedLock;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]

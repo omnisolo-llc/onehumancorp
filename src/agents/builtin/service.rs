@@ -308,6 +308,26 @@ impl AgentServiceImpl {
             state_scratchpad_path: None,
         }
     }
+
+    pub async fn run_ralph_loop(&self, req: RunTaskRequest) {
+        let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
+        let progress_file = format!(".ralph_progress_{}.json", task_id);
+        let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
+        let run_cfg = self.build_run_config(&req, &req.department).await;
+        
+        let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
+        let task_store = Arc::new(RwLock::new(TaskStore::default()));
+        let mailbox = Arc::new(RwLock::new(Mailbox::default()));
+        
+        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        tools.push(agent_tool());
+        let agent = Arc::new(Agent::new(llm, tools));
+        
+        let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
+        if let Err(e) = ralph.run(&req.task).await {
+            tracing::error!("Ralph Loop error: {}", e);
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -765,5 +785,25 @@ pub async fn start_builtin_agent(
         tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
     } else {
         tracing::info!("Subscribed to mesh channel 'agent_jobs'");
+    }
+
+    let handler_ralph = {
+        let svc = svc.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+                tracing::info!("Received Ralph job from mesh: {}", req.task_id);
+                let svc = svc.clone();
+                tokio::spawn(async move {
+                    svc.run_ralph_loop(req).await;
+                });
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("ralph_jobs", handler_ralph).await {
+        tracing::error!("Failed to subscribe to 'ralph_jobs' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'ralph_jobs'");
     }
 }

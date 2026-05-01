@@ -19,7 +19,10 @@ cargo_build_script(
 
 rust_binary(
     name = "server",
-    srcs = glob(["**/*.rs"]),
+    srcs = glob(["**/*.rs"]) + [
+        "//src/agents/builtin:autodream.rs",
+        "//src/agents/builtin:autodream/store.rs",
+    ],
     data = glob(["migrations/*.sql"]),
     edition = "2024",
     proc_macro_deps = [
@@ -68,7 +71,10 @@ rust_binary(
 rust_test(
     name = "server_test",
     size = "medium",
-    srcs = glob(["**/*.rs"]),
+    srcs = glob(["**/*.rs"]) + [
+        "//src/agents/builtin:autodream.rs",
+        "//src/agents/builtin:autodream/store.rs",
+    ],
     crate_root = "main.rs",
     data = glob(["migrations/*.sql", "**/*.rs"]),
     edition = "2024",

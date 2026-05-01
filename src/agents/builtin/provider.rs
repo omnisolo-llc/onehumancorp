@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
-use crate::agents::agent::Transport;
+#[async_trait]
+pub trait Transport: Send + Sync {
+    async fn send(&self, message: &[u8]) -> Result<(), String>;
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 pub enum ProviderType {

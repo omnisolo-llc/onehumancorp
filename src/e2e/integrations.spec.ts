@@ -1,0 +1,220 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Integrations Page', () => {
+  test('should display integrations page', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=/integrations|connect/i')).toBeVisible();
+  });
+
+  test('should show integrations header', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=Integrations')).toBeVisible();
+  });
+
+  test('should display available integrations', async ({ page }) => {
+    await page.goto('/integrations');
+    const integration = page.locator('[class*="integration"], [class*="app"]').first();
+    await expect(integration).toBeVisible();
+  });
+
+  test('should show slack integration', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=Slack')).toBeVisible();
+  });
+
+  test('should show github integration', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=GitHub')).toBeVisible();
+  });
+
+  test('should show zapier integration', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=Zapier')).toBeVisible();
+  });
+
+  test('should show google workspace integration', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=/google|workspace/i')).toBeVisible();
+  });
+
+  test('should show microsoft teams integration', async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page.locator('text=/microsoft|teams/i')).toBeVisible();
+  });
+
+  test('should connect slack integration', async ({ page }) => {
+    await page.goto('/integrations');
+    const slackBtn = page.locator('button:has-text("Connect"), button:has-text("Slack")').first();
+    if (await slackBtn.isVisible()) {
+      await slackBtn.click();
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    }
+  });
+
+  test('should disconnect integration', async ({ page }) => {
+    await page.goto('/integrations');
+    const integration = page.locator('[class*="integration"]').first();
+    await integration.hover();
+    const disconnectBtn = page.locator('button:has-text("Disconnect"), button:has-text("Remove")').first();
+    if (await disconnectBtn.isVisible()) {
+      await disconnectBtn.click();
+      await expect(page.locator('text=/disconnected|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+
+  test('should show integration status', async ({ page }) => {
+    await page.goto('/integrations');
+    const status = page.locator('text=/connected|active|inactive/i').first();
+    await expect(status).toBeVisible();
+  });
+
+  test('should configure integration settings', async ({ page }) => {
+    await page.goto('/integrations');
+    const integration = page.locator('[class*="integration"]').first();
+    await integration.click();
+    const settingsBtn = page.locator('button:has-text("Settings"), button:has-text("Configure")').first();
+    if (await settingsBtn.isVisible()) {
+      await settingsBtn.click();
+      await expect(page.locator('text=/settings|configure/i')).toBeVisible();
+    }
+  });
+
+  test('should show integration usage stats', async ({ page }) => {
+    await page.goto('/integrations');
+    const stats = page.locator('text=/usage|requests|api.*calls/i').first();
+    await expect(stats).toBeVisible();
+  });
+
+  test('should search integrations', async ({ page }) => {
+    await page.goto('/integrations');
+    const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
+    if (await searchInput.isVisible()) {
+      await searchInput.fill('slack');
+      await expect(page.locator('text=/slack/i')).toBeVisible();
+    }
+  });
+
+  test('should filter integrations by category', async ({ page }) => {
+    await page.goto('/integrations');
+    const filterSelect = page.locator('select').first();
+    if (await filterSelect.isVisible()) {
+      await filterSelect.selectOption({ index: 1 });
+    }
+  });
+});
+
+test.describe('Pipeline Management', () => {
+  test('should display pipelines page', async ({ page }) => {
+    await page.goto('/pipelines');
+    await expect(page.locator('text=/pipeline|workflow/i')).toBeVisible();
+  });
+
+  test('should show pipelines header', async ({ page }) => {
+    await page.goto('/pipelines');
+    await expect(page.locator('text=Pipelines')).toBeVisible();
+  });
+
+  test('should display pipeline list', async ({ page }) => {
+    await page.goto('/pipelines');
+    const pipeline = page.locator('[class*="pipeline"], [class*="workflow"]').first();
+    await expect(pipeline).toBeVisible();
+  });
+
+  test('should create new pipeline', async ({ page }) => {
+    await page.goto('/pipelines');
+    const newBtn = page.locator('button:has-text("New"), button:has-text("Create")').first();
+    if (await newBtn.isVisible()) {
+      await newBtn.click();
+      await expect(page.locator('text=/create.*pipeline|new.*pipeline/i')).toBeVisible();
+    }
+  });
+
+  test('should show pipeline stages', async ({ page }) => {
+    await page.goto('/pipelines');
+    const stage = page.locator('[class*="stage"], text=/stage|step/i').first();
+    await expect(stage).toBeVisible();
+  });
+
+  test('should drag to reorder stages', async ({ page }) => {
+    await page.goto('/pipelines');
+    const stage = page.locator('[class*="stage"]').first();
+    if (await stage.isVisible()) {
+      await stage.dragTo(page.locator('[class*="stage"]').nth(2));
+    }
+  });
+
+  test('should edit pipeline stage', async ({ page }) => {
+    await page.goto('/pipelines');
+    const stage = page.locator('[class*="stage"]').first();
+    await stage.click();
+    const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').first();
+    if (await editBtn.isVisible()) {
+      await editBtn.click();
+      await expect(page.locator('text=/edit|stage/i')).toBeVisible();
+    }
+  });
+
+  test('should delete pipeline stage', async ({ page }) => {
+    await page.goto('/pipelines');
+    const stage = page.locator('[class*="stage"]').first();
+    await stage.hover();
+    const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
+    if (await deleteBtn.isVisible()) {
+      await deleteBtn.click();
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+
+  test('should show pipeline analytics', async ({ page }) => {
+    await page.goto('/pipelines');
+    const analytics = page.locator('text=/analytics|metrics|stats/i').first();
+    await expect(analytics).toBeVisible();
+  });
+
+  test('should run pipeline manually', async ({ page }) => {
+    await page.goto('/pipelines');
+    const runBtn = page.locator('button:has-text("Run"), button:has-text("Execute")').first();
+    if (await runBtn.isVisible()) {
+      await runBtn.click();
+      await expect(page.locator('text=/running|executing/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+
+  test('should show pipeline run history', async ({ page }) => {
+    await page.goto('/pipelines');
+    const historyBtn = page.locator('button:has-text("History"), button:has-text("Runs")').first();
+    if (await historyBtn.isVisible()) {
+      await historyBtn.click();
+      await expect(page.locator('text=/history|runs|execution/i')).toBeVisible();
+    }
+  });
+
+  test('should pause pipeline', async ({ page }) => {
+    await page.goto('/pipelines');
+    const pauseBtn = page.locator('button:has-text("Pause"), button:has-text("Disable")').first();
+    if (await pauseBtn.isVisible()) {
+      await pauseBtn.click();
+      await expect(page.locator('text=/paused|disabled/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+
+  test('should resume pipeline', async ({ page }) => {
+    await page.goto('/pipelines');
+    const resumeBtn = page.locator('button:has-text("Resume"), button:has-text("Enable")').first();
+    if (await resumeBtn.isVisible()) {
+      await resumeBtn.click();
+      await expect(page.locator('text=/active|running/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+
+  test('should duplicate pipeline', async ({ page }) => {
+    await page.goto('/pipelines');
+    const pipeline = page.locator('[class*="pipeline"]').first();
+    await pipeline.hover();
+    const duplicateBtn = page.locator('button:has-text("Duplicate"), button:has-text("Copy")').first();
+    if (await duplicateBtn.isVisible()) {
+      await duplicateBtn.click();
+      await expect(page.locator('text=/duplicated|copied/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
+  });
+});

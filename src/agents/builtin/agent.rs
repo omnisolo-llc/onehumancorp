@@ -126,6 +126,7 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
+    pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
 impl Agent {
@@ -134,7 +135,13 @@ impl Agent {
             llm,
             tools,
             progress: Arc::new(AgentProgress::default()),
+            memory_store: None,
         }
+    }
+
+    pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
+        self.memory_store = Some(store);
+        self
     }
 
     /// Run the agent loop. Calls `on_event` for each event.
@@ -190,7 +197,24 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let combined_system = build_hierarchical_system_prompt(cfg);
+        let mut combined_system = build_hierarchical_system_prompt(cfg);
+
+        // Long-Term Memory Retrieval
+        if let Some(store) = &self.memory_store {
+            match store.retrieve(initial_message, 5).await {
+                Ok(memories) => {
+                    if !memories.is_empty() {
+                        combined_system.push_str("\n\n[Long-Term Memory Context]\n");
+                        for mem in memories {
+                            combined_system.push_str(&format!("- {}\n", mem));
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to retrieve long term memory: {}", e);
+                }
+            }
+        }
 
         for iteration in 0..max_iterations {
             on_event(AgentEvent::IterationStarted {
