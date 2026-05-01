@@ -17,19 +17,13 @@ impl OnboardingAgent {
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-        let product_fut = async {
-            if !req.first_product_name.is_empty() {
-                self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await
-            } else {
-                self.generate_initial_products(&org_id, &business_type).await
-            }
-        };
+        if !req.first_product_name.is_empty() {
+             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await?;
+        } else {
+             self.generate_initial_products(&org_id, &business_type).await?;
+        }
 
-        let agents_fut = self.seed_default_agents(&org_id);
-
-        let (prod_res, agents_res) = tokio::join!(product_fut, agents_fut);
-        prod_res?;
-        agents_res?;
+        self.seed_default_agents(&org_id).await?;
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();

@@ -102,18 +102,6 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
 
     let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
         if !key.is_empty() {
-            let key_file = std::path::Path::new(".ohc_sqlite_key");
-            if key_file.exists() {
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    if let Err(e) = std::fs::set_permissions(key_file, std::fs::Permissions::from_mode(0o600)) {
-                        eprintln!("CRITICAL SECURITY ERROR: Failed to set 0600 permissions on SQLite key file. {}", e);
-                        // Fail closed to prevent insecure key file
-                        std::process::exit(1);
-                    }
-                }
-            }
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
         } else {
             "sqlite://ohc-standalone.db".to_string()
@@ -125,7 +113,6 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
-    cfg.telemetry_enabled = false;
     cfg
 }
 
