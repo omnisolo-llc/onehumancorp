@@ -1069,7 +1069,7 @@ mod tests {
     use tonic::Request;
 
     // Helper to create a dummy hub and service for testing
-    // Note: These tests are ignored by default because they require a running Postgres database.
+
     async fn setup_test_service() -> Option<MyHubService> {
         let _ = std::env::var("DATABASE_URL").ok()?;
 
@@ -1081,7 +1081,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1100,7 +1100,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_accept_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1116,7 +1116,7 @@ mod tests {
         assert!(resp.unwrap().into_inner().success);
     }
     #[tokio::test]
-    #[ignore]
+
     async fn test_publish_teammate_mesh_event_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
@@ -1139,7 +1139,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_stream_mesh_events_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,

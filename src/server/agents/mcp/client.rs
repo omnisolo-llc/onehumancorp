@@ -170,7 +170,7 @@ impl MCPClient {
 mod tests {
 
     #[tokio::test]
-    #[ignore] // Ignoring database test because CI might not have postgres
+    // Ignoring database test because CI might not have postgres
     async fn test_hybrid_context_tool_success() {
         // This tests the success path if a database is actually available.
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
