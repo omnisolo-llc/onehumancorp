@@ -1,8 +1,8 @@
-use redis::AsyncCommands;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use dashmap::DashMap;
+use std::time::Instant;
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, prost::Message)]
 pub struct Message {
@@ -331,6 +331,7 @@ impl RedisTransport {
 impl MeshTransport for RedisTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
+        use redis::AsyncCommands;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
         let mut conn = self.publish_conn.lock().await;
@@ -376,6 +377,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        use redis::AsyncCommands;
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -393,6 +395,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        use redis::AsyncCommands;
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -414,6 +417,7 @@ impl MeshTransport for RedisTransport {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
+        use redis::AsyncCommands;
 
         let key = "mesh:presence";
 
@@ -429,6 +433,7 @@ impl MeshTransport for RedisTransport {
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         let mut conn = self.publish_conn.lock().await;
+        use redis::AsyncCommands;
 
         let key = "mesh:presence";
         let hash: std::collections::HashMap<String, String> = conn.hgetall(key).await.unwrap_or_default();

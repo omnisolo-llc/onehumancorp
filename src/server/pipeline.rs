@@ -7,7 +7,6 @@ use crate::hub::Hub;
 use crate::ohc::orchestration::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[allow(dead_code)]
 pub enum PipelineState {
     Implementing,
     Testing,
@@ -16,7 +15,6 @@ pub enum PipelineState {
     Rollback,
 }
 
-#[allow(dead_code)]
 pub struct Pipeline {
     pub id: String,
     pub branch: String,
@@ -25,20 +23,17 @@ pub struct Pipeline {
     pub created_at: DateTime<Utc>,
 }
 
-#[allow(dead_code)]
 pub struct SpecApprovedEvent {
     pub branch: String,
     pub details: String,
 }
 
 
-#[allow(dead_code)]
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
 }
 
-#[allow(dead_code)]
 impl Orchestrator {
     pub fn new(hub: Arc<Hub>) -> Self {
         Orchestrator {

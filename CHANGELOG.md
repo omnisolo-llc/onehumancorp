@@ -1,19 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
-### Cloud Scaling Improvements
-- 🛡️ Sentinel: [Hybrid Security Fix] Harden Multi-Tenant Isolation and Local SQLite Storage (#9126)
-
-### Privacy/Offline Improvements
-- 🛡️ Sentinel: [Hybrid Security Fix] Harden Multi-Tenant Isolation and Local SQLite Storage (#9126)
-
-## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
-### Cloud Scaling Improvements
-- 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
-
-### Privacy/Offline Improvements
-- 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
-
 ## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)

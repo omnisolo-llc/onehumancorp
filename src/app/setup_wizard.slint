@@ -41,15 +41,10 @@ export component SetupWizard inherits Window {
     in-out property <string> custom_dns_target: "";
 
     in-out property <bool> launching: false;
-    in-out property <bool> is_instant_build: false;
-    in-out property <string> instant_bio: "";
-
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
 
     callback launch(string, string, string, string, string, string, string, string, string);
-    callback generate_instant_preview();
-
     callback next_step();
     callback select_business_type(string);
     callback toggle_sell_physical();
@@ -133,18 +128,6 @@ export component SetupWizard inherits Window {
                     font-family: "Inter";
                     color: #94a3b8;
                     horizontal-alignment: center;
-                }
-                GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 0.8);
-                    VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { next_step(); } }
-                }
-                GlassCard {
-                    height: 54px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
                 }
             }
 
@@ -443,26 +426,6 @@ export component SetupWizard inherits Window {
                 }
             }
 
-            // Step 11: Instant Build
-            if (step == 11) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Tell us about your business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Write a short paragraph. AI will figure out the rest."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-
-                LineEdit {
-                    placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
-                    text <=> instant_bio;
-                    height: 120px;
-                }
-
-                GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 1.0);
-                    VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { generate_instant_preview(); } }
-                }
-            }
-
             // Step 10: Welcome Checklist
             if (step == 10) : VerticalBox {
                 spacing: 16px;
@@ -504,21 +467,15 @@ export component SetupWizard inherits Window {
                 width: 80px;
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; } }
-            }
-            if (step == 11 && !launching) : GlassCard {
-                width: 80px;
-                height: 44px;
-                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { is_instant_build = false; step = 0; } }
+                TouchArea { clicked => { step = step - 1; } }
             }
             if (step == 0 || step == 10) : Rectangle { width: 80px; } // spacer
 
-            if (step > 0 && step < 9 && step != 1 && step != 4 && step != 6 && step != 8) : GlassCard {
+            if (step < 9 && step != 1 && step != 4 && step != 6 && step != 8) : GlassCard {
                 width: 120px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: step == 0 ? "Get Started →" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { next_step(); } }
             }
 
