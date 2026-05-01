@@ -34,6 +34,7 @@ rust_binary(
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:axum",
+        "@crates//:async-nats",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -119,6 +120,7 @@ rust_test(
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
         "@crates//:axum",
+        "@crates//:async-nats",
         "@crates//:walkdir",
     ],
 )
