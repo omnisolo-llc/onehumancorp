@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::Row;

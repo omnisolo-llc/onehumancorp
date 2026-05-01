@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use std::collections::HashMap;
 use crate::services::onboarding::preflight;
 use crate::services::onboarding::provisioner;

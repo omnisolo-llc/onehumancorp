@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use sqlx::{PgPool, SqlitePool, Row};
 use std::sync::Arc;
 use crate::db::{DB, DbStore};

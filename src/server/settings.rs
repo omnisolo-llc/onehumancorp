@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use std::collections::HashMap;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};

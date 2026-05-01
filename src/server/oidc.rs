@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use serde::{Deserialize, Serialize};
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation, Algorithm};
 use std::collections::HashMap;
