@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -12,10 +13,10 @@ impl ToolExecutor for SleepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let secs = args["seconds"]
             .as_f64()
-            .ok_or("sleep: seconds is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("sleep: seconds is required".to_string()))?;
         let secs = secs.max(0.0).min(60.0); // cap at 60s
         tokio::time::sleep(std::time::Duration::from_secs_f64(secs)).await;
         Ok(format!("Slept for {}s.", secs))
@@ -28,6 +29,7 @@ pub fn sleep_tool() -> Tool {
         description: "Sleep for a number of seconds (max 60). \
             Use when waiting for async operations."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

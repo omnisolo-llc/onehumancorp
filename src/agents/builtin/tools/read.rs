@@ -1,21 +1,26 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
 
 use super::{Tool, ToolExecutor};
 
-struct ReadExecutor;
+struct ReadExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for ReadExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("read: path is required")?;
-        let content = fs::read_to_string(path)
+    ) -> Result<String, ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
+        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let content = fs::read_to_string(&actual_path)
             .await
-            .map_err(|e| format!("read: {}: {}", path, e))?;
+            .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Optional line range
         if let (Some(start), Some(end)) = (
@@ -26,7 +31,7 @@ impl ToolExecutor for ReadExecutor {
             let start = (start as usize).saturating_sub(1);
             let end = (end as usize).min(lines.len());
             if start >= end {
-                return Err(format!("read: invalid line range {}-{}", start + 1, end).into());
+                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", start + 1, end)));
             }
             return Ok(lines[start..end].join("\n"));
         }
@@ -35,10 +40,11 @@ impl ToolExecutor for ReadExecutor {
     }
 }
 
-pub fn read_tool() -> Tool {
+pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Read".to_string(),
         description: "Read the contents of a file. Optionally specify start_line and end_line for partial reads.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -57,6 +63,6 @@ pub fn read_tool() -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(ReadExecutor),
+        execute: Arc::new(ReadExecutor { working_dir }),
     }
 }

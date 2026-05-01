@@ -68,8 +68,15 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+        let hub_clone1 = self.hub.clone();
+        let hub_clone2 = self.hub.clone();
+        let hub_clone3 = self.hub.clone();
+
+        let (agents, meetings, summary) = tokio::join!(
+            async move { hub_clone1.get_agents() },
+            async move { hub_clone2.get_meetings() },
+            async move { hub_clone3.tracker().summary("system") }
+        );
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
@@ -102,7 +109,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let summary = self.hub.tracker().summary("system");
+
         
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,

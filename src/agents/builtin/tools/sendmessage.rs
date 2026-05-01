@@ -1,8 +1,9 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+
 
 use super::{SharedMailbox, Tool, ToolExecutor};
 
@@ -40,11 +41,11 @@ impl ToolExecutor for SendMessageExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let to = args["to"].as_str().unwrap_or("coordinator").to_string();
         let content = args["message"]
             .as_str()
-            .ok_or("sendmessage: message is required")?
+            .ok_or_else(|| ToolError::LlmRecoverable("sendmessage: message is required".to_string()))?
             .to_string();
 
         let msg = MailboxMessage {
@@ -65,6 +66,7 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
         description: "Send a message to the parent agent or coordinator. \
             Used for reporting sub-task results or requesting assistance."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

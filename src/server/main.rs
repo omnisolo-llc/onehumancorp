@@ -1,4 +1,3 @@
-pub mod mesh;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -12,7 +11,8 @@ mod hub;
 mod minimax;
 mod billing;
 mod ultraplan;
-mod autodream;
+#[path = "../agents/builtin/autodream.rs"]
+pub mod autodream;
 mod tasks;
 mod settings;
 mod scheduler;
@@ -24,7 +24,8 @@ mod seeder;
 mod orchestrator;
 mod spawner;
 mod queue;
-mod agents;
+mod workers;
+// Agent modules now live in src/agents/builtin/ (ohc_builtin_agent crate)
 mod domain;
 pub mod pricing;
 pub mod analytics;
@@ -34,7 +35,11 @@ mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub mod utils;
+pub mod orchestration;
 pub mod storage;
+#[cfg(test)]
+pub mod benchmarks;
+
 pub mod config;
 pub mod http;
 pub mod services {
@@ -96,18 +101,19 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
-        if let Ok(spiffe_id_str) = spiffe_id.to_str() {
-             match crate::auth::parse_spiffe_id(spiffe_id_str) {
-                 Ok((org_id, agent_id)) => {
-                     println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
-                 }
-                 Err(e) => return Err(tonic::Status::permission_denied(e)),
-             }
-        } else {
-             return Err(tonic::Status::invalid_argument("invalid x-spiffe-id header"));
+    let spiffe_id = req.metadata().get("x-spiffe-id")
+        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+
+    let spiffe_id_str = spiffe_id.to_str()
+        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
+
+    match crate::auth::parse_spiffe_id(spiffe_id_str) {
+        Ok((_org_id, _agent_id)) => {
+            println!("Authenticated SPIFFE ID successfully.");
         }
+        Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
+
     Ok(req)
 }
 
@@ -129,6 +135,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -138,14 +145,16 @@ pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
+    onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        MyHubService { hub, invite_tracker, viral_loop_tracker }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }
 
@@ -561,6 +570,53 @@ impl HubService for MyHubService {
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
+
+    async fn approve_task(
+        &self,
+        request: Request<ApproveTaskRequest>,
+    ) -> Result<Response<ApproveTaskResponse>, Status> {
+        let req = request.into_inner();
+        self.hub.task_manager().approve_task(&req.task_id, req.is_approved)
+            .map_err(|e| Status::internal(e))?;
+
+        Ok(Response::new(ApproveTaskResponse {
+            success: true,
+        }))
+    }
+
+    async fn trigger_custom_order(
+        &self,
+        request: Request<TriggerCustomOrderRequest>,
+    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        let req = request.into_inner();
+
+        let mut ops_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-ops-{}", uuid::Uuid::new_v4()),
+            format!("Process Custom Order for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        ops_task.action_risk = Some("low".to_string());
+        self.hub.task_manager().insert_task(ops_task);
+
+        let mut cs_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-cs-{}", uuid::Uuid::new_v4()),
+            format!("Draft Confirmation for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        cs_task.action_risk = Some("high".to_string());
+        cs_task.approval_status = Some("PENDING".to_string());
+        cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
+        self.hub.task_manager().insert_task(cs_task);
+
+        Ok(Response::new(TriggerCustomOrderResponse {
+            success: true,
+        }))
+    }
+
     async fn decompose_task(
         &self,
         request: Request<DecomposeTaskRequest>,
@@ -816,8 +872,19 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = self.hub.get_meetings();
+        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         Ok(Response::new(GetMeetingsResponse { meetings }))
+    }
+
+    async fn start_onboarding(
+        &self,
+        request: Request<StartOnboardingRequest>,
+    ) -> Result<Response<StartOnboardingResponse>, Status> {
+        let req = request.into_inner();
+        match self.onboarding_agent.start_onboarding(req).await {
+            Ok(resp) => Ok(Response::new(resp)),
+            Err(e) => Err(Status::internal(e)),
+        }
     }
 }
 
@@ -838,14 +905,82 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     }
     // });
     
+
+    // Start AutoDream worker
+    let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
+    autodream_worker.start();
+
+    // Start Memory Consolidation Worker
+    let vector_repo = std::sync::Arc::new(match &db.store {
+        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+    });
+    let consolidation_worker = ohc_builtin_agent::memory_store::MemoryConsolidationWorker::new(vector_repo);
+    consolidation_worker.start();
+
+    // Ensure local database permissions are secure in standalone mode
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        // Initialize local tables required for standalone mode
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    agent_id TEXT,
+                    content TEXT NOT NULL,
+                    embedding VECTOR(1536),
+                    source_type TEXT NOT NULL,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let db_path = "ohc-standalone.db";
+        if std::path::Path::new(db_path).exists() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(db_path)?.permissions();
+                perms.set_mode(0o600);
+                std::fs::set_permissions(db_path, perms)?;
+            }
+        }
+    }
+
     // Start Mesh API server
-    let mesh_transport = mesh::transport::create_transport(
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
-    ).await;
+    ).await.expect("Failed to create MeshTransport");
+
+    // Start Builtin Agent
+    let builtin_transport = mesh_transport.clone();
+    tokio::spawn(async move {
+        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+        let cfg = ohc_builtin_agent::service::AgentConfig {
+            llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+            model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
+            llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+            system_prompt: std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
+            max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
+            max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
+        };
+        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+        svc_impl.init_memory().await;
+        let svc = std::sync::Arc::new(svc_impl);
+        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+    });
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+
+        .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
@@ -866,15 +1001,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
-    // Start AutoDream worker
-    let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
-    autodream_worker.start();
-
     // Start Telemetry Sync Daemon (if in standalone mode)
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
         telemetry_daemon.start();
@@ -925,6 +1057,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
+        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -941,12 +1074,13 @@ mod tests {
     // Helper to create a dummy hub and service for testing
     // Note: These tests are ignored by default because they require a running Postgres database.
     async fn setup_test_service() -> Option<MyHubService> {
-        let db_url = std::env::var("DATABASE_URL").ok()?;
-        let pool = sqlx::PgPool::connect(&db_url).await.ok()?;
+        let _ = std::env::var("DATABASE_URL").ok()?;
+
+        let db = Arc::new(crate::db::DB::new().await.ok()?);
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(event_tx, pool.clone()));
-        Some(MyHubService::new(hub, pool))
+        let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+        Some(MyHubService::new(hub, db.pool.clone(), db))
     }
 
     #[tokio::test]

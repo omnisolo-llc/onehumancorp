@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use super::{Tool, ToolExecutor};
@@ -9,7 +10,7 @@ impl ToolExecutor for FinanceReportExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let report_type = args["report_type"]
             .as_str()
             .unwrap_or("weekly_summary");
@@ -44,6 +45,7 @@ pub fn finance_report_tool() -> Tool {
     Tool {
         name: "finance_report".to_string(),
         description: "Generate a plain-language financial report or summary for the business.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {

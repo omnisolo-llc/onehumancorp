@@ -75,7 +75,7 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
                     let org_id = match hub.task_manager().get_task(&task_id) {
                         Ok(task) => task.organization_id.clone(),
                         Err(_) => {
-                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
+                            println!("AutoDream: Failed to get task {} to find organization context", task_id);
                             "system".to_string() // Fallback
                         }
                     };
@@ -125,13 +125,13 @@ pub fn start_token_burn_forecaster(
                     
                     if h.len() > 1 {
                         let rate = (h.last().unwrap() - h.first().unwrap()) as f64 / (h.len() - 1) as f64;
-                        println!("TokenBurnForecaster: Org {} rate: {}", org_id, rate);
+                        println!("TokenBurnForecaster: rate: {}", rate);
                         
                         let prediction_24h = rate * 60.0 * 24.0;
-                        println!("TokenBurnForecaster: Org {} predicted 24h: {}", org_id, prediction_24h);
+                        println!("TokenBurnForecaster: predicted 24h: {}", prediction_24h);
                         
                         if prediction_24h > 0.0 {
-                            println!("TokenBurnForecaster: Predictive cost alert for {}", org_id);
+                            println!("TokenBurnForecaster: Predictive cost alert triggered.");
                         }
                     }
                 }

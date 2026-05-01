@@ -1,5 +1,80 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix Bazel test execution time warning for `server_test` (#8941)
+
+### Privacy/Offline Improvements
+- Fix Bazel test execution time warning for `server_test` (#8941)
+
+## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
+
+## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
+### Cloud Scaling Improvements
+- 🎥 Lens Audit: Softer Draft Wording (#8901)
+
+### Privacy/Offline Improvements
+- 🎥 Lens Audit: Softer Draft Wording (#8901)
+
+## v0.4.16 (Cloud) / v0.4.16+1 (Standalone)
+### Cloud Scaling Improvements
+- [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+
+### Privacy/Offline Improvements
+- [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
+
+## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
+
+### Privacy/Offline Improvements
+- Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
+
+## v0.4.14 (Cloud) / v0.4.14+1 (Standalone)
+### Cloud Scaling Improvements
+- Refactored Teammate Mesh transport to use Protobuf serialization for interop improvements.
+
+## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented Hybrid Distributed MeshLock Implementation
+- Abstracted SKIP LOCKED for sqlite and added chaos tests
+- Implemented observability metrics for AutoDream and Task Claim Contention
+- Implemented OS-level SandboxManager using bwrap and sandbox-exec
+
+### Privacy/Offline Improvements
+- Added viral storefront link growth feature
+- Added referral loop to User Management
+- Implemented AI agent department draft-for-review approval workflow
+- Hardened application for multi-tenant and local standalone
+- Implemented high-fidelity 11-step onboarding wizard
+- Removed tooltips from the app to improve reliability
+
+## v0.4.12 (Cloud) / v0.4.12+1 (Standalone)
+### Privacy/Offline Improvements
+- Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
+
+## v0.4.11 (Cloud) / v0.4.11+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented JSON minification and Gzip compression middleware to optimize server HTTP payloads.
+
+### Privacy/Offline Improvements
+- Fixed TooltipRegistry namespace issue in Slint UI and improved dashboard accessibility.
+
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+### Cloud Scaling Improvements
+- Creates formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks` to prepare them for RLS.
+- Enforces `ENABLE ROW LEVEL SECURITY` across 18 tenant data tables and provisions them with default `CREATE POLICY` statements binding queries to the current authenticated database context.
+- Hardens the `SyncMcpDeltas` RPC handler to extract its `tenant_id` securely from the authenticated SPIFFE ID metadata.
+
+### Privacy/Offline Improvements
+- Removes an insecure `println!` from the `power_sync_push` service handler to prevent request payload leakage into application logs.
+
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade: Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention.

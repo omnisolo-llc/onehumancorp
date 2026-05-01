@@ -1,0 +1,167 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component AgentConfig inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Configure AI Agent";
+
+    callback activate_agent(string, bool, bool, string);
+    callback next_step();
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_agent: "";
+    in-out property <bool> can_reply: false;
+    in-out property <bool> can_social: false;
+    in-out property <float> frequency_value: 2.0;
+    in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
+    in-out property <bool> is_advanced: false;
+    in-out property <bool> show_toast: false;
+
+    next_step => { step = step + 1; }
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            CheckBox {
+                text: "Expert Mode";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
+            }
+        }
+
+        // Step 0: Choose Agent
+        if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: API Key Overrides"; font-family: "Inter"; font-size: 14px; color: #1e293b; }
+                LineEdit { placeholder-text: "sk-proj-..."; }
+            }
+            spacing: 10px;
+            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
+            
+            HorizontalBox {
+                spacing: 10px;
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { selected_agent = "Customer Support"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                }
+            }
+            Text { text: "Selected: " + selected_agent; color: #a855f7; }
+        }
+
+        // Step 1: Capabilities
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            Text { text: "What should this agent do?"; color: #1e293b; }
+            
+            HorizontalBox {
+                Text { text: "Reply to customer messages"; color: #1e293b; }
+                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+            }
+            HorizontalBox {
+                Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
+                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            }
+        }
+
+        // Step 2: Frequency
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            Text { text: "How often should this agent work?"; color: #1e293b; }
+            
+            HorizontalBox {
+                spacing: 10px;
+                Slider {
+                    minimum: 0.0;
+                    maximum: 3.0;
+                    value <=> frequency_value;
+                    width: 100%;
+                }
+            }
+            Text { text: "Schedule: " + frequency; color: #a855f7; horizontal-alignment: center; }
+        }
+
+        // Step 3: Review
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Review & Activate"; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
+                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Schedule: " + frequency; color: #1e293b; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 3 ? "Activate" : "Next";
+                clicked => {
+                    if (step < 3) {
+                        next_step();
+                    } else {
+                        show_toast = true;
+                        activate_agent(selected_agent, can_reply, can_social, frequency);
+                    }
+                }
+            }
+        }
+    }
+
+    if (show_toast) : GlassCard {
+        width: 300px;
+        height: 60px;
+        x: (parent.width - self.width) / 2;
+        y: parent.height - 100px;
+        background: rgba(16, 185, 129, 0.9); // Green background
+        VerticalBox {
+            alignment: center;
+            Text {
+                text: "Agent Activated ✓";
+                font-family: "Outfit";
+                font-size: 16px;
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: center;
+            }
+        }
+        TouchArea { clicked => { show_toast = false; } }
+    }
+}

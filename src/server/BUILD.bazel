@@ -19,7 +19,10 @@ cargo_build_script(
 
 rust_binary(
     name = "server",
-    srcs = glob(["**/*.rs"]),
+    srcs = glob(["**/*.rs"]) + [
+        "//src/agents/builtin:autodream.rs",
+        "//src/agents/builtin:autodream/store.rs",
+    ],
     data = glob(["migrations/*.sql"]),
     edition = "2024",
     proc_macro_deps = [
@@ -28,12 +31,14 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":build_script",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:axum",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:config",
+        "@crates//:dashmap",
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
         "@crates//:futures",
@@ -65,9 +70,13 @@ rust_binary(
 
 rust_test(
     name = "server_test",
-    srcs = glob(["**/*.rs"]),
+    size = "medium",
+    srcs = glob(["**/*.rs"]) + [
+        "//src/agents/builtin:autodream.rs",
+        "//src/agents/builtin:autodream/store.rs",
+    ],
     crate_root = "main.rs",
-    data = glob(["migrations/*.sql"]),
+    data = glob(["migrations/*.sql", "**/*.rs"]),
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
@@ -77,11 +86,13 @@ rust_test(
     ],
     deps = [
         ":build_script",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:config",
+        "@crates//:dashmap",
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
         "@crates//:futures",

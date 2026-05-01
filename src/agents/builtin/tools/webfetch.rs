@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -13,8 +14,8 @@ impl ToolExecutor for WebFetchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let url = args["url"].as_str().ok_or("webfetch: url is required")?;
+    ) -> Result<String, ToolError> {
+        let url = args["url"].as_str().ok_or_else(|| ToolError::LlmRecoverable("webfetch: url is required".to_string()))?;
         let prompt = args["prompt"].as_str().unwrap_or("");
 
         let resp = self
@@ -23,10 +24,10 @@ impl ToolExecutor for WebFetchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("webfetch: GET {}: {}", url, e))?;
+            .map_err(|e| format!("webfetch: GET {}: {}", url, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if !resp.status().is_success() {
-            return Err(format!("webfetch: HTTP {}", resp.status()).into());
+            return Err(ToolError::LlmRecoverable(format!("webfetch: HTTP {}", resp.status())));
         }
 
         let content_type = resp
@@ -39,7 +40,7 @@ impl ToolExecutor for WebFetchExecutor {
         let body = resp
             .text()
             .await
-            .map_err(|e| format!("webfetch: read body: {}", e))?;
+            .map_err(|e| format!("webfetch: read body: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Strip HTML tags for HTML content.
         let text = if content_type.contains("html") {
@@ -85,6 +86,7 @@ pub fn webfetch_tool() -> Tool {
     Tool {
         name: "WebFetch".to_string(),
         description: "Fetch the contents of a URL. Returns text content, stripping HTML tags.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {

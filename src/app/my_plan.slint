@@ -1,0 +1,55 @@
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component MyPlan inherits Window {
+    width: 500px;
+    height: 400px;
+    title: "My Plan";
+
+    in-out property <string> tier: "Pro Tier";
+    in-out property <string> total_actions: "1200";
+    in-out property <string> action_limit: "Unlimited";
+    in-out property <string> used_storage: "150.5 MB";
+    in-out property <string> limit_storage: "10.0 GB";
+    in-out property <string> estimated_bill: "$124.50";
+
+    callback upgrade();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "My Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
+                Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
+                Button { text: "Upgrade"; clicked => { upgrade(); } }
+            }
+        }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Usage This Month"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+                Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: white; }
+                Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: white; }
+                Text { text: "Estimated Next Bill: " + estimated_bill; color: white; }
+            }
+        }
+    }
+}

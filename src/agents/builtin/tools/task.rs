@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -72,10 +73,10 @@ impl ToolExecutor for TaskCreateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let title = args["title"]
             .as_str()
-            .ok_or("task_create: title is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("task_create: title is required".to_string()))?;
         let description = args["description"].as_str().unwrap_or("").to_string();
         let assignee = args["assignee"].as_str().unwrap_or("").to_string();
 
@@ -108,13 +109,13 @@ impl ToolExecutor for TaskGetExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let id = args["id"].as_str().ok_or("task_get: id is required")?;
+    ) -> Result<String, ToolError> {
+        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_get: id is required".to_string()))?;
         let store = self.store.read().await;
         if let Some(task) = store.get(id) {
             Ok(serde_json::to_string_pretty(task).unwrap_or_default())
         } else {
-            Err(format!("Task not found: {}", id).into())
+            Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
         }
     }
 }
@@ -130,7 +131,7 @@ impl ToolExecutor for TaskListExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let store = self.store.read().await;
         let tasks: Vec<&Task> = store.list();
         if tasks.is_empty() {
@@ -151,15 +152,15 @@ impl ToolExecutor for TaskUpdateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let id = args["id"].as_str().ok_or("task_update: id is required")?;
+    ) -> Result<String, ToolError> {
+        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
         let status = args["status"].as_str().map(str::to_string);
         let result = args["result"].as_str().map(str::to_string);
 
         if self.store.write().await.update(id, status, result) {
             Ok(format!("Task updated: {}", id))
         } else {
-            Err(format!("Task not found: {}", id).into())
+            Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
         }
     }
 }
@@ -170,6 +171,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskCreate".to_string(),
         description: "Create a new task in the task tracker.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -187,6 +189,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskGet".to_string(),
         description: "Get details of a specific task by ID.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -202,6 +205,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskList".to_string(),
         description: "List all tasks in the task tracker.".to_string(),
+        is_read_only: true,
         parameters: json!({"type": "object", "properties": {}}),
         execute: Arc::new(TaskListExecutor { store }),
     }
@@ -211,6 +215,7 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskUpdate".to_string(),
         description: "Update a task's status or result.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {

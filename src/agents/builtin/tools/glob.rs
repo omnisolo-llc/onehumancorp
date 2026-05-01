@@ -1,31 +1,49 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
-struct GlobExecutor;
+struct GlobExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for GlobExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let pattern = args["pattern"]
             .as_str()
-            .ok_or("glob: pattern is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
         let base_dir = args["path"].as_str().unwrap_or(".");
 
-        let full_pattern = if base_dir == "." {
-            pattern.to_string()
+        let safe_base = base_dir.strip_prefix("/").unwrap_or(base_dir);
+        let safe_pattern = pattern.strip_prefix("/").unwrap_or(pattern);
+
+        let mut full_pattern = if safe_base == "." || safe_base == "" {
+            safe_pattern.to_string()
         } else {
-            format!("{}/{}", base_dir.trim_end_matches('/'), pattern)
+            format!("{}/{}", safe_base.trim_end_matches('/'), safe_pattern)
         };
 
+        if let Some(wd) = &self.working_dir {
+            full_pattern = format!("{}/{}", wd.display(), full_pattern);
+        }
+
         let matches: Vec<String> = glob::glob(&full_pattern)
-            .map_err(|e| format!("glob: invalid pattern: {}", e))?
+            .map_err(|e| ToolError::LlmRecoverable(format!("glob: invalid pattern: {}", e)))?
             .filter_map(|r| r.ok())
-            .map(|p| p.display().to_string())
+            .map(|p| {
+                let mut p_str = p.display().to_string();
+                if let Some(wd) = &self.working_dir {
+                    if let Ok(rel) = p.strip_prefix(wd) {
+                        p_str = rel.display().to_string();
+                    }
+                }
+                p_str
+            })
             .collect();
 
         if matches.is_empty() {
@@ -36,10 +54,11 @@ impl ToolExecutor for GlobExecutor {
     }
 }
 
-pub fn glob_tool() -> Tool {
+pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
         description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -54,6 +73,6 @@ pub fn glob_tool() -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GlobExecutor),
+        execute: Arc::new(GlobExecutor { working_dir }),
     }
 }

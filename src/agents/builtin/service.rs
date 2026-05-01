@@ -17,7 +17,6 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
-use chrono::Utc;
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
@@ -46,6 +45,77 @@ pub struct AgentServiceImpl {
     memory: Option<Arc<PgVectorMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
+}
+
+
+async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Option<&str>) -> String {
+    let current = current_dir.to_path_buf();
+    let target = if let Some(wd) = working_dir {
+        current.join(wd)
+    } else {
+        current.clone()
+    };
+
+    // Use tokio for canonicalize. Fallback to raw paths if it fails (e.g., dir doesn't exist yet).
+    let target_path = tokio::fs::canonicalize(&target).await.unwrap_or(target);
+    let current_path = tokio::fs::canonicalize(&current).await.unwrap_or(current);
+
+    let mut paths_to_check = Vec::new();
+    let mut ptr = target_path.as_path();
+
+    // Traverse upwards from target to current
+    loop {
+        paths_to_check.push(ptr.join("AGENTS.md"));
+        if ptr == current_path.as_path() {
+            break; // Stop at the workspace root
+        }
+        if let Some(p) = ptr.parent() {
+            ptr = p;
+            // Prevent going out of the workspace if canonicalization mismatched
+            if !ptr.starts_with(&current_path) && ptr != current_path.as_path() {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // paths_to_check currently has [leaf, parent, grandparent, ..., root]
+    // We want root to leaf (so leaf overrides/appends to root)
+    paths_to_check.reverse();
+
+    // Collect all contents, keeping track of them to handle truncation properly
+    // so we don't truncate the leaf.
+    let mut all_contents = Vec::new();
+    for p in paths_to_check {
+        if let Ok(content) = tokio::fs::read_to_string(&p).await {
+            all_contents.push(content);
+        }
+    }
+
+    let mut combined = String::new();
+    // Reconstruct string backwards to ensure leaf is prioritized if truncation happens.
+
+
+    for (i, content) in all_contents.iter().enumerate() {
+        if i > 0 {
+            combined.push_str("\n\n");
+        }
+        combined.push_str(content);
+    }
+
+    if combined.len() > 32768 {
+        // We must truncate from the start of the string, keeping the end.
+        let overflow = combined.len() - 32768;
+        let mut start_idx = overflow;
+        while start_idx < combined.len() && !combined.is_char_boundary(start_idx) {
+            start_idx += 1;
+        }
+        // Return the rightmost 32KB
+        combined = combined[start_idx..].to_string();
+    }
+
+    combined
 }
 
 impl AgentServiceImpl {
@@ -177,7 +247,7 @@ impl AgentServiceImpl {
             vec![]
         };
 
-        let system = if req.system_prompt.is_empty() {
+        let server_system_message = if req.system_prompt.is_empty() {
             let base_prompt = if !department.is_empty() {
                 if let Ok(dep) = Department::from_str(department) {
                     get_department_config(dep).system_prompt
@@ -191,6 +261,11 @@ impl AgentServiceImpl {
         } else {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
+
+        // Attempt to load AGENTS.md for user instructions
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let user_instructions = load_cascading_agents_md(&current_dir, None).await;
+        let developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
 
         let max_tokens = if req.max_tokens == 0 {
             if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
@@ -216,14 +291,41 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             model,
-            system,
+            server_system_message,
+            developer_instructions,
+            user_instructions,
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
+            enable_context_compaction: true,
+            compaction_threshold_tokens: 60_000,
             guardrails: None,
+            enable_llm_judge: false,
+            enable_state_checkpointing: false,
+            state_scratchpad_path: None,
+        }
+    }
+
+    pub async fn run_ralph_loop(&self, req: RunTaskRequest) {
+        let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
+        let progress_file = format!(".ralph_progress_{}.json", task_id);
+        let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
+        let run_cfg = self.build_run_config(&req, &req.department).await;
+        
+        let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
+        let task_store = Arc::new(RwLock::new(TaskStore::default()));
+        let mailbox = Arc::new(RwLock::new(Mailbox::default()));
+        
+        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        tools.push(agent_tool());
+        let agent = Arc::new(Agent::new(llm, tools));
+        
+        let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
+        if let Err(e) = ralph.run(&req.task).await {
+            tracing::error!("Ralph Loop error: {}", e);
         }
     }
 }
@@ -258,7 +360,8 @@ impl AgentService for AgentServiceImpl {
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        all_tools.push(agent_tool());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -305,6 +408,11 @@ impl AgentService for AgentServiceImpl {
                         r#type: EventType::IterationStarted as i32,
                         iteration,
                         message_count: message_count as i32,
+                        ..Default::default()
+                    },
+                    AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[Checkpoint Saved: Iteration {}, Path: {}]\n", iteration, path),
                         ..Default::default()
                     },
                     AgentEvent::TextChunk { content } => RunTaskEvent {
@@ -365,20 +473,33 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
-                system: self.cfg.system_prompt.clone(),
+                server_system_message: self.cfg.system_prompt.clone(),
+                developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
+                user_instructions: {
+                    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+                    load_cascading_agents_md(&current_dir, if sub_req.working_dir.is_empty() { None } else { Some(&sub_req.working_dir) }).await
+                },
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
+                enable_context_compaction: true,
+                compaction_threshold_tokens: 60_000,
                 guardrails: None,
+                enable_llm_judge: false,
+                enable_state_checkpointing: false,
+                state_scratchpad_path: None,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
             let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+
+            let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
+            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir);
+            tools.push(agent_tool());
             let agent = Agent::new(llm, tools);
 
             let mut no_op = |_: AgentEvent| {};
@@ -470,5 +591,219 @@ impl AgentService for SharedAgentService {
         req: tonic::Request<SubAgentRequest>,
     ) -> Result<tonic::Response<SubAgentResponse>, tonic::Status> {
         self.0.dispatch_to_sub_agent(req).await
+    }
+}
+
+use ohc_builtin_agent_core::types::ToolError;
+use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+use serde_json::{json, Value};
+use crate::proto::agent_service::agent_service_client::AgentServiceClient;
+
+struct SubagentExecutor;
+
+#[async_trait::async_trait]
+impl ToolExecutor for SubagentExecutor {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let prompt = args["prompt"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("agent: prompt is required".to_string()))?;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let branch_name = format!("subagent-{}", task_id);
+        let worktree_path = format!(".agent-worktrees/{}", task_id);
+
+        // Create worktree
+        let _ = tokio::process::Command::new("git")
+            .args(["branch", &branch_name])
+            .output()
+            .await;
+
+        let wt_output = tokio::process::Command::new("git")
+            .args(["worktree", "add", &worktree_path, &branch_name])
+            .output()
+            .await;
+
+        if let Err(e) = wt_output {
+            return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
+        }
+
+        let mut req = SubAgentRequest::default();
+        req.task = prompt.to_string();
+        req.working_dir = worktree_path.clone();
+
+        let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+        let res = async {
+            let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                .map_err(|e| format!("invalid sub-agent address: {}", e))?
+                .connect()
+                .await
+                .map_err(|e| format!("connect to sub-agent: {}", e))?;
+            let mut client = AgentServiceClient::new(channel);
+            client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
+        }.await;
+
+        // Cleanup
+        let _ = tokio::process::Command::new("git")
+            .args(["worktree", "remove", "--force", &worktree_path])
+            .output()
+            .await;
+        let _ = tokio::process::Command::new("git")
+            .args(["branch", "-D", &branch_name])
+            .output()
+            .await;
+
+        match res {
+            Ok(r) => {
+                let inner = r.into_inner();
+                if !inner.error.is_empty() {
+                    Err(ToolError::LlmRecoverable(inner.error))
+                } else {
+                    Ok(inner.result)
+                }
+            }
+            Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+        }
+    }
+}
+
+pub fn agent_tool() -> Tool {
+    Tool {
+        name: "Agent".to_string(),
+        description: "Spawn a sub-agent to execute a task autonomously. \
+            The sub-agent runs its own ReAct loop in an isolated git worktree. \
+            Use for parallelizable or delegatable work."
+            .to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The task prompt for the sub-agent."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Short description of the sub-task."
+                }
+            },
+            "required": ["prompt"]
+        }),
+        execute: Arc::new(SubagentExecutor),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md() {
+        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).unwrap();
+
+        let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
+        root_file.write_all(b"ROOT INSTRUCTION").unwrap();
+        root_file.flush().unwrap();
+
+        std::fs::create_dir_all(base_dir.join("nested")).unwrap();
+        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        nested_file.write_all(b"NESTED INSTRUCTION").unwrap();
+        nested_file.flush().unwrap();
+
+        let result = load_cascading_agents_md(&base_dir, Some("nested")).await;
+
+        let _ = std::fs::remove_dir_all(&base_dir);
+
+        assert_eq!(result, "ROOT INSTRUCTION\n\nNESTED INSTRUCTION");
+    }
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md_truncation() {
+        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).unwrap();
+
+        let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
+        let massive_str = "A".repeat(40000);
+        root_file.write_all(massive_str.as_bytes()).unwrap();
+        root_file.flush().unwrap();
+
+        std::fs::create_dir_all(base_dir.join("nested")).unwrap();
+        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        nested_file.write_all(b"CRITICAL_LEAF").unwrap();
+        nested_file.flush().unwrap();
+
+        let result = load_cascading_agents_md(&base_dir, Some("nested")).await;
+
+        let _ = std::fs::remove_dir_all(&base_dir);
+
+        assert!(result.len() <= 32768);
+        assert!(result.ends_with("CRITICAL_LEAF"));
+    }
+}
+
+pub async fn start_builtin_agent(
+    transport: std::sync::Arc<dyn crate::mesh::transport::MeshTransport>,
+    svc: std::sync::Arc<AgentServiceImpl>,
+) {
+    let handler = {
+        let transport = transport.clone();
+        let svc = svc.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+                tracing::info!("Received job from mesh: {}", req.task_id);
+                let svc = svc.clone();
+                let transport = transport.clone();
+                tokio::spawn(async move {
+                    match svc.run_task(tonic::Request::new(req)).await {
+                        Ok(resp) => {
+                            let mut stream = resp.into_inner();
+                            use tokio_stream::StreamExt;
+                            while let Some(Ok(evt)) = stream.next().await {
+                                let mut buf = Vec::new();
+                                use prost::Message;
+                                if evt.encode(&mut buf).is_ok() {
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                        topic: "agent_events".to_string(),
+                                        payload: buf,
+                                    }).await;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error running task from mesh: {}", e);
+                        }
+                    }
+                });
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("agent_jobs", handler).await {
+        tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'agent_jobs'");
+    }
+
+    let handler_ralph = {
+        let svc = svc.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+                tracing::info!("Received Ralph job from mesh: {}", req.task_id);
+                let svc = svc.clone();
+                tokio::spawn(async move {
+                    svc.run_ralph_loop(req).await;
+                });
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("ralph_jobs", handler_ralph).await {
+        tracing::error!("Failed to subscribe to 'ralph_jobs' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'ralph_jobs'");
     }
 }

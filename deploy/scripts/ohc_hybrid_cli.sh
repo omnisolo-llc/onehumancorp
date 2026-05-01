@@ -28,22 +28,22 @@ while true; do
     read -p "Choice: " choice
 
     case $choice in
-        1) bash "$SCRIPT_DIR/ohc-setup.sh" || echo -e "${PURPLE}Developer Setup returned non-zero exit status.${RESET}" ;;
-        2) bash "$SCRIPT_DIR/ohc-env-wizard.sh" || echo -e "${PURPLE}Environment Wizard returned non-zero exit status.${RESET}" ;;
-        3) bash "$SCRIPT_DIR/ohc-diagnostics.sh" || echo -e "${PURPLE}Diagnostics returned non-zero exit status.${RESET}" ;;
-        4) bash "$SCRIPT_DIR/ohc-quick-start.sh" || echo -e "${PURPLE}Quick Start returned non-zero exit status.${RESET}" ;;
-        5) bash "$SCRIPT_DIR/ohc-agent-wizard.sh" || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status.${RESET}" ;;
+        1) (set -e; bash "$SCRIPT_DIR/ohc-setup.sh") || echo -e "${PURPLE}Developer Setup returned non-zero exit status ($?).${RESET}" ;;
+        2) (set -e; bash "$SCRIPT_DIR/ohc-env-wizard.sh") || echo -e "${PURPLE}Environment Wizard returned non-zero exit status ($?).${RESET}" ;;
+        3) (set -e; bash "$SCRIPT_DIR/ohc-diagnostics.sh") || echo -e "${PURPLE}Diagnostics returned non-zero exit status ($?).${RESET}" ;;
+        4) (set -e; bash "$SCRIPT_DIR/ohc-quick-start.sh") || echo -e "${PURPLE}Quick Start returned non-zero exit status ($?).${RESET}" ;;
+        5) (set -e; bash "$SCRIPT_DIR/ohc-agent-wizard.sh") || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status ($?).${RESET}" ;;
         6)
             if ! command -v sqlite3 &> /dev/null; then
                 echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
             elif [ -f "local_standalone.db" ]; then
                 echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
-                sqlite3 "local_standalone.db" ".tables"
+                sqlite3 "local_standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
             else
                 echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
-        8) bash "$SCRIPT_DIR/ohc-seed-data.sh" || echo -e "${PURPLE}Data Seeder returned non-zero exit status.${RESET}" ;;
+        8) (set -e; bash "$SCRIPT_DIR/ohc-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac

@@ -100,7 +100,16 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         }
     }
 
-    cfg.database_url = Some("sqlite://ohc-standalone.db".to_string());
+    let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+        if !key.is_empty() {
+            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+        } else {
+            "sqlite://ohc-standalone.db".to_string()
+        }
+    } else {
+        "sqlite://ohc-standalone.db".to_string()
+    };
+    cfg.database_url = Some(sqlite_url);
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
@@ -153,6 +162,30 @@ mod tests {
         unsafe {
             env::remove_var("OHC_LISTEN_ADDR");
             env::remove_var("DATABASE_URL");
+        }
+    }
+
+    #[test]
+    fn test_telemetry_enabled_override() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        // SAFETY: Test-only code setting environment variables
+        unsafe {
+            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+        }
+
+        let cfg = load().unwrap();
+        assert_eq!(cfg.telemetry_enabled, true);
+
+        // SAFETY: Test-only code setting/removing environment variables
+        unsafe {
+            env::set_var("OHC_TELEMETRY_ENABLED", "false");
+        }
+
+        let cfg2 = load().unwrap();
+        assert_eq!(cfg2.telemetry_enabled, false);
+
+        unsafe {
+            env::remove_var("OHC_TELEMETRY_ENABLED");
         }
     }
 }

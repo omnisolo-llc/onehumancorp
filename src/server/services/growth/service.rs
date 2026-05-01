@@ -4,10 +4,13 @@ use crate::ohc::orchestration::growth_service_server::GrowthService;
 use std::sync::RwLock;
 use std::collections::HashMap;
 use chrono::Utc;
+use sqlx::{PgPool, Row};
+use crate::services::growth::referral_api;
+use crate::utils::auth_utils::set_org_context;
 
 pub struct MyGrowthService {
+    pool: PgPool,
     experiments: RwLock<Vec<LandingPageExperiment>>,
-    referrals: RwLock<Vec<Referral>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
     waitlist: RwLock<Vec<WaitlistEntry>>,
@@ -15,15 +18,27 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new() -> Self {
+    pub fn new(pool: PgPool) -> Self {
         MyGrowthService {
+            pool,
             experiments: RwLock::new(Vec::new()),
-            referrals: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
             waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
         }
+    }
+
+    async fn get_org_id(&self, metadata: &tonic::metadata::MetadataMap) -> Result<String, Status> {
+        let spiffe_id_str = metadata.get("x-spiffe-id")
+            .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
+            .to_str()
+            .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
+
+        let (org_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str)
+            .map_err(|e| Status::permission_denied(e))?;
+
+        Ok(org_id)
     }
 }
 
@@ -64,11 +79,34 @@ impl GrowthService for MyGrowthService {
 
     async fn get_referrals(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<ReferralsResponse>, Status> {
-        let refs = self.referrals.read().unwrap();
+        let org_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query("SELECT id, user_id, referral_code, clicks, conversions, created_at_unix FROM referrals WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let referrals = rows.into_iter().map(|row| {
+            Referral {
+                id: row.get("id"),
+                user_id: row.get("user_id"),
+                referral_code: row.get("referral_code"),
+                clicks: row.get("clicks"),
+                conversions: row.get("conversions"),
+                created_at_unix: row.get("created_at_unix"),
+            }
+        }).collect();
+
         Ok(Response::new(ReferralsResponse {
-            referrals: refs.clone(),
+            referrals,
         }))
     }
 
@@ -76,54 +114,106 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<CreateReferralRequest>,
     ) -> Result<Response<Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        if req.user_id.is_empty() || req.referral_code.is_empty() {
-            return Err(Status::invalid_argument("userId and referralCode are required"));
+
+        if req.user_id.is_empty() {
+            return Err(Status::invalid_argument("userId is required"));
         }
-        
-        let ref_obj = Referral {
-            id: format!("ref-{}", Utc::now().timestamp()),
-            user_id: req.user_id,
-            referral_code: req.referral_code,
-            clicks: 0,
-            conversions: 0,
-            created_at_unix: Utc::now().timestamp(),
+
+        let referral_code = if req.referral_code.is_empty() {
+            referral_api::generate_referral_link(&req.user_id)
+                .map_err(|e| Status::internal(e))?
+                .split('=')
+                .last()
+                .unwrap_or("error")
+                .to_string()
+        } else {
+            req.referral_code
         };
         
-        let mut refs = self.referrals.write().unwrap();
-        refs.push(ref_obj.clone());
-        
-        Ok(Response::new(ref_obj))
+        let id = format!("ref-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let created_at = Utc::now().timestamp();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, created_at_unix) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&id)
+            .bind(&org_id)
+            .bind(&req.user_id)
+            .bind(&referral_code)
+            .bind(created_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Referral {
+            id,
+            user_id: req.user_id,
+            referral_code,
+            clicks: 0,
+            conversions: 0,
+            created_at_unix: created_at,
+        }))
     }
 
     async fn click_referral(
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        let mut refs = self.referrals.write().unwrap();
         
-        if let Some(r) = refs.iter_mut().find(|r| r.id == req.id) {
-            r.clicks += 1;
-            return Ok(Response::new(r.clone()));
-        }
-        
-        Err(Status::not_found("referral not found"))
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+            .bind(&req.id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Referral {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            referral_code: row.get("referral_code"),
+            clicks: row.get("clicks"),
+            conversions: row.get("conversions"),
+            created_at_unix: row.get("created_at_unix"),
+        }))
     }
 
     async fn convert_referral(
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        let mut refs = self.referrals.write().unwrap();
         
-        if let Some(r) = refs.iter_mut().find(|r| r.id == req.id) {
-            r.conversions += 1;
-            return Ok(Response::new(r.clone()));
-        }
-        
-        Err(Status::not_found("referral not found"))
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+            .bind(&req.id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Referral {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            referral_code: row.get("referral_code"),
+            clicks: row.get("clicks"),
+            conversions: row.get("conversions"),
+            created_at_unix: row.get("created_at_unix"),
+        }))
     }
 
     async fn get_downloads(
@@ -208,16 +298,30 @@ impl GrowthService for MyGrowthService {
 
     async fn get_viral_coefficient(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<ViralCoefficientResponse>, Status> {
-        let refs = self.referrals.read().unwrap();
-        let total_referrals = refs.len() as i32;
+        let org_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let total_referrals = rows.len() as i32;
         let mut total_conversions = 0;
         let mut inviters = HashMap::new();
         
-        for r in refs.iter() {
-            total_conversions += r.conversions;
-            inviters.insert(r.user_id.clone(), true);
+        for row in rows.iter() {
+            let conversions: i32 = row.get("conversions");
+            let user_id: String = row.get("user_id");
+            total_conversions += conversions;
+            inviters.insert(user_id, true);
         }
         
         let unique_inviters = inviters.len() as i32;
@@ -237,27 +341,14 @@ impl GrowthService for MyGrowthService {
 
     async fn get_viral_coefficient_metrics(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<ViralCoefficientMetricsResponse>, Status> {
-        let refs = self.referrals.read().unwrap();
-        let mut total_conversions = 0;
-        let mut inviters = HashMap::new();
-        
-        for r in refs.iter() {
-            total_conversions += r.conversions;
-            inviters.insert(r.user_id.clone(), true);
-        }
-        
-        let unique_inviters = inviters.len() as i32;
-        let k_factor = if unique_inviters > 0 {
-            total_conversions as f64 / unique_inviters as f64
-        } else {
-            0.0
-        };
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let res = self.get_viral_coefficient(request).await?.into_inner();
         
         Ok(Response::new(ViralCoefficientMetricsResponse {
-            viral_coefficient: k_factor,
-            organization_id: "default".to_string(),
+            viral_coefficient: res.k_factor,
+            organization_id: org_id,
         }))
     }
 
@@ -315,17 +406,27 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GetQuotaRequest>,
     ) -> Result<Response<QuotaMetrics>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        let refs = self.referrals.read().unwrap();
-        
-        let mut total_conversions = 0;
-        for r in refs.iter() {
-            if req.user_id.is_empty() || r.user_id == req.user_id {
-                total_conversions += r.conversions;
-            }
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut query = "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
+        if !req.user_id.is_empty() {
+            query.push_str(" AND user_id = $2");
         }
-        
-        let max_quota = 50 + total_conversions * 10;
+
+        let row = if req.user_id.is_empty() {
+            sqlx::query(&query).bind(&org_id).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
+        }.map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let total_conversions: i64 = row.try_get(0).unwrap_or(0);
+        let max_quota = 50 + (total_conversions as i32) * 10;
         
         Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
     }
@@ -359,5 +460,44 @@ impl GrowthService for MyGrowthService {
         wl.push(entry.clone());
         
         Ok(Response::new(entry))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ohc::orchestration::*;
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_referral_flow() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = PgPool::connect(&database_url).await.unwrap();
+        let service = MyGrowthService::new(pool);
+
+        let mut req = Request::new(CreateReferralRequest {
+            user_id: "test_user".to_string(),
+            referral_code: "TESTCODE".to_string(),
+        });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+
+        let resp = service.create_referral(req).await.unwrap().into_inner();
+        assert_eq!(resp.user_id, "test_user");
+        assert_eq!(resp.referral_code, "TESTCODE");
+
+        let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
+        assert_eq!(click_resp.clicks, 1);
+
+        let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
+        assert_eq!(conv_resp.conversions, 1);
+
+        let mut list_req = Request::new(EmptyRequest {});
+        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
+        assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
     }
 }

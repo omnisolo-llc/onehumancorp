@@ -1,0 +1,280 @@
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+
+
+export struct UiPendingApproval {
+    task_id: string,
+    title: string,
+    proposed_content: string,
+}
+
+export struct UiRoleCount {
+    role: string,
+    count: int,
+}
+
+export component Dashboard inherits Window {
+    width: 375px;
+    height: 800px;
+    title: "Dashboard";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <string> todays_sales: "$0.00";
+    in property <int> new_orders_count: 0;
+    in property <int> active_helpers_count: 0;
+    in property <int> tasks_in_progress_count: 0;
+
+    in property <[UiPendingApproval]> pending_approvals;
+    in property <[UiRoleCount]> role_counts;
+    in property <[UiMeshMessage]> mesh_messages;
+
+    in-out property <bool> show_milestone: false;
+    in property <string> milestone_title: "";
+    in property <string> milestone_message: "";
+    callback dismiss_milestone();
+
+    callback open_help_center();
+    callback open_ai_chat();
+    callback open_interactive_walkthrough();
+    callback open_video_tutorials();
+    callback open_release_notes();
+    callback open_api_docs();
+    callback approve_task(string);
+    callback open_billing();
+
+    callback action_add_product();
+    callback action_view_orders();
+    callback action_check_messages();
+    callback action_see_analytics();
+    callback action_share_store();
+
+    in-out property <bool> show_quick_actions_hint: false;
+    in-out property <bool> show_menu: false;
+
+    Flickable {
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Header
+        HorizontalBox {
+            spacing: 16px;
+            Text { text: "Dashboard"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {} // Spacer
+            Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
+            Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } }
+        }
+
+        if (show_menu) : Rectangle {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
+                Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
+                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
+                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+            }
+        }
+
+        if (show_milestone) : GlassCard {
+            border-color: #f59e0b;
+            border-width: 1px;
+            background: rgba(245, 158, 11, 0.1);
+
+            HorizontalBox {
+                padding: 16px;
+                spacing: 12px;
+                alignment: start;
+
+                Text { text: "🎉"; font-size: 32px; vertical-alignment: center; }
+
+                VerticalBox {
+                    spacing: 4px;
+                    Text { text: milestone_title; font-weight: 700; font-size: 18px; color: white; }
+                    Text { text: milestone_message; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                }
+
+                Rectangle {}
+
+                Button {
+                    text: "Dismiss";
+                    height: 36px;
+                    clicked => { dismiss_milestone(); }
+                }
+            }
+        }
+
+        // Quick Actions Navigation
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
+            }
+            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } }
+                Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
+                Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } }
+            }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
+                Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
+            }
+        }
+
+        // Stat Cards
+        VerticalBox {
+            spacing: 16px;
+
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Today's Sales"; color: #94a3b8; }
+                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                        }
+                    }
+                }
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "New Orders"; color: #94a3b8; }
+                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                        }
+                    }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Active AI Helpers"; color: #94a3b8; }
+                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                        }
+                    }
+                }
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Tasks in Progress"; color: #94a3b8; }
+                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        if (pending_approvals.length > 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Drafts Ready for Review"; font-size: 20px; font-weight: 700; color: #b91c1c; }
+
+            for approval in pending_approvals : Rectangle {
+                background: #fef2f2;
+                border-color: #fca5a5;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+
+                    Text { text: approval.title; font-weight: 700; color: #991b1b; }
+                    Text { text: approval.proposed_content; color: #7f1d1d; wrap: word-wrap; }
+
+                    HorizontalBox {
+                        alignment: end;
+                        spacing: 10px;
+                        Button { text: "Edit"; height: 44px; }
+                        Button {
+                            text: "Approve";
+                            height: 44px;
+                            clicked => { approve_task(approval.task_id); }
+                        }
+                    }
+                }
+            }
+        }
+
+        SwarmObservability {
+            messages: mesh_messages;
+        }
+
+        // Company Structure
+        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        
+        VerticalBox {
+            spacing: 10px;
+            
+            for role_count in role_counts : GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
+                    Rectangle {}
+                    Button { text: "-"; width: 44px; height: 44px; }
+                    Text { text: role_count.count; font-weight: 700; color: white; horizontal-alignment: center; }
+                    Button { text: "+"; width: 44px; height: 44px; }
+                }
+            }
+        }
+    }
+}
+}

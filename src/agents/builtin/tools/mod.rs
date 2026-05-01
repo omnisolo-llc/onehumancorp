@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -20,11 +21,13 @@ pub mod marketing;
 pub mod finance;
 pub mod local_fs_sync;
 pub mod ollama;
+pub mod subagent;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
     pub name: String,
     pub description: String,
+    pub is_read_only: bool,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
 }
@@ -40,6 +43,7 @@ impl Clone for Tool {
         Self {
             name: self.name.clone(),
             description: self.description.clone(),
+            is_read_only: self.is_read_only,
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
         }
@@ -51,7 +55,7 @@ pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.
@@ -68,14 +72,15 @@ pub fn all_tools(
     todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
+    working_dir: Option<std::path::PathBuf>,
 ) -> Vec<Tool> {
     vec![
-        bash::bash_tool(),
-        read::read_tool(),
-        write::write_tool(),
-        edit::edit_tool(),
-        glob::glob_tool(),
-        grep::grep_tool(),
+        bash::bash_tool(working_dir.clone()),
+        read::read_tool(working_dir.clone()),
+        write::write_tool(working_dir.clone()),
+        edit::edit_tool(working_dir.clone()),
+        glob::glob_tool(working_dir.clone()),
+        grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
         sendmessage::sendmessage_tool(mailbox.clone()),
@@ -86,13 +91,13 @@ pub fn all_tools(
         task::task_get_tool(task_store.clone()),
         task::task_list_tool(task_store.clone()),
         task::task_update_tool(task_store.clone()),
+        agent_tool::agent_stop_tool(),
+        agent_tool::agent_status_tool(),
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
-        agent_tool::agent_stop_tool(),
-        agent_tool::agent_status_tool(),
-        agent_tool::agent_tool(),
-        local_fs_sync::local_fs_sync_tool(),
+        local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
+        subagent::subagent_tool(),
     ]
 }

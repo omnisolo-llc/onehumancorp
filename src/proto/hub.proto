@@ -190,6 +190,26 @@ message SharedTask {
   string proposed_content = 16;
 }
 
+
+message ApproveTaskRequest {
+  string task_id = 1;
+  bool is_approved = 2;
+}
+
+message ApproveTaskResponse {
+  bool success = 1;
+}
+
+message TriggerCustomOrderRequest {
+  string organization_id = 1;
+  string customer_name = 2;
+  string details = 3;
+}
+
+message TriggerCustomOrderResponse {
+  bool success = 1;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -207,6 +227,8 @@ service HubService {
   rpc CreateTask(CreateTaskRequest) returns (SharedTask);
   rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+  rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
+  rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
   rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
   rpc HandlePromptTuning(PromptTuningConfig) returns (WizardResponse);
@@ -222,6 +244,28 @@ service HubService {
   rpc Invite(InviteRequest) returns (InviteResponse);
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
+  rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+}
+
+message StartOnboardingRequest {
+  string business_type = 1;
+  string company_name = 2;
+  string company_description = 3;
+  repeated string selling_categories = 4;
+  string payment_pref = 5;
+  string admin_email = 6;
+  string website_template = 7;
+  string first_product_name = 8;
+  string first_product_price = 9;
+  string domain_choice = 10;
+  string admin_name = 11;
+  string admin_password = 12;
+}
+
+message StartOnboardingResponse {
+  bool success = 1;
+  string message = 2;
+  string organization_id = 3;
 }
 
 message AgentConfig {

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ohc::organization::Organization;
 use crate::ohc::organization::TeamMember;
 use crate::ohc::organization::RoleProfile;

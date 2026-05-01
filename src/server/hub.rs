@@ -133,6 +133,18 @@ impl Hub {
         let subs = self.subs.read().unwrap();
         
         let to_agent = msg.to_agent.clone();
+
+        // Check rate limiting
+        let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
+        let agent_id = msg.to_agent.clone();
+        let tracker = self.tracker.clone();
+        tokio::spawn(async move {
+            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+                if limit_status.soft_limit_reached {
+                    println!("Rate limit warning: {:?}", limit_status.user_message);
+                }
+            }
+        });
         
         // Add to recipient's inbox
         let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
@@ -513,12 +525,21 @@ impl Hub {
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
 
+        let mission_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
+            .fetch_one(&self.pool)
+            .await
+        {
+            Ok(count) => count,
+            Err(_) => 0,
+        };
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
+            "mission_sync_backlog": mission_sync_backlog,
         }))
     }
 }
@@ -547,4 +568,38 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
     }
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    async fn test_check_health() {
+        // Skip test if no database is available
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        // Since test db is likely unmigrated/empty, we connect lazily
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = Hub::new(tx, pool);
+
+        let health = hub.check_health().await.unwrap();
+
+        // When lazily connected, if DB doesn't exist, status might be degraded,
+        // or we might get an error depending on how check_health handles failure.
+        // In our check_health, failure to query SELECT 1 results in db_ping = 0.
+        // We just ensure the response contains the fields we expect.
+        assert!(health.get("status").is_some());
+        assert!(health.get("db_ping_ms").is_some());
+        assert!(health.get("mission_sync_backlog").is_some());
+    }
 }

@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
@@ -5,31 +6,32 @@ use tokio::process::Command;
 
 use super::{Tool, ToolExecutor};
 
-struct BashExecutor;
+struct BashExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for BashExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let command = args["command"]
             .as_str()
-            .ok_or("bash: command is required")?
+            .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
             .to_string();
         let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
-        let output = tokio::time::timeout(
-            timeout,
-            Command::new("bash")
-                .arg("-c")
-                .arg(&command)
-                .output(),
-        )
+        let mut cmd = Command::new("bash");
+        cmd.arg("-c").arg(&command);
+        if let Some(wd) = &self.working_dir {
+            cmd.current_dir(wd);
+        }
+        let output = tokio::time::timeout(timeout, cmd.output())
         .await
-        .map_err(|_| format!("bash: command timed out after {}s", timeout_secs))?
-        .map_err(|e| format!("bash: failed to execute: {}", e))?;
+        .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
+        .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -56,13 +58,14 @@ impl ToolExecutor for BashExecutor {
     }
 }
 
-pub fn bash_tool() -> Tool {
+pub fn bash_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Bash".to_string(),
         description: "Execute a bash command and return its output. \
             Use for build/test/git/shell operations. \
             Commands run in the repository root."
             .to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -77,6 +80,6 @@ pub fn bash_tool() -> Tool {
             },
             "required": ["command"]
         }),
-        execute: Arc::new(BashExecutor),
+        execute: Arc::new(BashExecutor { working_dir }),
     }
 }

@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -13,10 +14,10 @@ impl ToolExecutor for WebSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let query = args["query"]
             .as_str()
-            .ok_or("websearch: query is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("websearch: query is required".to_string()))?;
 
         // Use DuckDuckGo HTML endpoint (no API key required).
         let url = format!(
@@ -30,7 +31,7 @@ impl ToolExecutor for WebSearchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("websearch: {}", e))?;
+            .map_err(|e| format!("websearch: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if !resp.status().is_success() {
             return Ok(format!(
@@ -99,6 +100,7 @@ pub fn websearch_tool() -> Tool {
     Tool {
         name: "WebSearch".to_string(),
         description: "Search the web for information. Returns a list of result snippets.".to_string(),
+        is_read_only: true,
         parameters: json!({
             "type": "object",
             "properties": {
