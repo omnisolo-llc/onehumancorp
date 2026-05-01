@@ -978,6 +978,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
 
+        .route("/api/v1/queue/spawn", axum::routing::post(crate::api::queue::spawn::spawn_agent).with_state(crate::api::queue::spawn::AppState {
+            mesh_transport: mesh_transport.clone(),
+            queue_state: crate::api::queue::spawn::QueueState {
+                is_standalone: std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true",
+                redis_url: std::env::var("REDIS_URL").unwrap_or_default(),
+                mesh_transport: mesh_transport.clone(),
+            },
+        }))
+
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
