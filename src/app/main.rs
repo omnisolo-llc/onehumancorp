@@ -239,12 +239,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_ui = app::Pricing::new().unwrap();
     let pricing_handle = pricing_ui.as_weak();
 
+    let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+    let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
         if let Some(ui) = pricing_handle_clone.upgrade() {
             let _ = ui.show();
         }
     });
+
+    let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
+    my_plan_ui.on_view_details(move || {
+        if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let my_plan_handle_pricing_clone = my_plan_handle.clone();
+    pricing_ui.on_select_plan(move |plan| {
+        if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
+            ui.set_tier(plan.into());
+            let _ = ui.show();
+        }
+    });
+
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2145,6 +2164,22 @@ mod cost_transparency_e2e_tests {
         my_plan_ui.invoke_upgrade();
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
+        let view_details_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_details_opened_clone = view_details_opened.clone();
+        my_plan_ui.on_view_details(move || {
+            *view_details_opened_clone.borrow_mut() = true;
+        });
+        my_plan_ui.invoke_view_details();
+        assert!(*view_details_opened.borrow(), "View Cost Details should be opened from MyPlan");
+
+        let pricing_ui = app::Pricing::new().unwrap();
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        pricing_ui.on_select_plan(move |plan| {
+            *plan_selected_clone.borrow_mut() = plan.to_string();
+        });
+        pricing_ui.invoke_select_plan("Pro".into());
+        assert_eq!(*plan_selected.borrow(), "Pro");
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 

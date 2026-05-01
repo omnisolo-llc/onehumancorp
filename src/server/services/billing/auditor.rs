@@ -115,6 +115,15 @@ impl CostAuditor {
         *storage_savings
     }
 
+    pub fn get_total_cost(&self) -> f64 {
+        let total_cost = self.total_cost.lock().unwrap();
+        *total_cost
+    }
+
+    pub fn get_total_tokens(&self) -> i64 {
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        agent_output_tokens.values().sum()
+    }
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
