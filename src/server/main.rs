@@ -33,6 +33,7 @@ mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub mod utils;
+pub mod orchestration;
 pub mod storage;
 #[cfg(test)]
 pub mod benchmarks;
