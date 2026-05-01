@@ -12,6 +12,8 @@ pub struct EmbeddingRecord {
     pub embedding: Vec<f32>,
     pub source_type: String,
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub owner_override: bool,
 }
 
 pub enum VectorMemoryStore {
@@ -38,30 +40,44 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at)                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at"
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, owner_override) \
+                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8) \
+                     ON CONFLICT(id) DO UPDATE SET \
+                         content=excluded.content, \
+                         embedding=excluded.embedding, \
+                         created_at=excluded.created_at, \
+                         owner_override=excluded.owner_override"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(&record.source_type)
                 .bind(record.created_at)
+                .bind(record.owner_override)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at)                      VALUES (?, ?, ?, ?, ?, ?, ?)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at"
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, owner_override) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?) \
+                     ON CONFLICT(id) DO UPDATE SET \
+                         content=excluded.content, \
+                         embedding=excluded.embedding, \
+                         created_at=excluded.created_at, \
+                         owner_override=excluded.owner_override"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(&record.source_type)
                 .bind(record.created_at)
+                .bind(record.owner_override)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -79,10 +95,14 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = $1                      ORDER BY embedding <=> $2::vector                      LIMIT $3"
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, owner_override \
+                     FROM consolidated_memory \
+                     WHERE tenant_id = $1 \
+                     ORDER BY embedding <=> $2::vector \
+                     LIMIT $3"
                 )
                 .bind(tenant_id)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(limit)
                 .fetch_all(pool)
                 .await
@@ -96,6 +116,7 @@ impl VectorRepository {
                     let emb_str_res: String = row.get("embedding");
                     let source_type: String = row.get("source_type");
                     let created_at: DateTime<Utc> = row.get("created_at");
+                    let owner_override: bool = row.try_get("owner_override").unwrap_or(false);
 
                     let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
@@ -107,15 +128,20 @@ impl VectorRepository {
                         embedding,
                         source_type,
                         created_at,
+                        owner_override,
                     });
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = ?                      ORDER BY vec_distance_cosine(embedding, ?)                      LIMIT ?"
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, owner_override \
+                     FROM consolidated_memory \
+                     WHERE tenant_id = ? \
+                     ORDER BY vec_distance_cosine(embedding, ?) \
+                     LIMIT ?"
                 )
                 .bind(tenant_id)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(limit)
                 .fetch_all(pool)
                 .await
@@ -129,6 +155,7 @@ impl VectorRepository {
                     let emb_str_res: String = row.get("embedding");
                     let source_type: String = row.get("source_type");
                     let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
+                    let owner_override: bool = row.try_get("owner_override").unwrap_or(false);
 
                     let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
@@ -140,6 +167,7 @@ impl VectorRepository {
                         embedding,
                         source_type,
                         created_at,
+                        owner_override,
                     });
                 }
             }
@@ -192,6 +220,8 @@ impl VectorRepository {
     pub async fn resolve_conflicts(&self) -> Result<(), String> {
         // Resolve conflicts by identifying highly similar vectors (cosine distance < 0.05)
         // within the same organization and keeping only the most recent one.
+        // Explicitly retain records where `owner_override` is TRUE.
+        // Also scrub newer conflicting facts if an older `owner_override = TRUE` record exists.
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
@@ -200,7 +230,11 @@ impl VectorRepository {
                     WHERE a.tenant_id = b.tenant_id
                       AND a.id != b.id
                       AND a.embedding <=> b.embedding < 0.05
-                      AND a.created_at < b.created_at
+                      AND a.owner_override = FALSE
+                      AND (
+                          a.created_at < b.created_at
+                          OR b.owner_override = TRUE
+                      )
                 ";
                 sqlx::query(query)
                     .execute(pool)
@@ -216,7 +250,11 @@ impl VectorRepository {
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id
                         WHERE a.id != b.id
                           AND vec_distance_cosine(a.embedding, b.embedding) < 0.05
-                          AND a.created_at < b.created_at
+                          AND a.owner_override = 0
+                          AND (
+                              a.created_at < b.created_at
+                              OR b.owner_override = 1
+                          )
                     )
                 ";
                 sqlx::query(query)
@@ -327,6 +365,7 @@ mod tests {
             embedding: vec![1.0, 2.0, 3.0],
             source_type: "TEXT".to_string(),
             created_at: now,
+            owner_override: false,
         };
 
         let json = serde_json::to_string(&record).unwrap();
@@ -375,9 +414,10 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                owner_override BOOLEAN DEFAULT FALSE
             );"
         ).execute(&pool).await.unwrap();
 
@@ -396,6 +436,7 @@ mod tests {
             embedding: emb.clone(),
             source_type: "TEXT".to_string(),
             created_at: old_time,
+            owner_override: false,
         };
         let record2 = EmbeddingRecord {
             id: "rec2".to_string(), // different ID
@@ -405,6 +446,7 @@ mod tests {
             embedding: emb.clone(), // same embedding! (conflict)
             source_type: "TEXT".to_string(),
             created_at: now,
+            owner_override: false,
         };
         let record_stale = EmbeddingRecord {
             id: "rec3".to_string(),
@@ -414,19 +456,54 @@ mod tests {
             embedding: vec![4.0, 5.0, 6.0],
             source_type: "TASK_SUMMARY".to_string(),
             created_at: old_time,
+            owner_override: false,
         };
 
         repo.upsert(&record1).await.unwrap();
         repo.upsert(&record2).await.unwrap();
         repo.upsert(&record_stale).await.unwrap();
 
+        // Create an explicit override record that is older but should win over a newer conflicting record
+        let record_override = EmbeddingRecord {
+            id: "rec_override".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "explicitly overridden content".to_string(),
+            embedding: emb.clone(),
+            source_type: "TEXT".to_string(),
+            created_at: old_time, // older
+            owner_override: true,
+        };
+
+        // Create a newer record that conflicts with the overridden record
+        let record_newer_conflict = EmbeddingRecord {
+            id: "rec_newer".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "new conflicting content".to_string(),
+            embedding: emb.clone(),
+            source_type: "TEXT".to_string(),
+            created_at: now, // newer
+            owner_override: false,
+        };
+
+        repo.upsert(&record_override).await.unwrap();
+        repo.upsert(&record_newer_conflict).await.unwrap();
+
         // Test resolve conflicts
         repo.resolve_conflicts().await.unwrap();
 
-        // record1 should be deleted because it is older and has the same embedding
+        // record1 should be deleted because it is older and has the same embedding than record2
+        // record_newer_conflict should be deleted because it conflicts with record_override which is explicitly overridden
+        // record2 should also be deleted because it conflicts with record_override
         let search_res = repo.semantic_search("org1", &emb, 10).await.unwrap();
+
+        // Wait, because record2, record_newer_conflict, and record_override all have the same embedding:
+        // rec2 vs rec_override: rec_override wins
+        // rec_newer vs rec_override: rec_override wins
+
         assert_eq!(search_res.len(), 1);
-        assert_eq!(search_res[0].id, "rec2");
+        assert_eq!(search_res[0].id, "rec_override");
 
         // Test prune stale
         repo.prune_stale(now - chrono::Duration::days(30)).await.unwrap();
