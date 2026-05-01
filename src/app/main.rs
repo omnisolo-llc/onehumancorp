@@ -406,6 +406,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
+            let req_product_sku = ui.get_product_sku().to_string();
+            let req_product_inventory = ui.get_product_inventory().to_string();
+            let req_custom_dns_target = ui.get_custom_dns_target().to_string();
+
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
@@ -422,6 +426,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             first_product_name: req_product_name,
                             first_product_price: req_product_price,
                             domain_choice: req_domain_choice,
+                            product_sku: req_product_sku,
+                            product_inventory: req_product_inventory,
+                            custom_dns_target: req_custom_dns_target,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -789,6 +796,10 @@ mod e2e_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
+        // Toggle advanced mode
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+
         // Step 6: Template -> Step 7
         ui.invoke_select_template("Modern".into());
         assert_eq!(ui.get_step(), 7);
@@ -796,10 +807,13 @@ mod e2e_tests {
         // Step 7: Product -> Step 8
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.00".into());
+        ui.set_product_sku("SKU-123".into());
+        ui.set_product_inventory("100".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 8);
 
         // Step 8: Domain -> Step 9
+        ui.set_custom_dns_target("my-target.ohc.app".into());
         ui.invoke_select_domain("subdomain".into());
         assert_eq!(ui.get_step(), 9);
 
@@ -816,7 +830,10 @@ mod e2e_tests {
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
+        assert_eq!(ui.get_product_sku(), "SKU-123");
+        assert_eq!(ui.get_product_inventory(), "100");
         assert_eq!(ui.get_domain_choice(), "subdomain");
+        assert_eq!(ui.get_custom_dns_target(), "my-target.ohc.app");
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
@@ -1157,6 +1174,10 @@ mod docs_tests {
         // Step 4: Payments -> Step 5
         ui.invoke_select_payment_pref("online".into());
 
+        // Toggle advanced mode
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
@@ -1167,9 +1188,12 @@ mod docs_tests {
         // Step 7: Product -> Step 8
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.00".into());
+        ui.set_product_sku("SKU-123".into());
+        ui.set_product_inventory("100".into());
         ui.invoke_next_step();
 
         // Step 8: Domain -> Step 9
+        ui.set_custom_dns_target("my-target.ohc.app".into());
         ui.invoke_select_domain("subdomain".into());
         assert_eq!(ui.get_step(), 9);
 
@@ -1210,6 +1234,9 @@ mod docs_tests {
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
         assert_eq!(ui.get_domain_choice(), "subdomain");
+        assert_eq!(ui.get_product_sku(), "SKU-123");
+        assert_eq!(ui.get_product_inventory(), "100");
+        assert_eq!(ui.get_custom_dns_target(), "my-target.ohc.app");
     }
 
     #[test]

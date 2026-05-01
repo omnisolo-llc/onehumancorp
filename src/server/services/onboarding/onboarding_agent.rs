@@ -18,7 +18,7 @@ impl OnboardingAgent {
         let company_name = req.company_name.clone();
 
         if !req.first_product_name.is_empty() {
-             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await?;
+             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type, &req.product_sku, &req.product_inventory).await?;
         } else {
              self.generate_initial_products(&org_id, &business_type).await?;
         }
@@ -69,12 +69,17 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str, sku: &str, inventory: &str) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
             _ => "physical",
         };
+
+        let metadata = json!({
+            "sku": sku,
+            "inventory": inventory
+        });
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
@@ -84,7 +89,7 @@ impl OnboardingAgent {
             .bind("Added during onboarding")
             .bind(price_cents)
             .bind(strategy)
-            .bind(json!({}))
+            .bind(metadata)
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -206,6 +211,9 @@ mod tests {
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
+            product_sku: "".to_string(),
+            product_inventory: "".to_string(),
+            custom_dns_target: "".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
