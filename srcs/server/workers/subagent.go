@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"fmt"
 
 	"ohc/server/queue"
 )
@@ -21,7 +20,7 @@ func NewSubAgentWorker(q queue.Queue) *SubAgentWorker {
 
 // HandleJob executes the sub-agent logic
 func (w *SubAgentWorker) HandleJob(ctx context.Context, job *queue.Job) error {
-	fmt.Printf("Worker executing job %s for task %s with role %s\n", job.ID, job.TaskID, job.Role)
+
 
 	// Simulate execution context initialization
 	// e.g. initialize LLM context, tool access, reporting progress back to Shared Task List

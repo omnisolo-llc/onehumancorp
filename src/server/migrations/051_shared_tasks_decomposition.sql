@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     id TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
     mission_id TEXT NOT NULL,
     parent_plan_id TEXT NOT NULL,
     dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -29,3 +29,7 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     agent_id TEXT,
     transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (tenant_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_state_machine_transitions ON state_machine_transitions USING (task_id IN (SELECT id FROM shared_tasks_decomposition WHERE tenant_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system'));
