@@ -392,6 +392,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_company_description = company_description.to_string();
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
+            let req_admin_name = ui.get_admin_name().to_string();
+            let req_admin_password = ui.get_admin_password().to_string();
             let req_website_template = website_template.to_string();
             let req_product_name = product_name.to_string();
             let req_product_price = product_price.to_string();
@@ -413,6 +415,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
+                            admin_name: req_admin_name,
+                            admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
                             website_template: req_website_template,
                             first_product_name: req_product_name,
@@ -814,6 +818,43 @@ mod e2e_tests {
         assert_eq!(ui.get_product_price(), "10.00");
         assert_eq!(ui.get_domain_choice(), "subdomain");
 
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        let ui_weak = ui.as_weak();
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+            *launch_called_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_launching(false);
+                u.set_step(10);
+            }
+        });
+
+        ui.set_launching(true);
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+
+        assert!(*launch_called.borrow(), "Launch callback should be triggered");
+        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_launching(), false);
+
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
     }
 }
 
