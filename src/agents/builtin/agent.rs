@@ -435,7 +435,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = 3;
+                    let max_retries = 2;
                     loop {
                         match self.execute_tool(&tc_clone).await {
                             Ok(r) => {
@@ -552,7 +552,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = 3;
+                let max_retries = 2;
                 let mut content = String::new();
                 let mut error = String::new();
 
