@@ -980,6 +980,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ).await.expect("Failed to create MeshTransport");
 
     // Start Builtin Agent
+    let sync_transport = mesh_transport.clone();
+    let hub_clone = hub.clone();
+    tokio::spawn(async move {
+        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(evt) = crate::ohc::agent::service::RunTaskEvent::decode(&msg.payload[..]) {
+                if evt.r#type == crate::ohc::agent::service::EventType::TaskComplete as i32 {
+                    println!("Main Server: Received task completion event from agent for task {}", evt.task_id);
+                    let _ = hub_clone.task_manager().complete_task(&evt.task_id, "builtin_agent", evt.content.clone());
+                }
+            }
+        });
+        if let Err(e) = sync_transport.subscribe("agent_sync", handler).await {
+            eprintln!("Failed to subscribe to 'agent_sync': {}", e);
+        } else {
+            println!("Main Server subscribed to 'agent_sync'");
+        }
+    });
+
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
