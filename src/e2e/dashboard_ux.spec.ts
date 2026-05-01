@@ -17,11 +17,11 @@ test.describe('Dashboard UX', () => {
 
     // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
     // and verify the labels.
-    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+    await expect(page.locator('text=My Business').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
-    await expect(page.locator('text=New Orders')).toBeVisible();
-    await expect(page.locator('text=Active AI Helpers')).toBeVisible();
-    await expect(page.locator('text=Tasks in Progress')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
+    await expect(page.locator('text=Active Helpers')).toBeVisible();
+    await expect(page.locator('text=Current AI Tasks')).toBeVisible();
 
     // Verify softer wording for drafts
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
