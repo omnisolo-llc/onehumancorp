@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // Trivial change to force rebuild
 use async_trait::async_trait;
 use std::sync::Arc;

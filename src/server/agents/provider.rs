@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::sync::RwLock;

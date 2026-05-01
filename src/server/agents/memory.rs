@@ -167,6 +167,7 @@ impl VectorRepository {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
