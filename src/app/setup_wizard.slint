@@ -59,6 +59,7 @@ export component SetupWizard inherits Window {
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
+    callback generate_company_description();
     callback generate_product_description();
 
     next_step => { step = step + 1; save_state(); }
@@ -195,7 +196,7 @@ export component SetupWizard inherits Window {
                 Button {
                     text: "✨ Auto-suggest Description";
                     height: 44px;
-                    clicked => { company_description = company_name + " is the best " + business_type + " in town."; }
+                    clicked => { generate_company_description(); }
                 }
             }
 

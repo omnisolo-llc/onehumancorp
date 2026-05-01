@@ -445,6 +445,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_generate_company_description({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let name = ui.get_company_name().to_string();
+            let b_type = ui.get_business_type().to_string();
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = format!("Write a catchy 1-sentence tagline for a business named '{}' which is a {}.", name, b_type);
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "wizard-ai".to_string(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        let content = resp.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_company_description(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_generate_product_description({
         let ui_handle = setup_wizard_handle.clone();
         move || {
