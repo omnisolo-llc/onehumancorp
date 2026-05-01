@@ -21,10 +21,7 @@ mod pipeline;
 mod oidc;
 mod sip;
 mod seeder;
-mod orchestrator;
-mod spawner;
 mod queue;
-mod workers;
 // Agent modules now live in src/agents/builtin/ (ohc_builtin_agent crate)
 mod domain;
 pub mod pricing;
