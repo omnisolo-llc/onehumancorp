@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 // Billing module stub - provides Tracker struct used by hub.rs
 pub use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
