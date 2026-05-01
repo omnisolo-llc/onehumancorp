@@ -463,8 +463,48 @@ mod growth_e2e_tests {
             }
         });
 
+        // Initialize referrals data
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiReferral {
+                referral_code: "DASHBOARD2024".into(),
+                user_id: "user_dash".into(),
+                clicks: 10,
+                conversions: 5,
+                created_at: "2024-05-01".into(),
+            }
+        ]));
+        referrals_ui.set_referrals(referral_data);
+
+        // Test link generation mock
+        let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let new_link_generated_clone = new_link_generated.clone();
+        referrals_ui.on_generate_new_link(move || {
+            *new_link_generated_clone.borrow_mut() = true;
+        });
+
+        // Test link sharing mock
+        let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let link_shared_clone = link_shared.clone();
+        referrals_ui.on_share_link(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *link_shared_clone.borrow_mut() = true;
+        });
+
+        // Trigger dashboard action
         dashboard_ui.invoke_action_share_store();
         assert!(*share_store_called.borrow(), "action_share_store should be invoked");
+
+        // Assert UI state on referrals window
+        assert_eq!(referrals_ui.get_referrals().row_count(), 1);
+        let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
+        assert_eq!(first_row.referral_code, "DASHBOARD2024");
+
+        // Trigger interactions on referrals window
+        referrals_ui.invoke_generate_new_link();
+        assert!(*new_link_generated.borrow(), "generate_new_link should be invoked");
+
+        referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
+        assert!(*link_shared.borrow(), "share_link should be invoked");
     }
 
     #[test]
