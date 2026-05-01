@@ -145,37 +145,43 @@ export component Dashboard inherits Window {
             if (root.width > 768px) : HorizontalBox {
                 spacing: 16px;
 
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "todays_sales";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Today's Sales"; color: #94a3b8; }
+                                Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                            }
                         }
                     }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "orders_to_ship";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Orders to Ship"; color: #94a3b8; }
+                                Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                            }
                         }
                     }
                 }
@@ -184,37 +190,43 @@ export component Dashboard inherits Window {
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
 
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "todays_sales";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Today's Sales"; color: #94a3b8; }
+                                Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                            }
                         }
                     }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "orders_to_ship";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Orders to Ship"; color: #94a3b8; }
+                                Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                            }
                         }
                     }
                 }
@@ -223,37 +235,43 @@ export component Dashboard inherits Window {
             if (root.width > 768px) : HorizontalBox {
                 spacing: 16px;
 
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "active_helpers";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Active Helpers"; color: #94a3b8; }
+                                Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                            }
                         }
                     }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "ai_tasks";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Current AI Tasks"; color: #94a3b8; }
+                                Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                            }
                         }
                     }
                 }
@@ -262,37 +280,43 @@ export component Dashboard inherits Window {
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
 
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "active_helpers";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Active Helpers"; color: #94a3b8; }
+                                Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                            }
                         }
                     }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
+                TooltipElement {
+                    tooltip_id: "ai_tasks";
+                    GlassCard {
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
                         width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                        min-height: 88px;
+
+                        TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            VerticalBox {
+                                padding: 16px;
+                                Text { text: "Current AI Tasks"; color: #94a3b8; }
+                                Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                            }
                         }
                     }
                 }
