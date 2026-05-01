@@ -20,9 +20,8 @@ impl SyncService for MySyncService {
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
         let md = request.metadata().clone();
-        let md = request.metadata().clone();
-        let req = request.into_inner();
-        let payloads = req.payloads;
+        let _req = request.into_inner();
+        let payloads = _req.payloads;
 
         if payloads.is_empty() {
             return Ok(Response::new(HybridSyncMissionsResponse {
@@ -81,8 +80,8 @@ impl SyncService for MySyncService {
         &self,
         request: Request<PowerSyncPushRequest>,
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
-        let md = request.metadata().clone();
-        let req = request.into_inner();
+        let _md = request.metadata().clone();
+        let _req = request.into_inner();
         println!("PowerSync received push request.");
 
         Ok(Response::new(PowerSyncPushResponse {
@@ -170,9 +169,9 @@ impl SyncService for MySyncService {
         &self,
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
-        let md = request.metadata().clone();
-        let req = request.into_inner();
-        let payloads = req.payloads;
+        let _md = request.metadata().clone();
+        let _req = request.into_inner();
+        let payloads = _req.payloads;
 
         if payloads.is_empty() {
             return Ok(Response::new(SyncEscalationResponse {

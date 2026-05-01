@@ -1615,7 +1615,7 @@ mod tests {
             ]),
         });
 
-        let mut mutating_tool = Tool {
+        let mutating_tool = Tool {
             name: "mutating_tool".to_string(),
             description: "A mutating tool".to_string(),
             parameters: Value::Null,

@@ -16,7 +16,7 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, user: User, _org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         
         sqlx::query(
