@@ -440,7 +440,7 @@ impl Store {
                 };
 
                 if let Some(cfg) = cfg_opt {
-                     let claims = crate::oidc::validate_oidc_token(token, &cfg).await?;
+                     let claims = match crate::oidc::validate_oidc_token(token, &cfg).await { Ok(c) => c, Err(e) => return Err(format!("OIDC fallback error: {}", e)) };
                      if self.is_revoked(&claims.jti) {
                          return Err("token revoked".to_string());
                      }
