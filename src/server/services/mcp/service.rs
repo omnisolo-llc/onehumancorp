@@ -194,10 +194,22 @@ impl McpService for MyMcpService {
         &self,
         request: Request<SyncMissionsRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
         let req = request.into_inner();
+
+        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         for m in req.missions {
             let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) \
-                         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'system') \
+                         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) \
                          ON CONFLICT (id) DO UPDATE SET \
                              status = CASE WHEN $4 THEN EXCLUDED.status ELSE agent_missions.status END, \
                              payload = CASE WHEN $4 THEN EXCLUDED.payload ELSE agent_missions.payload END, \
@@ -208,10 +220,13 @@ impl McpService for MyMcpService {
                 .bind(&m.status)
                 .bind(&m.payload)
                 .bind(m.force_local)
-                .execute(&self.hub.pool)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -219,9 +234,20 @@ impl McpService for MyMcpService {
         &self,
         request: Request<SyncContextRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
         let req = request.into_inner();
+        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
-                     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, 'system') \
+                     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
                      ON CONFLICT (memory_id) DO UPDATE SET \
                          context = EXCLUDED.context, \
                          vector_embedding = EXCLUDED.vector_embedding, \
@@ -232,10 +258,108 @@ impl McpService for MyMcpService {
             .bind(&req.context)
             .bind(req.vector_embedding.as_bytes())
             .bind(&req.source_plugin)
-            .execute(&self.hub.pool)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
             
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(EmptyResponse {}))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use crate::ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_sync_missions_unauthenticated() {
+        let registry = Arc::new(IntegrationsRegistry::new());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyMcpService::new(registry, hub);
+
+        let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
+        let resp = service.sync_missions(req).await;
+
+        assert!(resp.is_err());
+        assert_eq!(resp.unwrap_err().code(), tonic::Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_sync_context_unauthenticated() {
+        let registry = Arc::new(IntegrationsRegistry::new());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyMcpService::new(registry, hub);
+
+        let req = Request::new(SyncContextRequest {
+            memory_id: "test".to_string(),
+            context: "test".to_string(),
+            vector_embedding: "".to_string(),
+            source_plugin: "test".to_string()
+        });
+        let resp = service.sync_context(req).await;
+
+        assert!(resp.is_err());
+        assert_eq!(resp.unwrap_err().code(), tonic::Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_sync_missions_authenticated() {
+        let registry = Arc::new(IntegrationsRegistry::new());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'org-1'").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyMcpService::new(registry, hub);
+
+        let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
+
+        let resp = service.sync_missions(req).await;
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_sync_context_authenticated() {
+        let registry = Arc::new(IntegrationsRegistry::new());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'org-1'").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyMcpService::new(registry, hub);
+
+        let mut req = Request::new(SyncContextRequest {
+            memory_id: "test".to_string(),
+            context: "test".to_string(),
+            vector_embedding: "".to_string(),
+            source_plugin: "test".to_string()
+        });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
+
+        // This will attempt an insert into DB, but since test env may not be running PG properly, it might fail internal, but at least not unauthenticated
+        let resp = service.sync_context(req).await;
+        if let Err(e) = resp {
+             // We just expect it to bypass the unauthenticated block,
+             // but it might fail on `pool.begin()` if the db is completely missing.
+             assert_ne!(e.code(), tonic::Code::Unauthenticated);
+        }
     }
 }
