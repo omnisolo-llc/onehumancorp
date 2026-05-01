@@ -14,6 +14,7 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct JWK {
     kid: String,
     n: String,
@@ -26,6 +27,7 @@ struct JWKSet {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OIDCDiscovery {
     jwks_uri: String,
 }
