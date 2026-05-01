@@ -174,10 +174,15 @@ impl Agent {
                 message_count: messages.len(),
             });
 
+            let mut final_messages = messages.clone();
+            if !cfg.developer_instructions.is_empty() {
+                final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
+            }
+
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: combined_system.clone(),
-                messages: messages.clone(),
+                messages: final_messages,
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
