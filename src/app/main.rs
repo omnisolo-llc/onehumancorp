@@ -219,6 +219,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
     let my_plan_ui = app::MyPlan::new().unwrap();
+    let cost_ui = app::CostDashboard::new().unwrap();
+    let cost_ui_weak = cost_ui.as_weak();
+    cost_ui.on_set_budget_alert(move |threshold| {
+        println!("Set budget alert to: {}", threshold);
+        if let Some(ui) = cost_ui_weak.upgrade() {
+            ui.set_budget_alert_threshold(threshold);
+        }
+    });
+
     let my_plan_handle = my_plan_ui.as_weak();
 
     let pricing_ui = app::Pricing::new().unwrap();
@@ -1981,6 +1990,16 @@ mod cost_transparency_e2e_tests {
 
         cost_ui.set_total_spend("$45.50".into());
         cost_ui.set_total_tokens("1,500,000".into());
+        cost_ui.set_forecasted_cost("$124.50".into());
+
+        let alert_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let alert_called_clone = alert_called.clone();
+        cost_ui.on_set_budget_alert(move |threshold| {
+            assert_eq!(threshold, "500");
+            *alert_called_clone.borrow_mut() = true;
+        });
+        cost_ui.invoke_set_budget_alert("500".into());
+        assert!(*alert_called.borrow(), "Setting a budget alert should execute the callback");
 
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {

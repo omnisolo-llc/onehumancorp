@@ -2,6 +2,9 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use crate::pricing::calculator::{self, CostConfig};
 
+
+use crate::pricing::budget::BudgetManager;
+
 pub struct AuditEvent {
     pub agent_id: String,
     pub input_tokens: i64,
@@ -16,6 +19,8 @@ pub struct ComputeEvent {
     pub network_egress_bytes: i64,
 }
 
+
+
 pub struct CostAuditor {
     config: CostConfig,
     agent_costs: Mutex<HashMap<String, f64>>,
@@ -27,6 +32,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    pub global_budget_manager: BudgetManager,
 }
 
 impl CostAuditor {
@@ -42,6 +48,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            global_budget_manager: BudgetManager::new(1000.0),
         }
     }
 
@@ -56,6 +63,11 @@ impl CostAuditor {
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
+
+        // Attempt to spend via global budget manager
+        if let Err(e) = self.global_budget_manager.record_spend(cost) {
+            eprintln!("Global budget manager prevented action: {}", e);
+        }
 
         let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
         *current_cost += cost;
@@ -149,6 +161,18 @@ impl CostAuditor {
         total
     }
 
+
+    pub fn calculate_projected_monthly_usd(&self, current_cost: f64, days_passed: f64, total_days_in_month: f64) -> f64 {
+        if days_passed <= 0.0 {
+            return current_cost;
+        }
+        let daily_burn = current_cost / days_passed;
+        (daily_burn * total_days_in_month * 10000.0).round() / 10000.0
+    }
+
+
+
+
     pub fn generate_report(&self) -> String {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_budgets = self.agent_budgets.lock().unwrap();
@@ -209,6 +233,7 @@ impl CostAuditor {
             false
         }
     }
+
 }
 
 #[cfg(test)]
@@ -246,5 +271,43 @@ mod tests {
         
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
+        #[test]
+    #[test]
+    fn test_cost_auditor_with_global_budget_manager() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let event = AuditEvent {
+            agent_id: "agent_budget".to_string(),
+            input_tokens: 500_000,
+            output_tokens: 0,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        let cost1 = auditor.record_event(event);
+        assert_eq!(cost1, 500.0);
+        assert_eq!(auditor.global_budget_manager.get_remaining(), 500.0);
+
+        let event2 = AuditEvent {
+            agent_id: "agent_budget".to_string(),
+            input_tokens: 600_000,
+            output_tokens: 0,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        let cost2 = auditor.record_event(event2);
+        assert_eq!(cost2, 600.0);
+
+        let proj = auditor.calculate_projected_monthly_usd(auditor.get_agent_cost("agent_budget"), 15.0, 30.0);
+        assert_eq!(proj, 2200.0);
     }
+
+
+}
 }

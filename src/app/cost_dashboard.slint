@@ -16,7 +16,11 @@ export component CostDashboard inherits Window {
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";
+    in-out property <string> forecasted_cost: "$0.00";
+    in-out property <string> budget_alert_threshold: "500";
     in-out property <[UiAgentCost]> agent_costs;
+
+    callback set_budget_alert(string);
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -58,9 +62,36 @@ export component CostDashboard inherits Window {
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Forecasted Cost"; color: #94a3b8; }
+                    Text { text: forecasted_cost; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #ef4444; }
+                }
+            }
         }
 
         Text { text: "Usage per Agent"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+        HorizontalBox {
+            Text { text: "Budget Alert Threshold ($):"; color: white; vertical-alignment: center; }
+            TextInput {
+                text <=> budget_alert_threshold;
+                color: white;
+                accepted => {
+                    set_budget_alert(self.text);
+                }
+            }
+            Button {
+                text: "Set Alert";
+                clicked => { set_budget_alert(budget_alert_threshold); }
+            }
+        }
 
         GlassCard {
             border-color: #e2e8f0;
