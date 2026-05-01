@@ -67,7 +67,7 @@ rust_binary(
 
 rust_test(
     name = "server_test",
-    size = "large",
+    size = "medium",
     srcs = glob(["**/*.rs"]),
     crate_root = "main.rs",
     data = glob(["migrations/*.sql", "**/*.rs"]),
