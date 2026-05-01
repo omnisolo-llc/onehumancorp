@@ -387,7 +387,6 @@ impl AgentService for AgentServiceImpl {
         // Send RUN_STARTED immediately.
         let _ = tx
             .send(Ok(RunTaskEvent {
-                task_id: task_req.task_id.clone(),
                 r#type: EventType::RunStarted as i32,
                 iteration: 0,
                 ..Default::default()
@@ -400,11 +399,9 @@ impl AgentService for AgentServiceImpl {
         tokio::spawn(async move {
             let tx_clone = tx.clone();
 
-            let task_id_for_event = task_req.task_id.clone();
             let mut on_event = |evt: AgentEvent| {
                 let pb = match evt {
                     AgentEvent::RunStarted { iteration } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(),
                         r#type: EventType::RunStarted as i32,
                         iteration,
                         ..Default::default()
@@ -413,18 +410,18 @@ impl AgentService for AgentServiceImpl {
                         iteration,
                         message_count,
                     } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::IterationStarted as i32,
+                        r#type: EventType::IterationStarted as i32,
                         iteration,
                         message_count: message_count as i32,
                         ..Default::default()
                     },
                     AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::TextChunk as i32,
+                        r#type: EventType::TextChunk as i32,
                         content: format!("[Checkpoint Saved: Iteration {}, Path: {}]\n", iteration, path),
                         ..Default::default()
                     },
                     AgentEvent::TextChunk { content } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::TextChunk as i32,
+                        r#type: EventType::TextChunk as i32,
                         content,
                         ..Default::default()
                     },
@@ -434,7 +431,7 @@ impl AgentService for AgentServiceImpl {
                         result,
                         iteration,
                     } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::ToolCall as i32,
+                        r#type: EventType::ToolCall as i32,
                         tool_name: name,
                         tool_args_json: args_json,
                         tool_result: result,
@@ -442,12 +439,12 @@ impl AgentService for AgentServiceImpl {
                         ..Default::default()
                     },
                     AgentEvent::TaskComplete { content } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::TaskComplete as i32,
+                        r#type: EventType::TaskComplete as i32,
                         content,
                         ..Default::default()
                     },
                     AgentEvent::TaskError { error } => RunTaskEvent {
-                        task_id: task_id_for_event.clone(), r#type: EventType::TaskError as i32,
+                        r#type: EventType::TaskError as i32,
                         error,
                         ..Default::default()
                     },
@@ -651,7 +648,7 @@ impl ToolExecutor for SubagentExecutor {
                 .connect()
                 .await
                 .map_err(|e| format!("connect to sub-agent: {}", e))?;
-            let mut client = crate::proto::agent_service::agent_service_client::AgentServiceClient::new(channel);
+            let mut client = AgentServiceClient::new(channel);
             client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
         }.await;
 
@@ -778,8 +775,8 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
-                                    let _ = transport.publish("agent_sync", crate::mesh::transport::Message {
-                                        topic: "agent_sync".to_string(),
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                        topic: "agent_events".to_string(),
                                         payload: buf,
                                     }).await;
                                 }

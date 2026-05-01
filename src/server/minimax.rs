@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -340,7 +339,7 @@ impl CachedMinimaxClient {
         let hash = format!("{:x}", Sha256::digest(prompt.as_bytes()));
         
         if let Some(ref redis_client) = self.redis {
-            if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
+            if let Ok(mut con) = redis_client.get_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 if let Ok(val) = con.get::<_, String>(&redis_key).await {
                     return Ok(val);
@@ -358,7 +357,7 @@ impl CachedMinimaxClient {
             let response: String = row.get("response");
             
             if let Some(ref redis_client) = self.redis {
-                if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
+                if let Ok(mut con) = redis_client.get_async_connection().await {
                     let redis_key = format!("llm_reason:{}", hash);
                     let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
                 }
@@ -370,7 +369,7 @@ impl CachedMinimaxClient {
         let response = self.client.reason(prompt).await?;
 
         if let Some(ref redis_client) = self.redis {
-            if let Ok(mut con) = redis_client.get_multiplexed_async_connection().await {
+            if let Ok(mut con) = redis_client.get_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
                 let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
             }

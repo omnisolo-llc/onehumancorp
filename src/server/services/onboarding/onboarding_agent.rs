@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use std::collections::HashMap;
 use serde_json::json;
 use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};

@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use crate::pricing::compression;

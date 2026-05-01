@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_imports, deprecated)]
 use std::sync::Arc;
 use crate::services::sync::local_repository::LocalRepository;
 use reqwest::Client;
