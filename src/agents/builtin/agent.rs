@@ -435,7 +435,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = 3;
+                    let max_retries = 2;
                     loop {
                         match self.execute_tool(&tc_clone).await {
                             Ok(r) => {
@@ -552,7 +552,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = 3;
+                let max_retries = 2;
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -1111,6 +1111,229 @@ mod tests {
 
         // We can verify that it produced the final answer, meaning it survived the loop and compaction.
         assert_eq!(result.unwrap(), "final answer");
+    }
+
+    #[tokio::test]
+    async fn test_error_handling_langgraph_4_tier() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call a tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_transient".to_string(),
+                            name: "transient_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call another tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_llm_recoverable".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call another tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_user_fixable".to_string(),
+                            name: "user_fixable_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call another tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_fatal".to_string(),
+                            name: "fatal_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                }
+            ]),
+        });
+
+        struct FourTierErrorToolExecutor {
+            name: String,
+        }
+        #[async_trait::async_trait]
+        impl ToolExecutor for FourTierErrorToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                match self.name.as_str() {
+                    "transient_tool" => Err(ToolError::Transient("network timeout".to_string())),
+                    "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
+                    "user_fixable_tool" => Err(ToolError::UserFixable("please login to external service".to_string())),
+                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    _ => Ok("success".to_string()),
+                }
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "transient_tool".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FourTierErrorToolExecutor { name: "transient_tool".to_string() }),
+            },
+            Tool {
+                name: "llm_recoverable_tool".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string() }),
+            },
+            Tool {
+                name: "user_fixable_tool".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FourTierErrorToolExecutor { name: "user_fixable_tool".to_string() }),
+            },
+            Tool {
+                name: "fatal_tool".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FourTierErrorToolExecutor { name: "fatal_tool".to_string() }),
+            }
+        ];
+
+        let cfg = AgentRunConfig::default();
+
+        // 1. Transient Error (Retries with backoff but fails after max_retries)
+        let client_transient = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }, ChatResponse {
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+            }]),
+        });
+        let agent1 = Agent::new(client_transient, tools.clone());
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+        let _ = agent1.run(&cfg, "Run transient", &mut on_event).await;
+        let transient_handled = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { name, result, .. } = e {
+                name == "transient_tool" && result.contains("Transient error after retries: network timeout")
+            } else {
+                false
+            }
+        });
+        assert!(transient_handled);
+
+        // 2. LLM Recoverable
+        let client_llm = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }, ChatResponse {
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+            }]),
+        });
+        let agent2 = Agent::new(client_llm, tools.clone());
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+        let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
+        let llm_recoverable_handled = events2.iter().any(|e| {
+            if let AgentEvent::ToolCall { name, result, .. } = e {
+                name == "llm_recoverable_tool" && result.contains("LLM Recoverable error: missing parameter X")
+            } else {
+                false
+            }
+        });
+        assert!(llm_recoverable_handled);
+
+        // 3. User Fixable
+        let client_user = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
+        });
+        let agent3 = Agent::new(client_user, tools.clone());
+        let mut events3 = vec![];
+        let mut on_event3 = |e| { events3.push(e); };
+        let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
+        assert!(res3.is_err());
+        let user_fixable_handled = events3.iter().any(|e| {
+            if let AgentEvent::TaskError { error } = e {
+                error.contains("User intervention required: please login to external service")
+            } else {
+                false
+            }
+        });
+        assert!(user_fixable_handled);
+
+        // 4. Fatal
+        let client_fatal = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
+        });
+        let agent4 = Agent::new(client_fatal, tools.clone());
+        let mut events4 = vec![];
+        let mut on_event4 = |e| { events4.push(e); };
+        let res4 = agent4.run(&cfg, "Run fatal", &mut on_event4).await;
+        assert!(res4.is_err());
+        let fatal_handled = events4.iter().any(|e| {
+            if let AgentEvent::TaskError { error } = e {
+                error.contains("Fatal tool error: system corrupted")
+            } else {
+                false
+            }
+        });
+        assert!(fatal_handled);
     }
 
     #[tokio::test]
