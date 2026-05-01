@@ -1,7 +1,7 @@
 #!/bin/bash
 # OHC Hybrid Developer Setup Script
 
-set -e
+set -eo pipefail
 
 RESET="\033[0m"
 BOLD="\033[1m"
@@ -18,6 +18,7 @@ echo -e "${BOLD}${BLUE}===============================================${RESET}"
 # Check requirements
 if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is required but not installed. Aborting.${RESET}"; false; fi
 if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
+if ! command -v xvfb-run >/dev/null 2>&1; then echo -e "${PURPLE}xvfb-run is required for headless UI tests. Please install it.${RESET}"; fi
 
 echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
 if [ ! -f .env ]; then
