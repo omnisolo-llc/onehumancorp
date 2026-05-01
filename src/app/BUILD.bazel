@@ -138,6 +138,7 @@ rust_binary(
     deps = [
         ":build_script",
         "@crates//:chrono",
+        "@crates//:copypasta",
         "@crates//:futures",
         "@crates//:prost",
         "@crates//:reqwest",
@@ -223,6 +224,7 @@ rust_test(
     deps = [
         ":build_script",
         "@crates//:chrono",
+        "@crates//:copypasta",
         "@crates//:futures",
         "@crates//:mockito",
         "@crates//:prost",
