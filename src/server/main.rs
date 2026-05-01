@@ -1056,6 +1056,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         telemetry_daemon.start();
     }
 
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        }
+
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        }
+
+
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let powersync_ticker = std::sync::Arc::new(crate::services::sync::powersync_ticker::PowerSyncTicker::new(db.pool.clone(), cloud_url));
+        let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+        powersync_ticker.start(shutdown_rx, std::time::Duration::from_secs(60));
+    }
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
     tokio::spawn(async move {

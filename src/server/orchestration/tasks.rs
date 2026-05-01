@@ -110,7 +110,7 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
-                let mut skip = false;
+
                 let deps_val: serde_json::Value = row.get("dependencies");
                 let deps: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 

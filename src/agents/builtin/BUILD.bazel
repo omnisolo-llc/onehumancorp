@@ -87,6 +87,7 @@ rust_library(
         "@crates//:futures",
         "@crates//:glob",
         "@crates//:dashmap",
+        "@crates//:async-nats",
         "@crates//:futures-util",
         "@crates//:hex",
         "@crates//:hmac",

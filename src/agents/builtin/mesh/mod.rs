@@ -13,57 +13,124 @@ pub trait TeammateMesh: Send + Sync {
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
+
+
+
+
+
 pub struct TeammateMeshClient {
-    transport: Arc<dyn MeshTransport>,
+    transport: tokio::sync::RwLock<Arc<dyn MeshTransport>>,
+    fallback_transport: Arc<dyn MeshTransport>,
+    task_handlers: tokio::sync::RwLock<Vec<Arc<dyn Fn(Message) + Send + Sync>>>,
+    coord_handlers: tokio::sync::RwLock<Vec<Arc<dyn Fn(Message) + Send + Sync>>>,
 }
 
 impl TeammateMeshClient {
-    pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
-        TeammateMeshClient { transport }
+    pub fn new(transport: Arc<dyn MeshTransport>, fallback_transport: Arc<dyn MeshTransport>) -> Self {
+        TeammateMeshClient {
+            transport: tokio::sync::RwLock::new(transport),
+            fallback_transport,
+            task_handlers: tokio::sync::RwLock::new(Vec::new()),
+            coord_handlers: tokio::sync::RwLock::new(Vec::new()),
+        }
+    }
+
+    pub async fn switch_to_fallback(&self) {
+        tracing::warn!("TeammateMeshClient: Switching to local fallback transport due to cloud disconnect.");
+        let mut t = self.transport.write().await;
+        *t = self.fallback_transport.clone();
+
+        let th = self.task_handlers.read().await;
+        for handler in th.iter() {
+            let h = handler.clone();
+            let _ = self.fallback_transport.subscribe("mesh:tasks", Box::new(move |m| h(m))).await;
+        }
+
+        let ch = self.coord_handlers.read().await;
+        for handler in ch.iter() {
+            let h = handler.clone();
+            let _ = self.fallback_transport.subscribe("mesh:coordination", Box::new(move |m| h(m))).await;
+        }
     }
 }
 
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:tasks", Message {
+        let t = self.transport.read().await.clone();
+        if let Err(e) = t.publish("mesh:tasks", Message {
             topic: "mesh:tasks".to_string(),
-            payload,
-        }).await
+            payload: payload.clone(),
+        }).await {
+            tracing::warn!("TeammateMeshClient: Failed to publish task, falling back. Error: {}", e);
+            self.switch_to_fallback().await;
+            self.fallback_transport.publish("mesh:tasks", Message {
+                topic: "mesh:tasks".to_string(),
+                payload,
+            }).await
+        } else {
+            Ok(())
+        }
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:coordination", Message {
+        let t = self.transport.read().await.clone();
+        if let Err(e) = t.publish("mesh:coordination", Message {
             topic: "mesh:coordination".to_string(),
-            payload,
-        }).await
+            payload: payload.clone(),
+        }).await {
+            tracing::warn!("TeammateMeshClient: Failed to publish coordination, falling back. Error: {}", e);
+            self.switch_to_fallback().await;
+            self.fallback_transport.publish("mesh:coordination", Message {
+                topic: "mesh:coordination".to_string(),
+                payload,
+            }).await
+        } else {
+            Ok(())
+        }
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:tasks", handler).await
+        let arc_handler: Arc<dyn Fn(Message) + Send + Sync> = Arc::from(handler);
+        let mut th = self.task_handlers.write().await;
+        th.push(arc_handler.clone());
+
+        let t = self.transport.read().await.clone();
+        let h = arc_handler.clone();
+        t.subscribe("mesh:tasks", Box::new(move |m| h(m))).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:coordination", handler).await
+        let arc_handler: Arc<dyn Fn(Message) + Send + Sync> = Arc::from(handler);
+        let mut ch = self.coord_handlers.write().await;
+        ch.push(arc_handler.clone());
+
+        let t = self.transport.read().await.clone();
+        let h = arc_handler.clone();
+        t.subscribe("mesh:coordination", Box::new(move |m| h(m))).await
     }
 }
 
+
+
 pub async fn create_teammate_mesh(redis_url: Option<&str>) -> Arc<dyn TeammateMesh> {
+    let fallback = Arc::new(MemoryTransport::new()) as Arc<dyn MeshTransport>;
+
     if let Some(url) = redis_url {
         match RedisTransport::new(url).await {
             Ok(redis_transport) => {
-                info!("Successfully connected to Redis for TeammateMesh.");
-                return Arc::new(TeammateMeshClient::new(Arc::new(redis_transport)));
+                tracing::info!("Successfully connected to Redis for TeammateMesh.");
+                return Arc::new(TeammateMeshClient::new(Arc::new(redis_transport) as Arc<dyn MeshTransport>, fallback));
             }
             Err(e) => {
-                warn!("Failed to connect to Redis for TeammateMesh: {}. Falling back to MemoryTransport.", e);
+                tracing::warn!("Failed to connect to Redis for TeammateMesh: {}. Falling back to MemoryTransport.", e);
             }
         }
     } else {
-        info!("No Redis URL provided for TeammateMesh. Using MemoryTransport.");
+        tracing::info!("No Redis URL provided for TeammateMesh. Using MemoryTransport.");
     }
 
-    Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
+    Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new()) as Arc<dyn MeshTransport>, fallback))
 }
 
 #[cfg(test)]
@@ -75,7 +142,7 @@ mod tests {
     #[tokio::test]
     async fn test_teammate_mesh_client() {
         let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
-        let mesh = TeammateMeshClient::new(transport);
+        let mesh = TeammateMeshClient::new(transport, Arc::new(MemoryTransport::new()) as Arc<dyn MeshTransport>);
 
         let tasks_received = Arc::new(AtomicBool::new(false));
         let coord_received = Arc::new(AtomicBool::new(false));

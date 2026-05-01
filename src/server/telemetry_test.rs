@@ -89,7 +89,7 @@ mod tests {
             p.push("src/server");
             search_dirs.push(p);
         } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
-            let mut p = PathBuf::from(runfiles_dir);
+            let p = PathBuf::from(runfiles_dir);
             search_dirs.push(p);
         }
 

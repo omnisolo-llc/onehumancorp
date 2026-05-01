@@ -443,7 +443,176 @@ impl MeshTransport for RedisTransport {
     }
 }
 
+
+pub struct NatsTransport {
+    client: async_nats::Client,
+}
+
+impl NatsTransport {
+    pub async fn new(nats_url: &str) -> Result<Self, String> {
+        let client = async_nats::connect(nats_url).await.map_err(|e| e.to_string())?;
+        Ok(NatsTransport { client })
+    }
+}
+
+#[async_trait]
+impl MeshTransport for NatsTransport {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf).unwrap();
+        self.client.publish(topic.to_string(), buf.into()).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        use prost::Message as ProstMessage;
+        use futures_util::StreamExt;
+
+        let mut subscriber = self.client.subscribe(topic.to_string()).await.map_err(|e| e.to_string())?;
+
+        let worker = tokio::spawn(async move {
+            while let Some(msg) = subscriber.next().await {
+                if let Ok(message) = Message::decode(&msg.payload[..]) {
+                    handler(message);
+                }
+            }
+        });
+
+        let cancel = Box::new(move || {
+            worker.abort();
+        });
+
+        Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let js = async_nats::jetstream::new(self.client.clone());
+
+        let kv = match js.get_key_value("mesh_locks").await {
+            Ok(kv) => kv,
+            Err(_) => {
+                js.create_key_value(async_nats::jetstream::kv::Config {
+                    bucket: "mesh_locks".to_string(),
+                    ..Default::default()
+                }).await.map_err(|e| e.to_string())?
+            }
+        };
+
+        let existing = kv.entry(resource).await.map_err(|e| e.to_string())?;
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+        let expires_at = now + ttl_seconds;
+        let lock_val = format!("{}|{}", owner, expires_at);
+
+        if let Some(entry) = existing {
+            let val_str = String::from_utf8(entry.value.to_vec()).unwrap_or_default();
+            let parts: Vec<&str> = val_str.split('|').collect();
+            if parts.len() == 2 {
+                let current_owner = parts[0];
+                let exp: u64 = parts[1].parse().unwrap_or(0);
+
+                if exp > now && current_owner != owner {
+                    return Ok(false);
+                }
+            }
+
+            match kv.update(resource, lock_val.into(), entry.revision).await {
+                Ok(_) => return Ok(true),
+                Err(_) => return Ok(false),
+            }
+        }
+
+        match kv.create(resource, lock_val.into()).await {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        let js = async_nats::jetstream::new(self.client.clone());
+        if let Ok(kv) = js.get_key_value("mesh_locks").await {
+            if let Ok(Some(entry)) = kv.entry(resource).await {
+                let val_str = String::from_utf8(entry.value.to_vec()).unwrap_or_default();
+                if val_str.starts_with(&format!("{}|", owner)) {
+                    let _ = kv.delete_expect_revision(resource, Some(entry.revision)).await;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let js = async_nats::jetstream::new(self.client.clone());
+
+        let kv = match js.get_key_value("mesh_presence").await {
+            Ok(kv) => kv,
+            Err(_) => {
+                js.create_key_value(async_nats::jetstream::kv::Config {
+                    bucket: "mesh_presence".to_string(),
+                    ..Default::default()
+                }).await.map_err(|e| e.to_string())?
+            }
+        };
+
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+        let expires_at = now + ttl_seconds;
+        let val = format!("{}|{}", status, expires_at);
+
+        kv.put(agent_id, val.into()).await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let js = async_nats::jetstream::new(self.client.clone());
+        let kv = match js.get_key_value("mesh_presence").await {
+            Ok(kv) => kv,
+            Err(_) => return Ok(vec![])
+        };
+
+        let mut agents = Vec::new();
+        let mut keys = match kv.keys().await {
+            Ok(keys) => keys,
+            Err(_) => return Ok(vec![])
+        };
+
+        use futures_util::StreamExt;
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+
+        while let Some(key_res) = keys.next().await {
+            if let Ok(key) = key_res {
+                if let Ok(Some(entry)) = kv.entry(&key).await {
+                    let val_str = String::from_utf8(entry.value.to_vec()).unwrap_or_default();
+                    let parts: Vec<&str> = val_str.split('|').collect();
+                    if parts.len() == 2 {
+                        let status = parts[0];
+                        let expires_at: u64 = parts[1].parse().unwrap_or(0);
+                        if expires_at > now {
+                            agents.push((key, status.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(agents)
+    }
+}
+
+
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
+    if let Ok(nats_url) = std::env::var("NATS_URL") {
+        match NatsTransport::new(&nats_url).await {
+            Ok(t) => {
+                println!("Initialized NatsTransport");
+                return Ok(Arc::new(t));
+            },
+            Err(e) => {
+                println!("Failed to initialize NatsTransport: {}. Falling back...", e);
+            }
+        }
+    }
+
     if is_cloud {
         if let Some(url) = redis_url {
             match RedisTransport::new(url).await {
@@ -663,6 +832,57 @@ mod tests {
         let active_agents_after_expiration = transport.get_active_agents().await.unwrap();
         assert_eq!(active_agents_after_expiration.len(), 1);
         assert_eq!(active_agents_after_expiration[0], ("agent_1".to_string(), "online".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn test_nats_transport() {
+        // Needs a running NATS instance
+        let transport = match NatsTransport::new("nats://localhost:4222").await {
+            Ok(t) => t,
+            Err(_) => {
+                println!("Skipping NATS transport test due to missing NATS connection");
+                return;
+            }
+        };
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(10);
+        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
+        let handler = Box::new(move |msg: Message| {
+            let tx_clone = tx_arc.clone();
+            tokio::spawn(async move {
+                let mut tx = tx_clone.lock().await;
+                let _ = tx.send(msg).await;
+            });
+        });
+
+        // Wait for connection
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let cancel = transport.subscribe("test_topic_nats", handler).await.unwrap();
+
+        // Wait for subscription
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let msg = Message {
+            topic: "test_topic_nats".to_string(),
+            payload: b"hello nats".to_vec(),
+        };
+
+        transport.publish("test_topic_nats", msg.clone()).await.unwrap();
+
+        // Use timeout
+        let result = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
+
+        assert!(result.is_ok());
+        if let Ok(Some(received_msg)) = result {
+             assert_eq!(received_msg.topic, "test_topic_nats");
+             assert_eq!(received_msg.payload, b"hello nats");
+        } else {
+             panic!("Did not receive message");
+        }
+
+        cancel();
     }
 
     #[tokio::test]
