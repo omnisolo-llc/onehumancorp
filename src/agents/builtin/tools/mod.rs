@@ -21,6 +21,7 @@ pub mod marketing;
 pub mod finance;
 pub mod local_fs_sync;
 pub mod ollama;
+pub mod subagent;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -95,7 +96,8 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
-                local_fs_sync::local_fs_sync_tool(working_dir.clone()),
+        local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
+        subagent::subagent_tool(),
     ]
 }
