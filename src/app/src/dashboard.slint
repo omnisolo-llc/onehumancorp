@@ -21,9 +21,9 @@ export component Dashboard inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    in property <int> active_agents_count: 0;
-    in property <int> active_tasks_count: 0;
-    in property <int> scheduled_calls_count: 0;
+    in property <int> active_helpers_count: 0;
+    in property <int> tasks_in_progress_count: 0;
+    in property <int> upcoming_bookings_count: 0;
     in property <int> team_members_count: 0;
 
     in property <[UiPendingApproval]> pending_approvals;
@@ -34,6 +34,12 @@ export component Dashboard inherits Window {
     callback open_ai_chat();
     callback approve_task(string);
     callback open_billing();
+
+    callback action_add_product();
+    callback action_view_orders();
+    callback action_check_messages();
+    callback action_see_analytics();
+    callback action_share_store();
 
     Flickable {
     VerticalBox {
@@ -48,6 +54,23 @@ export component Dashboard inherits Window {
             Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
             Button { text: "Help"; height: 44px; clicked => { open_help_center(); } }
             Button { text: "Billing"; height: 44px; clicked => { open_billing(); } }
+        }
+
+        // Quick Actions Navigation
+        VerticalBox {
+            spacing: 12px;
+            Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } }
+                Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
+                Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } }
+            }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
+                Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
+            }
         }
 
         // Stat Cards
@@ -68,8 +91,8 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Active Agents"; color: #94a3b8; }
-                            Text { text: active_agents_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Active Helpers"; color: #94a3b8; }
+                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                         }
                     }
                 }
@@ -84,8 +107,8 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Current Tasks"; color: #94a3b8; }
-                            Text { text: active_tasks_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                            Text { text: "Tasks in Progress"; color: #94a3b8; }
+                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                         }
                     }
                 }
@@ -105,8 +128,8 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Upcoming Calls"; color: #94a3b8; }
-                            Text { text: scheduled_calls_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                            Text { text: "Upcoming Bookings"; color: #94a3b8; }
+                            Text { text: upcoming_bookings_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                         }
                     }
                 }
