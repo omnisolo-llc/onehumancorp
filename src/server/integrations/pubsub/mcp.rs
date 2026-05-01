@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
@@ -50,7 +50,7 @@ impl PubSubManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 

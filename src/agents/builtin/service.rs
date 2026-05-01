@@ -713,3 +713,48 @@ mod tests {
         assert!(result.ends_with("CRITICAL_LEAF"));
     }
 }
+
+pub async fn start_builtin_agent(
+    transport: std::sync::Arc<dyn crate::mesh::transport::MeshTransport>,
+    svc: std::sync::Arc<AgentServiceImpl>,
+) {
+    let handler = {
+        let transport = transport.clone();
+        let svc = svc.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+                tracing::info!("Received job from mesh: {}", req.task_id);
+                let svc = svc.clone();
+                let transport = transport.clone();
+                tokio::spawn(async move {
+                    match svc.run_task(tonic::Request::new(req)).await {
+                        Ok(resp) => {
+                            let mut stream = resp.into_inner();
+                            use tokio_stream::StreamExt;
+                            while let Some(Ok(evt)) = stream.next().await {
+                                let mut buf = Vec::new();
+                                use prost::Message;
+                                if evt.encode(&mut buf).is_ok() {
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                        topic: "agent_events".to_string(),
+                                        payload: buf,
+                                    }).await;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error running task from mesh: {}", e);
+                        }
+                    }
+                });
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("agent_jobs", handler).await {
+        tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'agent_jobs'");
+    }
+}

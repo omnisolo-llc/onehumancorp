@@ -1,4 +1,3 @@
-pub mod mesh;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -948,10 +947,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let mesh_transport = mesh::transport::create_transport(
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
     ).await.expect("Failed to create MeshTransport");
+
+    // Start Builtin Agent
+    let builtin_transport = mesh_transport.clone();
+    tokio::spawn(async move {
+        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+        let cfg = ohc_builtin_agent::service::AgentConfig {
+            llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+            model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
+            llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+            system_prompt: std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
+            max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
+            max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
+        };
+        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+        svc_impl.init_memory().await;
+        let svc = std::sync::Arc::new(svc_impl);
+        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+    });
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
