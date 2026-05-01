@@ -219,6 +219,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
                 dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -231,14 +232,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
-                let referrals_handle_clone = referrals_handle.clone();
-                dashboard.on_action_share_store(move || {
-                    *share_store_called_clone.borrow_mut() = true;
-                    if let Some(ui) = referrals_handle_clone.upgrade() {
-                        let _ = ui.show();
+                if let Ok(business_share_ui) = app::BusinessShare::new() {
+                    let business_share_handle = business_share_ui.as_weak();
+                    let bs_handle_clone = business_share_handle.clone();
+                    dashboard.on_action_share_store(move || {
+                        *share_store_called_clone.borrow_mut() = true;
+                        if let Some(ui) = bs_handle_clone.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    let business_share_close_clone = business_share_handle.clone();
+                    business_share_ui.on_close(move || {
+                        if let Some(ui) = business_share_close_clone.upgrade() {
+                            let _ = ui.hide();
+                        }
+                    });
+
+                    // Keep strong reference alive indefinitely on the main thread via Box::leak
+                    Box::leak(Box::new(business_share_ui));
+                } else {
+                    let referrals_handle_clone = referrals_handle.clone();
+                    dashboard.on_action_share_store(move || {
+                        *share_store_called_clone.borrow_mut() = true;
+                        if let Some(ui) = referrals_handle_clone.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+                }
+
+                let dashboard_milestone_handle = dashboard_handle.clone();
+                dashboard.on_dismiss_milestone(move || {
+                    if let Some(ui) = dashboard_milestone_handle.upgrade() {
+                        ui.set_show_milestone(false);
                     }
                 });
 
@@ -1636,6 +1666,98 @@ mod cost_transparency_e2e_tests {
 
         let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
+    }
+
+    #[test]
+    fn test_e2e_business_share_and_milestones_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
+        // Assert milestones defaults and logic
+        assert!(!dashboard_ui.get_show_milestone());
+        dashboard_ui.set_show_milestone(true);
+        dashboard_ui.set_milestone_title("First Sale!".into());
+        dashboard_ui.set_milestone_message("You just got your first customer!".into());
+
+        assert!(dashboard_ui.get_show_milestone());
+        assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
+        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+
+        let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let milestone_dismissed_clone = milestone_dismissed.clone();
+        dashboard_ui.on_dismiss_milestone(move || {
+            *milestone_dismissed_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_dismiss_milestone();
+        assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+
+        // Verify BusinessShare Component
+        let business_share_ui = app::BusinessShare::new().unwrap();
+
+        let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let copy_link_called_clone = copy_link_called.clone();
+        business_share_ui.on_copy_link(move || { *copy_link_called_clone.borrow_mut() = true; });
+
+        let share_to_ig_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_ig_called_clone = share_to_ig_called.clone();
+        business_share_ui.on_share_to_instagram(move || { *share_to_ig_called_clone.borrow_mut() = true; });
+
+        let share_to_x_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_x_called_clone = share_to_x_called.clone();
+        business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
+
+        let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let close_called_clone = close_called.clone();
+        business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
+
+        assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
+        business_share_ui.set_business_name("Maya's Cakes".into());
+        assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.invoke_copy_link();
+        assert!(*copy_link_called.borrow());
+
+        business_share_ui.invoke_share_to_instagram();
+        assert!(*share_to_ig_called.borrow());
+
+        business_share_ui.invoke_share_to_x();
+        assert!(*share_to_x_called.borrow());
+
+        business_share_ui.invoke_close();
+        assert!(*close_called.borrow());
     }
 
     #[test]
