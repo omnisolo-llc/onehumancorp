@@ -9,6 +9,8 @@ export component SetupWizard inherits Window {
 
     in-out property <int> step: 0;
 
+    in-out property <bool> show_saved_indicator: false;
+
     // State
     in-out property <string> business_type: "";
     in-out property <string> company_name: "";
@@ -59,17 +61,23 @@ export component SetupWizard inherits Window {
     callback save_state();
     callback toggle_advanced();
 
-    next_step => { step = step + 1; save_state(); }
-    select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
-    toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
-    toggle_sell_digital => { sell_digital = !sell_digital; save_state(); }
-    toggle_sell_services => { sell_services = !sell_services; save_state(); }
-    toggle_sell_food => { sell_food = !sell_food; save_state(); }
-    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
-    select_template(t) => { website_template = t; step = step + 1; save_state(); }
-    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
-    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
+    next_step => { step = step + 1; show_saved_indicator = true; save_state(); }
+    select_business_type(t) => { business_type = t; step = step + 1; show_saved_indicator = true; save_state(); }
+    toggle_sell_physical => { sell_physical = !sell_physical; show_saved_indicator = true; save_state(); }
+    toggle_sell_digital => { sell_digital = !sell_digital; show_saved_indicator = true; save_state(); }
+    toggle_sell_services => { sell_services = !sell_services; show_saved_indicator = true; save_state(); }
+    toggle_sell_food => { sell_food = !sell_food; show_saved_indicator = true; save_state(); }
+    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; show_saved_indicator = true; save_state(); }
+    select_payment_pref(p) => { payment_pref = p; step = step + 1; show_saved_indicator = true; save_state(); }
+    select_template(t) => { website_template = t; step = step + 1; show_saved_indicator = true; save_state(); }
+    select_domain(d) => { domain_choice = d; step = step + 1; show_saved_indicator = true; save_state(); }
+    toggle_advanced => { is_advanced = !is_advanced; show_saved_indicator = true; save_state(); }
+
+    Timer {
+        interval: 3s;
+        running: show_saved_indicator;
+        triggered => { show_saved_indicator = false; }
+    }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
