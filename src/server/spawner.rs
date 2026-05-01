@@ -8,29 +8,44 @@ pub trait SubAgentSpawner: Send + Sync {
     async fn spawn(&self, task: SharedTask) -> Result<(), String>;
 }
 
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+
 pub struct DefaultSubAgentSpawner {
     hub: Arc<Hub>,
+    transport: Arc<dyn MeshTransport>,
 }
 
 impl DefaultSubAgentSpawner {
-    pub fn new(hub: Arc<Hub>) -> Self {
-        DefaultSubAgentSpawner { hub }
+    pub fn new(hub: Arc<Hub>, transport: Arc<dyn MeshTransport>) -> Self {
+        DefaultSubAgentSpawner { hub, transport }
     }
 }
 
 #[async_trait]
 impl SubAgentSpawner for DefaultSubAgentSpawner {
     async fn spawn(&self, task: SharedTask) -> Result<(), String> {
-        let hub = self.hub.clone();
-        tokio::spawn(async move {
-            println!("Spawning sub-agent for task: {}", task.id);
-            // Simulate work
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            
-            // Complete task in task manager
-            let _ = hub.task_manager().complete_task(&task.id, "sub-agent", "Success from spawned agent".to_string());
-        });
+        println!("Spawning sub-agent for task via MeshTransport: {}", task.id);
         
+        use crate::ohc::agent::service::RunTaskRequest;
+        use prost::Message;
+
+        let req = RunTaskRequest {
+            task_id: task.id.clone(),
+            task: task.title.clone(),
+            model: String::new(),
+            llm_provider: String::new(),
+            department: "system".to_string(),
+            ..Default::default()
+        };
+
+        let mut buf = Vec::new();
+        req.encode(&mut buf).map_err(|e| format!("encode failed: {}", e))?;
+
+        self.transport.publish("agent_jobs", ohc_builtin_agent::mesh::transport::Message {
+            topic: "agent_jobs".to_string(),
+            payload: buf,
+        }).await?;
+
         Ok(())
     }
 }
