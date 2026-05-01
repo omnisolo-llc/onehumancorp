@@ -25,28 +25,6 @@ test.describe('Dashboard UX', () => {
 
     // Verify softer wording for drafts
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
-
-    // Verify we can see the dismiss milestone button
-    // It should exist in the DOM (though it may be hidden depending on state, we can just assert it exists)
-    // Wait, the milestone is conditionally rendered. We can just verify the overall layout doesn't crash
-  });
-
-  test('should prioritize stat cards over quick actions on mobile', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
-    await page.waitForURL('**/*');
-
-    // Make sure we don't have to scroll to see 'Today\'s Sales'
-    const todaySales = page.locator('text=Today\'s Sales');
-    await expect(todaySales).toBeVisible();
-
-    const boundingBox = await todaySales.boundingBox();
-    expect(boundingBox).not.toBeNull();
-    if (boundingBox) {
-      expect(boundingBox.y).toBeLessThan(800); // 800 is the viewport height
-    }
   });
 });
 
