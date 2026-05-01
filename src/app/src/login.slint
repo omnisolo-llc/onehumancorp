@@ -9,7 +9,7 @@ export component Login inherits Window {
 
     property <bool> loading: false;
     property <bool> is_sign_up: false;
-    property <string> error_message: "";
+    in-out property <string> error_message: "";
     in-out property <bool> show_verification: false;
     in-out property <string> verification_message: "";
 

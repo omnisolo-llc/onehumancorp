@@ -65,6 +65,102 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        let wizard_handle = setup_wizard_handle.clone();
+        move |email, password| {
+            if email.is_empty() || password.is_empty() {
+                if let Some(ui) = login_handle.upgrade() {
+                    ui.set_error_message("Invalid credentials".into());
+                }
+                return;
+            }
+            let login_h = login_handle.clone();
+            let wizard_h = wizard_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut is_completed = false;
+                    let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                    req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
+                    if let Ok(resp) = client.get_wizard_state(req).await {
+                        let state = resp.into_inner().state;
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                if step >= 10 {
+                                    is_completed = true;
+                                }
+                            }
+                        }
+                    }
+
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = login_h.upgrade() {
+                            let _ = ui.hide();
+                        }
+                        if is_completed {
+                            if let Ok(dashboard) = app::Dashboard::new() {
+                                let dashboard_handle = dashboard.as_weak();
+
+                                let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                                let add_product_called_clone = add_product_called.clone();
+                                dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+                                let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                                let view_orders_called_clone = view_orders_called.clone();
+                                dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+
+                                let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                                let check_messages_called_clone = check_messages_called.clone();
+                                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+
+                                let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                                let see_analytics_called_clone = see_analytics_called.clone();
+                                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+
+                                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                                let share_store_called_clone = share_store_called.clone();
+
+                                if let Ok(business_share_ui) = app::BusinessShare::new() {
+                                    let business_share_handle = business_share_ui.as_weak();
+                                    let bs_handle_clone = business_share_handle.clone();
+                                    dashboard.on_action_share_store(move || {
+                                        *share_store_called_clone.borrow_mut() = true;
+                                        if let Some(ui) = bs_handle_clone.upgrade() {
+                                            let _ = ui.show();
+                                        }
+                                    });
+
+                                    let business_share_close_clone = business_share_handle.clone();
+                                    business_share_ui.on_close(move || {
+                                        if let Some(ui) = business_share_close_clone.upgrade() {
+                                            let _ = ui.hide();
+                                        }
+                                    });
+
+                                    Box::leak(Box::new(business_share_ui));
+                                }
+
+                                let dashboard_milestone_handle = dashboard_handle.clone();
+                                dashboard.on_dismiss_milestone(move || {
+                                    if let Some(ui) = dashboard_milestone_handle.upgrade() {
+                                        ui.set_show_milestone(false);
+                                    }
+                                });
+
+                                let _ = dashboard.show();
+                                Box::leak(Box::new(dashboard));
+                            }
+                        } else {
+                            if let Some(wizard) = wizard_h.upgrade() {
+                                let _ = wizard.show();
+                            }
+                        }
+                    }).unwrap();
+                }
+            });
+        }
+    });
+
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {

@@ -300,14 +300,44 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<SaveWizardStateRequest>,
     ) -> Result<tonic::Response<SaveWizardStateResponse>, tonic::Status> {
+        let req_metadata = request.metadata().clone();
         let req = request.into_inner();
         let state = req.state;
-
-        let mut wizard_state = self.hub.wizard_state.write().map_err(|e| tonic::Status::internal(e.to_string()))?;
         
-        for (k, v) in state {
-            wizard_state.insert(k, serde_json::Value::String(v));
-        }
+        let spiffe_id_str = req_metadata.get("x-spiffe-id")
+            .map(|v| v.to_str().unwrap_or_default())
+            .unwrap_or_default();
+
+        let org_id = match crate::auth::parse_spiffe_id(spiffe_id_str) {
+            Ok((org, _)) => {
+                if org.is_empty() {
+                    "default_org".to_string()
+                } else {
+                    org
+                }
+            },
+            Err(_) => "default_org".to_string(),
+        };
+
+        let pool = self.hub.pool.clone();
+        let json_state = serde_json::to_value(&state).unwrap_or(serde_json::json!({}));
+
+        let mut tx = pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        sqlx::query(
+            "INSERT INTO wizard_state (organization_id, state, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (organization_id) DO UPDATE
+             SET state = wizard_state.state || $2, updated_at = NOW()"
+        )
+        .bind(&org_id)
+        .bind(json_state)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(SaveWizardStateResponse {
             status: "saved".to_string(),
@@ -316,18 +346,48 @@ impl HubService for MyHubService {
 
     async fn get_wizard_state(
         &self,
-        _request: tonic::Request<GetWizardStateRequest>,
+        request: tonic::Request<GetWizardStateRequest>,
     ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
-        let wizard_state = self.hub.wizard_state.read().map_err(|e| tonic::Status::internal(e.to_string()))?;
-        
+        let req_metadata = request.metadata().clone();
+        let spiffe_id_str = req_metadata.get("x-spiffe-id")
+            .map(|v| v.to_str().unwrap_or_default())
+            .unwrap_or_default();
+
+        let org_id = match crate::auth::parse_spiffe_id(spiffe_id_str) {
+            Ok((org, _)) => {
+                if org.is_empty() {
+                    "default_org".to_string()
+                } else {
+                    org
+                }
+            },
+            Err(_) => "default_org".to_string(),
+        };
+
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let mut state = std::collections::HashMap::new();
-        for (k, v) in wizard_state.iter() {
-            if let Some(s) = v.as_str() {
-                state.insert(k.clone(), s.to_string());
-            } else {
-                state.insert(k.clone(), v.to_string());
+
+        if let Ok(record) = sqlx::query("SELECT state FROM wizard_state WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_one(&mut *tx)
+            .await
+        {
+            use sqlx::Row;
+            let record_state: serde_json::Value = record.get("state");
+            if let Some(map) = record_state.as_object() {
+                for (k, v) in map {
+                    if let Some(s) = v.as_str() {
+                        state.insert(k.clone(), s.to_string());
+                    } else {
+                        state.insert(k.clone(), v.to_string());
+                    }
+                }
             }
         }
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(GetWizardStateResponse {
             state,
