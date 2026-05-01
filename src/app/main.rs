@@ -832,7 +832,7 @@ mod e2e_tests {
         assert_eq!(ui.get_step(), 4);
 
         // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
+        ui.invoke_select_payment_pref("skip".into());
         assert_eq!(ui.get_step(), 5);
 
         // Step 5: Admin -> Step 6
@@ -858,7 +858,7 @@ mod e2e_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
+        assert_eq!(ui.get_payment_pref(), "skip");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_sell_digital(), false);
         assert_eq!(ui.get_sell_services(), false);
@@ -1206,7 +1206,7 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
+        ui.invoke_select_payment_pref("skip".into());
 
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
@@ -1255,7 +1255,7 @@ mod docs_tests {
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
+        assert_eq!(ui.get_payment_pref(), "skip");
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
@@ -1357,7 +1357,7 @@ mod docs_tests {
 
         let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_custom_integrations(move || { *docs_opened_clone.borrow_mut() = true; });
 
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
@@ -1374,14 +1374,14 @@ mod docs_tests {
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
         dashboard_ui.invoke_open_ai_chat();
-        dashboard_ui.invoke_open_api_docs();
+        dashboard_ui.invoke_open_custom_integrations();
         dashboard_ui.invoke_open_video_tutorials();
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*docs_opened.borrow(), "Custom Integrations should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
@@ -1423,9 +1423,18 @@ mod docs_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
 
 
-        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
+
+        // Let's call the tooltip registry directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
         // But we can verify it doesn't crash on Dashboard creation.
         // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
@@ -1470,9 +1479,9 @@ mod docs_tests {
         app::VideoTutorials::new().unwrap();
     }
     #[test]
-    fn test_api_docs_creation() {
+    fn test_custom_integrations_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
+        app::CustomIntegrations::new().unwrap();
     }
     #[test]
     fn test_e2e_agent_config_flow() {
@@ -1631,6 +1640,15 @@ mod docs_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
 
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1695,6 +1713,15 @@ mod dashboard_docs_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
 
         // 3. Test opening Help Center from Dashboard
@@ -1767,6 +1794,15 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
         // Assert properties to make sure new plain-language labels exist and work
         dashboard_ui.set_todays_sales("$125.50".into());
@@ -1827,6 +1863,15 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
         // Populate mock agent activity messages for E2E testing
         let mock_messages = vec![
@@ -1877,6 +1922,15 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
         // Assert milestones defaults and logic
         assert!(!dashboard_ui.get_show_milestone());
@@ -1969,6 +2023,15 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(||{});
+        dashboard_ui.on_open_ai_chat(||{});
+        dashboard_ui.on_open_interactive_walkthrough(||{});
+        dashboard_ui.on_open_video_tutorials(||{});
+        dashboard_ui.on_open_release_notes(||{});
+        dashboard_ui.on_open_api_docs(||{});
+        dashboard_ui.on_approve_task(|_| {});
+        dashboard_ui.on_open_billing(||{});
+
 
         let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let billing_opened_clone = billing_opened.clone();

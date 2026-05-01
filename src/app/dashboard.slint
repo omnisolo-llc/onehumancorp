@@ -41,7 +41,7 @@ export component Dashboard inherits Window {
     callback open_interactive_walkthrough();
     callback open_video_tutorials();
     callback open_release_notes();
-    callback open_api_docs();
+    callback open_custom_integrations();
     callback approve_task(string);
     callback open_billing();
 
@@ -79,7 +79,7 @@ export component Dashboard inherits Window {
                 spacing: 8px;
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "Custom Integrations"; height: 44px; clicked => { open_custom_integrations(); show_menu = false; } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
@@ -124,17 +124,39 @@ export component Dashboard inherits Window {
                 Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
             }
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
-            HorizontalBox {
+
+            if (root.width <= 768px) : VerticalBox {
                 spacing: 8px;
-                TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
-                TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
-                TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
+                HorizontalBox {
+                    spacing: 8px;
+                    TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
+                    TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
+                    Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
+                    Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                }
             }
-            HorizontalBox {
+            if (root.width > 768px) : VerticalBox {
                 spacing: 8px;
-                Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
-                Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
-                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                HorizontalBox {
+                    spacing: 8px;
+                    TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
+                    TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
+                    TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
+                    Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
+                    Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                }
             }
         }
 
@@ -152,14 +174,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Today's Sales"; color: #94a3b8; }
+                        Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                     }
                 }
                 GlassCard {
@@ -169,14 +187,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Orders to Ship"; color: #94a3b8; }
+                        Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                     }
                 }
             }
@@ -191,14 +205,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Today's Sales"; color: #94a3b8; }
+                        Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                     }
                 }
                 GlassCard {
@@ -208,14 +218,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Orders to Ship"; color: #94a3b8; }
+                        Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                     }
                 }
             }
@@ -230,14 +236,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Active Helpers"; color: #94a3b8; }
+                        Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                     }
                 }
                 GlassCard {
@@ -247,14 +249,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Current AI Tasks"; color: #94a3b8; }
+                        Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                     }
                 }
             }
@@ -269,14 +267,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Active Helpers"; color: #94a3b8; }
+                        Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
                     }
                 }
                 GlassCard {
@@ -286,14 +280,10 @@ export component Dashboard inherits Window {
                     width: 100%;
                     min-height: 88px;
 
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Current AI Tasks"; color: #94a3b8; }
+                        Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                     }
                 }
             }
