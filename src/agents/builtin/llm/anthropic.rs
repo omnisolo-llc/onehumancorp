@@ -104,9 +104,9 @@ struct AnthropicUsage {
     input_tokens: i32,
     output_tokens: i32,
     #[serde(default)]
-    #[allow(dead_code)] cache_creation_input_tokens: i32,
+    cache_creation_input_tokens: i32,
     #[serde(default)]
-    #[allow(dead_code)] cache_read_input_tokens: i32,
+    cache_read_input_tokens: i32,
 }
 
 #[async_trait]
