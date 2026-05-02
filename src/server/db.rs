@@ -38,10 +38,17 @@ impl DB {
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_millis(500))
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        let _ = conn.execute("RESET app.current_tenant").await;
+                        Ok(true)
+                    })
+                })
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                         Ok(true)
                     })
                 })
@@ -224,10 +231,17 @@ mod autodream_db_tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    let _ = conn.execute("RESET app.current_tenant").await;
+                    Ok(true)
+                })
+            })
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                     Ok(true)
                 })
             })
@@ -251,10 +265,17 @@ mod autodream_db_tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    let _ = conn.execute("RESET app.current_tenant").await;
+                    Ok(true)
+                })
+            })
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                     Ok(true)
                 })
             })
