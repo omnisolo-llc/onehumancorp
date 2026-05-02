@@ -1035,7 +1035,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .nest("/api/growth", api::growth::router(std::sync::Arc::new(crate::services::growth::service::MyGrowthService::new(db.pool.clone()))))
 
         .with_state(mesh_transport);
 
