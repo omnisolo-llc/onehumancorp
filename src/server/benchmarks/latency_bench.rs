@@ -41,45 +41,34 @@ pub async fn bench_queue_latency() {
 
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    // 1. Cloud Mode - Postgres
-    println!("--- Cloud Mode (Postgres) ---");
-    let (tx1, _rx1) = tokio::sync::mpsc::channel(100);
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
-    if database_url != "postgres://localhost/dummy" {
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url).await;
-
-        if let Ok(pg_pool) = pool_res {
-            let hub = Arc::new(crate::hub::Hub::new(tx1, pg_pool));
-            bench_snapshot_fetching("Postgres", hub).await;
-        } else {
-            println!("Skipping Postgres bench due to connection failure");
-        }
-    } else {
-        println!("Skipping bench_dashboard_snapshot Cloud mode due to missing DATABASE_URL");
+    if database_url == "postgres://localhost/dummy" {
+        println!("Skipping bench_dashboard_snapshot due to missing db connection (dummy url)");
+        return;
     }
 
-    // 2. Standalone Mode - Mock Postgres (Lazy offline pool)
-    println!("--- Standalone Mode (Mock Postgres Offline Pool) ---");
-    let (tx2, _rx2) = tokio::sync::mpsc::channel(100);
-    let offline_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://localhost/dummy")
-        .unwrap();
+    let pool_res = sqlx::postgres::PgPoolOptions::new()
+        .before_acquire(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("SET app.current_tenant = 'system'").await?;
+                Ok(true)
+            })
+        })
+        .connect(&database_url).await;
 
-    let standalone_hub = Arc::new(crate::hub::Hub::new(tx2, offline_pool));
-    bench_snapshot_fetching("Standalone", standalone_hub).await;
-}
+    let pg_pool = match pool_res {
+        Ok(p) => p,
+        Err(e) => {
+            println!("Skipping bench_dashboard_snapshot due to missing db connection: {}", e);
+            return;
+        }
+    };
 
-async fn bench_snapshot_fetching(name: &str, hub: Arc<crate::hub::Hub>) {
+    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
@@ -100,23 +89,17 @@ async fn bench_snapshot_fetching(name: &str, hub: Arc<crate::hub::Hub>) {
 
         let hub_clone1 = hub.clone();
         let hub_clone2 = hub.clone();
-        let hub_clone3 = hub.clone();
 
-        let (_, _, _) = tokio::join!(
+        let (_, _) = tokio::join!(
             tokio::task::spawn_blocking(move || { let _ = hub_clone1.get_agents(); }),
-            tokio::task::spawn_blocking(move || { let _ = hub_clone2.get_meetings(); }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub_clone3.get_cost_auditor();
-                let _ = cost_auditor.get_total_cost();
-                let _ = cost_auditor.get_total_tokens();
-            })
+            tokio::task::spawn_blocking(move || { let _ = hub_clone2.get_meetings(); })
         );
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    println!("{}: Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", name, fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)

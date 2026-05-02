@@ -23,22 +23,19 @@ impl MyAgentManagerService {
     async fn get_snapshot(&self) -> DashboardSnapshot {
         let hub_clone1 = self.hub.clone();
         let hub_clone2 = self.hub.clone();
-        let hub_clone3 = self.hub.clone();
 
-        let (agents_res, meetings_res, costs_res) = tokio::join!(
+        let (agents, meetings) = tokio::join!(
             tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub_clone3.get_cost_auditor();
-                Summary {
-                    total_cost_usd: cost_auditor.get_total_cost(),
-                    total_tokens: cost_auditor.get_total_tokens(),
-                }
-            })
+            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
         );
-        let agents = agents_res.unwrap_or_else(|_| vec![]);
-        let meetings = meetings_res.unwrap_or_else(|_| vec![]);
-        let costs = costs_res.unwrap_or_else(|_| Summary { total_cost_usd: 0.0, total_tokens: 0 });
+        let agents = agents.unwrap_or_else(|_| vec![]);
+        let meetings = meetings.unwrap_or_else(|_| vec![]);
+
+        let cost_auditor = self.hub.get_cost_auditor();
+        let costs = Summary {
+            total_cost_usd: cost_auditor.get_total_cost(),
+            total_tokens: cost_auditor.get_total_tokens(),
+        };
 
         let mut status_map = std::collections::HashMap::new();
         for a in &agents {
