@@ -9,24 +9,16 @@ path = "main.rs"
 
 [dependencies]
 slint = { version = "1.8.0", default-features = false, features = ["backend-winit", "renderer-software", "compat-1-2"] }
-serde = { workspace = true }
-serde_json = { workspace = true }
-chrono = { workspace = true }
-serde_yaml = { workspace = true }
-futures = { workspace = true }
-wasm-bindgen = { workspace = true, optional = true }
-wasm-bindgen-futures = { workspace = true, optional = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 copypasta = "0.10.1"
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+serde_yaml = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { workspace = true }
-wasm-bindgen-futures = { workspace = true }
+futures = { workspace = true }
 
 [build-dependencies]
 slint-build = "1.8.0"

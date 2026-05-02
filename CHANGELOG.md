@@ -1,13 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
-### Cloud Scaling Improvements
-- ⚡ Bolt: [performance improvement] Parallelized fetching and optimized mobile payloads (#9210)
-
-### Privacy/Offline Improvements
-- ⚡ Bolt: [performance improvement] Parallelized fetching and optimized mobile payloads (#9210)
-
-
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)

@@ -1,0 +1,48 @@
+<<<<<<< SEARCH
+    welcome_checklist_ui.on_go_to_dashboard({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+=======
+    welcome_checklist_ui.on_go_to_dashboard({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_docs({
+        move || {
+            println!("Navigating to docs...");
+            // Simulated navigation to docs
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_video({
+        move || {
+            println!("Navigating to video tutorials...");
+            // Simulated navigation to video tutorials
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_support({
+        move || {
+            println!("Navigating to support...");
+            // Simulated navigation to support
+        }
+    });
+>>>>>>> REPLACE

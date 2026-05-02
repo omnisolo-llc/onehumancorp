@@ -1,5 +1,5 @@
 use std::sync::RwLock;
-use opentelemetry::global;
+use opentelemetry::{global, KeyValue};
 use opentelemetry::metrics::Counter;
 
 pub struct ViralLoopTracker {
