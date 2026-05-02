@@ -41,7 +41,7 @@ impl DB {
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
                         Ok(true)
                     })
                 })
@@ -227,7 +227,7 @@ mod autodream_db_tests {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
                     Ok(true)
                 })
             })
@@ -254,7 +254,7 @@ mod autodream_db_tests {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
                     Ok(true)
                 })
             })

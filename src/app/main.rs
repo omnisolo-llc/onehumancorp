@@ -1,81 +1,49 @@
-fn spawn<F>(f: F)
-where
-    F: std::future::Future<Output = ()> + Send + 'static,
-{
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::spawn(f);
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_futures::spawn_local(f);
-}
+use ohc::orchestration::hub_service_client::HubServiceClient;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::RegisterAgentRequest;
+use ohc::orchestration::Agent;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
         tonic::include_proto!("ohc.orchestration");
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
-use slint::Model;
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
-pub fn main_wasm() -> Result<(), JsValue> {
-    main_internal().map_err(|e| JsValue::from_str(&e.to_string()))
-}
+use slint::ComponentHandle;
 
 pub mod app {
-    slint::include_modules!();
+    include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 use slint::Global;
 
-#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
 }
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
-
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::hub_service_client::HubServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::growth_service_client::GrowthServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::RegisterAgentRequest;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::Agent;
-use slint::ComponentHandle;
-
-#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    main_internal()
-}
-
-fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
 
     let tooltip_registry = app::TooltipRegistry::get(&login_ui);
-    let tooltips_json = include_str!("tooltips.json");
-    let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
-
-    tooltip_registry.on_request_tooltip_text(move |id: slint::SharedString| {
-        tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+    tooltip_registry.on_request_tooltip_text(|id: slint::SharedString| {
+        match id.as_str() {
+            "add_product" => "Add a new product to your store catalog".into(),
+            "view_orders" => "View and manage customer orders".into(),
+            "messages" => "Check messages from your customers".into(),
+            "analytics" => "View your store's performance".into(),
+            "ask_ai" => "Get help from the OHC AI assistant".into(),
+            "menu" => "Open the main navigation menu".into(),
+            _ => "".into(),
+        }
     });
 
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
                 println!("Connected to server!");
@@ -118,7 +86,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
+    let login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -134,9 +102,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let init_ui_handle = setup_wizard_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -198,8 +165,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -210,9 +177,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let agent_config_ui = app::AgentConfig::new()?;
     let agent_config_handle = agent_config_ui.as_weak();
     let init_agent_config_handle = agent_config_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -230,8 +196,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -242,8 +208,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let prompt_tuning_ui = app::PromptTuning::new()?;
     let prompt_tuning_handle = prompt_tuning_ui.as_weak();
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -261,8 +227,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -273,8 +239,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let website_builder_ui = app::WebsiteBuilder::new()?;
     let website_builder_handle = website_builder_ui.as_weak();
     let init_website_builder_handle = website_builder_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -292,8 +258,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -304,8 +270,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let grow_business_ui = app::GrowBusiness::new()?;
     let grow_business_handle = grow_business_ui.as_weak();
     let init_grow_business_handle = grow_business_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -323,8 +289,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -344,8 +310,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
@@ -378,7 +344,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(_ui) = ui_handle.upgrade() {
                 let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
 
-                #[cfg(not(target_arch = "wasm32"))]
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
                         if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
@@ -390,8 +355,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Clipboard not initialized, failed to copy share link");
                     }
                 });
-                #[cfg(target_arch = "wasm32")]
-                println!("Clipboard not supported in WASM share: {}", pre_filled_msg);
             }
         }
     });
@@ -400,8 +363,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
                             user_id: "current_user".to_string(), // In production, use actual user_id
@@ -488,16 +451,16 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         move || {
                             if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
                                 let link = ui.get_share_link();
-                                let msg = link.to_string();
 
-                                #[cfg(not(target_arch = "wasm32"))]
                                 CLIPBOARD.with(|cb| {
                                     if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                        if let Err(e) = ctx.set_contents(msg.clone()) {
+                                        if let Err(e) = ctx.set_contents(link.to_string()) {
                                             println!("Failed to copy to clipboard: {:?}", e);
                                         } else {
-                                            println!("Copy success: {}", msg);
+                                            println!("Shareable Store Link copied to clipboard: {}", link);
                                         }
+                                    } else {
+                                        println!("Clipboard not initialized, failed to copy store link");
                                     }
                                 });
                             }
@@ -550,54 +513,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                if let Ok(help_center_ui) = app::HelpCenter::new() {
-                    let rc_ui = std::rc::Rc::new(help_center_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_help_center(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(ai_help_chat_ui) = app::AiHelpChat::new() {
-                    let rc_ui = std::rc::Rc::new(ai_help_chat_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_ai_chat(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(api_docs_ui) = app::ApiDocs::new() {
-                    let rc_ui = std::rc::Rc::new(api_docs_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_api_docs(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(video_tutorials_ui) = app::VideoTutorials::new() {
-                    let rc_ui = std::rc::Rc::new(video_tutorials_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_video_tutorials(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(interactive_walkthrough_ui) = app::InteractiveWalkthrough::new() {
-                    let rc_ui = std::rc::Rc::new(interactive_walkthrough_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_interactive_walkthrough(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(release_notes_ui) = app::ReleaseNotes::new() {
-                    let rc_ui = std::rc::Rc::new(release_notes_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_release_notes(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
 
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
@@ -610,7 +525,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
             }
         }
     });
@@ -782,8 +696,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
                             business_type: req_business_type,
@@ -860,6 +774,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod growth_e2e_tests {
     use super::*;
+    use slint::Model;
 
     #[test]
     fn test_start_setup_wizard_transitions() {
@@ -1095,6 +1010,7 @@ mod growth_e2e_tests {
 
 #[cfg(test)]
 mod e2e_tests {
+    use slint::Model;
     use super::*;
 
     #[test]
@@ -2237,50 +2153,14 @@ mod dashboard_docs_tests {
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
-        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || {
-            *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
-        });
-        dashboard_ui.invoke_open_interactive_walkthrough();
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
-
-        // 6. Test Video Tutorials
-        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || {
-            *videos_opened_clone.borrow_mut() = true;
-            let _videos = app::VideoTutorials::new().unwrap();
-        });
-        dashboard_ui.invoke_open_video_tutorials();
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
-
-        // 7. Test API Docs
-        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
-            *docs_opened_clone.borrow_mut() = true;
-            let _docs = app::ApiDocs::new().unwrap();
-        });
-        dashboard_ui.invoke_open_api_docs();
-        assert!(*docs_opened.borrow(), "API Docs should be opened from Dashboard");
-
-        // 8. Test Release Notes
-        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || {
-            *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
-        });
-        dashboard_ui.invoke_open_release_notes();
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
     }
 }
 
 #[cfg(test)]
 mod cost_transparency_e2e_tests {
     use super::*;
+    use slint::Model;
 
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
@@ -2608,6 +2488,7 @@ mod cost_transparency_e2e_tests {
 #[cfg(test)]
 mod additional_tests {
     use crate::app;
+    use slint::Model;
 
     #[test]
     fn test_product_photo_and_description() {
