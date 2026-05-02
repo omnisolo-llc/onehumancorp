@@ -1,6 +1,9 @@
-use async_trait::async_trait;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse};
-
+<<<<<<< SEARCH
+#[async_trait]
+pub trait LlmClient: Send + Sync {
+    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+}
+=======
 #[async_trait]
 pub trait LlmClient: Send + Sync {
     async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
@@ -9,8 +12,4 @@ pub trait LlmClient: Send + Sync {
         Ok(vec![]) // Default implementation returns empty embedding
     }
 }
-
-pub mod anthropic;
-pub mod openai;
-pub mod ollama;
-pub mod gemini;
+>>>>>>> REPLACE

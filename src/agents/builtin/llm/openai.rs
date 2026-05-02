@@ -36,6 +36,22 @@ impl OpenAIClient {
     }
 }
 
+#[derive(Serialize)]
+struct OpenAIEmbeddingRequest {
+    model: String,
+    input: String,
+}
+
+#[derive(Deserialize)]
+struct OpenAIEmbeddingResponse {
+    data: Vec<OpenAIEmbeddingData>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIEmbeddingData {
+    embedding: Vec<f32>,
+}
+
 // ── Wire types ────────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
@@ -267,5 +283,32 @@ impl LlmClient for OpenAIClient {
             usage,
             stop_reason: finish_reason,
         })
+    }
+
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+        let url = format!("{}/embeddings", self.base_url);
+        let payload = OpenAIEmbeddingRequest {
+            model: "text-embedding-3-small".to_string(), // Adjust default as needed
+            input: text.to_string(),
+        };
+
+        let resp = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("openai embedding error (status {}): {}", status, body).into());
+        }
+
+        let result: OpenAIEmbeddingResponse = resp.json().await?;
+        let data = result.data.into_iter().next().ok_or("no embedding data")?;
+        Ok(data.embedding)
     }
 }

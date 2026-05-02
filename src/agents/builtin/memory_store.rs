@@ -71,18 +71,23 @@ impl VectorRepository {
     }
 
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
-        let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
-
         let mut results = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = $1                      ORDER BY embedding <=> $2::vector                      LIMIT $3"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
+                let query = if query_embedding.is_empty() {
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at FROM consolidated_memory WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                } else {
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at FROM consolidated_memory WHERE tenant_id = $1 ORDER BY embedding <=> $2::vector LIMIT $3"
+                };
+
+                let mut q = sqlx::query(query).bind(tenant_id);
+                if !query_embedding.is_empty() {
+                    let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
+                    q = q.bind(emb_str);
+                }
+
+                let rows = q.bind(limit)
                 .fetch_all(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -110,12 +115,19 @@ impl VectorRepository {
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = ?                      ORDER BY vec_distance_cosine(embedding, ?)                      LIMIT ?"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
+                let query = if query_embedding.is_empty() {
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                } else {
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at FROM consolidated_memory WHERE tenant_id = ? ORDER BY vec_distance_cosine(embedding, ?) LIMIT ?"
+                };
+
+                let mut q = sqlx::query(query).bind(tenant_id);
+                if !query_embedding.is_empty() {
+                    let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
+                    q = q.bind(emb_str);
+                }
+
+                let rows = q.bind(limit)
                 .fetch_all(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -226,6 +238,28 @@ impl VectorRepository {
         }
         Ok(())
     }
+}
+
+pub fn inject_memories_into_prompt(memories: &[EmbeddingRecord], system_prompt: &str) -> String {
+    if memories.is_empty() {
+        return system_prompt.to_string();
+    }
+    let mut s = String::new();
+    s.push_str("## Relevant past experience\n");
+    for m in memories {
+        s.push_str("- ");
+        let source = if m.source_type.is_empty() {
+            "Unknown".to_string()
+        } else {
+            m.source_type.clone()
+        };
+        s.push_str(&format!("[Department/Source: {}] ", source));
+        s.push_str(&m.content);
+        s.push('\n');
+    }
+    s.push_str("\n---\n\n");
+    s.push_str(system_prompt);
+    s
 }
 
 pub struct MemoryConsolidationWorker {
@@ -492,5 +526,29 @@ impl LongTermMemory for RedisMemoryStore {
             .map_err(|e| e.to_string())?;
             
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_inject_memories() {
+        let memories = vec![
+            EmbeddingRecord {
+                id: "1".to_string(),
+                tenant_id: "org1".to_string(),
+                agent_id: "agent1".to_string(),
+                content: "Customer requested vegan cakes".to_string(),
+                embedding: vec![],
+                source_type: "CustomerSuccess".to_string(),
+                created_at: chrono::Utc::now(),
+            },
+        ];
+        let result = inject_memories_into_prompt(&memories, "System Prompt");
+        assert!(result.contains("Relevant past experience"));
+        assert!(result.contains("[Department/Source: CustomerSuccess] Customer requested vegan cakes"));
+        assert!(result.contains("System Prompt"));
     }
 }

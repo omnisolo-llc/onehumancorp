@@ -8,7 +8,7 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
+use crate::memory_store::{inject_memories_into_prompt, VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -42,7 +42,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<PgVectorMemoryStore>>,
+    memory: Option<Arc<VectorRepository>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
 }
@@ -131,15 +131,36 @@ impl AgentServiceImpl {
 
     pub async fn init_memory(&mut self) {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
 
         if !db_url.is_empty() {
-            match PgVectorMemoryStore::new(&db_url, org_id).await {
-                Ok(store) => {
-                    self.memory = Some(Arc::new(store));
+            if db_url.starts_with("sqlite") {
+                use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+                use std::str::FromStr;
+                match SqliteConnectOptions::from_str(&db_url) {
+                    Ok(conn_opts) => {
+                        let conn_opts = conn_opts.create_if_missing(true).extension("sqlite_vec");
+                        match SqlitePoolOptions::new().connect_with(conn_opts).await {
+                            Ok(pool) => {
+                                self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to connect to sqlite for memory store: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to parse sqlite URL for memory store: {}", e);
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Failed to connect to database for memory store: {}", e);
+            } else {
+                use sqlx::postgres::PgPoolOptions;
+                match PgPoolOptions::new().connect(&db_url).await {
+                    Ok(pool) => {
+                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to postgres for memory store: {}", e);
+                    }
                 }
             }
         }
@@ -241,8 +262,15 @@ impl AgentServiceImpl {
             req.model.clone()
         };
 
+        let mut embedding = vec![];
+        let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
+        if let Ok(emb) = llm.generate_embedding(&req.task).await {
+            embedding = emb;
+        }
+
         let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
+            let tenant_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+            store.semantic_search(&tenant_id, &embedding, 5).await.unwrap_or_default()
         } else {
             vec![]
         };
@@ -380,7 +408,7 @@ impl AgentService for AgentServiceImpl {
             all_tools
         };
 
-        let agent = Arc::new(Agent::new(llm, tools));
+        let agent = Arc::new(Agent::new(llm.clone(), tools));
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
 
@@ -395,6 +423,7 @@ impl AgentService for AgentServiceImpl {
 
         let agent_clone = agent.clone();
         let _start = std::time::Instant::now();
+        let department = task_req.department.clone();
 
         tokio::spawn(async move {
             let tx_clone = tx.clone();
@@ -458,7 +487,24 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let _ = store.write(content, vec![]).await;
+                let tenant_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+                let source_type = department;
+
+                let mut embedding = vec![];
+                if let Ok(emb) = llm.generate_embedding(content).await {
+                    embedding = emb;
+                }
+
+                let record = EmbeddingRecord {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id,
+                    agent_id: run_cfg.agent_id.clone(),
+                    content: content.to_string(),
+                    embedding,
+                    source_type,
+                    created_at: chrono::Utc::now(),
+                };
+                let _ = store.upsert(&record).await;
             }
         });
 

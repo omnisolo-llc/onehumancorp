@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use crate::minimax::MinimaxClient;
 
 pub struct LocalLLMProvider {
     endpoint: String,
@@ -92,50 +91,3 @@ impl LocalLLMProvider {
     }
 }
 
-pub struct ResilientProvider {
-    primary: Arc<MinimaxClient>,
-    fallback: Arc<LocalLLMProvider>,
-}
-
-impl ResilientProvider {
-    pub fn new(primary: Arc<MinimaxClient>, fallback: Option<Arc<LocalLLMProvider>>) -> Self {
-        let fallback = fallback.unwrap_or_else(|| Arc::new(LocalLLMProvider::new()));
-        ResilientProvider {
-            primary,
-            fallback,
-        }
-    }
-
-    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
-        match self.primary.reason(prompt).await {
-            Ok(resp) => Ok(resp),
-            Err(e) => {
-                if is_network_error(&e) {
-                    println!("Primary LLM failed with network error, falling back to local: {}", e);
-                    self.fallback.reason(prompt).await
-                } else {
-                    Err(e)
-                }
-            }
-        }
-    }
-
-    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
-        match self.primary.generate_embedding(text).await {
-            Ok(emb) => Ok(emb),
-            Err(e) => {
-                if is_network_error(&e) {
-                    println!("Primary LLM failed with network error, falling back to local: {}", e);
-                    self.fallback.generate_embedding(text).await
-                } else {
-                    Err(e)
-                }
-            }
-        }
-    }
-}
-
-fn is_network_error(err: &str) -> bool {
-    // Simplified check based on string matching, as we don't have typed errors from gRPC or HTTP client here yet in this simplified version.
-    err.contains("timeout") || err.contains("connection refused") || err.contains("closed") || err.contains("503")
-}
