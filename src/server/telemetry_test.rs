@@ -24,6 +24,19 @@ mod tests {
     }
 
     #[test]
+    fn test_do_not_redact_tenant_org() {
+        let input = json!({
+            "tenant_id": "tenant123",
+            "org_id": "org123"
+        });
+        let expected = json!({
+            "tenant_id": "tenant123",
+            "org_id": "org123"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
     fn test_redact_pii_email() {
         let input = json!({
             "contact": "maya@example.com",
@@ -32,6 +45,21 @@ mod tests {
         let expected = json!({
             "contact": "[EMAIL_REDACTED]",
             "other": "not-an-email"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
+    fn test_redact_pii_session() {
+        let input = json!({
+            "session_id": "session_id_123",
+            "session_data": {"user_id": 12},
+            "payload": {"some": "data"}
+        });
+        let expected = json!({
+            "session_id": "[REDACTED]",
+            "session_data": "[REDACTED]",
+            "payload": "[REDACTED]"
         });
         assert_eq!(redact_interface_pii(input), expected);
     }
@@ -57,7 +85,13 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let labels = json!({"user_id": "123", "secret": "shh"});
+        let labels = json!({
+            "user_id": "123",
+            "secret": "shh",
+            "tenant_id": "tenant123",
+            "session_id": "session123",
+            "org_id": "org123"
+        });
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
@@ -72,6 +106,9 @@ mod tests {
 
         assert_eq!(redacted["user_id"], "123");
         assert_eq!(redacted["secret"], "[REDACTED]");
+        assert_eq!(redacted["tenant_id"], "tenant123");
+        assert_eq!(redacted["org_id"], "org123");
+        assert_eq!(redacted["session_id"], "[REDACTED]");
     }
 
     #[test]
