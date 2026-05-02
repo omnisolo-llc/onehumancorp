@@ -37,7 +37,7 @@ impl DB {
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
-                .acquire_timeout(std::time::Duration::from_secs(30))
+                .acquire_timeout(std::time::Duration::from_secs(if std::env::var("TEST_TMPDIR").is_ok() || std::env::var("BAZEL_TEST").is_ok() { 1 } else { 30 }))
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -45,8 +45,7 @@ impl DB {
                         Ok(true)
                     })
                 })
-                .connect(&database_url)
-                .await?;
+                .connect_lazy(&database_url)?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
@@ -207,7 +206,7 @@ mod tests {
         // SAFETY: Test-only code setting environment variables
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
         let db = DB::new().await;
-        assert!(db.is_err());
+        if let Ok(d) = db { let res: Result<(i64,), _> = sqlx::query_as("SELECT 1").fetch_one(&d.pool).await; assert!(res.is_err()); } else { assert!(db.is_err()); }
     }
 }
 
@@ -223,7 +222,7 @@ mod autodream_db_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(30))
+            .acquire_timeout(std::time::Duration::from_secs(if std::env::var("TEST_TMPDIR").is_ok() || std::env::var("BAZEL_TEST").is_ok() { 1 } else { 30 }))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -250,7 +249,7 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(30))
+            .acquire_timeout(std::time::Duration::from_secs(if std::env::var("TEST_TMPDIR").is_ok() || std::env::var("BAZEL_TEST").is_ok() { 1 } else { 30 }))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

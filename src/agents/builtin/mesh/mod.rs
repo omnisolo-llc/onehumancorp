@@ -2,7 +2,7 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
+use crate::mesh::transport::{MeshTransport, Message};
 use tracing::{info, warn};
 
 #[async_trait]
@@ -55,8 +55,9 @@ pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Ar
             Arc::new(TeammateMeshClient::new(transport))
         }
         Err(e) => {
-            warn!("Failed to create transport for TeammateMesh: {}. Falling back to MemoryTransport.", e);
-            Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
+            warn!("Failed to create transport for TeammateMesh: {}. Falling back via create_transport standalone mode.", e);
+            let transport = crate::mesh::transport::create_transport(None, false).await.expect("Failed to initialize fallback transport");
+            Arc::new(TeammateMeshClient::new(transport))
         }
     }
 }
@@ -69,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_teammate_mesh_client() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = crate::mesh::transport::create_transport(None, false).await.unwrap();
         let mesh = TeammateMeshClient::new(transport);
 
         let tasks_received = Arc::new(AtomicBool::new(false));
