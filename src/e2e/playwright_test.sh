@@ -122,28 +122,38 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   fuser -k 8081/tcp 2>/dev/null || true
 
   echo "[playwright] Starting server from $SERVER_BIN..."
+  # Use a more descriptive log path and ensure it's cleared
+  SERVER_LOG="${TEST_TMPDIR:-/tmp}/server_$(date +%s).log"
   DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc" \
   REDIS_URL="redis://127.0.0.1:6379" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+    "$SERVER_BIN" >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
 
   # Wait for server
   echo "[playwright] Waiting for server on port 18789..."
-  for i in $(seq 1 30); do
+  SERVER_READY=false
+  for i in $(seq 1 60); do
     if nc -z 127.0.0.1 18789 2>/dev/null; then
       echo "[playwright] Server is ready."
+      SERVER_READY=true
       break
     fi
     # Check if server crashed
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-      echo "[playwright] Server process died. Log:"
-      tail -20 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true
+      echo "[playwright] ERROR: Server process died early. Log contents:"
+      cat "$SERVER_LOG"
       break
     fi
     sleep 1
   done
+
+  if [[ "$SERVER_READY" = "false" ]]; then
+    echo "[playwright] ERROR: Server failed to become ready on port 18789"
+    exit 1
+  fi
 else
-  echo "[playwright] Warning: server binary not found, tests may fail"
+  echo "[playwright] ERROR: server binary not found at $SERVER_BIN"
+  exit 1
 fi
 
 # Run playwright inside Docker to avoid host dependency issues (Node, glibc, etc.)
