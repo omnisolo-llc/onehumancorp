@@ -146,6 +146,9 @@ pub struct Agent {
 }
 
 impl Agent {
+    pub fn add_tool(&mut self, tool: Tool) {
+        self.tools.push(tool);
+    }
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
         Self {
             llm,
@@ -260,6 +263,15 @@ impl Agent {
                 }
                 Err(e) => {
                     tracing::warn!("Failed to retrieve long term memory: {}", e);
+                }
+            }
+
+            // 3-Tier Memory Mechanic: Lightweight Index
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    combined_system.push_str("\n\n[Lightweight Memory Index]\n");
+                    combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    combined_system.push_str(&index_content);
                 }
             }
         }
@@ -842,7 +854,7 @@ impl Agent {
 mod tests {
     #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -890,7 +902,7 @@ mod tests {
             },
         ];
 
-        let agent = Agent::new(_client.clone(), tools.clone());
+        let agent = Agent::new(client.clone(), tools.clone());
 
         // Test 1: Untrusted project rejects mutating tools
         let mut cfg = AgentRunConfig::default();
@@ -904,7 +916,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Project not trusted. Mutating tools are disabled."));
 
         // Reset mock
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -921,7 +933,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(_client.clone(), vec![
+        let agent = Agent::new(client, vec![
             Tool {
                 name: "unallowed_tool".to_string(),
                 description: "write".to_string(),
@@ -945,7 +957,7 @@ mod tests {
 
 
         // Test 3: High-risk operations require explicit confirmation
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -962,7 +974,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(_client.clone(), vec![
+        let agent = Agent::new(client, vec![
             Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
@@ -1025,7 +1037,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_observation_masking() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1066,7 +1078,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         }];
 
-        let agent = Agent::new(_client.clone(), tools);
+        let agent = Agent::new(client, tools);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
@@ -1093,7 +1105,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_context_compaction() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1160,7 +1172,7 @@ mod tests {
         cfg.enable_context_compaction = true;
         cfg.compaction_threshold_tokens = 50; // Set low threshold to trigger compaction
 
-        let agent = Agent::new(_client.clone(), tools);
+        let agent = Agent::new(client, tools);
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
@@ -1175,7 +1187,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1398,7 +1410,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_guardrail_tripwire() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1439,7 +1451,7 @@ mod tests {
             },
         ];
 
-        let agent = Agent::new(_client.clone(), tools);
+        let agent = Agent::new(client, tools);
 
         let mut cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
@@ -1454,7 +1466,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Input guardrail tripped"));
 
         // Reset client for next tests
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1472,7 +1484,7 @@ mod tests {
                 },
             ]),
         });
-        let agent = Agent::new(_client.clone(), vec![
+        let agent = Agent::new(client, vec![
             Tool {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
@@ -1490,7 +1502,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Tool guardrail tripped"));
 
         // Reset client for Output test
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Here is the secret data."),
@@ -1499,7 +1511,7 @@ mod tests {
                 },
             ]),
         });
-        let agent = Agent::new(_client.clone(), vec![]);
+        let agent = Agent::new(client, vec![]);
 
         // Test Output Guardrail
         let mut events = vec![];
@@ -1582,7 +1594,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_llm_judge_rejects_and_approves() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
@@ -1607,7 +1619,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(_client.clone(), vec![]);
+        let agent = Agent::new(client, vec![]);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
@@ -1625,7 +1637,7 @@ mod tests {
     async fn test_telemetry_metrics_emission() {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
@@ -1635,7 +1647,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(_client.clone(), vec![]);
+        let agent = Agent::new(client, vec![]);
 
         let mut cfg = AgentRunConfig::default();
         // Specifically setting a model that triggers cost estimation logic
@@ -1777,7 +1789,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_state_checkpointing() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1801,7 +1813,7 @@ mod tests {
             ]),
         });
 
-        let mutating_tool = Tool {
+        let mut mutating_tool = Tool {
             name: "mutating_tool".to_string(),
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
@@ -1809,7 +1821,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let agent = Agent::new(_client.clone(), vec![mutating_tool]);
+        let agent = Agent::new(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
         let mut cfg = AgentRunConfig::default();

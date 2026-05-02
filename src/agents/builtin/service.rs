@@ -326,7 +326,7 @@ impl AgentServiceImpl {
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
         tools.push(agent_tool());
         let agent = Arc::new(Agent::new(llm, tools));
         
@@ -367,7 +367,12 @@ impl AgentService for AgentServiceImpl {
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        // Inject memory accessor if using Anthropic3TierMemoryStore
+        let accessor = if let Some(_mem) = &memory {
+            None
+        } else { None };
+
+        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor);
         all_tools.push(agent_tool());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
@@ -512,7 +517,7 @@ impl AgentService for AgentServiceImpl {
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir);
+            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None);
             tools.push(agent_tool());
             let agent = Agent::new(llm, tools);
 
