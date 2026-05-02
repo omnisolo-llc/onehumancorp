@@ -66,8 +66,9 @@ impl OrgService for MyOrgService {
 
     async fn get_analytics(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
+        let is_mobile = request.metadata().get("x-client-type").map_or(false, |v| v == "mobile");
         let hub_clone1 = self.hub.clone();
         let hub_clone2 = self.hub.clone();
         let hub_clone3 = self.hub.clone();
@@ -78,7 +79,7 @@ impl OrgService for MyOrgService {
             tokio::task::spawn_blocking(move || { hub_clone3.tracker().summary("system") })
         );
         let agents = agents.unwrap_or_else(|_| vec![]);
-        let meetings = meetings.unwrap_or_else(|_| vec![]);
+        let mut meetings = meetings.unwrap_or_else(|_| vec![]);
         let summary = summary.unwrap_or_else(|_| Default::default());
         
         let mut total_msgs = 0;
@@ -97,6 +98,12 @@ impl OrgService for MyOrgService {
             }
         }
         
+        if is_mobile {
+            for m in &mut meetings {
+                m.transcript.clear();
+            }
+        }
+
         let audit_fidelity_pct = if total_msgs > 0 {
             (audited_msgs as f64 / total_msgs as f64) * 100.0
         } else {

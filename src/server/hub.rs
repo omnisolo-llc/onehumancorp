@@ -25,6 +25,8 @@ pub struct Hub {
     agents: RwLock<HashMap<String, Agent>>,
     meetings: RwLock<HashMap<String, MeetingRoom>>,
     inbox: RwLock<HashMap<String, Vec<Message>>>,
+    pub agent_cache: RwLock<Option<(std::time::Instant, Vec<Agent>)>>,
+    pub meetings_cache: RwLock<Option<(std::time::Instant, Vec<MeetingRoom>)>>,
     subs: RwLock<HashMap<String, broadcast::Sender<Message>>>,
     minimax_api_key: String,
     caps_tx: broadcast::Sender<AgentCapabilities>,
@@ -50,6 +52,8 @@ impl Hub {
             agents: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
             inbox: RwLock::new(HashMap::new()),
+            agent_cache: RwLock::new(None),
+            meetings_cache: RwLock::new(None),
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
@@ -75,6 +79,8 @@ impl Hub {
     pub fn register_agent(&self, agent: Agent) {
         let mut agents = self.agents.write().unwrap();
         agents.insert(agent.id.clone(), agent);
+        let mut cache = self.agent_cache.write().unwrap();
+        *cache = None;
     }
 
     pub fn get_agent(&self, id: &str) -> Option<Agent> {
@@ -93,12 +99,24 @@ impl Hub {
         
         agents.remove(id);
         inbox.remove(id);
+        let mut cache = self.agent_cache.write().unwrap();
+        *cache = None;
     }
 
     pub fn get_agents(&self) -> Vec<Agent> {
+        {
+            let cache = self.agent_cache.read().unwrap();
+            if let Some((time, ref agents_vec)) = *cache {
+                if time.elapsed() < std::time::Duration::from_secs(5) {
+                    return agents_vec.clone();
+                }
+            }
+        }
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+        let mut cache = self.agent_cache.write().unwrap();
+        *cache = Some((std::time::Instant::now(), agents_vec.clone()));
         agents_vec
     }
 
@@ -124,6 +142,8 @@ impl Hub {
         };
         
         meetings.insert(id, meeting.clone());
+        let mut cache = self.meetings_cache.write().unwrap();
+        *cache = None;
         
         for participant in participants {
             if let Some(agent) = agents.get_mut(&participant) {
@@ -131,6 +151,9 @@ impl Hub {
             }
         }
         
+        let mut agent_cache = self.agent_cache.write().unwrap();
+        *agent_cache = None;
+
         meeting
     }
 
@@ -161,6 +184,8 @@ impl Hub {
         if !msg.meeting_id.is_empty() {
             if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
                 meeting.transcript.push(msg.clone());
+                let mut cache = self.meetings_cache.write().unwrap();
+                *cache = None;
                 
                 // Aggressive AI Context Summarization
                 if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
@@ -215,8 +240,19 @@ impl Hub {
     }
 
     pub fn get_meetings(&self) -> Vec<MeetingRoom> {
+        {
+            let cache = self.meetings_cache.read().unwrap();
+            if let Some((time, ref meetings_vec)) = *cache {
+                if time.elapsed() < std::time::Duration::from_millis(500) {
+                    return meetings_vec.clone();
+                }
+            }
+        }
         let meetings = self.meetings.read().unwrap();
-        meetings.values().cloned().collect()
+        let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
+        let mut cache = self.meetings_cache.write().unwrap();
+        *cache = Some((std::time::Instant::now(), meetings_vec.clone()));
+        meetings_vec
     }
 
     pub fn get_inbox(&self, agent_id: &str) -> Vec<Message> {
