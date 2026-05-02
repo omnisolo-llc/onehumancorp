@@ -2,8 +2,7 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
-use tracing::{info, warn};
+use crate::mesh::transport::{MeshTransport, Message};
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
@@ -62,6 +61,7 @@ pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
 
