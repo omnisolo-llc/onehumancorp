@@ -662,7 +662,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         *share_store_called_clone.borrow_mut() = true;
                         let bs_ui_clone = bs_handle_clone.clone();
                         tokio::spawn(async move {
-                            if let Ok(mut client) = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let connect_future = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(
+                                std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())
+                            );
+                            if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_millis(500), connect_future).await {
                                 if let Ok(resp) = client.get_snapshots(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
                                     if let Some(snapshot) = resp.into_inner().snapshots.last() {
                                         let org_name = snapshot.org_name.clone();
@@ -685,7 +688,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                             }
-                            // Fallback if network fails
+                            // Fallback if network fails or times out
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = bs_ui_clone.upgrade() {
                                     let _ = ui.show();
