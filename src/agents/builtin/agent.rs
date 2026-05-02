@@ -543,17 +543,16 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
-                        let err = format!("LLM Recoverable error: {}", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: format!("Error: {}", msg),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: err,
+                            error: msg.clone(),
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -637,14 +636,13 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
-                            let err = format!("LLM Recoverable error: {}", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
+                                result: format!("Error: {}", msg),
                                 iteration,
                             });
-                            error = err;
+                            error = msg.clone();
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
@@ -1345,7 +1343,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result.contains("LLM Recoverable error: missing parameter X")
+                name == "llm_recoverable_tool" && result.contains("missing parameter X") && !result.contains("LLM Recoverable error:")
             } else {
                 false
             }
