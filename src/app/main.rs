@@ -568,6 +568,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
+                Box::leak(Box::new(cost_dashboard_ui));
             }
         }
     });
