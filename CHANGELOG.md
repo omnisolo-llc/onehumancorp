@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
+### Cloud Scaling Improvements
+- 🚀 Nova: [Business Share & Viral Loops] (#9302)
+
+### Privacy/Offline Improvements
+- 🚀 Nova: [Business Share & Viral Loops] (#9302)
+
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
