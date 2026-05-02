@@ -29,6 +29,8 @@ export component WelcomeChecklist inherits Window {
     in-out property <bool> insta_checked: false;
     in-out property <bool> share_checked: false;
     property <bool> all_done: prod_checked && insta_checked && share_checked;
+    property <int> completed_count: (prod_checked ? 1 : 0) + (insta_checked ? 1 : 0) + (share_checked ? 1 : 0);
+    property <string> progress_text: completed_count + " of 3 completed";
 
     VerticalBox {
         alignment: center;
@@ -47,6 +49,13 @@ export component WelcomeChecklist inherits Window {
                     color: white;
                     wrap: word-wrap;
                     font-family: "Outfit";
+                }
+
+                Text {
+                    text: root.progress_text;
+                    font-size: 14px;
+                    color: #a0aec0;
+                    font-family: "Inter";
                 }
 
                 HorizontalBox {
