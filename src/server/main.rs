@@ -1028,8 +1028,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let app = axum::Router::new()
-        .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
-        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::mesh_broadcast_handler))
+        .route("/mesh/subscribe", axum::routing::get(api::mesh::handler::mesh_subscribe_handler))
+        .route("/mesh/publish", axum::routing::post(api::mesh::handler::mesh_publish_handler))
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
 

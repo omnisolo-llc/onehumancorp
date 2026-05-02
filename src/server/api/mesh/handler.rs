@@ -6,7 +6,7 @@ use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
@@ -15,14 +15,13 @@ pub struct ConnectQuery {
     pub channel: String,
 }
 
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct BroadcastRequest {
     pub topic: String,
     pub payload: String,
 }
 
-pub async fn mesh_broadcast_handler(
+pub async fn mesh_publish_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     Json(req): Json<BroadcastRequest>,
 ) -> impl IntoResponse {
@@ -37,7 +36,7 @@ pub async fn mesh_broadcast_handler(
     }
 }
 
-pub async fn mesh_ws_handler(
+pub async fn mesh_subscribe_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
     Query(query): Query<ConnectQuery>,
@@ -107,16 +106,17 @@ mod tests {
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use reqwest;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     #[tokio::test]
-    async fn test_mesh_ws_handler() {
+    async fn test_mesh_subscribe_handler() {
         let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
         let transport_clone = transport.clone();
 
         let app = Router::new()
-            .route("/api/v1/mesh/connect", get(mesh_ws_handler))
+            .route("/mesh/subscribe", get(mesh_subscribe_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -131,7 +131,7 @@ mod tests {
             .unwrap();
         });
 
-        let ws_url = format!("ws://{}/api/v1/mesh/connect?channel=test_chan", addr);
+        let ws_url = format!("ws://{}/mesh/subscribe?channel=test_chan", addr);
         let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
         // Test sending a message from client to server (publish)
@@ -168,5 +168,55 @@ mod tests {
             }
         }
         assert!(found, "Did not receive the srv_test message");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_publish_handler() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport_clone = transport.clone();
+
+        let app = Router::new()
+            .route("/mesh/publish", axum::routing::post(mesh_publish_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        // Setup a subscriber to verify the publish
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let handler = Box::new(move |msg: MeshMessage| {
+            let _ = tx.try_send(msg);
+        });
+        let _cancel = transport_clone.subscribe("test_topic", handler).await.unwrap();
+
+        let client = reqwest::Client::new();
+        let publish_url = format!("http://{}/mesh/publish", addr);
+
+        let req_body = BroadcastRequest {
+            topic: "test_topic".to_string(),
+            payload: "hello_world".to_string(),
+        };
+
+        let res = client.post(&publish_url)
+            .json(&req_body)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), reqwest::StatusCode::OK);
+
+        // Verify the message was published
+        let received_msg = rx.recv().await.expect("Did not receive message");
+        assert_eq!(received_msg.topic, "test_topic");
+        assert_eq!(received_msg.payload, b"hello_world");
     }
 }

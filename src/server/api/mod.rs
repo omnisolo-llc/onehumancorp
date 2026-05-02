@@ -1,3 +1,3 @@
-pub mod mesh_handler;
+pub mod mesh;
 pub mod autodream;
 pub mod tenant;
