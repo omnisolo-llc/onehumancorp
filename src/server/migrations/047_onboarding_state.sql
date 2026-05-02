@@ -1,4 +1,3 @@
--- 058_onboarding_state.sql
 
 CREATE TABLE IF NOT EXISTS onboarding_state (
     tenant_id VARCHAR(255) NOT NULL,

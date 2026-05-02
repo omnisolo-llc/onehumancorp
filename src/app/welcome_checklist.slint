@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
@@ -8,27 +8,10 @@ export component WelcomeChecklist inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    property <float> confetti_y: -100;
-    property <float> confetti_opacity: 1.0;
-
-    init => {
-        confetti_y = 600;
-        confetti_opacity = 0.0;
-    }
-
     callback go_to_dashboard();
-    callback go_to_docs();
-    callback go_to_video();
-    callback go_to_support();
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
-    callback checklist_changed(int, bool);
-
-    in-out property <bool> prod_checked: false;
-    in-out property <bool> insta_checked: false;
-    in-out property <bool> share_checked: false;
-    property <bool> all_done: prod_checked && insta_checked && share_checked;
 
     VerticalBox {
         alignment: center;
@@ -51,15 +34,12 @@ export component WelcomeChecklist inherits Window {
 
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "✓"; color: #10b981; } 
+                    Text { text: "✓"; color: #10b981; }
                     Text { text: "Business live"; color: white; font-family: "Inter"; }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    CheckBox {
-                        checked <=> prod_checked;
-                        toggled => { root.checklist_changed(1, self.checked); }
-                    }
+                    Text { text: "○"; color: white; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
@@ -69,10 +49,7 @@ export component WelcomeChecklist inherits Window {
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    CheckBox {
-                        checked <=> insta_checked;
-                        toggled => { root.checklist_changed(2, self.checked); }
-                    }
+                    Text { text: "○"; color: white; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
@@ -82,38 +59,12 @@ export component WelcomeChecklist inherits Window {
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    CheckBox {
-                        checked <=> share_checked;
-                        toggled => { root.checklist_changed(3, self.checked); }
-                    }
+                    Text { text: "○"; color: white; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         clicked => { root.go_to_share_link(); }
                         Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
-                    }
-                }
-
-                if (all_done) : Text {
-                    text: "Congratulations! You are complete and ready to grow your business.";
-                    color: #10b981;
-                    font-family: "Outfit";
-                    font-weight: 700;
-                }
-
-                HorizontalBox {
-                    spacing: 10px;
-                    TouchArea {
-                        clicked => { root.go_to_docs(); }
-                        Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; }
-                    }
-                    TouchArea {
-                        clicked => { root.go_to_video(); }
-                        Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; }
-                    }
-                    TouchArea {
-                        clicked => { root.go_to_support(); }
-                        Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; }
                     }
                 }
 
@@ -125,16 +76,6 @@ export component WelcomeChecklist inherits Window {
                 }
             }
         }
-    }
-
-    Text {
-        text: "🎊🎉🎊🎉🎊🎉🎊🎉";
-        font-size: 40px;
-        x: root.width / 2 - self.width / 2;
-        y: confetti_y * 1px;
-        opacity: confetti_opacity;
-        animate y { duration: 2500ms; easing: ease-out; }
-        animate opacity { duration: 2500ms; }
     }
 }
 
