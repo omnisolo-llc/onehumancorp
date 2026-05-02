@@ -2,11 +2,11 @@ import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider } from "
 import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
-    width: 600px;
-    height: 500px;
+    width: 375px;
+    height: 800px;
     title: "Configure AI Agent";
 
-    callback activate_agent(string, bool, bool, string);
+    callback activate_agent(string, bool, bool, bool, bool, string);
     callback next_step();
     callback save_state();
 
@@ -14,6 +14,8 @@ export component AgentConfig inherits Window {
     in-out property <string> selected_agent: "";
     in-out property <bool> can_reply: false;
     in-out property <bool> can_social: false;
+    in-out property <bool> can_write_descriptions: false;
+    in-out property <bool> can_send_updates: false;
     in-out property <float> frequency_value: 2.0;
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
     in-out property <bool> is_advanced: false;
@@ -47,7 +49,7 @@ export component AgentConfig inherits Window {
             spacing: 10px;
             Text { text: "Choose an agent to add to your team"; color: #1e293b; }
 
-            HorizontalBox {
+            VerticalBox {
                 spacing: 10px;
                 GlassCard {
                     height: 80px;
@@ -55,6 +57,7 @@ export component AgentConfig inherits Window {
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        CheckBox { text: "Add to my team"; checked: selected_agent == "Customer Support"; toggled => { selected_agent = "Customer Support"; } }
                     }
                     TouchArea { clicked => { selected_agent = "Customer Support"; } }
                 }
@@ -64,8 +67,39 @@ export component AgentConfig inherits Window {
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        CheckBox { text: "Add to my team"; checked: selected_agent == "Social Media Manager"; toggled => { selected_agent = "Social Media Manager"; } }
                     }
                     TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "SEO Booster" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🚀 SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Marketer"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        CheckBox { text: "Add to my team"; checked: selected_agent == "SEO Booster"; toggled => { selected_agent = "SEO Booster"; } }
+                    }
+                    TouchArea { clicked => { selected_agent = "SEO Booster"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Order Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "📦 Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Operations Lead"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        CheckBox { text: "Add to my team"; checked: selected_agent == "Order Manager"; toggled => { selected_agent = "Order Manager"; } }
+                    }
+                    TouchArea { clicked => { selected_agent = "Order Manager"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: selected_agent == "Email Marketer" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "📧 Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "The Communicator"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                        CheckBox { text: "Add to my team"; checked: selected_agent == "Email Marketer"; toggled => { selected_agent = "Email Marketer"; } }
+                    }
+                    TouchArea { clicked => { selected_agent = "Email Marketer"; } }
                 }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }
@@ -83,6 +117,14 @@ export component AgentConfig inherits Window {
             HorizontalBox {
                 Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
                 CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            }
+            HorizontalBox {
+                Text { text: "Write product descriptions"; color: #1e293b; }
+                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+            }
+            HorizontalBox {
+                Text { text: "Send order updates"; color: #1e293b; }
+                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
             }
         }
 
@@ -118,6 +160,8 @@ export component AgentConfig inherits Window {
                     Text { text: "Agent: " + selected_agent; color: #1e293b; }
                     Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
                     Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Write descriptions: " + (can_write_descriptions ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Send updates: " + (can_send_updates ? "Yes" : "No"); color: #1e293b; }
                     Text { text: "Schedule: " + frequency; color: #1e293b; }
                 }
             }
@@ -139,7 +183,7 @@ export component AgentConfig inherits Window {
                         next_step();
                     } else {
                         show_toast = true;
-                        activate_agent(selected_agent, can_reply, can_social, frequency);
+                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
                     }
                 }
             }
