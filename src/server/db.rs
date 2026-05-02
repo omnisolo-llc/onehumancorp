@@ -30,6 +30,12 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
+            use sqlx::Executor;
+            // Initialize local PowerSync sync rules / tables
+            use sqlx::ConnectOptions;
+            let mut conn = conn_opts.clone().connect().await?;
+            conn.execute("CREATE TABLE IF NOT EXISTS crdt_deltas (tenant_id TEXT NOT NULL, id TEXT NOT NULL, entity_id TEXT NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL, synced_to_cloud BOOLEAN DEFAULT FALSE, PRIMARY KEY (tenant_id, id));").await?;
+
             let sqlite_pool = SqlitePoolOptions::new()
                 .connect_with(conn_opts)
                 .await?;
