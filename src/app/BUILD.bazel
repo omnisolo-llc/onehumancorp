@@ -1,10 +1,12 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 cargo_build_script(
     name = "build_script",
     srcs = ["build.rs"],
     data = [
+        "tooltips.json",
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",
@@ -28,7 +30,6 @@ cargo_build_script(
         "grow_business.slint",
         "handoffs.slint",
         "help_center.slint",
-        "inbox.slint",
         "integrations.slint",
         "interactive_walkthrough.slint",
         "landing.slint",
@@ -62,9 +63,16 @@ cargo_build_script(
         "video_tutorials.slint",
         "website_builder.slint",
         "welcome_checklist.slint",
-        "//src/proto:hub.proto",
-        "@protobuf//:protoc",
-    ],
+    ] + select({
+        "@rules_rust//rust/platform:wasm32-unknown-unknown": [],
+        "//conditions:default": [
+            "@protobuf//:protoc",
+            "//src/proto:agent_service.proto",
+            "//src/proto:common.proto",
+            "//src/proto:hub.proto",
+            "//src/proto:organization.proto",
+        ],
+    }),
     edition = "2024",
     deps = [
         "@crates//:slint-build",
@@ -78,6 +86,7 @@ rust_binary(
         "main.rs",
     ],
     data = [
+        "tooltips.json",
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",
@@ -100,7 +109,6 @@ rust_binary(
         "grow_business.slint",
         "handoffs.slint",
         "help_center.slint",
-        "inbox.slint",
         "integrations.slint",
         "interactive_walkthrough.slint",
         "landing.slint",
@@ -108,7 +116,6 @@ rust_binary(
         "login.slint",
         "logs.slint",
         "meetings.slint",
-        "mesh_message.slint",
         "my_plan.slint",
         "ongoing_management.slint",
         "password_input.slint",
@@ -153,9 +160,38 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "app_wasm_bin",
+    srcs = ["main.rs"],
+    edition = "2024",
+    rustc_flags = [
+        "--cfg=feature=\"wasm\"",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":build_script",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:serde_yaml",
+        "@crates//:slint",
+        "@crates//:wasm-bindgen",
+        "@crates//:wasm-bindgen-futures",
+    ],
+)
+
+rust_wasm_bindgen(
+    name = "app_wasm",
+    target = "web",
+    wasm_file = ":app_wasm_bin",
+    visibility = ["//visibility:public"],
+)
+
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
+    "index.html",
 ])
 
 rust_test(
@@ -166,6 +202,7 @@ rust_test(
     ],
     crate_root = "main.rs",
     data = [
+        "tooltips.json",
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",
@@ -188,7 +225,6 @@ rust_test(
         "grow_business.slint",
         "handoffs.slint",
         "help_center.slint",
-        "inbox.slint",
         "integrations.slint",
         "interactive_walkthrough.slint",
         "landing.slint",
@@ -196,7 +232,6 @@ rust_test(
         "login.slint",
         "logs.slint",
         "meetings.slint",
-        "mesh_message.slint",
         "my_plan.slint",
         "ongoing_management.slint",
         "password_input.slint",

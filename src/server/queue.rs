@@ -805,7 +805,7 @@ mod tests {
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                         Ok(true)
                     })
                 })
@@ -859,7 +859,7 @@ mod tests {
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                         Ok(true)
                     })
                 })
