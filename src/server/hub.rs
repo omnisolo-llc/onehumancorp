@@ -593,7 +593,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(30))
+            .acquire_timeout(std::time::Duration::from_secs(1))
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);

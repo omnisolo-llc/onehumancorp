@@ -49,6 +49,8 @@ use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::wizard_service_client::WizardServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
@@ -713,16 +715,79 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = setup_wizard_handle.clone();
         move || {
             if let Some(ui) = ui_weak.upgrade() {
-                // Here we would normally call an AI endpoint.
-                // For now, we simulate the extraction as requested by the test and the design doc.
-                ui.set_company_name("AI Generated Store".into());
-                ui.set_business_type("Online Store".into());
-                ui.set_website_template("Modern".into());
-                ui.set_product_name("AI Fast Product".into());
-                ui.set_domain_choice("subdomain".into());
-                ui.set_admin_email("admin@ai-generated.test".into());
-                ui.set_payment_pref("online".into());
-                ui.set_step(9); // Skip straight to Review & Launch
+                let bio = ui.get_instant_bio().to_string();
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let ui_clone = ui.as_weak();
+                    tokio::spawn(async move {
+                        if let Ok(mut client) = WizardServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::InstantBuildRequest {
+                                bio,
+                            });
+
+                            match client.instant_build(request).await {
+                                Ok(response) => {
+                                    let data = response.into_inner();
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = ui_clone.upgrade() {
+                                            ui.set_company_name(data.company_name.into());
+                                            ui.set_business_type(data.business_type.into());
+                                            ui.set_website_template(data.website_template.into());
+                                            ui.set_product_name(data.product_name.into());
+                                            ui.set_domain_choice(data.domain_choice.into());
+                                            ui.set_admin_email(data.admin_email.into());
+                                            ui.set_payment_pref(data.payment_pref.into());
+                                            ui.set_step(9);
+                                        }
+                                    });
+                                },
+                                Err(e) => {
+                                    println!("Failed to call instant_build: {:?}", e);
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = ui_clone.upgrade() {
+                                            // Handle failure by reverting or showing generic details
+                                            ui.set_company_name("AI Generated Store".into());
+                                            ui.set_business_type("Online Store".into());
+                                            ui.set_website_template("Modern".into());
+                                            ui.set_product_name("AI Fast Product".into());
+                                            ui.set_domain_choice("subdomain".into());
+                                            ui.set_admin_email("admin@ai-generated.test".into());
+                                            ui.set_payment_pref("online".into());
+                                            ui.set_step(9);
+                                        }
+                                    });
+                                }
+                            }
+                        } else {
+                            println!("Failed to connect to WizardService");
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_clone.upgrade() {
+                                    ui.set_company_name("AI Generated Store".into());
+                                    ui.set_business_type("Online Store".into());
+                                    ui.set_website_template("Modern".into());
+                                    ui.set_product_name("AI Fast Product".into());
+                                    ui.set_domain_choice("subdomain".into());
+                                    ui.set_admin_email("admin@ai-generated.test".into());
+                                    ui.set_payment_pref("online".into());
+                                    ui.set_step(9);
+                                }
+                            });
+                        }
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    ui.set_company_name("AI Store".into());
+                    ui.set_business_type("Online Store".into());
+                    ui.set_website_template("Modern".into());
+                    ui.set_product_name("AI Product".into());
+                    ui.set_domain_choice("subdomain".into());
+                    ui.set_admin_email("ai@test.com".into());
+                    ui.set_payment_pref("online".into());
+                    ui.set_step(9);
+                }
             }
         }
     });

@@ -1317,6 +1317,21 @@ service WizardService {
   rpc GetWizardStatus(EmptyRequest) returns (WizardStatusProtoResponse);
   rpc ConfigureWizard(WizardConfigureRequest) returns (WizardStatusProtoResponse);
   rpc VerifyOnboarding(EmptyRequest) returns (OnboardingVerifyResponse);
+  rpc InstantBuild(InstantBuildRequest) returns (InstantBuildResponse);
+}
+
+message InstantBuildRequest {
+  string bio = 1;
+}
+
+message InstantBuildResponse {
+  string company_name = 1;
+  string business_type = 2;
+  string website_template = 3;
+  string product_name = 4;
+  string domain_choice = 5;
+  string admin_email = 6;
+  string payment_pref = 7;
 }
 
 message GetMeetingsResponse {
