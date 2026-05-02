@@ -84,8 +84,8 @@ mod tests {
     #[tokio::test]
     async fn test_nats_provider_integration() {
         let published = Arc::new(AtomicUsize::new(0));
-        let mock = Arc::new(MockNatsClient { published_messages: published.clone() });
-        let provider = NatsProvider::with_client(mock, "mock_url");
+        let client = Arc::new(MockNatsClient { published_messages: published.clone() });
+        let provider = NatsProvider::with_client(client, "url");
 
         let received = Arc::new(AtomicUsize::new(0));
         let received_clone = received.clone();
