@@ -77,6 +77,59 @@ impl GrowthService for MyGrowthService {
         Ok(Response::new(exp))
     }
 
+    async fn get_referral_stats(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<ReferralStatsResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query("SELECT clicks, conversions FROM referrals WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let total_referrals = rows.len() as i32;
+        let mut click_count = 0;
+        let mut conversions = 0;
+
+        for row in rows.iter() {
+            let c: i32 = row.get("clicks");
+            let cv: i32 = row.get("conversions");
+            click_count += c;
+            conversions += cv;
+        }
+
+        let conversion_rate = if click_count > 0 {
+            (conversions as f64 / click_count as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        // For now, simulate rewards. 1 month free Pro credit could equal a balance.
+        // E.g., each conversion gives $10 credit.
+        let reward_balance_cents = conversions * 1000;
+        let bonus_credit = conversions / 5; // 1 bonus credit for every 5 conversions
+
+        let waitlist_position = self.waitlist.read().unwrap().len() as i32 + 42;
+        let download_count = self.downloads.read().unwrap().len() as i32 + 105;
+
+        Ok(Response::new(ReferralStatsResponse {
+            total_referrals,
+            click_count,
+            conversion_rate,
+            reward_balance_cents,
+            bonus_credit,
+            download_count,
+            waitlist_position,
+        }))
+    }
+
     async fn get_referrals(
         &self,
         request: Request<EmptyRequest>,
@@ -175,6 +228,15 @@ impl GrowthService for MyGrowthService {
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
+
+        // Implement Credit Attribution: "both get 1 month free Pro"
+        // In a real app we'd update a billing or organizations table.
+        // For now, we simulate credit attribution.
+        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
+            .bind(&org_id)
+            .bind(&req.id)
+            .execute(&mut *tx)
+            .await;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 

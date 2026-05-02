@@ -11,8 +11,6 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:18789',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    launchOptions: {
-    },
   },
   projects: [
     {
@@ -20,4 +18,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  webServer: {
+    command: 'docker compose -f deploy/docker-compose.e2e.yml up -d',
+    url: 'http://localhost:5432',
+    reuseExistingServer: !process.env.CI,
+    waitForSocket: 'postgres:5432',
+    timeout: 120 * 1000,
+  },
 });
