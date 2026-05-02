@@ -34,7 +34,6 @@ def define_playwright_tests():
             timeout = "long",
             tags = [
                 "e2e",
-                "manual",
                 "no-remote-exec",
                 "requires-docker",
                 "exclusive",

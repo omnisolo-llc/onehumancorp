@@ -10,10 +10,4 @@ CREATE TABLE IF NOT EXISTS onboarding_state (
     PRIMARY KEY (tenant_id, organization_id)
 );
 
-
 ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_isolation_onboarding_state ON onboarding_state;
-CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state USING (
-    organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system'
-);
