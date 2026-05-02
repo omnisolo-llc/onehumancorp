@@ -49,21 +49,15 @@ impl TeammateMesh for TeammateMeshClient {
 }
 
 pub async fn create_teammate_mesh(redis_url: Option<&str>) -> Arc<dyn TeammateMesh> {
-    if let Some(url) = redis_url {
-        match RedisTransport::new(url).await {
-            Ok(redis_transport) => {
-                info!("Successfully connected to Redis for TeammateMesh.");
-                return Arc::new(TeammateMeshClient::new(Arc::new(redis_transport)));
-            }
-            Err(e) => {
-                warn!("Failed to connect to Redis for TeammateMesh: {}. Falling back to MemoryTransport.", e);
-            }
+    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+    let transport = match crate::mesh::transport::create_transport(redis_url, is_cloud).await {
+        Ok(t) => t,
+        Err(e) => {
+            warn!("Failed to initialize mesh transport: {}. Falling back to MemoryTransport.", e);
+            Arc::new(crate::mesh::transport::MemoryTransport::new())
         }
-    } else {
-        info!("No Redis URL provided for TeammateMesh. Using MemoryTransport.");
-    }
-
-    Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
+    };
+    Arc::new(TeammateMeshClient::new(transport))
 }
 
 #[cfg(test)]
