@@ -504,6 +504,10 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    let bs_handle_ig = business_share_handle.clone();
+                    business_share_ui.on_share_to_instagram(move || { if let Some(ui) = bs_handle_ig.upgrade() { println!("Sharing to IG: {}", ui.get_share_link()); } });
+                    let bs_handle_x = business_share_handle.clone();
+                    business_share_ui.on_share_to_x(move || { if let Some(ui) = bs_handle_x.upgrade() { println!("Sharing to X: {}", ui.get_share_link()); } });
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
