@@ -22,39 +22,9 @@ cd "$workspace_root"
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
-# Ensure playwright browsers are installed (shared cache)
-export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/tmp/ohc-playwright-browsers}"
-mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
-
-# Chromium is pre-cached at /tmp/ohc-playwright-browsers/chromium-1222
-# Skip playwright install since it fails on Ubuntu 26.04
-# Use the full Chrome installation from /tmp/chrome-extract which has all required resources
-CHROMIUM_SRC="/tmp/chrome-extract/opt/google/chrome/chrome"
-PLAYWRIGHT_BROWSERS_PATH="$workspace_root/.playwright-browsers"
-mkdir -p "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64"
-if [[ -f "$CHROMIUM_SRC" ]]; then
-  echo "[playwright] Chromium found at $CHROMIUM_SRC"
-  # Create a local copy that will be accessible in the sandbox
-  cp "$CHROMIUM_SRC" "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
-  chmod +x "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
-  echo "[playwright] Chromium copied to $PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
-  # Copy ALL required resources - entire chrome directory contents
-  cp -r /tmp/chrome-extract/opt/google/chrome/* "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/" 2>/dev/null || true
-  # Copy the chrome-sandbox with correct permissions
-  if [[ -f "/tmp/chrome-extract/opt/google/chrome/chrome-sandbox" ]]; then
-    cp "/tmp/chrome-extract/opt/google/chrome/chrome-sandbox" "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome-sandbox"
-    chmod 755 "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome-sandbox"
-  fi
-else
-  echo "[playwright] WARNING: No chromium found at $CHROMIUM_SRC"
-  if [[ -n "${CI:-}" ]]; then
-    echo "[playwright] Running on CI, installing chromium via playwright..."
-    pnpm exec playwright install chromium --with-deps
-  fi
-fi
-# Set the executable path for playwright
+# Set the executable path for playwright (only relevant if running on host, but kept for compatibility)
+export PLAYWRIGHT_BROWSERS_PATH="$workspace_root/.playwright-browsers"
 export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
-export PLAYWRIGHT_BROWSERS_PATH
 
 # Cleanup handler
 cleanup() {
@@ -179,5 +149,5 @@ docker run --rm --network host \
   -e CI=true \
   -e BASE_URL="http://localhost:18789" \
   mcr.microsoft.com/playwright:v1.40.0-jammy \
-  sh -c "corepack enable && pnpm install && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
+  sh -c "corepack enable && pnpm install --frozen-lockfile && (pnpm exec playwright install chromium || true) && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
 echo "[playwright] Playwright command finished"
