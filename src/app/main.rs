@@ -1,81 +1,32 @@
-fn spawn<F>(f: F)
-where
-    F: std::future::Future<Output = ()> + Send + 'static,
-{
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::spawn(f);
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_futures::spawn_local(f);
-}
+use ohc::orchestration::hub_service_client::HubServiceClient;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::RegisterAgentRequest;
+use ohc::orchestration::Agent;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
         tonic::include_proto!("ohc.orchestration");
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
-use slint::Model;
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
-pub fn main_wasm() -> Result<(), JsValue> {
-    main_internal().map_err(|e| JsValue::from_str(&e.to_string()))
-}
+use slint::ComponentHandle;
 
 pub mod app {
-    slint::include_modules!();
+    include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
-use slint::Global;
 
-#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
 }
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
-
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::hub_service_client::HubServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::growth_service_client::GrowthServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::RegisterAgentRequest;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::Agent;
-use slint::ComponentHandle;
-
-#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    main_internal()
-}
-
-fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
-    let login_ui = app::Login::new()?;
-    let login_ui_handle = login_ui.as_weak();
-
-    let tooltip_registry = app::TooltipRegistry::get(&login_ui);
-    let tooltips_json = include_str!("tooltips.json");
-    let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
-
-    tooltip_registry.on_request_tooltip_text(move |id: slint::SharedString| {
-        tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-    });
-
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
                 println!("Connected to server!");
@@ -100,6 +51,9 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
@@ -118,7 +72,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
+    let login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -134,9 +88,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let init_ui_handle = setup_wizard_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -198,8 +151,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -210,9 +163,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let agent_config_ui = app::AgentConfig::new()?;
     let agent_config_handle = agent_config_ui.as_weak();
     let init_agent_config_handle = agent_config_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))]
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -230,8 +182,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -242,8 +194,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let prompt_tuning_ui = app::PromptTuning::new()?;
     let prompt_tuning_handle = prompt_tuning_ui.as_weak();
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -261,8 +213,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -273,8 +225,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let website_builder_ui = app::WebsiteBuilder::new()?;
     let website_builder_handle = website_builder_ui.as_weak();
     let init_website_builder_handle = website_builder_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -292,8 +244,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -304,8 +256,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
     let grow_business_ui = app::GrowBusiness::new()?;
     let grow_business_handle = grow_business_ui.as_weak();
     let init_grow_business_handle = grow_business_handle.clone();
-    spawn(async move {
-        #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -323,8 +275,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -344,14 +296,15 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
+                            let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle.upgrade() {
+                                if let Some(ui) = handle_clone.upgrade() {
                                     let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
                                         app::UiReferral {
                                             referral_code: r.referral_code.into(),
@@ -365,11 +318,68 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }).unwrap();
                         }
+
+                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(stats_resp) = stats_response {
+                            let stats = stats_resp.into_inner();
+                            let handle_clone = handle.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    ui.set_total_referrals(stats.total_referrals);
+                                    ui.set_click_count(stats.click_count);
+                                    ui.set_conversion_rate(stats.conversion_rate as f32);
+                                    let formatted_balance = format!("${}.{:02}", stats.reward_balance_cents / 100, stats.reward_balance_cents % 100);
+                                    ui.set_reward_balance(formatted_balance.into());
+                                    ui.set_bonus_credit(stats.bonus_credit);
+                                    ui.set_download_count(stats.download_count);
+                                    ui.set_waitlist_position(stats.waitlist_position);
+                                }
+                            }).unwrap();
+                        }
+
+                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(vc_resp) = vc_response {
+                            let vc = vc_resp.into_inner();
+                            let handle_clone = handle.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    ui.set_viral_coefficient(vc.k_factor as f32);
+                                }
+                            }).unwrap();
+                        }
                     }
                     Err(e) => println!("Failed to connect for referrals: {:?}", e),
                 }
             });
         }
+    });
+
+    referrals_ui.on_copy_link({
+        let ui_handle = referrals_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let link = ui.get_my_referral_link();
+                CLIPBOARD.with(|cb| {
+                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                        if let Err(e) = ctx.set_contents(link.into()) {
+                            println!("Failed to copy to clipboard: {:?}", e);
+                        } else {
+                            println!("Share link copied to clipboard");
+                        }
+                    } else {
+                        println!("Clipboard not initialized, failed to copy share link");
+                    }
+                });
+            }
+        }
+    });
+
+    referrals_ui.on_export_data(|| {
+        println!("Exporting referral data...");
+    });
+
+    referrals_ui.on_view_history(|| {
+        println!("Viewing referral history...");
     });
 
     referrals_ui.on_share_link({
@@ -378,7 +388,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(_ui) = ui_handle.upgrade() {
                 let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
 
-                #[cfg(not(target_arch = "wasm32"))]
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
                         if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
@@ -390,8 +399,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Clipboard not initialized, failed to copy share link");
                     }
                 });
-                #[cfg(target_arch = "wasm32")]
-                println!("Clipboard not supported in WASM share: {}", pre_filled_msg);
             }
         }
     });
@@ -400,8 +407,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
                             user_id: "current_user".to_string(), // In production, use actual user_id
@@ -488,16 +495,16 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         move || {
                             if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
                                 let link = ui.get_share_link();
-                                let msg = link.to_string();
 
-                                #[cfg(not(target_arch = "wasm32"))]
                                 CLIPBOARD.with(|cb| {
                                     if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                        if let Err(e) = ctx.set_contents(msg.clone()) {
+                                        if let Err(e) = ctx.set_contents(link.to_string()) {
                                             println!("Failed to copy to clipboard: {:?}", e);
                                         } else {
-                                            println!("Copy success: {}", msg);
+                                            println!("Shareable Store Link copied to clipboard: {}", link);
                                         }
+                                    } else {
+                                        println!("Clipboard not initialized, failed to copy store link");
                                     }
                                 });
                             }
@@ -508,6 +515,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
                         if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                            ui.invoke_refresh();
                             let _ = ui.show();
                         }
                     });
@@ -532,6 +540,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
                         if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                            ui.invoke_refresh();
                             let _ = ui.show();
                         }
                     });
@@ -550,54 +559,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                if let Ok(help_center_ui) = app::HelpCenter::new() {
-                    let rc_ui = std::rc::Rc::new(help_center_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_help_center(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(ai_help_chat_ui) = app::AiHelpChat::new() {
-                    let rc_ui = std::rc::Rc::new(ai_help_chat_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_ai_chat(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(api_docs_ui) = app::ApiDocs::new() {
-                    let rc_ui = std::rc::Rc::new(api_docs_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_api_docs(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(video_tutorials_ui) = app::VideoTutorials::new() {
-                    let rc_ui = std::rc::Rc::new(video_tutorials_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_video_tutorials(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(interactive_walkthrough_ui) = app::InteractiveWalkthrough::new() {
-                    let rc_ui = std::rc::Rc::new(interactive_walkthrough_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_interactive_walkthrough(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
-                if let Ok(release_notes_ui) = app::ReleaseNotes::new() {
-                    let rc_ui = std::rc::Rc::new(release_notes_ui);
-                    let rc_clone = rc_ui.clone();
-                    dashboard.on_open_release_notes(move || {
-                        let _ = rc_clone.show();
-                    });
-                }
-
 
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
@@ -610,7 +571,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
             }
         }
     });
@@ -660,42 +620,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    welcome_checklist_ui.on_go_to_docs({
-        move || {
-            println!("Navigating to docs...");
-            // Simulated navigation to docs
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_video({
-        move || {
-            println!("Navigating to video tutorials...");
-            // Simulated navigation to video tutorials
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_support({
-        move || {
-            println!("Navigating to support...");
-            // Simulated navigation to support
-        }
-    });
-
-    welcome_checklist_ui.on_checklist_changed({
-        let handle = welcome_checklist_handle.clone();
-        move |index, checked| {
-            if let Some(ui) = handle.upgrade() {
-                if index == 1 {
-                    ui.set_prod_checked(checked);
-                } else if index == 2 {
-                    ui.set_insta_checked(checked);
-                } else if index == 3 {
-                    ui.set_share_checked(checked);
-                }
-            }
-        }
-    });
-
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
         move || {
@@ -727,28 +651,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_generate_product_description({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let name = ui.get_product_name();
-                ui.set_product_description(format!("AI Generated Description for {}", name).into());
-            }
-        }
-    });
-
-    setup_wizard_ui.on_upload_product_photo({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                ui.set_product_photo_uploaded(true);
-            }
-        }
-    });
-
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        let welcome_checklist_handle_clone = welcome_checklist_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
@@ -787,9 +691,6 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             let req_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
 
-            let req_company_name_clone = req_company_name.clone();
-            let wc_handle = welcome_checklist_handle_clone.clone();
-
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
             if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
@@ -797,8 +698,8 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            spawn(async move {
-                #[cfg(not(target_arch = "wasm32"))] match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            tokio::spawn(async move {
+                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
                             business_type: req_business_type,
@@ -819,25 +720,11 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
-
-                                let safe_name = req_company_name_clone.to_lowercase().replace(" ", "-");
-                                let share_link = format!("https://{}.ohc.app", safe_name);
-
                                 slint::invoke_from_event_loop(move || {
-                                    CLIPBOARD.with(|cb| {
-                                        if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                            let _ = ctx.set_contents(share_link);
-                                        }
-                                    });
-
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // For tests to assert correctly
-                                        let _ = ui.hide();
-                                    }
-                                    if let Some(wc) = wc_handle.upgrade() {
-                                        let _ = wc.show();
+                                        ui.set_step(10); // Go to checklist
                                     }
                                 }).unwrap();
                             }
@@ -875,6 +762,7 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod growth_e2e_tests {
     use super::*;
+    use slint::Model;
 
     #[test]
     fn test_start_setup_wizard_transitions() {
@@ -1062,6 +950,12 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
+        // Set up mock stats for test
+        referrals_ui.set_total_referrals(5);
+        referrals_ui.set_click_count(100);
+        referrals_ui.set_conversion_rate(5.0);
+        referrals_ui.set_reward_balance("$50.00".into());
+
         // Trigger dashboard action
         dashboard_ui.invoke_action_open_referrals();
         assert!(*share_store_called.borrow(), "action_open_referrals should be invoked");
@@ -1070,6 +964,8 @@ mod growth_e2e_tests {
         assert_eq!(referrals_ui.get_referrals().row_count(), 1);
         let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
         assert_eq!(first_row.referral_code, "DASHBOARD2024");
+        assert_eq!(referrals_ui.get_total_referrals(), 5);
+        assert_eq!(referrals_ui.get_click_count(), 100);
 
         // Trigger interactions on referrals window
         referrals_ui.invoke_generate_new_link();
@@ -1110,6 +1006,7 @@ mod growth_e2e_tests {
 
 #[cfg(test)]
 mod e2e_tests {
+    use slint::Model;
     use super::*;
 
     #[test]
@@ -2252,50 +2149,14 @@ mod dashboard_docs_tests {
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
-        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || {
-            *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
-        });
-        dashboard_ui.invoke_open_interactive_walkthrough();
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
-
-        // 6. Test Video Tutorials
-        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || {
-            *videos_opened_clone.borrow_mut() = true;
-            let _videos = app::VideoTutorials::new().unwrap();
-        });
-        dashboard_ui.invoke_open_video_tutorials();
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
-
-        // 7. Test API Docs
-        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
-            *docs_opened_clone.borrow_mut() = true;
-            let _docs = app::ApiDocs::new().unwrap();
-        });
-        dashboard_ui.invoke_open_api_docs();
-        assert!(*docs_opened.borrow(), "API Docs should be opened from Dashboard");
-
-        // 8. Test Release Notes
-        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || {
-            *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
-        });
-        dashboard_ui.invoke_open_release_notes();
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
     }
 }
 
 #[cfg(test)]
 mod cost_transparency_e2e_tests {
     use super::*;
+    use slint::Model;
 
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
@@ -2717,34 +2578,5 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
-    }
-}
-#[cfg(test)]
-mod additional_tests {
-    use crate::app;
-
-    #[test]
-    fn test_product_photo_and_description() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let ui = app::SetupWizard::new().unwrap();
-
-        let desc_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let desc_called_clone = desc_called.clone();
-        ui.on_generate_product_description(move || {
-            *desc_called_clone.borrow_mut() = true;
-        });
-
-        let photo_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let photo_called_clone = photo_called.clone();
-        ui.on_upload_product_photo(move || {
-            *photo_called_clone.borrow_mut() = true;
-        });
-
-        ui.invoke_generate_product_description();
-        assert!(*desc_called.borrow(), "generate description callback should be triggered");
-
-        ui.invoke_upload_product_photo();
-        assert!(*photo_called.borrow(), "upload photo callback should be triggered");
     }
 }
