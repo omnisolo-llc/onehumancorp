@@ -1,26 +1,29 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component ApiDocs inherits Window {
     width: 800px;
     height: 600px;
     title: "API Reference (Advanced)";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
-        padding: 16px;
+        padding: 24px;
         spacing: 20px;
 
         Text {
             text: "Developer API";
             font-size: 24px;
             font-weight: 700;
-            color: #0f172a;
+            color: white;
+            font-family: "Outfit";
         }
 
         Text {
             text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
             color: #ef4444; // red warning
             wrap: word-wrap;
+            font-family: "Inter";
         }
 
         ScrollView {
@@ -29,13 +32,13 @@ export component ApiDocs inherits Window {
 
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #334155; }
-                    Rectangle {
-                        background: #1e293b; border-radius: 8px; // dark theme for code
+                    Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #94a3b8; font-family: "Outfit"; }
+                    GlassCard {
+                        background: #1e293b; // Code block theme
                         VerticalBox {
                             padding: 16px; spacing: 8px;
-                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
-                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; font-family: "Inter"; } // green for GET
+                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; font-family: "Inter"; }
                         }
                     }
                 }

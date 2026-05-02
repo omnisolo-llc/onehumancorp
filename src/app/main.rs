@@ -20,6 +20,13 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
+    static WINDOWS: RefCell<Vec<Box<dyn std::any::Any>>> = const { RefCell::new(Vec::new()) };
+}
+
+fn keep_alive<T: 'static>(ui: T) {
+    WINDOWS.with(|windows| {
+        windows.borrow_mut().push(Box::new(ui));
+    });
 }
 
 #[tokio::main]
@@ -284,10 +291,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agent_config_ui));
-    Box::leak(Box::new(prompt_tuning_ui));
-    Box::leak(Box::new(website_builder_ui));
-    Box::leak(Box::new(grow_business_ui));
+    keep_alive(agent_config_ui);
+    keep_alive(prompt_tuning_ui);
+    keep_alive(website_builder_ui);
+    keep_alive(grow_business_ui);
 
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
@@ -474,8 +481,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
+                    keep_alive(business_share_ui);
                 } else {
                     let referrals_handle_clone = referrals_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
@@ -507,10 +513,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
                 let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
+                keep_alive(dashboard);
 
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
+                keep_alive(my_plan_ui);
+                keep_alive(pricing_ui);
             }
         }
     });
@@ -528,7 +534,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(dashboard) = app::Dashboard::new() {
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+                keep_alive(dashboard);
             }
         }
     });
@@ -542,7 +548,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(dashboard) = app::Dashboard::new() {
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+                keep_alive(dashboard);
             }
         }
     });
@@ -555,7 +561,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(referrals) = app::Referrals::new() {
                 referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
+                keep_alive(referrals);
             }
         }
     });
@@ -568,7 +574,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+                keep_alive(dashboard);
             }
         }
     });
