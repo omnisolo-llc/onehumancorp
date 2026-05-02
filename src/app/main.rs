@@ -248,6 +248,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
+    prompt_tuning_ui.on_save_prompt({
+        let ui_handle = prompt_tuning_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let tone = ui.get_tone();
+            let focus_only_business = ui.get_focus_only_business();
+            let focus_avoid_competitors = ui.get_focus_avoid_competitors();
+            let focus_reply_spanish = ui.get_focus_reply_spanish();
+
+            let state = std::collections::HashMap::from([
+                ("prompt_tone".to_string(), tone.to_string()),
+                ("prompt_focus_business".to_string(), focus_only_business.to_string()),
+                ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
+                ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
+            ]);
+            let ui_handle_err = ui_handle.clone();
+            tokio::spawn(async move {
+                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                match HubServiceClient::connect(url).await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        if let Err(e) = client.save_wizard_state(request).await {
+                            eprintln!("Failed to save wizard state: {}", e);
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_err.upgrade() {
+                                    ui.set_show_toast(false); // rollback optimistic UI
+                                    // In a real app we might show an error toast here
+                                }
+                            }).unwrap();
+                            return;
+                        }
+
+                        let mut domain_focus = vec![];
+                        if focus_only_business { domain_focus.push("Only discuss business".to_string()); }
+                        if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
+                        if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
+
+                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                            personality: tone.to_string(),
+                            domain_focus,
+                        });
+                        if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
+                            eprintln!("Failed to handle prompt tuning: {}", e);
+                            let ui_err_clone = ui_handle_err.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_err_clone.upgrade() {
+                                    ui.set_show_toast(false); // rollback
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_err.upgrade() {
+                                ui.set_show_toast(false); // rollback optimistic UI
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -1520,6 +1583,16 @@ mod tests {
         assert_eq!(ui.get_tone(), "Concise");
         assert_eq!(ui.get_focus_only_business(), true);
         assert_eq!(ui.get_focus_avoid_competitors(), true);
+
+        let save_prompt_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_prompt_called_clone = save_prompt_called.clone();
+
+        ui.on_save_prompt(move || {
+            *save_prompt_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_save_prompt();
+        assert!(*save_prompt_called.borrow(), "on_save_prompt should be called");
     }
 
     #[test]
