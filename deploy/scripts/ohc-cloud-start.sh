@@ -23,6 +23,7 @@ if [ ! -f .env.cloud ]; then
   echo "OHC_MULTITENANT=true" > .env.cloud
   echo "OHC_HEADLESS=true" >> .env.cloud
   echo "OHC_SOURCE_MODE=cloud" >> .env.cloud
+  echo "OHC_STANDALONE=false" >> .env.cloud
   chmod 0600 .env.cloud
 fi
 
@@ -30,6 +31,7 @@ echo -e "${DIM}[3/4] Launching cloud backend...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=true
 export OHC_SOURCE_MODE=cloud
+export OHC_STANDALONE=false
 
 echo -e "${DIM}[4/4] Setting up local Kubernetes context...${RESET}"
 bash deploy/setup_k8s.sh || true

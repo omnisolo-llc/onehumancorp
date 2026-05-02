@@ -970,7 +970,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     consolidation_worker.start();
 
     // Ensure local database permissions are secure in standalone mode
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if {
+        let env_vars = std::env::vars().collect();
+        let env_config = crate::services::onboarding::env_verifier::verify_environment(&env_vars).unwrap_or_else(|_| crate::services::onboarding::env_verifier::EnvConfig { mode: "standalone".to_string(), multi_tenant: false, headless: false, telemetry_enabled: false, api_endpoint: "".to_string(), database_url: "".to_string() });
+        env_config.mode == "standalone"
+    } {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -1003,7 +1007,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
+        {
+        let env_vars = std::env::vars().collect();
+        let env_config = crate::services::onboarding::env_verifier::verify_environment(&env_vars).unwrap_or_else(|_| crate::services::onboarding::env_verifier::EnvConfig { mode: "standalone".to_string(), multi_tenant: false, headless: false, telemetry_enabled: false, api_endpoint: "".to_string(), database_url: "".to_string() });
+        env_config.mode == "standalone"
+    }
     ).await.expect("Failed to create MeshTransport");
 
     // Start Builtin Agent
@@ -1064,7 +1072,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if in standalone mode)
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
+    if {
+        let env_vars = std::env::vars().collect();
+        let env_config = crate::services::onboarding::env_verifier::verify_environment(&env_vars).unwrap_or_else(|_| crate::services::onboarding::env_verifier::EnvConfig { mode: "standalone".to_string(), multi_tenant: false, headless: false, telemetry_enabled: false, api_endpoint: "".to_string(), database_url: "".to_string() });
+        env_config.mode == "standalone"
+    } && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
         telemetry_daemon.start();

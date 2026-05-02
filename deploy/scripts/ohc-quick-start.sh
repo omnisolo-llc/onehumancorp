@@ -25,12 +25,14 @@ if [ ! -f .env ]; then
   echo "OHC_MULTITENANT=false" >> .env
   echo "OHC_HEADLESS=false" >> .env
   echo "OHC_SOURCE_MODE=standalone" >> .env
+  echo "OHC_STANDALONE=true" >> .env
   chmod 0600 .env
 fi
 
 echo -e "${DIM}[3/4] Launching local backend...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_SOURCE_MODE=standalone
+export OHC_STANDALONE=true
 bazelisk run //src/server:ohc &
 SERVER_PID=$!
 echo -e "${GREEN}✓ Server started with PID $SERVER_PID. To stop, run: kill $SERVER_PID${RESET}"

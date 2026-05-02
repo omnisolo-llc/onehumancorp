@@ -30,6 +30,7 @@ PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
+OHC_STANDALONE=true
 OHC_RUNTIME_DIR=.ohc/runtime
 OHC_MEMORY_DIR=.ohc/runtime/memory
 OHC_STATUS_DIR=.ohc/runtime/status
@@ -41,12 +42,14 @@ echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
+export OHC_STANDALONE=true
 bazelisk test //src/server/api/...
 
 echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
+export OHC_STANDALONE=false
 bazelisk test //src/server/api/...
 
 echo -e "${DIM}[X] Verifying .env setup...${RESET}"

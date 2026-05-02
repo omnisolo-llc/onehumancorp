@@ -102,7 +102,9 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let run_mode = std::env::var("OHC_STANDALONE").unwrap_or_default();
+        let env_vars = std::env::vars().collect();
+        let env_config = crate::services::onboarding::env_verifier::verify_environment(&env_vars).unwrap_or_else(|_| crate::services::onboarding::env_verifier::EnvConfig { mode: "standalone".to_string(), multi_tenant: false, headless: false, telemetry_enabled: false, api_endpoint: "".to_string(), database_url: "".to_string() });
+        let run_mode = if env_config.mode == "standalone" { "true".to_string() } else { "false".to_string() };
         let is_standalone = run_mode == "true";
         
         let mut health_checks = Vec::new();

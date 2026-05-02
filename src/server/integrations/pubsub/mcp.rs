@@ -15,7 +15,9 @@ impl PubSubManager {
     }
 
     pub fn from_env(transport: Arc<dyn MeshTransport>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let env_vars = std::env::vars().collect();
+        let env_config = crate::services::onboarding::env_verifier::verify_environment(&env_vars).unwrap_or_else(|_| crate::services::onboarding::env_verifier::EnvConfig { mode: "standalone".to_string(), multi_tenant: false, headless: false, telemetry_enabled: false, api_endpoint: "".to_string(), database_url: "".to_string() });
+        let is_cloud = env_config.mode == "cloud";
         Self::new(transport, is_cloud)
     }
 

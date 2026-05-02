@@ -13,6 +13,7 @@ echo "Switching OHC Development Environment to: $MODE"
 case $MODE in
   cloud)
     export OHC_MULTITENANT=true
+    export OHC_STANDALONE=false
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=cloud
     export LOG_FORMAT="json"
@@ -38,6 +39,7 @@ case $MODE in
   headless)
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=true
+    export OHC_STANDALONE=false
     export OHC_SOURCE_MODE=cloud
     export LOG_FORMAT="json"
     export LOG_LEVEL="info"
