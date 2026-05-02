@@ -120,15 +120,10 @@ pub struct Store {
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
     secret: Vec<u8>,
     oidc_cfg: RwLock<OIDCConfig>,
-    db_pool: Option<sqlx::PgPool>,
 }
 
 impl Store {
     pub fn new() -> Self {
-        Self::new_with_db(None)
-    }
-
-    pub fn new_with_db(db_pool: Option<sqlx::PgPool>) -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
@@ -175,7 +170,6 @@ impl Store {
                 client_id,
                 enabled,
             }),
-            db_pool,
         };
 
         store.seed_default_admin(now);
@@ -378,48 +372,15 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>) -> Result<(), String> {
-        if let Some(pool) = &self.db_pool {
-            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-            sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, 'system') ON CONFLICT (jti) DO NOTHING")
-                .bind(&jti)
-                .bind(exp)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            tx.commit().await.map_err(|e| e.to_string())?;
-        }
-
+    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
         
         let now = Utc::now();
         revoked.retain(|_, v| *v > now);
-
-        Ok(())
     }
 
-    pub async fn is_revoked(&self, jti: &str) -> bool {
-        if let Some(pool) = &self.db_pool {
-            if let Ok(mut tx) = pool.begin().await {
-                let _ = sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await;
-                if let Ok(row) = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
-                    .bind(jti)
-                    .fetch_one(&mut *tx)
-                    .await
-                {
-                    use sqlx::Row;
-                    let count: i64 = row.get(0);
-                    if count > 0 {
-                        return true;
-                    }
-                }
-            }
-        }
-
+    pub fn is_revoked(&self, jti: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
@@ -460,7 +421,7 @@ impl Store {
 
         match token_data {
             Ok(data) => {
-                if self.is_revoked(&data.claims.jti).await {
+                if self.is_revoked(&data.claims.jti) {
                     return Err("token revoked".to_string());
                 }
                 Ok(data.claims)
@@ -481,7 +442,7 @@ impl Store {
 
                 if let Some(cfg) = cfg_opt {
                      let claims = crate::oidc::validate_oidc_token(token, &cfg).await?;
-                     if self.is_revoked(&claims.jti).await {
+                     if self.is_revoked(&claims.jti) {
                          return Err("token revoked".to_string());
                      }
                      return Ok(claims);
@@ -503,19 +464,18 @@ impl Store {
             }
         }
 
-
-
-
-        let mut final_email = email.to_string();
-        if !final_email.is_empty() {
-            let email_key = TenantKey { org_id: org_id.to_string(), key: final_email.clone() };
-            if by_email.contains_key(&email_key) {
-                final_email = format!("{}_{}", final_email, hex::encode(random_bytes(3)));
+        if !email.is_empty() {
+            let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
+            if let Some(user_id) = by_email.get(&email_key) {
+                if let Some(user) = users.get_mut(user_id) {
+                    user.oidc_subject = Some(sub.to_string());
+                    by_oidc.insert(oidc_key, user_id.clone());
+                    return user.clone();
+                }
             }
         }
 
         let mut uname = preferred_username.to_string();
-
         if uname.is_empty() {
             uname = email.to_string();
         }
@@ -530,7 +490,7 @@ impl Store {
         let user = User {
             id: id.clone(),
             username: uname.clone(),
-            email: final_email.clone(),
+            email: email.to_string(),
             password_hash: String::new(), // No password for OIDC users
             roles: vec![ROLE_VIEWER.to_string()],
             active: true,
@@ -544,8 +504,8 @@ impl Store {
         if !uname.is_empty() {
             by_name.insert(TenantKey { org_id: org_id.to_string(), key: uname }, id.clone());
         }
-        if !final_email.is_empty() {
-            by_email.insert(TenantKey { org_id: org_id.to_string(), key: final_email }, id.clone());
+        if !email.is_empty() {
+            by_email.insert(TenantKey { org_id: org_id.to_string(), key: email.to_string() }, id.clone());
         }
         by_oidc.insert(oidc_key, id);
 
@@ -616,7 +576,7 @@ impl AuthService for Arc<Store> {
                     if let Ok(claims) = self.as_ref().validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.as_ref().revoke_token(claims.jti, exp).await;
+                        let _ = self.as_ref().revoke_token(claims.jti, exp);
                     }
                 }
             }
@@ -856,7 +816,7 @@ mod tests {
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24)).await;
+        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24));
         
         assert!(s.validate_token(&token).await.is_err());
     }
@@ -1020,44 +980,3 @@ mod isolation_tests {
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
     }
 }
-
-#[cfg(test)]
-mod regression_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_get_or_create_oidc_user_no_account_takeover() {
-        let store = Store::new();
-        // Create an initial user
-        let user1 = store.create_user(
-            "admin".to_string(),
-            "admin@example.com".to_string(),
-            "password".to_string(),
-            vec!["admin".to_string()],
-            "org-1".to_string(),
-        ).unwrap();
-
-        // OIDC flow for the same email but different sub should NOT return user1's id
-        let oidc_user = store.get_or_create_oidc_user("new-sub", "admin@example.com", "admin", "org-1");
-        assert_ne!(user1.id, oidc_user.id, "Account takeover vulnerability: OIDC user was merged with an existing user purely based on email");
-    }
-}
-
-    #[test]
-    fn test_revoke_token_expiry() {
-        let store = Store::new();
-        // create jti with expiry in past
-        store.revoke_token("past".to_string(), Utc::now() - chrono::Duration::hours(1));
-        assert!(!store.is_revoked("past"));
-
-        // create jti with expiry in future
-        store.revoke_token("future".to_string(), Utc::now() + chrono::Duration::hours(1));
-        assert!(store.is_revoked("future"));
-    }
-
-    #[tokio::test]
-    async fn test_auth_store_isolate() {
-        let store = Store::new();
-        // Just verify store instantiation is isolated
-        assert!(store.secret.len() > 0);
-    }

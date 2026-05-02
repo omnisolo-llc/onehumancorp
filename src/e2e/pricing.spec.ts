@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-test.skip('should open cost transparency dashboard', async ({ page }) => { });
-
 test.describe('Pricing Page', () => {
   test('should display pricing page', async ({ page }) => {
     await page.goto('/pricing');
