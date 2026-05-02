@@ -148,7 +148,7 @@ impl Hub {
         tokio::spawn(async move {
             if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
                 if limit_status.soft_limit_reached {
-                    println!("Rate limit warning: {:?}", limit_status.user_message);
+                    tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
                 }
             }
         });
