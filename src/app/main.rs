@@ -483,6 +483,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |link| {
             if let Some(_ui) = ui_handle.upgrade() {
                 let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
+                let encoded_msg = urlencoding::encode(&pre_filled_msg);
+                let url = format!("https://x.com/intent/tweet?text={}", encoded_msg);
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.open_with_url_and_target(&url, "_blank");
+                    }
+                }
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let _ = open::that(&url);
+                }
 
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
@@ -623,6 +637,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         println!("Clipboard not initialized, failed to copy store link");
                                     }
                                 });
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_instagram({
+                        let bs_handle_clone_for_ig = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_ig.upgrade() {
+                                let url = "https://instagram.com/"; // Instagram does not support text pre-filling via URL intent
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&url, "_blank");
+                                    }
+                                }
+
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    let _ = open::that(&url);
+                                }
+
+                                // Alternatively, since sharing specifically to Instagram via intent doesn't work well for text,
+                                // we fallback to copying to clipboard first:
+                                let text_to_encode = format!("Check out my store {} at {}", ui.get_business_name(), ui.get_share_link());
+                                CLIPBOARD.with(|cb| {
+                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                        let _ = ctx.set_contents(text_to_encode);
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_x({
+                        let bs_handle_clone_for_x = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_x.upgrade() {
+                                let text_to_encode = format!("Check out my store {} at {}", ui.get_business_name(), ui.get_share_link());
+                                let encoded_text = urlencoding::encode(&text_to_encode);
+                                let url = format!("https://x.com/intent/tweet?text={}", encoded_text);
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&url, "_blank");
+                                    }
+                                }
+
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    let _ = open::that(&url);
+                                }
                             }
                         }
                     });
