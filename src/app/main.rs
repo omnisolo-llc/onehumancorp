@@ -8,6 +8,7 @@ pub mod ohc {
         tonic::include_proto!("ohc.orchestration");
     }
 }
+use slint::Global;
 
 use slint::ComponentHandle;
 
@@ -36,6 +37,21 @@ fn set_global_is_advanced(val: bool) {
 fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     ADVANCED_LISTENERS.with(|listeners| {
         listeners.borrow_mut().push(listener);
+    });
+
+}
+
+fn setup_tooltip_registry(ui: &app::Login) {
+    let registry = app::TooltipRegistry::get(ui);
+    registry.on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "ask_ai" => "Click here to ask our AI helper anything about running your business.".into(),
+            "menu" => "Open the main menu to access help, billing, and settings.".into(),
+            "add_product" => "Quickly add a new item or service to your store.".into(),
+            "view_orders" => "See all your recent customer orders and their status.".into(),
+            "messages" => "Read and reply to messages from your customers.".into(),
+            _ => "".into(),
+        }
     });
 }
 
@@ -69,7 +85,118 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let login_ui = app::Login::new()?;
+    setup_tooltip_registry(&login_ui);
     let login_ui_handle = login_ui.as_weak();
+
+    let help_center_ui = app::HelpCenter::new()?;
+    let help_center_handle = help_center_ui.as_weak();
+    let _ = help_center_ui.hide();
+
+    let ai_chat_ui = app::AiHelpChat::new()?;
+    let ai_chat_handle = ai_chat_ui.as_weak();
+    let _ = ai_chat_ui.hide();
+
+    let walkthrough_ui = app::InteractiveWalkthrough::new()?;
+    let walkthrough_handle = walkthrough_ui.as_weak();
+    let _ = walkthrough_ui.hide();
+
+    let video_tutorials_ui = app::VideoTutorials::new()?;
+    let video_tutorials_handle = video_tutorials_ui.as_weak();
+    let _ = video_tutorials_ui.hide();
+
+    let release_notes_ui = app::ReleaseNotes::new()?;
+    let release_notes_handle = release_notes_ui.as_weak();
+    let _ = release_notes_ui.hide();
+
+    let api_docs_ui = app::ApiDocs::new()?;
+    let api_docs_handle = api_docs_ui.as_weak();
+    let _ = api_docs_ui.hide();
+
+    let all_articles = vec![
+        app::UiHelpArticle { title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into(), category: "Getting Started".into() },
+        app::UiHelpArticle { title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into(), category: "My Store".into() },
+        app::UiHelpArticle { title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into(), category: "Payments & Billing".into() },
+        app::UiHelpArticle { title: "What can the Customer Success Agent do?".into(), description: "Your agent can reply to customer emails and Instagram DMs automatically.".into(), category: "AI Agents".into() },
+        app::UiHelpArticle { title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into(), category: "Marketing".into() },
+        app::UiHelpArticle { title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into(), category: "Account & Billing".into() },
+    ];
+
+    help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles.clone())));
+
+    help_center_ui.on_search_query_changed({
+        let hc_handle = help_center_handle.clone();
+        let articles = all_articles.clone();
+        move |query| {
+            if let Some(ui) = hc_handle.upgrade() {
+                let filtered: Vec<app::UiHelpArticle> = articles.iter().filter(|a| {
+                    a.title.to_lowercase().contains(&query.to_lowercase()) ||
+                    a.description.to_lowercase().contains(&query.to_lowercase()) ||
+                    a.category.to_lowercase().contains(&query.to_lowercase())
+                }).cloned().collect();
+                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+            }
+        }
+    });
+
+    ai_chat_ui.on_send_message({
+        let ac_handle = ai_chat_handle.clone();
+        move || {
+            let ui = ac_handle.upgrade().unwrap();
+            let prompt = ui.get_user_input().to_string();
+            ui.set_user_input("".into());
+            ui.set_is_loading(true);
+            ui.set_show_article_link(false);
+
+            let handle_clone = ac_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let help_system_prompt = "You are the OHC Help Agent. You help non-technical small business owners understand how to use OHC. Use plain language. Be encouraging. If the user asks about a specific feature, mention that they can read the full article in the Help Center.";
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt: format!("System: {}
+User: {}", help_system_prompt, prompt),
+                        from_agent_id: "help_agent_ui".into(),
+                    });
+
+                    match client.reason(request).await {
+                        Ok(resp) => {
+                            let content = resp.into_inner().content;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(u) = handle_clone.upgrade() {
+                                    u.set_ai_response(content.into());
+                                    u.set_is_loading(false);
+                                    u.set_show_article_link(true);
+                                }
+                            }).unwrap();
+                        }
+                        Err(_) => {
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(u) = handle_clone.upgrade() {
+                                    u.set_ai_response("Sorry, I'm having trouble connecting to the help system right now.".into());
+                                    u.set_is_loading(false);
+                                }
+                            }).unwrap();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    ai_chat_ui.on_open_full_article({
+        let hc_handle = help_center_handle.clone();
+        move || {
+            if let Some(ui) = hc_handle.upgrade() {
+                let _ = ui.show();
+            }
+        }
+    });
+
+    Box::leak(Box::new(help_center_ui));
+    Box::leak(Box::new(ai_chat_ui));
+    Box::leak(Box::new(walkthrough_ui));
+    Box::leak(Box::new(video_tutorials_ui));
+    Box::leak(Box::new(release_notes_ui));
+    Box::leak(Box::new(api_docs_ui));
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -746,6 +873,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = my_plan_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let hc_handle = help_center_handle.clone();
+                dashboard.on_open_help_center(move || {
+                    if let Some(ui) = hc_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let ac_handle = ai_chat_handle.clone();
+                dashboard.on_open_ai_chat(move || {
+                    if let Some(ui) = ac_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let wt_handle = walkthrough_handle.clone();
+                dashboard.on_open_interactive_walkthrough(move || {
+                    if let Some(ui) = wt_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let vt_handle = video_tutorials_handle.clone();
+                dashboard.on_open_video_tutorials(move || {
+                    if let Some(ui) = vt_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let rn_handle = release_notes_handle.clone();
+                dashboard.on_open_release_notes(move || {
+                    if let Some(ui) = rn_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let ad_handle = api_docs_handle.clone();
+                dashboard.on_open_api_docs(move || {
+                    if let Some(ui) = ad_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });

@@ -7,7 +7,12 @@ export component AiHelpChat inherits Window {
     background: white;
 
     in-out property <string> user_input: "";
+    in-out property <string> ai_response: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
+    in-out property <bool> is_loading: false;
+    in-out property <bool> show_article_link: false;
+
     callback send_message();
+    callback open_full_article();
 
     VerticalBox {
         padding: 16px;
@@ -18,10 +23,15 @@ export component AiHelpChat inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 16px;
+                spacing: 12px;
                 Text {
-                    text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
+                    text: is_loading ? "Thinking..." : ai_response;
                     color: #0f172a;
                     wrap: word-wrap;
+                }
+                if (show_article_link && !is_loading) : Button {
+                    text: "Read the full article →";
+                    clicked => { open_full_article(); }
                 }
             }
         }
@@ -35,9 +45,12 @@ export component AiHelpChat inherits Window {
             LineEdit {
                 placeholder-text: "Type your question here...";
                 text <=> user_input;
+                enabled: !is_loading;
+                accepted => { send_message(); }
             }
             Button {
                 text: "Send";
+                enabled: !is_loading && user_input != "";
                 clicked => { send_message(); }
             }
         }
