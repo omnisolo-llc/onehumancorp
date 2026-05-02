@@ -628,9 +628,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     dashboard.on_action_share_store(move || {
                         *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = bs_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
+                        let bs_ui_clone = bs_handle_clone.clone();
+                        tokio::spawn(async move {
+                            if let Ok(mut client) = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                if let Ok(resp) = client.get_snapshots(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                                    if let Some(snapshot) = resp.into_inner().snapshots.last() {
+                                        let org_name = snapshot.org_name.clone();
+                                        let domain = snapshot.domain.clone();
+                                        let _ = slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = bs_ui_clone.upgrade() {
+                                                if !org_name.is_empty() {
+                                                    ui.set_business_name(org_name.into());
+                                                }
+                                                ui.set_business_tagline("The best place to buy things".into());
+                                                if !domain.is_empty() {
+                                                    ui.set_share_link(format!("https://{}.ohc.app", domain).into());
+                                                } else {
+                                                    ui.set_share_link("ohc://share?b=123".into());
+                                                }
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        return;
+                                    }
+                                }
+                            }
+                            // Fallback if network fails
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = bs_ui_clone.upgrade() {
+                                    let _ = ui.show();
+                                }
+                            });
+                        });
                     });
 
                     let business_share_close_clone = business_share_handle.clone();
@@ -2401,6 +2430,9 @@ mod cost_transparency_e2e_tests {
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.set_share_link("ohc://share?b=123".into());
+        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=123");
 
         business_share_ui.invoke_copy_link();
         assert!(*copy_link_called.borrow());
