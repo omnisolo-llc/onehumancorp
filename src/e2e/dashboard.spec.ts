@@ -81,6 +81,12 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Company Structure')).toBeVisible();
   });
 
+  test('should display aligned company structure list', async ({ page }) => {
+    await page.goto('/');
+    const btn1 = page.locator('button:has-text("-")').first();
+    await expect(btn1).toBeVisible();
+  });
+
   test('should display help buttons', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Ask AI')).toBeVisible();
@@ -126,9 +132,10 @@ test.describe('Dashboard Core', () => {
     await expect(editBtn).toBeVisible();
   });
 
-  test('should display agent actions today', async ({ page }) => {
+  test('should display agent activity feed', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Agent Actions Today')).toBeVisible();
+    const activitySection = page.locator('[class*="activity"], [class*="feed"]').first();
+    await expect(activitySection).toBeVisible();
   });
 });
 

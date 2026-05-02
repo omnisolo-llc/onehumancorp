@@ -103,12 +103,10 @@ struct AnthropicResponseContent {
 struct AnthropicUsage {
     input_tokens: i32,
     output_tokens: i32,
-    #[allow(dead_code)]
     #[serde(default)]
-    cache_creation_input_tokens: i32,
-    #[allow(dead_code)]
+    #[allow(dead_code)] cache_creation_input_tokens: i32,
     #[serde(default)]
-    cache_read_input_tokens: i32,
+    #[allow(dead_code)] cache_read_input_tokens: i32,
 }
 
 #[async_trait]

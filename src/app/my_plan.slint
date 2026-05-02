@@ -13,15 +13,9 @@ export component MyPlan inherits Window {
     in-out property <string> used_storage: "150.5 MB";
     in-out property <string> limit_storage: "10.0 GB";
     in-out property <string> estimated_bill: "$124.50";
-    in-out property <string> renewal_date: "Oct 25, 2025";
-    in-out property <string> plan_status: "Active Status";
 
     callback upgrade();
     callback view_details();
-    callback view_history();
-    callback cancel_subscription();
-    callback update_payment();
-    callback download_invoice();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -41,13 +35,10 @@ export component MyPlan inherits Window {
                 spacing: 8px;
                 Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
                 Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Text { text: plan_status; color: #22c55e; }
-                Text { text: "Renews on: " + renewal_date; color: #94a3b8; }
-
                 HorizontalBox {
                     spacing: 8px;
                     Button { text: "Upgrade"; height: 44px; clicked => { upgrade(); } }
-                    Button { text: "Cancel"; height: 44px; clicked => { cancel_subscription(); } }
+                    Button { text: "View Cost Details"; height: 44px; clicked => { view_details(); } }
                 }
             }
         }
@@ -64,27 +55,6 @@ export component MyPlan inherits Window {
                 Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: white; }
                 Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: white; }
                 Text { text: "Estimated Next Bill: " + estimated_bill; color: white; }
-
-                Button { text: "View Cost Details"; height: 44px; clicked => { view_details(); } }
-            }
-        }
-
-        GlassCard {
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-
-            VerticalBox {
-                padding: 16px;
-                spacing: 8px;
-                Text { text: "Billing Information"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
-
-                HorizontalBox {
-                    spacing: 8px;
-                    Button { text: "History"; height: 44px; clicked => { view_history(); } }
-                    Button { text: "Update Payment"; height: 44px; clicked => { update_payment(); } }
-                    Button { text: "Download Invoice"; height: 44px; clicked => { download_invoice(); } }
-                }
             }
         }
     }

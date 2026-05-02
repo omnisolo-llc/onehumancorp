@@ -1,170 +1,52 @@
-import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiPricingTier {
     name: string,
     price: string,
     description: string,
-    is_recommended: bool,
-    agent_limit: string,
-    storage_limit: string,
-    support_level: string,
-    features: [string],
 }
 
 export component Pricing inherits Window {
     preferred-width: 400px;
     min-width: 375px;
-    height: 600px;
+    preferred-height: 600px;
     title: "Pricing & Billing";
 
     background: #f8fafc;
 
-    in property <bool> is_annual: false;
-
     in property <[UiPricingTier]> tiers: [
-        {
-            name: "Free",
-            price: is_annual ? "$0/mo" : "$0/mo",
-            description: "Up to 100 AI Actions, 500MB storage.",
-            is_recommended: false,
-            agent_limit: "1 agent limit",
-            storage_limit: "500MB storage limit",
-            support_level: "Community support",
-            features: ["Basic Storefront", "Standard Agents", "Community Support"],
-        },
-        {
-            name: "Starter",
-            price: is_annual ? "$23/mo (20% off)" : "$29/mo",
-            description: "Up to 1000 AI Actions, 5GB storage.",
-            is_recommended: false,
-            agent_limit: "5 agent limit",
-            storage_limit: "5GB storage limit",
-            support_level: "Email support",
-            features: ["Custom Domain", "Advanced Agents", "Email Support"],
-        },
-        {
-            name: "Pro",
-            price: is_annual ? "$79/mo (20% off)" : "$99/mo",
-            description: "Unlimited AI Actions, 50GB storage.",
-            is_recommended: true,
-            agent_limit: "Unlimited number of agents",
-            storage_limit: "50GB storage limit",
-            support_level: "Priority support",
-            features: ["Multiple Locations", "Pro Agents", "Priority Support"],
-        },
-        {
-            name: "Enterprise",
-            price: "Custom",
-            description: "Enterprise features and support.",
-            is_recommended: false,
-            agent_limit: "Unlimited number of agents",
-            storage_limit: "Unlimited storage limit",
-            support_level: "Dedicated support",
-            features: ["White-label", "Custom Agents", "Dedicated Support"],
-        },
+        { name: "Free", price: "$0/mo", description: "Up to 100 AI Actions, 500MB storage." },
+        { name: "Starter", price: "$29/mo", description: "Up to 1000 AI Actions, 5GB storage." },
+        { name: "Pro", price: "$99/mo", description: "Unlimited AI Actions, 50GB storage." },
+        { name: "Business", price: "Custom", description: "Enterprise features and support." },
     ];
 
     callback select_plan(string);
-    callback toggle_billing_cycle();
 
-    ScrollView {
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Pricing & Billing"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
         VerticalBox {
-            spacing: 20px;
-            padding: 24px;
-
-            Text { text: "Plan Comparison"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
-
-            HorizontalBox {
-                alignment: center;
-                spacing: 10px;
-                Text { text: "Monthly"; color: is_annual ? #64748b : #1e293b; vertical-alignment: center; }
-                Button {
-                    text: is_annual ? "Annual (20% off)" : "Monthly";
-                    clicked => { toggle_billing_cycle(); }
-                }
-            }
-
-            VerticalBox {
-                spacing: 16px;
-                for tier in tiers : Rectangle {
-                    background: white;
-                    border-color: tier.is_recommended ? #a855f7 : #e2e8f0;
-                    border-width: tier.is_recommended ? 2px : 1px;
-                    border-radius: 8px;
-
-                    VerticalBox {
-                        padding: 16px;
-                        spacing: 12px;
-
-                        if tier.is_recommended : Rectangle {
-                            background: #a855f7;
-                            border-radius: 4px;
-                            VerticalBox {
-                                padding: 4px;
-                                Text { text: "Recommended / Best"; color: white; font-size: 12px; horizontal-alignment: center; }
-                            }
-                        }
-
-                        Text { text: tier.name; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
-                        Text { text: tier.price; font-size: 16px; color: #a855f7; }
-                        Text { text: tier.description; color: #64748b; wrap: word-wrap; }
-
-                        Text { text: tier.agent_limit; color: #475569; }
-                        Text { text: tier.storage_limit; color: #475569; }
-                        Text { text: tier.support_level; color: #475569; }
-
-                        VerticalBox {
-                            spacing: 4px;
-                            for feature in tier.features : Text {
-                                text: "• " + feature;
-                                color: #475569;
-                            }
-                        }
-
-                        if tier.name == "Free" : Button {
-                            text: "Start Free";
-                            height: 44px;
-                            clicked => { select_plan(tier.name); }
-                        }
-                        if tier.name == "Starter" || tier.name == "Pro" : Button {
-                            text: "Choose " + tier.name;
-                            height: 44px;
-                            clicked => { select_plan(tier.name); }
-                        }
-                        if tier.name == "Enterprise" || tier.name == "Business" : Button {
-                            text: "Contact Sales";
-                            height: 44px;
-                            clicked => { select_plan(tier.name); }
-                        }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: #f0fdf4;
+            spacing: 16px;
+            for tier in tiers : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
                 border-radius: 8px;
+
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "100% Money Back Guarantee"; font-family: "Outfit"; font-weight: 700; color: #166534; }
-                    Text { text: "Secure SSL Checkout"; color: #166534; }
-                }
-            }
-
-            VerticalBox {
-                spacing: 12px;
-                Text { text: "FAQ / Frequently Asked Questions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
-
-                Rectangle {
-                    background: white;
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    VerticalBox {
-                        padding: 16px;
-                        spacing: 8px;
-                        Text { text: "Question 1?"; font-weight: 700; color: #1e293b; }
-                        Text { text: "This is an answer description."; color: #64748b; wrap: word-wrap; }
+                    Text { text: tier.name; font-size: 20px; font-weight: 700; color: #1e293b; }
+                    Text { text: tier.price; font-size: 16px; color: #a855f7; }
+                    Text { text: tier.description; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Select Plan";
+                        height: 44px;
+                        clicked => { select_plan(tier.name); }
                     }
                 }
             }

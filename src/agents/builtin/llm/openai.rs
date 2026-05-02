@@ -40,7 +40,7 @@ impl OpenAIClient {
 
 #[derive(Serialize)]
 struct OpenAIMessage {
-    role: String,
+    #[allow(dead_code)] role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,8 +99,7 @@ struct OpenAIChoice {
 
 #[derive(Deserialize)]
 struct OpenAIResponseMessage {
-    #[allow(dead_code)]
-    role: String,
+    #[allow(dead_code)] role: String,
     content: Option<String>,
     tool_calls: Option<Vec<OpenAIResponseToolCall>>,
 }

@@ -13,6 +13,33 @@ actions:
           - "*"
     steps:
       - run: |
+          # Install dependencies for Docker and xvfb
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            apt-transport-https \
+            ca-certificates \
+            curl \
+            gnupg-agent \
+            software-properties-common \
+            xvfb \
+            netcat-openbsd \
+            psmisc
+
+          # Install Docker
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+          sudo apt-get update -qq
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+          # Install Docker Compose (v2)
+          mkdir -p ~/.docker/cli-plugins/
+          curl -SL https://github.com/docker/compose/releases/download/v2.32.1/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+          chmod +x ~/.docker/cli-plugins/docker-compose
+
+          # Ensure docker can be run without sudo (optional, but good for some setups)
+          sudo usermod -aG docker $USER || true
+          sudo service docker restart || true
+      - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
             --config=buildbuddy \

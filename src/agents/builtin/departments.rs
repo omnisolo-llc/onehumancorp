@@ -43,7 +43,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get"],
+            allowed_tools: vec!["read", "write", "glob", "task_create", "task_update", "task_list", "task_get"],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -66,7 +66,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Manages lead pipeline and customer inquiry responses\n\
                 - Suggests upsell and cross-sell opportunities\n\
                 - Manages referral program and tracks referrals",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage"],
+            allowed_tools: vec!["read", "write", "sendmessage"],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
@@ -77,7 +77,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list"],
+            allowed_tools: vec!["read", "sendmessage", "task_list"],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
@@ -89,7 +89,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
                 - Provides tax-ready financial summaries (income statements, expense tracking)",
-            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
+            allowed_tools: vec!["read", "write", "bash", "finance_report"],
             confidence_threshold: 0.95,
         },
         Department::Legal => DepartmentConfig {
@@ -100,7 +100,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Manages cookie consent banners and GDPR compliance for EU customers\n\
                 - Tracks business licenses and permits expiration\n\
                 - Provides hazard and liability disclaimers for food, health, and service businesses",
-            allowed_tools: vec!["read", "head", "tail", "write", "grep"],
+            allowed_tools: vec!["read", "write", "grep"],
             confidence_threshold: 0.98,
         },
         Department::BusinessAdvisory => DepartmentConfig {
@@ -112,7 +112,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Compares performance to similar businesses (anonymized)\n\
                 - Recommends pricing adjustments based on market data\n\
                 - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)",
-            allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
+            allowed_tools: vec!["read", "write", "websearch", "finance_report"],
             confidence_threshold: 0.85,
         },
     }
