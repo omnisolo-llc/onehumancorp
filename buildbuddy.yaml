@@ -38,7 +38,7 @@ actions:
           
           # Ensure docker can be run without sudo (optional, but good for some setups)
           sudo usermod -aG docker $USER || true
-          sudo service docker start || true
+          sudo service docker restart || true
       - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
