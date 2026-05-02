@@ -1,29 +1,63 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('User Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    const btn = page.locator('button:has-text("/login")');
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")');
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        await page.locator('button:has-text("/login")').click();
+      }
+    }
+  });
   test('should display user management page', async ({ page }) => {
-    await page.goto('/users');
     await expect(page.locator('text=/user|management|team/i')).toBeVisible();
   });
 
   test('should show users list header', async ({ page }) => {
-    await page.goto('/users');
     await expect(page.locator('text=Users')).toBeVisible();
   });
 
   test('should display users list', async ({ page }) => {
-    await page.goto('/users');
     const userItem = page.locator('[class*="user"], [class*="member"]').first();
     await expect(userItem).toBeVisible();
   });
 
   test('should show add user button', async ({ page }) => {
-    await page.goto('/users');
     await expect(page.locator('button:has-text("Add User"), button:has-text("Invite")')).toBeVisible();
   });
 
   test('should invite new user', async ({ page }) => {
-    await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     if (await inviteBtn.isVisible()) {
       await inviteBtn.click();
@@ -32,7 +66,6 @@ test.describe('User Management', () => {
   });
 
   test('should enter user email', async ({ page }) => {
-    await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     if (await inviteBtn.isVisible()) {
       await inviteBtn.click();
@@ -44,7 +77,6 @@ test.describe('User Management', () => {
   });
 
   test('should assign role to user', async ({ page }) => {
-    await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     if (await inviteBtn.isVisible()) {
       await inviteBtn.click();
@@ -56,7 +88,6 @@ test.describe('User Management', () => {
   });
 
   test('should send invitation', async ({ page }) => {
-    await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     if (await inviteBtn.isVisible()) {
       await inviteBtn.click();
@@ -67,7 +98,6 @@ test.describe('User Management', () => {
   });
 
   test('should search users', async ({ page }) => {
-    await page.goto('/users');
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
     if (await searchInput.isVisible()) {
       await searchInput.fill('admin');
@@ -76,7 +106,6 @@ test.describe('User Management', () => {
   });
 
   test('should filter users by role', async ({ page }) => {
-    await page.goto('/users');
     const filterSelect = page.locator('select').first();
     if (await filterSelect.isVisible()) {
       await filterSelect.selectOption({ index: 1 });
@@ -84,14 +113,12 @@ test.describe('User Management', () => {
   });
 
   test('should show user details', async ({ page }) => {
-    await page.goto('/users');
     const userItem = page.locator('[class*="user"]').first();
     await userItem.click();
     await expect(page.locator('text=/details|profile|name|email/i')).toBeVisible();
   });
 
   test('should edit user', async ({ page }) => {
-    await page.goto('/users');
     const userItem = page.locator('[class*="user"]').first();
     await userItem.click();
     const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').first();
@@ -102,7 +129,6 @@ test.describe('User Management', () => {
   });
 
   test('should delete user', async ({ page }) => {
-    await page.goto('/users');
     const userItem = page.locator('[class*="user"]').first();
     await userItem.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
@@ -113,19 +139,16 @@ test.describe('User Management', () => {
   });
 
   test('should show user role badges', async ({ page }) => {
-    await page.goto('/users');
     const badge = page.locator('[class*="badge"], [class*="role"]').first();
     await expect(badge).toBeVisible();
   });
 
   test('should show user status indicators', async ({ page }) => {
-    await page.goto('/users');
     const status = page.locator('text=/active|inactive|pending/i').first();
     await expect(status).toBeVisible();
   });
 
   test('should export users list', async ({ page }) => {
-    await page.goto('/users');
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
     if (await exportBtn.isVisible()) {
       await exportBtn.click();
@@ -134,7 +157,6 @@ test.describe('User Management', () => {
   });
 
   test('should show pending invitations', async ({ page }) => {
-    await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
     if (await pendingTab.isVisible()) {
       await pendingTab.click();
@@ -143,7 +165,6 @@ test.describe('User Management', () => {
   });
 
   test('should resend invitation', async ({ page }) => {
-    await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
     if (await pendingTab.isVisible()) {
       await pendingTab.click();
@@ -156,7 +177,6 @@ test.describe('User Management', () => {
   });
 
   test('should cancel invitation', async ({ page }) => {
-    await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
     if (await pendingTab.isVisible()) {
       await pendingTab.click();
@@ -170,34 +190,50 @@ test.describe('User Management', () => {
 });
 
 test.describe('Role Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
   test('should show roles list', async ({ page }) => {
-    await page.goto('/users/roles');
     await expect(page.locator('text=/role|permissions/i')).toBeVisible();
   });
 
   test('should display role cards', async ({ page }) => {
-    await page.goto('/users/roles');
     const roleCard = page.locator('[class*="role"], [class*="card"]').first();
     await expect(roleCard).toBeVisible();
   });
 
   test('should show admin role', async ({ page }) => {
-    await page.goto('/users/roles');
     await expect(page.locator('text=/admin|administrator/i')).toBeVisible();
   });
 
   test('should show viewer role', async ({ page }) => {
-    await page.goto('/users/roles');
     await expect(page.locator('text=/viewer|view/i')).toBeVisible();
   });
 
   test('should show operator role', async ({ page }) => {
-    await page.goto('/users/roles');
     await expect(page.locator('text=/operator|operations/i')).toBeVisible();
   });
 
   test('should create new role', async ({ page }) => {
-    await page.goto('/users/roles');
     const createBtn = page.locator('button:has-text("Create"), button:has-text("New Role")').first();
     if (await createBtn.isVisible()) {
       await createBtn.click();
@@ -206,7 +242,6 @@ test.describe('Role Management', () => {
   });
 
   test('should assign permissions to role', async ({ page }) => {
-    await page.goto('/users/roles');
     const roleCard = page.locator('[class*="role"]').first();
     await roleCard.click();
     const permissionCheckbox = page.locator('input[type="checkbox"]').first();
@@ -217,7 +252,6 @@ test.describe('Role Management', () => {
   });
 
   test('should delete custom role', async ({ page }) => {
-    await page.goto('/users/roles');
     const roleCard = page.locator('[class*="role"]').first();
     await roleCard.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
@@ -228,7 +262,6 @@ test.describe('Role Management', () => {
   });
 
   test('should show role user count', async ({ page }) => {
-    await page.goto('/users/roles');
     const count = page.locator('text=/\\d+.*user|\\d+.*member/i').first();
     await expect(count).toBeVisible();
   });

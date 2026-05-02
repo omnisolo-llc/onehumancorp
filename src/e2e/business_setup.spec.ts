@@ -1,29 +1,63 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    const btn = page.locator('button:has-text("/login")');
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")');
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        await page.locator('button:has-text("/login")').click();
+      }
+    }
+  });
   test('should show welcome step', async ({ page }) => {
-    await page.goto('/business-setup');
     await expect(page.locator('text=Welcome')).toBeVisible();
   });
 
   test('should display welcome message', async ({ page }) => {
-    await page.goto('/business-setup');
     await expect(page.locator('text=/welcome|get started/i')).toBeVisible();
   });
 
   test('should show next button on welcome step', async ({ page }) => {
-    await page.goto('/business-setup');
     await expect(page.locator('button:has-text("Next")')).toBeVisible();
   });
 
   test('should navigate to business type step', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await expect(page.locator('text=/business type/i')).toBeVisible();
   });
 
   test('should show business type options', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await expect(page.locator('text=Online Store')).toBeVisible();
     await expect(page.locator('text=Service Business')).toBeVisible();
@@ -31,38 +65,32 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should select online store option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Online Store').click();
     await expect(page.locator('button:has-text("Next")')).toBeEnabled();
   });
 
   test('should select service business option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Service Business').click();
   });
 
   test('should select restaurant option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Restaurant').click();
   });
 
   test('should select creative portfolio option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Creative').click();
   });
 
   test('should select local business option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Local Business').click();
   });
 
   test('should navigate through wizard steps', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Online Store');
     await page.locator('button:has-text("Next")').click();
@@ -72,13 +100,11 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show step indicator', async ({ page }) => {
-    await page.goto('/business-setup');
     const stepIndicator = page.locator('[class*="step"], text=/step \\d+/i').first();
     await expect(stepIndicator).toBeVisible();
   });
 
   test('should allow going back', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     const backButton = page.locator('button:has-text("Back")');
     await expect(backButton).toBeVisible();
@@ -87,14 +113,12 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show company name input', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await expect(page.locator('input[type="text"]').first()).toBeVisible();
   });
 
   test('should show what you sell step', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Test Company');
@@ -103,7 +127,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show physical products option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Test Company');
@@ -112,7 +135,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show digital products option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Test Company');
@@ -121,7 +143,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show services option', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Test Company');
@@ -130,7 +151,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show payments step', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('button:has-text("Next")').click();
     await page.locator('input[type="text"]').first().fill('Test Company');
@@ -141,7 +161,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show admin account step', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 5; i++) {
       await page.locator('button:has-text("Next")').click();
       await page.waitForTimeout(200);
@@ -150,7 +169,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show template selection step', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 6; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -162,7 +180,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show domain step', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 7; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -174,7 +191,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show review and launch step', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 8; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -186,7 +202,6 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show launch button on final step', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 9; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -199,14 +214,34 @@ test.describe('Business Setup Wizard', () => {
 });
 
 test.describe('Business Setup Wizard Validation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
   test('should require business type selection', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await expect(page.locator('text=/select.*type|choose.*type/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
   });
 
   test('should require company name', async ({ page }) => {
-    await page.goto('/business-setup');
     await page.locator('button:has-text("Next")').click();
     await page.locator('text=Online Store').click();
     await page.locator('button:has-text("Next")').click();
@@ -215,7 +250,6 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 5; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -229,7 +263,6 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should validate password strength', async ({ page }) => {
-    await page.goto('/business-setup');
     for (let i = 0; i < 5; i++) {
       const nextBtn = page.locator('button:has-text("Next")');
       if (await nextBtn.isVisible()) {
@@ -243,7 +276,6 @@ test.describe('Business Setup Wizard Validation', () => {
 });
   test('should use AI to auto-generate description', async ({ page }) => {
     // We navigate to the onboarding flow and fill out required steps to reach First Product step
-    await page.goto('/business-setup');
 
     // We expect the backend mocking or the UI click to properly update the product description field
     // In our Slint app, this is in step 7.

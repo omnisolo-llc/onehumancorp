@@ -1,11 +1,49 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard UX', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    const btn = page.locator('button:has-text("/login")');
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")');
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        await page.locator('button:has-text("/login")').click();
+      }
+    }
+  });
   test.use({ viewport: { width: 375, height: 800 } });
 
   test('should display correctly on mobile and verify plain language labels', async ({ page }) => {
     // Navigate to login page
-    await page.goto('/login');
 
     // Fill in credentials and sign in
     await page.fill('input[type="email"]', 'test@example.com');
@@ -28,7 +66,6 @@ test.describe('Dashboard UX', () => {
   });
 
   test('metrics cards should display side-by-side in a grid to conserve vertical space on mobile', async ({ page }) => {
-    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -55,7 +92,6 @@ test.describe('Dashboard UX', () => {
 });
 
 test('should display Quick Actions on mobile', async ({ page }) => {
-  await page.goto('/login');
   await page.fill('input[type="email"]', 'test@example.com');
   await page.fill('input[type="password"]', 'password123');
   await page.click('button:has-text("Sign In")');
@@ -84,7 +120,6 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
-  await page.goto('/login');
   await page.fill('input[type="email"]', 'test@example.com');
   await page.fill('input[type="password"]', 'password123');
   await page.click('button:has-text("Sign In")');
@@ -104,7 +139,6 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 });
 
   test('tapping metrics cards should trigger the appropriate actions', async ({ page }) => {
-    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -119,7 +153,6 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
     // Navigate back to Dashboard if needed
     // (Assuming there's a back button or we just click Dashboard on nav)
     // For simplicity, we just reload or re-navigate to ensure clean state
-    await page.goto('/');
 
     // Wait for Dashboard to load again
     await page.waitForURL('**/*');

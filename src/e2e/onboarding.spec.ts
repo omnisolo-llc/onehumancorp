@@ -1,24 +1,59 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    const btn = page.locator('button:has-text("/login")');
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")');
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        await page.locator('button:has-text("/login")').click();
+      }
+    }
+  });
   test('should start business setup onboarding', async ({ page }) => {
-    await page.goto('/onboarding');
     await expect(page.locator('text=/onboarding|setup|welcome/i')).toBeVisible();
   });
 
   test('should show welcome screen', async ({ page }) => {
-    await page.goto('/onboarding');
     await expect(page.locator('text=/welcome|get started/i')).toBeVisible();
   });
 
   test('should show progress indicator', async ({ page }) => {
-    await page.goto('/onboarding');
     const progress = page.locator('[class*="progress"], text=/step \\d+ of \\d+/i').first();
     await expect(progress).toBeVisible();
   });
 
   test('should navigate to next step', async ({ page }) => {
-    await page.goto('/onboarding');
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
@@ -27,7 +62,6 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should navigate to previous step', async ({ page }) => {
-    await page.goto('/onboarding');
     const backBtn = page.locator('button:has-text("Back"), button:has-text("Previous")').first();
     if (await backBtn.isVisible()) {
       await backBtn.click();
@@ -36,7 +70,6 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should select business type', async ({ page }) => {
-    await page.goto('/onboarding');
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
@@ -45,7 +78,6 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should enter company name', async ({ page }) => {
-    await page.goto('/onboarding');
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
     if (await nextBtn.isVisible()) {
       for (let i = 0; i < 2; i++) {
@@ -60,7 +92,6 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should skip optional steps', async ({ page }) => {
-    await page.goto('/onboarding');
     const skipBtn = page.locator('button:has-text("Skip"), button:has-text("Skip this step")').first();
     if (await skipBtn.isVisible()) {
       await skipBtn.click();
@@ -68,7 +99,6 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should complete onboarding', async ({ page }) => {
-    await page.goto('/onboarding');
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Complete")').first();
     if (await finishBtn.isVisible()) {
       await finishBtn.click();
@@ -77,32 +107,49 @@ test.describe('Onboarding Flow', () => {
   });
 
   test('should save onboarding progress', async ({ page }) => {
-    await page.goto('/onboarding');
     await page.fill('input[type="text"]', 'Test Company').catch(() => {});
     await page.locator('button:has-text("Save"), button:has-text("Continue")').click();
     await expect(page.locator('text=/saved|progress/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
   });
 
   test('should resume onboarding from saved state', async ({ page }) => {
-    await page.goto('/onboarding');
     await expect(page.locator('text=/resume|continue.*where.*left.*off/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
   });
 });
 
 test.describe('Onboarding Welcome Checklist', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
   test('should display welcome checklist', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     await expect(page.locator('text=/checklist|welcome/i')).toBeVisible();
   });
 
   test('should show checklist items', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const item = page.locator('[class*="item"], [class*="checklist"]').first();
     await expect(item).toBeVisible();
   });
 
   test('should mark item as complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const checkbox = page.locator('input[type="checkbox"]').first();
     if (await checkbox.isVisible()) {
       await checkbox.check();
@@ -111,13 +158,11 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should show completion progress', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const progress = page.locator('text=/\\d+ of \\d+|\\d+%/').first();
     await expect(progress).toBeVisible();
   });
 
   test('should mark all items complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const checkboxes = page.locator('input[type="checkbox"]');
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
@@ -127,7 +172,6 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should show congratulations message', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const checkboxes = page.locator('input[type="checkbox"]');
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
@@ -138,7 +182,6 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should link to documentation', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const docLink = page.locator('a:has-text("Documentation"), a:has-text("Docs")').first();
     if (await docLink.isVisible()) {
       await docLink.click();
@@ -147,7 +190,6 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should link to video tutorials', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const videoLink = page.locator('a:has-text("Video"), a:has-text("Tutorial")').first();
     if (await videoLink.isVisible()) {
       await videoLink.click();
@@ -156,7 +198,6 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should offer to contact support', async ({ page }) => {
-    await page.goto('/welcome-checklist');
     const supportLink = page.locator('text=/support|help|contact/i').first();
     await expect(supportLink).toBeVisible();
   });

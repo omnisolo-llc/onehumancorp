@@ -1,10 +1,14 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, ListView, ComboBox } from "std-widgets.slint";
 
 export struct UiChatMessage {
     id: string,
     author_name: string,
     body: string,
     is_me: bool,
+    timestamp: string,
+    is_read: bool,
+    is_typing: bool,
+    is_pinned: bool,
 }
 
 export component Chat inherits Window {
@@ -14,13 +18,53 @@ export component Chat inherits Window {
 
     in property <[UiChatMessage]> messages;
     in-out property <string> new_message: "";
+
+    in-out property <bool> is_typing: false;
+    in-out property <bool> is_muted: false;
+
     callback send_message(string);
+    callback search_messages(string);
+    callback filter_messages(int);
+    callback new_conversation();
+    callback attach_file();
+    callback show_emoji_picker();
+    callback mark_read(string);
+    callback delete_message(string);
+    callback edit_message(string);
+    callback react_to_message(string);
+    callback reply_to_message(string);
+    callback pin_message(string);
+    callback mute_chat();
 
     background: #f8fafc;
 
     VerticalBox {
         spacing: 16px;
         padding: 16px;
+
+        // Header
+        HorizontalBox {
+            spacing: 10px;
+            Text { text: "Chat"; font-weight: 700; font-size: 20px; }
+            Rectangle {} // Spacer
+            Button { text: "New Compose"; clicked => { new_conversation(); } }
+            Button { text: is_muted ? "Silenced" : "Mute"; clicked => { is_muted = !is_muted; mute_chat(); } }
+        }
+
+        // Search & Filter
+        HorizontalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Search messages...";
+                accepted(text) => { search_messages(text); }
+            }
+            ComboBox {
+                model: ["All", "Unread", "Pinned"];
+                selected => { filter_messages(self.current-index); }
+            }
+        }
+
+        if (is_typing) : Text { text: "Someone is typing..."; color: gray; }
 
         // Chat history area
         Rectangle {
@@ -34,34 +78,70 @@ export component Chat inherits Window {
                 padding: 16px;
                 alignment: start;
                 
-                for msg in messages : HorizontalBox {
-                    alignment: msg.is_me ? end : start;
-                    if (msg.is_me) : Rectangle {} // Spacer
-                    Rectangle {
-                        background: msg.is_me ? #f3e8ff : #f1f5f9;
-                        border-radius: 12px;
-                        width: 260px;
+                ListView {
+                    for msg[idx] in messages : HorizontalBox {
+                        alignment: msg.is_me ? end : start;
+                        if (msg.is_me) : Rectangle {} // Spacer
                         
-                        VerticalBox {
-                            padding: 10px;
-                            spacing: 4px;
-                            Text { 
-                                text: msg.author_name; 
-                                font-weight: 700; 
-                                color: msg.is_me ? #1e293b : #a855f7; 
-                                horizontal-alignment: msg.is_me ? right : left; 
+                        Rectangle {
+                            background: msg.is_me ? #f3e8ff : #f1f5f9;
+                            border-radius: 12px;
+                            width: 320px;
+
+                            VerticalBox {
+                                padding: 10px;
+                                spacing: 4px;
+
+                                HorizontalBox {
+                                    spacing: 8px;
+                                    Rectangle {
+                                        width: 24px; height: 24px; border-radius: 12px; background: #cbd5e1;
+                                        Text { text: "U"; horizontal-alignment: center; vertical-alignment: center; } // avatar
+                                    }
+                                    Text {
+                                        text: msg.author_name;
+                                        font-weight: 700;
+                                        color: msg.is_me ? #1e293b : #a855f7;
+                                    }
+                                    Rectangle {} // spacer
+                                    Text { text: msg.timestamp; color: gray; font-size: 10px; }
+                                }
+
+                                Rectangle {
+                                    VerticalBox {
+                                        Text { text: msg.body; color: #1e293b; wrap: word-wrap; }
+
+                                        if (msg.is_pinned) : Text { text: "(Pinned)"; color: orange; font-size: 10px; }
+                                        if (!msg.is_read) : Rectangle { width: 8px; height: 8px; border-radius: 4px; background: red; }
+                                        if (msg.is_read) : Text { text: "Read"; color: green; font-size: 10px; }
+                                    }
+                                }
+
+                                HorizontalBox {
+                                    spacing: 5px;
+                                    Button { text: "React"; clicked => { react_to_message(msg.id); } }
+                                    Button { text: "Reply"; clicked => { reply_to_message(msg.id); } }
+                                    Button { text: "Pin"; clicked => { pin_message(msg.id); } }
+                                    Button { text: "Edit"; clicked => { edit_message(msg.id); } }
+                                    Button { text: "Delete"; clicked => { delete_message(msg.id); } }
+                                }
                             }
-                            Text { text: msg.body; color: #1e293b; wrap: word-wrap; }
+
+                            TouchArea {
+                                clicked => { mark_read(msg.id); }
+                            }
                         }
+                        if (!msg.is_me) : Rectangle {} // Spacer
                     }
-                    if (!msg.is_me) : Rectangle {} // Spacer
                 }
             }
         }
 
         // Input Bar
         HorizontalBox {
-            spacing: 10px;
+            spacing: 5px;
+            Button { text: "Attach"; clicked => { attach_file(); } }
+            Button { text: "😀"; clicked => { show_emoji_picker(); } }
             LineEdit {
                 placeholder-text: "Type a message...";
                 text <=> new_message;

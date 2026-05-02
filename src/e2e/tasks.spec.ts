@@ -1,30 +1,64 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Task List Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    const btn = page.locator('button:has-text("/login")');
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")');
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        await page.locator('button:has-text("/login")').click();
+      }
+    }
+  });
   test('should display task list page', async ({ page }) => {
-    await page.goto('/tasks');
     await expect(page.locator('text=/task|todo/i')).toBeVisible();
   });
 
   test('should show task list header', async ({ page }) => {
-    await page.goto('/tasks');
     await expect(page.locator('text=Tasks')).toBeVisible();
   });
 
   test('should display task items', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"], [class*="item"]').first();
     await expect(taskItem).toBeVisible();
   });
 
   test('should show task status indicators', async ({ page }) => {
-    await page.goto('/tasks');
     const status = page.locator('[class*="status"], text=/pending|progress|done/i').first();
     await expect(status).toBeVisible();
   });
 
   test('should filter tasks by status', async ({ page }) => {
-    await page.goto('/tasks');
     const filterDropdown = page.locator('select, [class*="filter"]').first();
     if (await filterDropdown.isVisible()) {
       await filterDropdown.selectOption({ index: 1 });
@@ -32,7 +66,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should sort tasks', async ({ page }) => {
-    await page.goto('/tasks');
     const sortButton = page.locator('button:has-text("Sort"), [class*="sort"]').first();
     if (await sortButton.isVisible()) {
       await sortButton.click();
@@ -41,7 +74,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should search tasks', async ({ page }) => {
-    await page.goto('/tasks');
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
     if (await searchInput.isVisible()) {
       await searchInput.fill('test task');
@@ -50,7 +82,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should create new task', async ({ page }) => {
-    await page.goto('/tasks');
     const newTaskBtn = page.locator('button:has-text("New"), button:has-text("Add")').first();
     if (await newTaskBtn.isVisible()) {
       await newTaskBtn.click();
@@ -59,7 +90,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should complete a task', async ({ page }) => {
-    await page.goto('/tasks');
     const completeBtn = page.locator('button:has-text("Complete"), button:has-text("Done")').first();
     if (await completeBtn.isVisible()) {
       await completeBtn.click();
@@ -68,7 +98,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should delete a task', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
@@ -79,7 +108,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should assign task to agent', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const assignSelect = page.locator('select, [class*="assign"]').first();
@@ -89,7 +117,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should set task priority', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const priorityBtn = page.locator('button:has-text("Priority"), [class*="priority"]').first();
@@ -100,7 +127,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should add due date to task', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const dateInput = page.locator('input[type="date"], [class*="date"]').first();
@@ -110,7 +136,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should show task description', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const description = page.locator('text=/description|details/i').first();
@@ -118,7 +143,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should add comment to task', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const commentInput = page.locator('textarea, input[type="text"]').nth(1);
@@ -129,7 +153,6 @@ test.describe('Task List Page', () => {
   });
 
   test('should show task activity log', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const activityTab = page.locator('button:has-text("Activity"), button:has-text("History")').first();
@@ -140,13 +163,11 @@ test.describe('Task List Page', () => {
   });
 
   test('should paginate task list', async ({ page }) => {
-    await page.goto('/tasks');
     const pagination = page.locator('[class*="pagination"], button:has-text("Next")').first();
     await expect(pagination).toBeVisible();
   });
 
   test('should navigate to next page', async ({ page }) => {
-    await page.goto('/tasks');
     const nextBtn = page.locator('button:has-text("Next"), button:has-text(">")').first();
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
@@ -156,15 +177,35 @@ test.describe('Task List Page', () => {
 });
 
 test.describe('Task List Mobile', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.locator('button:has-text("Sign In")').click();
+    await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
+
+    // Navigate to feature from dashboard
+    const btn = page.locator('button:has-text("/login")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+    } else {
+      const menuBtn = page.locator('button:has-text("Menu")').first();
+      if (await menuBtn.isVisible()) {
+        await menuBtn.click();
+        const innerBtn = page.locator('button:has-text("/login")').first();
+        if (await innerBtn.isVisible()) {
+          await innerBtn.click();
+        }
+      }
+    }
+  });
+
   test.use({ viewport: { width: 375, height: 800 } });
 
   test('should display task list on mobile', async ({ page }) => {
-    await page.goto('/tasks');
     await expect(page.locator('text=/task/i')).toBeVisible();
   });
 
   test('should swipe to complete task on mobile', async ({ page }) => {
-    await page.goto('/tasks');
     const taskItem = page.locator('[class*="task"]').first();
     if (await taskItem.isVisible()) {
       await taskItem.swipe('left');
