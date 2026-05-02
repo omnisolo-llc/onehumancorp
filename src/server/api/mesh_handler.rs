@@ -6,7 +6,7 @@ use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
@@ -16,7 +16,7 @@ pub struct ConnectQuery {
 }
 
 
-#[derive(serde::Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BroadcastRequest {
     pub agent_id: String,
     pub channel: String,

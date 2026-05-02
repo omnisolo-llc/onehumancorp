@@ -1,9 +1,4 @@
-# OHC Release Notes
-
-## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
-- Scaling (Cloud): ⚡ Bolt: [performance improvement] Parallelized fetching and optimized mobile payloads (#9210)
-- Privacy/Offline (Standalone): ⚡ Bolt: [performance improvement] Parallelized fetching and optimized mobile payloads (#9210)
-
+# Release Notes
 
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 - Scaling (Cloud): 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
