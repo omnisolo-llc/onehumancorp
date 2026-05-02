@@ -30,7 +30,7 @@ impl MyAgentManagerService {
         );
         let agents = agents.unwrap_or_else(|_| vec![]);
         let meetings = meetings.unwrap_or_else(|_| vec![]);
-        
+
         let cost_auditor = self.hub.get_cost_auditor();
         let costs = Summary {
             total_cost_usd: cost_auditor.get_total_cost(),
