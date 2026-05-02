@@ -441,6 +441,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
 
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let messages_model = std::rc::Rc::new(slint::VecModel::<app::UiMeshMessage>::default());
+                let messages_model = std::rc::Rc::new(slint::VecModel::<app::UiMeshMessage>::default());
+                dashboard.set_mesh_messages(messages_model.clone().into());
+                let dashboard_mesh_handle = dashboard.as_weak();
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::EventStreamRequest { topic: "dashboard".to_string() });
+                        if let Ok(mut stream) = client.stream_teammate_mesh(request).await.map(|resp| resp.into_inner()) {
+                            while let Ok(Some(event)) = stream.message().await {
+                                let action = event.action.clone();
+                                let dashboard_mesh_handle_clone = dashboard_mesh_handle.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(dashboard_ui) = dashboard_mesh_handle_clone.upgrade() {
+                                        let messages_rc = dashboard_ui.get_mesh_messages();
+                                        if let Some(vec_model) = slint::Model::as_any(&messages_rc).downcast_ref::<slint::VecModel<app::UiMeshMessage>>() {
+                                            vec_model.push(app::UiMeshMessage {
+                                                id: slint::SharedString::from(format!("msg-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis())),
+                                                content: slint::SharedString::from(action),
+                                            });
+                                        }
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                });
+
+                dashboard.set_mesh_messages(messages_model.clone().into());
+                let dashboard_mesh_handle = dashboard.as_weak();
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::EventStreamRequest { topic: "dashboard".to_string() });
+                        if let Ok(mut stream) = client.stream_teammate_mesh(request).await.map(|resp| resp.into_inner()) {
+                            while let Ok(Some(event)) = stream.message().await {
+                                let action = event.action.clone();
+                                let dashboard_mesh_handle_clone = dashboard_mesh_handle.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(dashboard_ui) = dashboard_mesh_handle_clone.upgrade() {
+                                        let messages_rc = dashboard_ui.get_mesh_messages();
+                                        if let Some(vec_model) = slint::Model::as_any(&messages_rc).downcast_ref::<slint::VecModel<app::UiMeshMessage>>() {
+                                            vec_model.push(app::UiMeshMessage {
+                                                id: slint::SharedString::from(format!("msg-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis())),
+                                                content: slint::SharedString::from(action),
+                                            });
+                                        }
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                });
+
                 let share_store_called_clone = share_store_called.clone();
 
                 if let Ok(business_share_ui) = app::BusinessShare::new() {
@@ -2260,21 +2314,33 @@ mod cost_transparency_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        let messages_model = std::rc::Rc::new(slint::VecModel::<app::UiMeshMessage>::default());
+        dashboard_ui.set_mesh_messages(messages_model.clone().into());
+        let dashboard_mesh_handle = dashboard_ui.as_weak();
 
-
-        // Populate mock agent activity messages
-        let mock_messages = vec![
-            app::UiMeshMessage {
-                id: "msg-1".into(),
-                content: "✅ Your Support Agent replied to 3 customers".into(),
-            },
-            app::UiMeshMessage {
-                id: "msg-2".into(),
-                content: "📦 Order Manager updated stock for 12 items".into(),
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let request = tonic::Request::new(ohc::orchestration::EventStreamRequest { topic: "dashboard".to_string() });
+                if let Ok(mut stream) = client.stream_teammate_mesh(request).await.map(|resp| resp.into_inner()) {
+                    while let Ok(Some(event)) = stream.message().await {
+                        let action = event.action.clone();
+                        let dashboard_mesh_handle_clone = dashboard_mesh_handle.clone();
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(dashboard_ui) = dashboard_mesh_handle_clone.upgrade() {
+                                let messages_rc = dashboard_ui.get_mesh_messages();
+                                if let Some(vec_model) = slint::Model::as_any(&messages_rc).downcast_ref::<slint::VecModel<app::UiMeshMessage>>() {
+                                    vec_model.push(app::UiMeshMessage {
+                                        id: slint::SharedString::from(format!("msg-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis())),
+                                        content: slint::SharedString::from(action),
+                                    });
+                                }
+                            }
+                        }).unwrap();
+                    }
+                }
             }
-        ];
+        });
 
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
     }
 
