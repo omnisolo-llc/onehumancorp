@@ -147,6 +147,8 @@ rust_binary(
         "@crates//:serde_yaml",
         "@crates//:slint",
         "@crates//:tokio",
+        "@crates//:open",
+        "@crates//:urlencoding",
         "@crates//:tonic",
     ],
 )
@@ -234,6 +236,8 @@ rust_test(
         "@crates//:serde_yaml",
         "@crates//:slint",
         "@crates//:tokio",
+        "@crates//:open",
+        "@crates//:urlencoding",
         "@crates//:tonic",
     ],
 )

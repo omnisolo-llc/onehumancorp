@@ -626,9 +626,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
 
                     let bs_handle_ig = business_share_handle.clone();
-                    business_share_ui.on_share_to_instagram(move || { if let Some(ui) = bs_handle_ig.upgrade() { println!("Sharing to IG: {}", ui.get_share_link()); } });
+                    business_share_ui.on_share_to_instagram(move || {
+                        if let Some(_ui) = bs_handle_ig.upgrade() {
+                            let url = "https://instagram.com/".to_string();
+                            let _ = open::that(url);
+                        }
+                    });
                     let bs_handle_x = business_share_handle.clone();
-                    business_share_ui.on_share_to_x(move || { if let Some(ui) = bs_handle_x.upgrade() { println!("Sharing to X: {}", ui.get_share_link()); } });
+                    business_share_ui.on_share_to_x(move || {
+                        if let Some(ui) = bs_handle_x.upgrade() {
+                            let link = ui.get_share_link().to_string();
+                            let url = format!("https://x.com/intent/tweet?url={}", urlencoding::encode(&link));
+                            let _ = open::that(url);
+                        }
+                    });
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
