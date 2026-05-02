@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::Path;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::global;
 
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };

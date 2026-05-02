@@ -8,13 +8,7 @@ use base64::{Engine as _, engine::general_purpose};
 
 fn get_crypto_key() -> [u8; 32] {
     let key = std::env::var("OHC_SQLITE_KEY")
-        .unwrap_or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY").unwrap_or_else(|_| {
-            if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
-                "standalone_ephemeral_key".to_string()
-            } else {
-                "transient_memory_key".to_string()
-            }
-        }));
+        .unwrap_or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage."));
     
     let mut hasher = Sha256::new();
     hasher.update(key.as_bytes());

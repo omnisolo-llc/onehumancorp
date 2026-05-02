@@ -1,6 +1,6 @@
 use axum::{
     extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, State, Query},
-    response::IntoResponse,
+    response::IntoResponse, Json,
 };
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
@@ -13,6 +13,28 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 #[derive(Deserialize)]
 pub struct ConnectQuery {
     pub channel: String,
+}
+
+
+#[derive(Deserialize)]
+pub struct BroadcastRequest {
+    pub topic: String,
+    pub payload: String,
+}
+
+pub async fn mesh_broadcast_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    Json(req): Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    let payload_bytes = req.payload.into_bytes();
+    let msg = MeshMessage {
+        topic: req.topic.clone(),
+        payload: payload_bytes,
+    };
+    match transport.publish(&req.topic, msg).await {
+        Ok(_) => (axum::http::StatusCode::OK, "Broadcasted successfully").into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
 }
 
 pub async fn mesh_ws_handler(
