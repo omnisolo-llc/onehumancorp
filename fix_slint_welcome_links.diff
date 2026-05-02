@@ -1,0 +1,35 @@
+<<<<<<< SEARCH
+                if (all_done) : Text {
+                    text: "Congratulations! You are complete and ready to grow your business.";
+                    color: #10b981;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                }
+
+                Button {
+=======
+                if (all_done) : Text {
+                    text: "Congratulations! You are complete and ready to grow your business.";
+                    color: #10b981;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    TouchArea {
+                        clicked => { root.go_to_docs(); }
+                        Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; }
+                    }
+                    TouchArea {
+                        clicked => { root.go_to_video(); }
+                        Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; }
+                    }
+                    TouchArea {
+                        clicked => { root.go_to_support(); }
+                        Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; }
+                    }
+                }
+
+                Button {
+>>>>>>> REPLACE
