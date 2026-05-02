@@ -81,6 +81,7 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await expect(page.locator('text=Messages')).toBeVisible();
   await expect(page.locator('text=Analytics')).toBeVisible();
   await expect(page.locator('text=Share Store')).toBeVisible();
+  await expect(page.locator('text=Grow My Business')).toBeVisible();
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {

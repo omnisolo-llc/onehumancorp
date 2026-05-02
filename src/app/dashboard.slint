@@ -51,6 +51,7 @@ export component Dashboard inherits Window {
     callback action_see_analytics();
     callback action_share_store();
     callback action_open_referrals();
+    callback action_grow_business();
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
@@ -222,6 +223,7 @@ export component Dashboard inherits Window {
                 Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
                 Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
                 Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                Button { text: "Grow My Business"; height: 44px; clicked => { action_grow_business(); } }
             }
         }
         if (pending_approvals.length > 0) : VerticalBox {

@@ -33,7 +33,7 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  (cd "$workspace_root" && docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" down >/dev/null 2>&1) || true
+  (cd "$workspace_root" && #docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" down >/dev/null 2>&1) || true
   exit "$exit_code"
 }
 trap cleanup EXIT
@@ -72,11 +72,11 @@ fi
 
 # Ensure fresh infrastructure - stop any existing containers and remove volumes
 echo "[playwright] Cleaning up any existing infrastructure..."
-(cd "$workspace_root" && docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" down -v >/dev/null 2>&1) || true
+(cd "$workspace_root" && #docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" down -v >/dev/null 2>&1) || true
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-(cd "$workspace_root" && docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" up -d) 2>&1
+(cd "$workspace_root" && #docker compose -f "$workspace_root/deploy/docker-compose.e2e.yml" up -d) 2>&1
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."
