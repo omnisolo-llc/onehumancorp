@@ -20,12 +20,7 @@ The OHC Slint app features a comprehensive 11-step onboarding wizard:
 8.  **Product Add**: Adding the first product or service with price and photo.
 9.  **Domain Choice**: Choosing between a free OHC subdomain or a custom domain.
 10. **Review & Launch**: Summary of setup and triggering the AI deployment.
-11. **Post-launch Checklist**: Interactive checklist for the business owner after setup is complete.
-
-### Dual-Path Experience
-The wizard supports two primary paths:
-- **Guided Setup**: Steps 0-10, providing a comprehensive manual configuration from Welcome to Review & Launch.
-- **Instant Build**: An AI-powered branching path (Step 11) accessible from the Welcome screen. This path allows users to provide a short bio, and then jumps directly to Step 9 (Review & Launch) with AI-prefilled details.
+11. **Checklist**: Post-launch checklist for the business owner.
 
 ## 3. Running Tests
 
