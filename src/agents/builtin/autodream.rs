@@ -4,7 +4,7 @@ use crate::db::DB;
 use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
-use chrono::{Utc, DateTime};
+use chrono::Utc;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -178,7 +178,7 @@ impl AutoDreamWorker {
 
         for row in rows {
             let session_id: String = row.get("session_id");
-            let agent_id: String = row.get("agent_id");
+            let _agent_id: String = row.get("agent_id");
             let context_data: String = row.get("context_data");
 
             match client.generate_embedding(&context_data).await {

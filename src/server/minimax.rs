@@ -93,6 +93,7 @@ impl MinimaxClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let cb = get_circuit_breaker();
         if !cb.allow() {
@@ -158,6 +159,7 @@ impl MinimaxClient {
         Err(format!("failed after 5 retries: {}", last_err))
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         let cb = get_circuit_breaker();
         if !cb.allow() {
@@ -221,6 +223,7 @@ impl MinimaxClient {
     }
 }
 
+#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -228,6 +231,7 @@ pub struct LocalLLMClient {
 }
 
 impl LocalLLMClient {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
@@ -239,6 +243,7 @@ impl LocalLLMClient {
         LocalLLMClient { endpoint, embed_endpoint, model }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
@@ -262,6 +267,7 @@ impl LocalLLMClient {
         Ok(response.to_string())
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
@@ -286,12 +292,14 @@ impl LocalLLMClient {
     }
 }
 
+#[allow(dead_code)]
 pub struct ResilientClient {
     primary: MinimaxClient,
     fallback: LocalLLMClient,
 }
 
 impl ResilientClient {
+    #[allow(dead_code)]
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {
             primary,
@@ -299,6 +307,7 @@ impl ResilientClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         match self.primary.reason(prompt).await {
             Ok(res) => Ok(res),
@@ -309,6 +318,7 @@ impl ResilientClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         match self.primary.generate_embedding(text).await {
             Ok(res) => Ok(res),

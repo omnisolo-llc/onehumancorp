@@ -15,6 +15,7 @@ pub enum PipelineState {
     Rollback,
 }
 
+#[allow(dead_code)]
 pub struct Pipeline {
     pub id: String,
     pub branch: String,
