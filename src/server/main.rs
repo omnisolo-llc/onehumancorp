@@ -994,10 +994,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
+    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
+        is_cloud
     ).await.expect("Failed to create MeshTransport");
+
+    // Initialize Handoff Manager
+    let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
+        mesh_transport.clone(),
+        db.clone(),
+        is_cloud
+    );
+    if let Err(e) = handoff_manager.start_listener().await {
+        eprintln!("Failed to start handoff listener: {}", e);
+    }
 
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
