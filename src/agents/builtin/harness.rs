@@ -145,19 +145,33 @@ impl ASTValidator {
         ASTValidator
     }
 
-    pub fn validate(&self, command: &str) -> Result<(), String> {
+    pub fn validate(&self, command: &str, agent_id: &str) -> Result<(), String> {
+        let mut violation: Option<&str> = None;
         if command.contains("sudo") {
-            return Err("sudo is not allowed".to_string());
+            violation = Some("sudo is not allowed");
+        } else if command.contains("zmodload") {
+            violation = Some("zmodload is not allowed");
+        } else if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
+            violation = Some("subshells and redirections are not allowed in stub");
+        } else if command.contains("IFS") {
+            violation = Some("IFS injection is not allowed");
         }
-        if command.contains("zmodload") {
-            return Err("zmodload is not allowed".to_string());
+
+        if let Some(err_msg) = violation {
+            let agent_id = agent_id.to_string();
+
+            // Record using OTEL Counter
+            let meter = opentelemetry::global::meter("ohc-harness");
+            let counter = meter.u64_counter("ohc_sandbox_violation_total").build();
+            counter.add(1, &[
+                opentelemetry::KeyValue::new("agent_id", agent_id.clone()),
+                opentelemetry::KeyValue::new("violation_type", "blocked_command"),
+                opentelemetry::KeyValue::new("harness_mode", "local"),
+            ]);
+
+            return Err(err_msg.to_string());
         }
-        if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
-            return Err("subshells and redirections are not allowed in stub".to_string());
-        }
-        if command.contains("IFS") {
-            return Err("IFS injection is not allowed".to_string());
-        }
+
         // TODO: use tree-sitter for full AST validation
         Ok(())
     }
@@ -165,7 +179,7 @@ impl ASTValidator {
 
 #[async_trait]
 pub trait HarnessBackend: Send + Sync {
-    async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String>;
+    async fn execute(&self, command: &str, policy: &Policy, agent_id: &str) -> Result<ResultModel, String>;
 }
 
 pub struct LocalBackend {
@@ -261,8 +275,8 @@ impl LocalBackend {
 
 #[async_trait]
 impl HarnessBackend for LocalBackend {
-    async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
-        self.validator.validate(command)?;
+    async fn execute(&self, command: &str, policy: &Policy, agent_id: &str) -> Result<ResultModel, String> {
+        self.validator.validate(command, agent_id)?;
 
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
@@ -299,7 +313,7 @@ impl DockerBackend {
 
 #[async_trait]
 impl HarnessBackend for DockerBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
+    async fn execute(&self, command: &str, _policy: &Policy, _agent_id: &str) -> Result<ResultModel, String> {
         // Mock implementation for spinning up a container per agent session
         Ok(ResultModel {
             stdout: format!("Mock Docker Execution: {}", command),
@@ -342,11 +356,11 @@ impl Manager {
         }
     }
 
-    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType) -> Result<ResultModel, String> {
+    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType, agent_id: &str) -> Result<ResultModel, String> {
         let policy = policy.unwrap_or(&self.config.default_policy);
         match backend_type {
-            BackendType::Local => self.local_backend.execute(command, policy).await,
-            BackendType::Docker => self.docker_backend.execute(command, policy).await,
+            BackendType::Local => self.local_backend.execute(command, policy, agent_id).await,
+            BackendType::Docker => self.docker_backend.execute(command, policy, agent_id).await,
         }
     }
 }
@@ -430,14 +444,15 @@ mod tests {
     #[test]
     fn test_ast_validator() {
         let validator = ASTValidator::new();
+        let agent_id = "test-agent";
         
-        assert!(validator.validate("ls -l").is_ok());
-        assert!(validator.validate("echo hello").is_ok());
+        assert!(validator.validate("ls -l", agent_id).is_ok());
+        assert!(validator.validate("echo hello", agent_id).is_ok());
         
-        let err = validator.validate("sudo rm -rf /").unwrap_err();
+        let err = validator.validate("sudo rm -rf /", agent_id).unwrap_err();
         assert_eq!(err, "sudo is not allowed");
         
-        let err = validator.validate("zmodload zsh/clone").unwrap_err();
+        let err = validator.validate("zmodload zsh/clone", agent_id).unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
     }
 
@@ -487,13 +502,14 @@ mod tests {
         let config = Config::default();
         let manager = Manager::new(config);
         let command = "echo routing_test";
+        let agent_id = "test-agent";
 
-        let local_res = manager.execute_with_policy(command, None, BackendType::Local).await.unwrap();
+        let local_res = manager.execute_with_policy(command, None, BackendType::Local, agent_id).await.unwrap();
         // Since bwrap is not guaranteed to be available in tests, it might be a simulated output.
         // We will just check it executes without error.
         assert!(local_res.exit_code == 0 || local_res.exit_code == -1);
 
-        let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
+        let docker_res = manager.execute_with_policy(command, None, BackendType::Docker, agent_id).await.unwrap();
         assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
         assert_eq!(docker_res.exit_code, 0);
     }
