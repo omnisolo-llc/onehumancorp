@@ -126,10 +126,9 @@ test.describe('Dashboard Core', () => {
     await expect(editBtn).toBeVisible();
   });
 
-  test('should display agent activity feed', async ({ page }) => {
+  test('should display agent actions today', async ({ page }) => {
     await page.goto('/');
-    const activitySection = page.locator('[class*="activity"], [class*="feed"]').first();
-    await expect(activitySection).toBeVisible();
+    await expect(page.locator('text=Agent Actions Today')).toBeVisible();
   });
 });
 
