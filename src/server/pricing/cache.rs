@@ -87,13 +87,23 @@ impl CompressedEmbeddingCache {
 
     pub fn get(&self, prompt: &str) -> Option<String> {
         let key = self.hash_prompt(prompt);
-        let entries = self.entries.read().unwrap();
         
-        if let Some(entry) = entries.get(&key) {
-            if Instant::now() > entry.expires_at {
-                return None;
+        // Scope the lock so we don't hold it during decompression
+        let compressed_response = {
+            let entries = self.entries.read().unwrap();
+            if let Some(entry) = entries.get(&key) {
+                if Instant::now() > entry.expires_at {
+                    None
+                } else {
+                    Some(entry.response.clone())
+                }
+            } else {
+                None
             }
-            match compression::decompress_lossless(&entry.response) {
+        };
+
+        if let Some(resp) = compressed_response {
+            match compression::decompress_lossless(&resp) {
                 Ok(decompressed) => Some(decompressed),
                 Err(e) => {
                     eprintln!("Failed to decompress cached response: {}", e);
@@ -140,14 +150,14 @@ mod tests {
 
     #[test]
     fn test_local_embedding_cache() {
-        let cache = LocalEmbeddingCache::new(Duration::from_secs(1));
+        let cache = LocalEmbeddingCache::new(Duration::from_millis(50));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         assert_eq!(cache.get("prompt2"), None);
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(1500));
+        thread::sleep(Duration::from_millis(100));
         assert_eq!(cache.get("prompt1"), None);
         
         // Prune
@@ -157,13 +167,13 @@ mod tests {
 
     #[test]
     fn test_compressed_embedding_cache() {
-        let cache = CompressedEmbeddingCache::new(Duration::from_secs(1));
+        let cache = CompressedEmbeddingCache::new(Duration::from_millis(50));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(1500));
+        thread::sleep(Duration::from_millis(100));
         assert_eq!(cache.get("prompt1"), None);
     }
 }
