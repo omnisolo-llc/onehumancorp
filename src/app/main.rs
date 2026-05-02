@@ -124,9 +124,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
                 if ui.get_is_sign_up() {
-                    ui.invoke_start_setup_wizard();
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("Login as {}...", email);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
+                }
+            }
+        }
+    });
+
+    login_ui.on_resend_verification({
+        let login_handle = login_ui_handle.clone();
+        move |_email| {
+            if let Some(ui) = login_handle.upgrade() {
+                // Simulate email verified
+                ui.invoke_start_setup_wizard();
+            }
+        }
+    });
+
+    login_ui.on_oauth_login({
+        let login_handle = login_ui_handle.clone();
+        move |provider| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("OAuth Login via {}...", provider);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
                 }
             }
         }
@@ -840,6 +875,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_copy_link(|link| {
+        // Send to system clipboard if possible. Using terminal fallback for test
+        println!("Copied to clipboard: {}", link);
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -907,9 +947,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let msg = r.message.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // Go to checklist
+                                        // Delay going to step 10 to show confetti?
+                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
+                                        // If we transition to step 10, the confetti disappears.
+                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
+                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
                                     }
                                 }).unwrap();
                             }
