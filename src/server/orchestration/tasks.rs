@@ -95,6 +95,7 @@ impl TaskDecompositionService {
                     r#"
                     SELECT id, dependencies FROM shared_tasks_decomposition
                     WHERE status = 'PENDING'
+                    ORDER BY created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
