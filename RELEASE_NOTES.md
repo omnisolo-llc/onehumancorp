@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
+- Scaling (Cloud): 🔨 Forge: [Architecture] Business Journey Architecture: End-to-End Persona Journeys (#9354)
+- Privacy/Offline (Standalone): 🔨 Forge: [Architecture] Business Journey Architecture: End-to-End Persona Journeys (#9354)
+
 ## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
 - Scaling (Cloud): chore: migrate protobufs to bazel and fix tests (#9343)
 - Privacy/Offline (Standalone): chore: migrate protobufs to bazel and fix tests (#9343)

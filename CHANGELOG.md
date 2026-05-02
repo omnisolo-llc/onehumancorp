@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: [Architecture] Business Journey Architecture: End-to-End Persona Journeys (#9354)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: [Architecture] Business Journey Architecture: End-to-End Persona Journeys (#9354)
+
 ## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
 ### Cloud Scaling Improvements
 - chore: migrate protobufs to bazel and fix tests (#9343)
