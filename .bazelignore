@@ -5,8 +5,6 @@ bazel/rules/flutter/bazel-bin
 bazel/rules/flutter/bazel-out
 bazel/rules/flutter/bazel-testlogs
 node_modules
-.pnpm-store
-.playwright-browsers
 bazel-mono
 bazel-bin
 bazel-out

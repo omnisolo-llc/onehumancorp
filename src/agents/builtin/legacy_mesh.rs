@@ -20,7 +20,7 @@ impl DistributedLock {
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
-        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
         
         loop {
@@ -47,7 +47,7 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
-        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
@@ -126,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_claim_mission_no_db() {
-        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let res = claim_mission(&pool, "agent-1").await;
         // Should fail because table doesn't exist or connection fails on execution!
         assert!(res.is_err());

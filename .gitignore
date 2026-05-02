@@ -113,7 +113,3 @@ site/
 /src/app/macos/Flutter/GeneratedPluginRegistrant.swift
 /src/app/**/ephemeral/
 playwright-report/
-.playwright-browsers/
-*.tar.gz
-*.tar.xz
-debian-binary

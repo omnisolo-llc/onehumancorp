@@ -1,4 +1,4 @@
--- 057_transcripts_rls.sql
+-- 050_transcripts_rls.sql
 -- Enable Row Level Security and corresponding policies on meeting_transcripts table.
 
 ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;

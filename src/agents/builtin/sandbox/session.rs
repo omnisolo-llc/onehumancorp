@@ -12,6 +12,7 @@ pub struct ShellSession {
     pub memory_dir: PathBuf,
     pub current_cwd: RwLock<PathBuf>,
     blocked_patterns: Vec<Regex>,
+    pub bwrap_available: bool,
 }
 
 impl ShellSession {
@@ -37,12 +38,22 @@ impl ShellSession {
             Regex::new(r"=\(").unwrap(),
         ];
 
+        let bwrap_available = tokio::process::Command::new("bwrap")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .await
+            .map(|s| s.success())
+            .unwrap_or(false);
+
         Ok(ShellSession {
             session_id: session_id.to_string(),
             sandbox_dir: sandbox_path.to_path_buf(),
             memory_dir,
             current_cwd: RwLock::new(sandbox_path.to_path_buf()),
             blocked_patterns,
+            bwrap_available,
         })
     }
 
@@ -54,6 +65,41 @@ impl ShellSession {
         }
         // TODO: Implement AST validation similar to Go BashASTValidator
         Ok(())
+    }
+
+    pub fn build_command(&self, wrapper_cmd: &str) -> Command {
+        if self.bwrap_available {
+            let mut bwrap_cmd = Command::new("bwrap");
+            bwrap_cmd.arg("--unshare-pid")
+                     .arg("--unshare-uts")
+                     .arg("--proc").arg("/proc")
+                     .arg("--dev").arg("/dev")
+                     .arg("--ro-bind").arg("/usr").arg("/usr")
+                     .arg("--ro-bind").arg("/bin").arg("/bin")
+                     .arg("--ro-bind").arg("/etc").arg("/etc");
+
+            if Path::new("/run").exists() {
+                bwrap_cmd.arg("--ro-bind").arg("/run").arg("/run");
+            }
+            if Path::new("/var/run").exists() {
+                bwrap_cmd.arg("--ro-bind").arg("/var/run").arg("/var/run");
+            }
+            if Path::new("/lib").exists() {
+                bwrap_cmd.arg("--ro-bind").arg("/lib").arg("/lib");
+            }
+            if Path::new("/lib64").exists() {
+                bwrap_cmd.arg("--ro-bind").arg("/lib64").arg("/lib64");
+            }
+
+            bwrap_cmd.arg("--tmpfs").arg("/tmp")
+                     .arg("--bind").arg(&self.sandbox_dir).arg(&self.sandbox_dir)
+                     .arg("--").arg("bash").arg("-c").arg(wrapper_cmd);
+            bwrap_cmd
+        } else {
+            let mut bash_cmd = Command::new("bash");
+            bash_cmd.arg("-c").arg(wrapper_cmd);
+            bash_cmd
+        }
     }
 
     pub async fn run_stateful_command(&self, command: &str) -> Result<String, String> {
@@ -69,16 +115,13 @@ impl ShellSession {
             memory_dir_export, env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
         );
 
-        let mut cmd = Command::new("bash");
-        cmd.arg("-c").arg(wrapper_cmd);
+        let mut cmd = self.build_command(&wrapper_cmd);
         
         let cwd = self.current_cwd.read().await.clone();
         cmd.current_dir(cwd);
         
         cmd.env_clear();
         cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
-
-        // TODO: Support sandboxing with bwrap or sandbox-exec if available
 
         let output = cmd.output().await.map_err(|e| e.to_string())?;
 
@@ -133,6 +176,35 @@ mod tests {
         let res = session.run_stateful_command("sudo apt-get update").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("violates security policy"));
+
+        let _ = tokio::fs::remove_dir_all(dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_shell_session_bwrap_args() {
+        let dir = "/tmp/test_session_bwrap";
+        let _ = tokio::fs::remove_dir_all(dir).await;
+        let mut session = ShellSession::new("sess3", dir).await.unwrap();
+
+        // Force bwrap mode for test evaluation
+        session.bwrap_available = true;
+        let cmd = session.build_command("echo test");
+        let cmd_str = format!("{:?}", cmd);
+
+        assert!(cmd_str.contains("bwrap"));
+        assert!(cmd_str.contains("--unshare-pid"));
+        assert!(cmd_str.contains("--tmpfs"));
+        assert!(cmd_str.contains("--bind"));
+        assert!(cmd_str.contains("/tmp/test_session_bwrap"));
+
+        // Force bash fallback
+        session.bwrap_available = false;
+        let cmd2 = session.build_command("echo test");
+        let cmd_str2 = format!("{:?}", cmd2);
+
+        assert!(!cmd_str2.contains("bwrap"));
+        assert!(cmd_str2.contains("bash"));
+        assert!(cmd_str2.contains("-c"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
