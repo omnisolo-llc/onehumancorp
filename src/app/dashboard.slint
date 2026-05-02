@@ -55,10 +55,11 @@ export component Dashboard inherits Window {
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
 
-    Flickable {
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        Flickable {
+            VerticalBox {
+                spacing: 20px;
+                padding: 24px;
 
         // Header
         HorizontalBox {
@@ -118,7 +119,7 @@ export component Dashboard inherits Window {
         VerticalBox {
             spacing: 16px;
 
-            HorizontalBox {
+            if (root.width > 768px) : HorizontalBox {
                 spacing: 16px;
 
                 GlassCard {
@@ -131,7 +132,6 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        clicked => { action_see_analytics(); }
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Today's Sales"; color: #94a3b8; }
@@ -149,7 +149,6 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        clicked => { action_view_orders(); }
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Orders to Ship"; color: #94a3b8; }
@@ -159,7 +158,7 @@ export component Dashboard inherits Window {
                 }
             }
 
-            HorizontalBox {
+            if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
 
                 GlassCard {
@@ -172,7 +171,45 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        // no callback available for helpers/tasks yet
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Today's Sales"; color: #94a3b8; }
+                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                        }
+                    }
+                }
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Orders to Ship"; color: #94a3b8; }
+                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                        }
+                    }
+                }
+            }
+
+            if (root.width > 768px) : HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Active Helpers"; color: #94a3b8; }
@@ -190,7 +227,45 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        // no callback available for helpers/tasks yet
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Current AI Tasks"; color: #94a3b8; }
+                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                        }
+                    }
+                }
+            }
+
+            if (root.width <= 768px) : VerticalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Active Helpers"; color: #94a3b8; }
+                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                        }
+                    }
+                }
+                GlassCard {
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 100%;
+                    min-height: 88px;
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Current AI Tasks"; color: #94a3b8; }
@@ -282,4 +357,68 @@ export component Dashboard inherits Window {
         }
     }
 }
+
+        // Sticky Bottom Navigation
+        GlassCard {
+            border-radius: 0px;
+            border-width: 0px;
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 51, 0.95);
+            height: 64px;
+
+            HorizontalBox {
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                alignment: space-around;
+
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_add_product(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Add"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_view_orders(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Orders"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_check_messages(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Chat"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_see_analytics(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Stats"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_share_store(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Share"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
+    }
 }
