@@ -19,6 +19,8 @@ chrono = { workspace = true }
 serde_yaml = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
 futures = { workspace = true }
+open = { workspace = true }
+urlencoding = { workspace = true }
 
 [build-dependencies]
 slint-build = "1.8.0"

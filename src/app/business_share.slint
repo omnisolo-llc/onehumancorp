@@ -11,10 +11,12 @@ export component BusinessShare inherits Window {
     in property <string> business_name: "My Awesome Store";
     in property <string> business_tagline: "The best place to buy things";
     in property <string> share_link: "ohc://share?b=123";
+    in property <image> logo_image;
 
     callback copy_link();
     callback share_to_instagram();
     callback share_to_x();
+    callback share_to_whatsapp();
     callback close();
 
     VerticalBox {
@@ -42,7 +44,18 @@ export component BusinessShare inherits Window {
                     height: 120px;
                     background: rgba(255, 255, 255, 0.1);
                     border-radius: 8px;
-                    Text { text: "Logo / Cover Image"; color: #cbd5e1; horizontal-alignment: center; vertical-alignment: center; }
+                    if logo_image.width > 0 : Image {
+                        source: logo_image;
+                        width: 100%;
+                        height: 100%;
+                        image-fit: cover;
+                    }
+                    if logo_image.width == 0 : Text {
+                        text: "Logo / Cover Image";
+                        color: #cbd5e1;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
                 }
 
                 Text { text: business_name; font-size: 20px; font-weight: 700; color: white; horizontal-alignment: center; }
@@ -70,6 +83,12 @@ export component BusinessShare inherits Window {
                 text: "🐦 Share to X";
                 height: 48px;
                 clicked => { share_to_x(); }
+            }
+
+            Button {
+                text: "💬 Share to WhatsApp";
+                height: 48px;
+                clicked => { share_to_whatsapp(); }
             }
         }
 

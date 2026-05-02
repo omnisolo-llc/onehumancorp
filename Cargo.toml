@@ -64,6 +64,8 @@ tonic-build = "0.12"
 members = ["src/app"]
 
 [workspace.dependencies]
+open = "5.1.4"
+urlencoding = "2"
 tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 prost = "0.13"

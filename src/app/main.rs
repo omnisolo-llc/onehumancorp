@@ -627,6 +627,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    business_share_ui.on_share_to_instagram({
+                        let bs_handle_clone_for_ig = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_ig.upgrade() {
+                                let link = ui.get_share_link();
+                                let msg = format!("Check out my store on OneHumanCorp: {}", link);
+                                let url = format!("https://www.instagram.com/?url={}", urlencoding::encode(&link));
+                                println!("Opening Instagram share intent for link: {}", url);
+                                let _ = open::that(url);
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_x({
+                        let bs_handle_clone_for_x = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_x.upgrade() {
+                                let link = ui.get_share_link();
+                                let msg = format!("Check out my store on OneHumanCorp! {}", link);
+                                let url = format!("https://twitter.com/intent/tweet?text={}", urlencoding::encode(&msg));
+                                println!("Opening X share intent for link: {}", url);
+                                let _ = open::that(url);
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_whatsapp({
+                        let bs_handle_clone_for_wa = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_wa.upgrade() {
+                                let link = ui.get_share_link();
+                                let msg = format!("Check out my store on OneHumanCorp! {}", link);
+                                let url = format!("https://wa.me/?text={}", urlencoding::encode(&msg));
+                                println!("Opening WhatsApp share intent for link: {}", url);
+                                let _ = open::that(url);
+                            }
+                        }
+                    });
+
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
@@ -2461,6 +2500,10 @@ mod cost_transparency_e2e_tests {
         let share_to_x_called_clone = share_to_x_called.clone();
         business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
 
+        let share_to_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_wa_called_clone = share_to_wa_called.clone();
+        business_share_ui.on_share_to_whatsapp(move || { *share_to_wa_called_clone.borrow_mut() = true; });
+
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
         business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
@@ -2477,6 +2520,9 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_share_to_x();
         assert!(*share_to_x_called.borrow());
+
+        business_share_ui.invoke_share_to_whatsapp();
+        assert!(*share_to_wa_called.borrow());
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
