@@ -464,6 +464,45 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
+
+                let dashboard_handle_for_mesh = dashboard_handle.clone();
+                spawn(async move {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::EventStreamRequest {
+                            topic: "dashboard".to_string(),
+                        });
+                        if let Ok(response) = client.stream_teammate_mesh(request).await {
+                            let mut stream = response.into_inner();
+                            let mut messages = Vec::new();
+                            while let Ok(Some(event)) = stream.message().await {
+                                let id = format!("{}-{}", event.agent_id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+                                let content = if event.payload.is_empty() {
+                                    format!("Agent {} performed action: {}", event.agent_id, event.action)
+                                } else {
+                                    String::from_utf8_lossy(&event.payload).into_owned()
+                                };
+                                messages.push(app::UiMeshMessage {
+                                    id: id.into(),
+                                    content: content.into(),
+                                });
+                                // Keep only the last 10 messages
+                                if messages.len() > 10 {
+                                    messages.remove(0);
+                                }
+                                let messages_clone = messages.clone();
+                                let ui_weak = dashboard_handle_for_mesh.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = ui_weak.upgrade() {
+                                        let messages_model = slint::ModelRc::new(slint::VecModel::from(messages_clone));
+                                        ui.set_mesh_messages(messages_model.into());
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                    }
+                });
+
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
                 dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
