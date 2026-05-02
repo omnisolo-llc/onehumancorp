@@ -182,7 +182,12 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
-        jti: raw.get("jti").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+        jti: raw.get("jti").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| {
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(token_str.as_bytes());
+            hex::encode(hasher.finalize())
+        }),
     })
 }
 
