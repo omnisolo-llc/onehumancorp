@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tools",
+    srcs = [
+        "registry.go",
+        "base_tools.go",
+    ],
+    importpath = "onehumancorp/srcs/server/agents/tools",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "tools_test",
+    srcs = [
+        "registry_test.go",
+        "base_tools_test.go",
+    ],
+    embed = [":tools"],
+)
