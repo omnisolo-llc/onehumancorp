@@ -115,11 +115,10 @@ exports_files([
 
 rust_test(
     name = "app_test",
-    size = "small",
+    size = "large",
     srcs = [
         "main.rs",
-        "ui_tests.rs",
-    ],
+    ] + glob(["ui_tests/**/*.rs"]),
     crate_root = "main.rs",
     data = [
         "agent_config.slint",
@@ -179,6 +178,11 @@ rust_test(
         "welcome_checklist.slint",
     ],
     edition = "2024",
+    tags = ["exclusive"],
+    env = {
+        "SLINT_BACKEND": "software",
+        "RUST_TEST_THREADS": "1",
+    },
     deps = [
         "//src/proto:hub_tonic",
         ":build_script",
