@@ -120,15 +120,10 @@ pub struct Store {
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
     secret: Vec<u8>,
     oidc_cfg: RwLock<OIDCConfig>,
-    db_pool: Option<sqlx::PgPool>,
 }
 
 impl Store {
     pub fn new() -> Self {
-        Self::new_with_db(None)
-    }
-
-    pub fn new_with_db(db_pool: Option<sqlx::PgPool>) -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
@@ -175,7 +170,6 @@ impl Store {
                 client_id,
                 enabled,
             }),
-            db_pool,
         };
 
         store.seed_default_admin(now);
@@ -378,48 +372,15 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>) -> Result<(), String> {
-        if let Some(pool) = &self.db_pool {
-            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-            sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, 'system') ON CONFLICT (jti) DO NOTHING")
-                .bind(&jti)
-                .bind(exp)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            tx.commit().await.map_err(|e| e.to_string())?;
-        }
-
+    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
         
         let now = Utc::now();
         revoked.retain(|_, v| *v > now);
-
-        Ok(())
     }
 
-    pub async fn is_revoked(&self, jti: &str) -> bool {
-        if let Some(pool) = &self.db_pool {
-            if let Ok(mut tx) = pool.begin().await {
-                let _ = sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await;
-                if let Ok(row) = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
-                    .bind(jti)
-                    .fetch_one(&mut *tx)
-                    .await
-                {
-                    use sqlx::Row;
-                    let count: i64 = row.get(0);
-                    if count > 0 {
-                        return true;
-                    }
-                }
-            }
-        }
-
+    pub fn is_revoked(&self, jti: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
@@ -460,7 +421,7 @@ impl Store {
 
         match token_data {
             Ok(data) => {
-                if self.is_revoked(&data.claims.jti).await {
+                if self.is_revoked(&data.claims.jti) {
                     return Err("token revoked".to_string());
                 }
                 Ok(data.claims)
@@ -481,7 +442,7 @@ impl Store {
 
                 if let Some(cfg) = cfg_opt {
                      let claims = crate::oidc::validate_oidc_token(token, &cfg).await?;
-                     if self.is_revoked(&claims.jti).await {
+                     if self.is_revoked(&claims.jti) {
                          return Err("token revoked".to_string());
                      }
                      return Ok(claims);
@@ -616,7 +577,7 @@ impl AuthService for Arc<Store> {
                     if let Ok(claims) = self.as_ref().validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.as_ref().revoke_token(claims.jti, exp).await;
+                        let _ = self.as_ref().revoke_token(claims.jti, exp);
                     }
                 }
             }
@@ -856,7 +817,7 @@ mod tests {
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24)).await;
+        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24));
         
         assert!(s.validate_token(&token).await.is_err());
     }
