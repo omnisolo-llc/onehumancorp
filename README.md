@@ -13,7 +13,7 @@ From the root of the repository, you must explicitly run the onboarding CLI:
 **What this does:**
 - 🚀 Guides you through the **Developer Setup**
 - ⚙️ Configures your **Environment Variables**
-- 🩺 Runs deep system **Diagnostics**
+- 🩺 Runs deep system **Diagnostics** (including "Verify System State" dependencies check)
 - 🔄 Allows seamless switching between `cloud`, `standalone`, and `headless` modes
 
 This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
