@@ -1,17 +1,26 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
     width: 600px;
-    height: 400px;
+    height: 600px;
     title: "Welcome Checklist";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    property <bool> business_live: true;
+    property <bool> products_added: false;
+    property <bool> instagram_connected: false;
+    property <bool> link_shared: false;
+    property <int> completed_count: (business_live ? 1 : 0) + (products_added ? 1 : 0) + (instagram_connected ? 1 : 0) + (link_shared ? 1 : 0);
 
     callback go_to_dashboard();
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback go_to_docs();
+    callback go_to_video();
+    callback go_to_support();
 
     VerticalBox {
         alignment: center;
@@ -32,39 +41,70 @@ export component WelcomeChecklist inherits Window {
                     font-family: "Outfit";
                 }
 
+                Text {
+                    text: completed_count + " of 4 completed";
+                    font-size: 14px;
+                    color: #94a3b8;
+                    font-family: "Inter";
+                }
+
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "✓"; color: #10b981; } 
-                    Text { text: "Business live"; color: white; font-family: "Inter"; }
+                    CheckBox { checked <=> root.business_live; }
+                    Text { text: "Business live"; color: white; font-family: "Inter"; vertical-alignment: center; }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    CheckBox { checked <=> root.products_added; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         clicked => { root.go_to_add_products(); }
-                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; vertical-alignment: center; }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    CheckBox { checked <=> root.instagram_connected; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         clicked => { root.go_to_connect_instagram(); }
-                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; vertical-alignment: center; }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    CheckBox { checked <=> root.link_shared; }
                     TouchArea {
                         width: 100%;
                         height: 100%;
                         clicked => { root.go_to_share_link(); }
-                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; vertical-alignment: center; }
+                    }
+                }
+
+                if (completed_count == 4) : Text {
+                    text: "Congratulations! Your setup is complete!";
+                    color: #10b981;
+                    font-family: "Outfit";
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+
+                HorizontalBox {
+                    spacing: 20px;
+                    TouchArea {
+                        clicked => { root.go_to_docs(); }
+                        Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; }
+                    }
+                    TouchArea {
+                        clicked => { root.go_to_video(); }
+                        Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; }
+                    }
+                    TouchArea {
+                        clicked => { root.go_to_support(); }
+                        Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; }
                     }
                 }
 
