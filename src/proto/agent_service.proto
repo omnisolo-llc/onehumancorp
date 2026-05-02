@@ -46,6 +46,8 @@ message RunTaskRequest {
   ToolsetConfig toolset_config = 10;
   // The OHC department handling the task.
   string department = 12;
+  // The organization owning the task.
+  string organization_id = 13;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
