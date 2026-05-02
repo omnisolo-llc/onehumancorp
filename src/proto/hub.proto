@@ -126,6 +126,14 @@ message TeammateMeshEvent {
   bytes payload = 4;
 }
 
+message SyncStateHandoff {
+  string tenant_id = 1;
+  string state_id = 2;
+  bytes serialized_state = 3;
+  string mode_source = 4; // "cloud" or "standalone"
+  int64 timestamp = 5;
+}
+
 message PublishTeammateMeshEventRequest {
   string channel = 1;
   TeammateMeshEvent event = 2;
@@ -633,6 +641,16 @@ message ReferralsResponse {
   repeated Referral referrals = 1;
 }
 
+message ReferralStatsResponse {
+  int32 total_referrals = 1;
+  int32 click_count = 2;
+  double conversion_rate = 3;
+  int32 reward_balance_cents = 4;
+  int32 bonus_credit = 5;
+  int32 download_count = 6;
+  int32 waitlist_position = 7;
+}
+
 message GrowthIdRequest {
   string id = 1;
 }
@@ -735,6 +753,7 @@ service GrowthService {
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
   rpc GetReferrals(EmptyRequest) returns (ReferralsResponse);
+  rpc GetReferralStats(EmptyRequest) returns (ReferralStatsResponse);
   rpc CreateReferral(CreateReferralRequest) returns (Referral);
   rpc ClickReferral(GrowthIdRequest) returns (Referral);
   rpc ConvertReferral(GrowthIdRequest) returns (Referral);
