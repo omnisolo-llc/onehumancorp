@@ -57,13 +57,20 @@ pub fn redact_interface_pii(val: Value) -> Value {
 
 fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
+    if k == "tenant_id" || k == "org_id" {
+        return false;
+    }
+
     k.contains("password") ||
     k.contains("secret") ||
     k.contains("key") ||
     k.contains("token") ||
     k.contains("auth") ||
     k.contains("cookie") ||
-    k.contains("credential")
+    k.contains("credential") ||
+    k.contains("session_id") ||
+    k.contains("session_data") ||
+    k.contains("payload")
 }
 
 fn is_email(s: &str) -> bool {
