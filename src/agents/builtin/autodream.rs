@@ -4,7 +4,7 @@ use crate::db::DB;
 use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
-use chrono::{Utc, DateTime};
+use chrono::Utc;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -53,7 +53,7 @@ impl AutoDreamWorker {
             }
         });
         
-        let db = self.db.clone();
+        let _db = self.db.clone();
         tokio::spawn(async move {
             loop {
                 println!("AutoDream: running conflict resolution pipeline...");

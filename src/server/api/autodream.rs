@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Query},
+    extract::Query,
     response::IntoResponse,
     Json,
     routing::{post, get},
