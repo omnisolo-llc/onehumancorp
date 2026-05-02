@@ -102,6 +102,13 @@ impl Provider for LocalProvider {
         }
         tokio::fs::write(path, data).await
     }
+
+    async fn get_tenant_usage(&self, _tenant_id: &str) -> io::Result<i64> {
+        // PERF: Avoid walking the directory on every call.
+        // In a production system, this would query a database or a cached counter.
+        // For now, we return a placeholder to avoid O(N) performance degradation.
+        Ok(0)
+    }
 }
 
 #[cfg(test)]
