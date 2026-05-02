@@ -20,12 +20,12 @@ impl Provider for S3Provider {
     }
 
     async fn list_blobs(&self, _prefix: &str) -> io::Result<Vec<BlobMetadata>> {
-        // Implemented later
+        // STUB
         Ok(vec![])
     }
 
     async fn read_blob_metadata(&self, key: &str) -> io::Result<BlobMetadata> {
-        // Implemented later
+        // STUB
         Ok(BlobMetadata {
             key: key.to_string(),
             size: 1024,
@@ -35,17 +35,17 @@ impl Provider for S3Provider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
-        // Return a presigned URL
-        Ok(format!("https://s3.amazonaws.com/{}/{}?X-Amz-Signature=xyz", self.bucket_name, key))
+        // STUB: Return a fake presigned URL
+        Ok(format!("https://s3.amazonaws.com/{}/{}?X-Amz-Signature=stub", self.bucket_name, key))
     }
 
     async fn read_blob(&self, _key: &str) -> io::Result<Vec<u8>> {
-        // Implemented later
+        // STUB
         Ok(vec![])
     }
 
     async fn write_blob(&self, _key: &str, _data: &[u8]) -> io::Result<()> {
-        // Implemented later
+        // STUB
         Ok(())
     }
 }

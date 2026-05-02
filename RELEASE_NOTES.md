@@ -1,8 +1,5 @@
 # Release Notes
 
-## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
-- Scaling (Cloud): 🧙 Wizard: Simplify Setup Wizard to 7 Steps (#9321)
-- Privacy/Offline (Standalone): 🧙 Wizard: Simplify Setup Wizard to 7 Steps (#9321)
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 - Scaling (Cloud): 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
 - Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
