@@ -12,6 +12,14 @@ pub struct EmbeddingRecord {
     pub embedding: Vec<f32>,
     pub source_type: String,
     pub created_at: DateTime<Utc>,
+    #[serde(default = "default_reliability")]
+    pub reliability: f64,
+    #[serde(default)]
+    pub owner_override: bool,
+}
+
+fn default_reliability() -> f64 {
+    1.0
 }
 
 pub enum VectorMemoryStore {
@@ -38,30 +46,34 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at)                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at"
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, reliability, owner_override)                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at,                          reliability=excluded.reliability,                          owner_override=excluded.owner_override"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(&record.source_type)
                 .bind(record.created_at)
+                .bind(record.reliability)
+                .bind(record.owner_override)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at)                      VALUES (?, ?, ?, ?, ?, ?, ?)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at"
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, reliability, owner_override)                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)                      ON CONFLICT(id) DO UPDATE SET                          content=excluded.content,                          embedding=excluded.embedding,                          created_at=excluded.created_at,                          reliability=excluded.reliability,                          owner_override=excluded.owner_override"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(&record.source_type)
                 .bind(record.created_at)
+                .bind(record.reliability)
+                .bind(record.owner_override)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -79,10 +91,10 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = $1                      ORDER BY embedding <=> $2::vector                      LIMIT $3"
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, reliability, owner_override                      FROM consolidated_memory                      WHERE tenant_id = $1                      ORDER BY embedding <=> $2::vector                      LIMIT $3"
                 )
                 .bind(tenant_id)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(limit)
                 .fetch_all(pool)
                 .await
@@ -96,6 +108,8 @@ impl VectorRepository {
                     let emb_str_res: String = row.get("embedding");
                     let source_type: String = row.get("source_type");
                     let created_at: DateTime<Utc> = row.get("created_at");
+                    let reliability: f64 = row.try_get("reliability").unwrap_or(1.0);
+                    let owner_override: bool = row.try_get("owner_override").unwrap_or(false);
 
                     let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
@@ -107,15 +121,17 @@ impl VectorRepository {
                         embedding,
                         source_type,
                         created_at,
+                        reliability,
+                        owner_override,
                     });
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at                      FROM consolidated_memory                      WHERE tenant_id = ?                      ORDER BY vec_distance_cosine(embedding, ?)                      LIMIT ?"
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, reliability, owner_override                      FROM consolidated_memory                      WHERE tenant_id = ?                      ORDER BY vec_distance_cosine(embedding, ?)                      LIMIT ?"
                 )
                 .bind(tenant_id)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(limit)
                 .fetch_all(pool)
                 .await
@@ -129,6 +145,8 @@ impl VectorRepository {
                     let emb_str_res: String = row.get("embedding");
                     let source_type: String = row.get("source_type");
                     let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
+                    let reliability: f64 = row.try_get("reliability").unwrap_or(1.0);
+                    let owner_override: bool = row.try_get("owner_override").unwrap_or(false);
 
                     let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
@@ -140,6 +158,8 @@ impl VectorRepository {
                         embedding,
                         source_type,
                         created_at,
+                        reliability,
+                        owner_override,
                     });
                 }
             }
@@ -191,7 +211,8 @@ impl VectorRepository {
 
     pub async fn resolve_conflicts(&self) -> Result<(), String> {
         // Resolve conflicts by identifying highly similar vectors (cosine distance < 0.05)
-        // within the same organization and keeping only the most recent one.
+        // within the same organization and keeping the one with higher reliability,
+        // or explicit owner override, or failing that, the most recent one.
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
@@ -200,7 +221,13 @@ impl VectorRepository {
                     WHERE a.tenant_id = b.tenant_id
                       AND a.id != b.id
                       AND a.embedding <=> b.embedding < 0.05
-                      AND a.created_at < b.created_at
+                      AND (
+                          (b.owner_override = true AND a.owner_override = false)
+                          OR
+                          (b.owner_override = a.owner_override AND b.reliability > a.reliability)
+                          OR
+                          (b.owner_override = a.owner_override AND b.reliability = a.reliability AND a.created_at < b.created_at)
+                      )
                 ";
                 sqlx::query(query)
                     .execute(pool)
@@ -216,7 +243,13 @@ impl VectorRepository {
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id
                         WHERE a.id != b.id
                           AND vec_distance_cosine(a.embedding, b.embedding) < 0.05
-                          AND a.created_at < b.created_at
+                          AND (
+                              (b.owner_override = 1 AND a.owner_override = 0)
+                              OR
+                              (b.owner_override = a.owner_override AND b.reliability > a.reliability)
+                              OR
+                              (b.owner_override = a.owner_override AND b.reliability = a.reliability AND a.created_at < b.created_at)
+                          )
                     )
                 ";
                 sqlx::query(query)
@@ -327,6 +360,8 @@ mod tests {
             embedding: vec![1.0, 2.0, 3.0],
             source_type: "TEXT".to_string(),
             created_at: now,
+            reliability: 1.0,
+            owner_override: false,
         };
 
         let json = serde_json::to_string(&record).unwrap();
@@ -396,6 +431,8 @@ mod tests {
             embedding: emb.clone(),
             source_type: "TEXT".to_string(),
             created_at: old_time,
+            reliability: 1.0,
+            owner_override: false,
         };
         let record2 = EmbeddingRecord {
             id: "rec2".to_string(), // different ID
@@ -405,6 +442,8 @@ mod tests {
             embedding: emb.clone(), // same embedding! (conflict)
             source_type: "TEXT".to_string(),
             created_at: now,
+            reliability: 1.0,
+            owner_override: false,
         };
         let record_stale = EmbeddingRecord {
             id: "rec3".to_string(),
@@ -414,6 +453,8 @@ mod tests {
             embedding: vec![4.0, 5.0, 6.0],
             source_type: "TASK_SUMMARY".to_string(),
             created_at: old_time,
+            reliability: 1.0,
+            owner_override: false,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -436,62 +477,4 @@ mod tests {
 }
 
 
-#[async_trait]
-pub trait LongTermMemory: Send + Sync {
-    /// Retrieve relevant past conversations or state based on a query
-    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    
-    /// Store a new piece of memory (e.g., an architectural decision or summary)
-    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
-}
 
-/// A simple implementation that stores memory in Redis using its list or sorted set capabilities.
-/// In a production system, this would likely use Redis Vector Search (RediSearch) or a dedicated vector DB.
-pub struct RedisMemoryStore {
-    client: redis::Client,
-    namespace: String,
-}
-
-impl RedisMemoryStore {
-    pub fn new(redis_url: &str, namespace: &str) -> Result<Self, String> {
-        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        Ok(Self {
-            client,
-            namespace: namespace.to_string(),
-        })
-    }
-}
-
-#[async_trait]
-impl LongTermMemory for RedisMemoryStore {
-    async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        let key = format!("{}:memory", self.namespace);
-        
-        // Simple LRANGE to get recent memories. 
-        // Real implementation would embed the query and use FT.SEARCH
-        let results: Vec<String> = redis::cmd("LRANGE")
-            .arg(&key)
-            .arg(0)
-            .arg((limit.max(1) - 1) as i64)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| e.to_string())?;
-            
-        Ok(results)
-    }
-
-    async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        let key = format!("{}:memory", self.namespace);
-        
-        let _: () = redis::cmd("LPUSH")
-            .arg(&key)
-            .arg(content)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| e.to_string())?;
-            
-        Ok(())
-    }
-}

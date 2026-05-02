@@ -21,7 +21,6 @@ rust_library(
         "budget.rs",
         "caveman.rs",
         "core.rs",
-        "memory.rs",
         "pubsub.rs",
         "output_parser.rs",
         "types.rs",

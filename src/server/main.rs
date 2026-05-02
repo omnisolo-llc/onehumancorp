@@ -1,3 +1,6 @@
+use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
+use crate::ohc::orchestration::*;
+use crate::ohc::agent::service::*;
 pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
@@ -132,7 +135,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
+
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -977,8 +980,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 );"
             )
-            .execute(pool)
-            .await;
+            .execute(pool).await;
+            // Add columns if they do not exist
+            let _ = sqlx::query("ALTER TABLE consolidated_memory ADD COLUMN reliability FLOAT DEFAULT 1.0;").execute(pool).await;
+            let _ = sqlx::query("ALTER TABLE consolidated_memory ADD COLUMN owner_override BOOLEAN DEFAULT FALSE;").execute(pool).await;
         }
 
         let db_path = "ohc-standalone.db";
@@ -1111,8 +1116,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ohc::orchestration::*;
-    use crate::ohc::agent::service::*;
+
+
     use tonic::Request;
 
     // Helper to create a dummy hub and service for testing

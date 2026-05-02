@@ -8,7 +8,7 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
+use crate::memory_store::{EmbeddingRecord, VectorRepository};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -42,11 +42,27 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<PgVectorMemoryStore>>,
+    memory: Option<Arc<VectorRepository>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
 }
 
+
+pub fn inject_memories_into_prompt(memories: &[EmbeddingRecord], system_prompt: &str) -> String {
+    if memories.is_empty() {
+        return system_prompt.to_string();
+    }
+    let mut s = String::new();
+    s.push_str("## Relevant past experience\n");
+    for m in memories {
+        s.push_str("- ");
+        s.push_str(&m.content);
+        s.push('\n');
+    }
+    s.push_str("\n---\n\n");
+    s.push_str(system_prompt);
+    s
+}
 
 async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Option<&str>) -> String {
     let current = current_dir.to_path_buf();
@@ -131,15 +147,23 @@ impl AgentServiceImpl {
 
     pub async fn init_memory(&mut self) {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
 
         if !db_url.is_empty() {
-            match PgVectorMemoryStore::new(&db_url, org_id).await {
-                Ok(store) => {
-                    self.memory = Some(Arc::new(store));
+            match sqlx::PgPool::connect(&db_url).await {
+                Ok(pool) => {
+                    self.memory = Some(Arc::new(VectorRepository::new(pool)));
                 }
                 Err(e) => {
                     tracing::error!("Failed to connect to database for memory store: {}", e);
+                }
+            }
+        } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            // Standalone mode with SQLite
+            let db_path = "ohc-standalone.db";
+            if std::path::Path::new(db_path).exists() {
+                let conn_str = format!("sqlite://{}", db_path);
+                if let Ok(pool) = sqlx::sqlite::SqlitePoolOptions::new().connect(&conn_str).await {
+                    self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
                 }
             }
         }
@@ -234,7 +258,7 @@ impl AgentServiceImpl {
         }
     }
 
-    async fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
+    async fn build_run_config(&self, llm: Arc<dyn LlmClient>, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
         let model = if req.model.is_empty() {
             self.cfg.model.clone()
         } else {
@@ -242,7 +266,11 @@ impl AgentServiceImpl {
         };
 
         let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
+            let tenant_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+            // TODO: call the proper embedding service here instead of returning an empty list
+            let _ = store;
+            let _ = tenant_id;
+            vec![]
         } else {
             vec![]
         };
@@ -318,7 +346,7 @@ impl AgentServiceImpl {
         let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
-        let run_cfg = self.build_run_config(&req, &req.department).await;
+        let run_cfg = self.build_run_config(llm.clone(), &req, &req.department).await;
         
         let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
@@ -357,7 +385,7 @@ impl AgentService for AgentServiceImpl {
 
         let task_req = req.into_inner();
         let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req, &task_req.department).await;
+        let run_cfg = self.build_run_config(llm.clone(), &task_req, &task_req.department).await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
@@ -458,7 +486,18 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let _ = store.write(content, vec![]).await;
+                let record = crate::memory_store::EmbeddingRecord {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: "system".to_string(),
+                    agent_id: "system".to_string(),
+                    content: content.clone(),
+                    embedding: vec![],
+                    source_type: "MEMORY".to_string(),
+                    created_at: chrono::Utc::now(),
+                    reliability: 1.0,
+                    owner_override: false,
+                };
+                let _ = store.upsert(&record).await;
             }
         });
 
