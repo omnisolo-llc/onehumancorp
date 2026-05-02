@@ -581,6 +581,7 @@ mod tests {
     }
 
     #[tokio::test]
+        #[allow(unused_variables)]
     async fn test_create_transport_standalone() {
         let transport = create_transport(None, false).await.unwrap();
         // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
@@ -676,7 +677,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             let tx_clone = tx_arc.clone();
             tokio::spawn(async move {
-                let mut tx = tx_clone.lock().await;
+                let tx = tx_clone.lock().await;
                 let _ = tx.send(msg).await;
             });
         });

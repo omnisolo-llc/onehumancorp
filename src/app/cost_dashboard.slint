@@ -31,14 +31,15 @@ export component CostDashboard inherits Window {
             Button { text: "Refresh"; height: 44px; }
         }
 
-        // Summary Cards
-        if (root.width <= 768px) : VerticalBox {
+        // Use standard flexbox properties instead of conditional components with hardcoded sizes
+        HorizontalBox {
             spacing: 16px;
 
             GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
+                horizontal-stretch: 1;
 
                 VerticalBox {
                     padding: 16px;
@@ -50,36 +51,8 @@ export component CostDashboard inherits Window {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
+                horizontal-stretch: 1;
 
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Total Tokens"; color: #94a3b8; }
-                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                }
-            }
-        }
-
-        if (root.width > 768px) : HorizontalBox {
-            spacing: 16px;
-            
-            GlassCard {
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Total Spend"; color: #94a3b8; }
-                    Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                }
-            }
-            GlassCard {
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Total Tokens"; color: #94a3b8; }
