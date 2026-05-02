@@ -1058,12 +1058,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
-
-    let store = std::sync::Arc::new(if is_cloud {
-        auth::Store::new_with_db(Some(db.pool.clone()))
-    } else {
-        auth::Store::new_with_db(None)
-    });
+    let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {

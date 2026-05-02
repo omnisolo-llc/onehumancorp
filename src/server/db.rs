@@ -26,21 +26,6 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            // Pre-create SQLite DB file securely with 0o600 permissions
-            let path_str = database_url.strip_prefix("sqlite://").unwrap_or(&database_url);
-            let file_path = path_str.split('?').next().unwrap_or(path_str);
-            if file_path != ":memory:" && !file_path.is_empty() && !std::path::Path::new(file_path).exists() {
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::OpenOptionsExt;
-                    let _ = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .mode(0o600)
-                        .open(file_path);
-                }
-            }
-
             let conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
@@ -102,17 +87,12 @@ impl DB {
     }
 
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let mut tx = self.pool.begin().await?;
-        sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await?;
-
         sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
             .bind(memory_id)
             .bind(context)
             .bind(embedding)
-            .execute(&mut *tx)
+            .execute(&self.pool)
             .await?;
-
-        tx.commit().await?;
 
         Ok(())
     }
@@ -120,12 +100,9 @@ impl DB {
     pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
-        let mut tx = self.pool.begin().await?;
-        sqlx::query("SET app.current_tenant = 'system'").execute(&mut *tx).await?;
-
         // Fetch from shared_tasks
         let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
-            .fetch_all(&mut *tx)
+            .fetch_all(&self.pool)
             .await?;
 
         for row in shared_rows {
@@ -136,13 +113,14 @@ impl DB {
         }
 
         // Fetch from swarm_tasks
-        let swarm_rows = sqlx::query("SELECT id::text, tenant_id, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
-            .fetch_all(&mut *tx)
+        // Note: swarm_tasks doesn't have organization_id natively in the schema provided earlier
+        let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
+            .fetch_all(&self.pool)
             .await?;
 
         for row in swarm_rows {
             let id: String = row.get("id");
-            let org_id: String = row.get("tenant_id");
+            let org_id: String = "system".to_string(); // Fallback organization_id
             let payload: String = row.get("payload");
             result.push((id, org_id, payload, "swarm_tasks".to_string()));
         }
