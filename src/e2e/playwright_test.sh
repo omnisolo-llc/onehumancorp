@@ -22,9 +22,8 @@ cd "$workspace_root"
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
-# Set the executable path for playwright (only relevant if running on host, but kept for compatibility)
-export PLAYWRIGHT_BROWSERS_PATH="$workspace_root/.playwright-browsers"
-export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
+# Playwright browsers are managed by the Docker image or pnpm inside the container.
+# No host-side browser management is required.
 
 # Cleanup handler
 cleanup() {
