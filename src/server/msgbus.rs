@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
@@ -71,6 +70,8 @@ impl Default for MemoryBus {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(test)]
+use std::sync::Arc;
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
     
