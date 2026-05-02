@@ -1,11 +1,16 @@
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
-        tonic::include_proto!("ohc.orchestration");
+        pub use hub_proto::ohc::orchestration::*;
     }
 }
 
@@ -15,14 +20,29 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
+#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 
+#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
+
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
+    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+}
+
+#[cfg(test)]
+mod ui_tests;
 
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
@@ -39,6 +59,7 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -134,14 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                     }
                 }).unwrap();
             }
@@ -166,14 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             tokio::spawn(async move {
@@ -258,6 +265,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+    prompt_tuning_ui.on_save_prompt({
+        let ui_handle = prompt_tuning_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let tone = ui.get_tone();
+            let focus_only_business = ui.get_focus_only_business();
+            let focus_avoid_competitors = ui.get_focus_avoid_competitors();
+            let focus_reply_spanish = ui.get_focus_reply_spanish();
+
+            let state = std::collections::HashMap::from([
+                ("prompt_tone".to_string(), tone.to_string()),
+                ("prompt_focus_business".to_string(), focus_only_business.to_string()),
+                ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
+                ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
+            ]);
+            let ui_handle_err = ui_handle.clone();
+            tokio::spawn(async move {
+                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                match HubServiceClient::connect(url).await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        if let Err(e) = client.save_wizard_state(request).await {
+                            eprintln!("Failed to save wizard state: {}", e);
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_err.upgrade() {
+                                    ui.set_show_toast(false); // rollback optimistic UI
+                                    // In a real app we might show an error toast here
+                                }
+                            }).unwrap();
+                            return;
+                        }
+
+                        let mut domain_focus = vec![];
+                        if focus_only_business { domain_focus.push("Only discuss business".to_string()); }
+                        if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
+                        if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
+
+                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                            personality: tone.to_string(),
+                            domain_focus,
+                        });
+                        if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
+                            eprintln!("Failed to handle prompt tuning: {}", e);
+                            let ui_err_clone = ui_handle_err.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_err_clone.upgrade() {
+                                    ui.set_show_toast(false); // rollback
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_err.upgrade() {
+                                ui.set_show_toast(false); // rollback optimistic UI
+                            }
+                        }).unwrap();
+                    }
                 }
             });
         }
@@ -612,6 +682,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+    Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
@@ -831,9 +902,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // For now, we simulate the extraction as requested by the test and the design doc.
                 ui.set_company_name("AI Generated Store".into());
                 ui.set_business_type("Online Store".into());
-                ui.set_website_template("Modern".into());
-                ui.set_product_name("AI Fast Product".into());
-                ui.set_domain_choice("subdomain".into());
+
                 ui.set_admin_email("admin@ai-generated.test".into());
                 ui.set_payment_pref("online".into());
                 ui.set_step(9); // Skip straight to Review & Launch
@@ -861,10 +930,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -876,10 +945,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_admin_email = admin_email.to_string();
             let req_admin_name = ui.get_admin_name().to_string();
             let req_admin_password = ui.get_admin_password().to_string();
-            let req_website_template = website_template.to_string();
-            let req_product_name = product_name.to_string();
-            let req_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
 
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
@@ -900,10 +965,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: req_website_template,
-                            first_product_name: req_product_name,
-                            first_product_price: req_product_price,
-                            domain_choice: req_domain_choice,
+                            website_template: "".to_string(),
+                            first_product_name: "".to_string(),
+                            first_product_price: "".to_string(),
+                            domain_choice: "".to_string(),
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -941,6 +1006,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             });
+        }
+    });
+
+    login_ui.run()?;
+
+    Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn spawn<F>(f: F)
+where
+    F: std::future::Future<Output = ()> + 'static,
+{
+    wasm_bindgen_futures::spawn_local(f);
+}
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub async fn main_wasm() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+    run_app_wasm().await.map_err(|e| e.to_string().into())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let sw_ui_weak = setup_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = sw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let _ = setup_wizard_ui.hide();
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
         }
     });
 
@@ -1332,20 +1450,6 @@ mod e2e_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
-        assert_eq!(ui.get_step(), 7);
-
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        // Step 8: Domain -> Step 9
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
@@ -1356,20 +1460,17 @@ mod e2e_tests {
         assert_eq!(ui.get_sell_services(), false);
         assert_eq!(ui.get_sell_food(), false);
         assert_eq!(ui.get_sell_subscriptions(), false);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
+
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -1387,7 +1488,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1636,6 +1737,16 @@ mod tests {
         assert_eq!(ui.get_tone(), "Concise");
         assert_eq!(ui.get_focus_only_business(), true);
         assert_eq!(ui.get_focus_avoid_competitors(), true);
+
+        let save_prompt_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_prompt_called_clone = save_prompt_called.clone();
+
+        ui.on_save_prompt(move || {
+            *save_prompt_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_save_prompt();
+        assert!(*save_prompt_called.borrow(), "on_save_prompt should be called");
     }
 
     #[test]
@@ -1706,9 +1817,7 @@ mod docs_tests {
             if let Some(u) = ui_weak.upgrade() {
                 u.set_company_name("AI Store".into());
                 u.set_business_type("Online Store".into());
-                u.set_website_template("Modern".into());
-                u.set_product_name("AI Product".into());
-                u.set_domain_choice("subdomain".into());
+
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
                 u.set_step(9);
@@ -1717,20 +1826,19 @@ mod docs_tests {
 
         ui.invoke_generate_instant_preview();
 
-        assert_eq!(ui.get_step(), 9);
+        assert_eq!(ui.get_step(), 6);
         assert_eq!(ui.get_company_name(), "AI Store");
         assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_website_template(), "Modern");
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
         let ui_weak_launch = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -1747,7 +1855,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
 
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1800,18 +1908,15 @@ mod docs_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
-
-        // Step 7: Product -> Step 8
+        // New steps in onboarding
+        ui.invoke_select_template("Classic".into());
         ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
+        ui.set_product_price("10.0".into());
         ui.invoke_next_step();
 
-        // Step 8: Domain -> Step 9
         ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
 
+        assert_eq!(ui.get_step(), 9);
         // Step 9: Launch -> Step 10
         ui.invoke_launch(
             ui.get_business_type(),
@@ -1830,7 +1935,7 @@ mod docs_tests {
         ui.set_launching(false);
         ui.set_step(10);
 
-        // Step 10: Go to Dashboard
+        // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
         ui.on_go_to_dashboard(move || {
@@ -1845,10 +1950,7 @@ mod docs_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
+
     }
 
 

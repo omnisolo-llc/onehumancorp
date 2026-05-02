@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::auth::{User, UserRepository};
+use crate::utils::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
@@ -18,9 +19,12 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, _org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
@@ -37,9 +41,11 @@ impl UserRepository for PgUserRepository {
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -51,10 +57,14 @@ impl UserRepository for PgUserRepository {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let row = if org_id.is_empty() {
-            sqlx::query(query).bind(id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(id).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
@@ -83,10 +93,14 @@ impl UserRepository for PgUserRepository {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let row = if org_id.is_empty() {
-            sqlx::query(query).bind(username).fetch_one(&self.pool).await
+            sqlx::query(query).bind(username).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -114,10 +128,14 @@ impl UserRepository for PgUserRepository {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let row = if org_id.is_empty() {
-            sqlx::query(query).bind(email).fetch_one(&self.pool).await
+            sqlx::query(query).bind(email).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -145,10 +163,14 @@ impl UserRepository for PgUserRepository {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let row = if org_id.is_empty() {
-            sqlx::query(query).bind(sub).fetch_one(&self.pool).await
+            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -175,10 +197,14 @@ impl UserRepository for PgUserRepository {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let rows = if org_id.is_empty() {
-            sqlx::query(query).fetch_all(&self.pool).await
+            sqlx::query(query).fetch_all(&mut *tx).await
         } else {
-            sqlx::query(query).bind(org_id).fetch_all(&self.pool).await
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
@@ -204,7 +230,7 @@ impl UserRepository for PgUserRepository {
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
+
         let query = if org_id.is_empty() {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
@@ -219,6 +245,10 @@ impl UserRepository for PgUserRepository {
             "#
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let res = if org_id.is_empty() {
             sqlx::query(query)
                 .bind(&user.id)
@@ -230,7 +260,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.organization_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut *tx)
                 .await
         } else {
             sqlx::query(query)
@@ -244,13 +274,15 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .bind(org_id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut *tx)
                 .await
         }.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -262,15 +294,21 @@ impl UserRepository for PgUserRepository {
             "DELETE FROM users WHERE id = $1 AND organization_id = $2 RETURNING id"
         };
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
         let res = if org_id.is_empty() {
-            sqlx::query(query).bind(id).fetch_optional(&self.pool).await
+            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
