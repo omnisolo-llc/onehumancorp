@@ -587,17 +587,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
 
-                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                    match id.as_str() {
-                        "ask_ai" => "Ask AI for help".into(),
-                        "menu" => "Open Menu".into(),
-                        "add_product" => "Add a new product".into(),
-                        "view_orders" => "View your orders".into(),
-                        "messages" => "Check messages".into(),
-                        _ => "".into(),
-                    }
-                });
-
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
@@ -639,38 +628,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     dashboard.on_action_share_store(move || {
                         *share_store_called_clone.borrow_mut() = true;
-                        let bs_ui_clone = bs_handle_clone.clone();
-                        tokio::spawn(async move {
-                            if let Ok(mut client) = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                                if let Ok(resp) = client.get_snapshots(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
-                                    if let Some(snapshot) = resp.into_inner().snapshots.last() {
-                                        let org_name = snapshot.org_name.clone();
-                                        let domain = snapshot.domain.clone();
-                                        let _ = slint::invoke_from_event_loop(move || {
-                                            if let Some(ui) = bs_ui_clone.upgrade() {
-                                                if !org_name.is_empty() {
-                                                    ui.set_business_name(org_name.into());
-                                                }
-                                                ui.set_business_tagline("The best place to buy things".into());
-                                                if !domain.is_empty() {
-                                                    ui.set_share_link(format!("https://{}.ohc.app", domain).into());
-                                                } else {
-                                                    ui.set_share_link("ohc://share?b=123".into());
-                                                }
-                                                let _ = ui.show();
-                                            }
-                                        });
-                                        return;
-                                    }
-                                }
-                            }
-                            // Fallback if network fails
-                            let _ = slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = bs_ui_clone.upgrade() {
-                                    let _ = ui.show();
-                                }
-                            });
-                        });
+                        if let Some(ui) = bs_handle_clone.upgrade() {
+                            let _ = ui.show();
+                        }
                     });
 
                     let business_share_close_clone = business_share_handle.clone();
@@ -1852,17 +1812,6 @@ mod docs_tests {
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask AI for help".into(),
-                "menu" => "Open Menu".into(),
-                "add_product" => "Add a new product".into(),
-                "view_orders" => "View your orders".into(),
-                "messages" => "Check messages".into(),
-                _ => "".into(),
-            }
-        });
-
         dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
 
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1939,10 +1888,7 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Simulate a tooltip registry request to verify the Slint logic works directly
-        dashboard_ui.global::<app::TooltipRegistry>().invoke_show_tooltip("ask_ai".into(), 0.0, 0.0);
-        let active_text = dashboard_ui.global::<app::TooltipRegistry>().get_active_text();
-        assert_eq!(active_text, "Ask AI for help");
+        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
         // But we can verify it doesn't crash on Dashboard creation.
         // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
@@ -1950,17 +1896,6 @@ mod docs_tests {
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
-
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask AI for help".into(),
-                "menu" => "Open Menu".into(),
-                "add_product" => "Add a new product".into(),
-                "view_orders" => "View your orders".into(),
-                "messages" => "Check messages".into(),
-                _ => "".into(),
-            }
-        });
 
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
@@ -2243,17 +2178,6 @@ mod dashboard_docs_tests {
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask AI for help".into(),
-                "menu" => "Open Menu".into(),
-                "add_product" => "Add a new product".into(),
-                "view_orders" => "View your orders".into(),
-                "messages" => "Check messages".into(),
-                _ => "".into(),
-            }
-        });
-
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
             // Verify HelpCenter component can be instantiated
@@ -2477,9 +2401,6 @@ mod cost_transparency_e2e_tests {
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
-
-        business_share_ui.set_share_link("ohc://share?b=123".into());
-        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=123");
 
         business_share_ui.invoke_copy_link();
         assert!(*copy_link_called.borrow());

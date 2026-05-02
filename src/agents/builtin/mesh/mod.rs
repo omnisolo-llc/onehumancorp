@@ -64,7 +64,6 @@ mod tests {
     use crate::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
-    use crate::mesh::transport::MemoryTransport;
 
     #[tokio::test]
     async fn test_teammate_mesh_client() {

@@ -51,30 +51,6 @@ impl Tracker {
         }
     }
 
-    pub async fn create_checkout_session(&self, price_id: &str, customer_id: &str) -> Result<String, String> {
-        if let Some(ref client) = self.stripe_client {
-            client.create_checkout_session(price_id, customer_id).await
-        } else {
-            Err("Stripe client not configured".to_string())
-        }
-    }
-
-    pub async fn cancel_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
-        if let Some(ref client) = self.stripe_client {
-            client.cancel_subscription(subscription_id).await
-        } else {
-            Err("Stripe client not configured".to_string())
-        }
-    }
-
-    pub async fn list_invoices(&self, customer_id: &str) -> Result<Vec<crate::integrations::stripe::client::StripeInvoice>, String> {
-        if let Some(ref client) = self.stripe_client {
-            client.list_invoices(customer_id).await
-        } else {
-            Err("Stripe client not configured".to_string())
-        }
-    }
-
     pub fn summary(&self, _scope: &str) -> TokenSummary {
         TokenSummary::default()
     }
