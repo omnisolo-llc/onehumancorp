@@ -17,6 +17,7 @@ pub mod app {
 
 use std::cell::RefCell;
 use copypasta::{ClipboardContext, ClipboardProvider};
+use slint::Global;
 
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
@@ -25,6 +26,22 @@ thread_local! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
+
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
+    let tooltip_registry = app::TooltipRegistry::get(&login_ui);
+    tooltip_registry.on_request_tooltip_text(|id: slint::SharedString| {
+        match id.as_str() {
+            "add_product" => "Add a new product to your store catalog".into(),
+            "view_orders" => "View and manage customer orders".into(),
+            "messages" => "Check messages from your customers".into(),
+            "analytics" => "View your store's performance".into(),
+            "ask_ai" => "Get help from the OHC AI assistant".into(),
+            "menu" => "Open the main navigation menu".into(),
+            _ => "".into(),
+        }
+    });
 
     tokio::spawn(async move {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -50,9 +67,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
-
-    let login_ui = app::Login::new()?;
-    let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
