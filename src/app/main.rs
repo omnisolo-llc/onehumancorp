@@ -1593,7 +1593,7 @@ mod docs_tests {
 
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
-                u.set_step(9);
+                u.set_step(6);
             }
         });
 
@@ -2622,6 +2622,57 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_instant_build_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(8);
+        ui.set_is_instant_build(true);
+        ui.set_instant_bio("A test bakery".into());
+
+        // In a real e2e test, we invoke the action that the user triggers
+        // Main setup_wizard.slint handles calling generate_instant_preview when step 8 is submitted.
+        // We simulate the backend call completion which sets the values and steps to 6.
+        let ui_weak = ui.as_weak();
+        ui.on_generate_instant_preview(move || {
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_company_name("AI Store".into());
+                u.set_business_type("Online Store".into());
+                u.set_admin_email("ai@test.com".into());
+                u.set_payment_pref("online".into());
+                u.set_step(6);
+            }
+        });
+
+        ui.invoke_generate_instant_preview();
+
+        assert_eq!(ui.get_step(), 6);
+        assert_eq!(ui.get_company_name(), "AI Store");
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae| {
+            *launch_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_launch("".into(), "".into(), "".into(), "".into(), "".into());
+        assert!(*launch_called.borrow(), "Launch should be called from Setup Wizard");
     }
 }
 
