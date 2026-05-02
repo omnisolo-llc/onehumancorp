@@ -1026,7 +1026,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
 
-        .with_state(mesh_transport);
+        .nest("/api/v1/tenant", api::tenant::handler::router(db.clone())).with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
