@@ -1115,7 +1115,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1615,7 +1615,7 @@ mod tests {
             ]),
         });
 
-        let mutating_tool = Tool {
+        let mut mutating_tool = Tool {
             name: "mutating_tool".to_string(),
             description: "A mutating tool".to_string(),
             parameters: Value::Null,

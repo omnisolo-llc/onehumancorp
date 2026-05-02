@@ -5,4 +5,3 @@ pub mod compute;
 pub mod federation;
 pub mod organization;
 pub mod sre;
-pub mod tenant;
