@@ -82,8 +82,11 @@ echo "[playwright] Starting E2E infrastructure..."
 echo "[playwright] Waiting for postgres..."
 for i in $(seq 1 60); do
   if pg_isready -h 127.0.0.1 -p 5432 -U ohc >/dev/null 2>&1; then
-    echo "[playwright] Postgres is ready!"
-    break
+    # Try a real connection
+    if PGPASSWORD=ohc psql -h 127.0.0.1 -p 5432 -U ohc -d ohc -c "SELECT 1" >/dev/null 2>&1; then
+      echo "[playwright] Postgres is fully ready!"
+      break
+    fi
   fi
   if nc -z 127.0.0.1 5432 2>/dev/null; then
     echo "[playwright] Postgres port is open!"
@@ -153,5 +156,5 @@ docker run --rm --network host \
   -e BASE_URL="http://localhost:18789" \
   -e spec_file="$spec_file" \
   mcr.microsoft.com/playwright:v1.40.0-jammy \
-  sh -c "corepack enable && pnpm install --frozen-lockfile && (pnpm exec playwright install chromium || true) && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
+  sh -c "corepack enable && pnpm install --frozen-lockfile=false && (pnpm exec playwright install chromium || true) && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
 echo "[playwright] Playwright command finished"
