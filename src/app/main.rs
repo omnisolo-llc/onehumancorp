@@ -137,7 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
+                let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_ui_handle.upgrade() {
                         if let Some(step_str) = state.get("step") {
                             if let Ok(step) = step_str.parse::<i32>() {
@@ -157,7 +157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                });
             }
         }
     });
@@ -206,11 +206,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_agent_config_handle.upgrade() {
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                ui.set_step(step);
+                            }
+                        }
+                        if let Some(val) = state.get("selected_agent") { ui.set_selected_agent(val.into()); }
+                        if let Some(val) = state.get("can_reply") { ui.set_can_reply(val == "true"); }
+                        if let Some(val) = state.get("can_social") { ui.set_can_social(val == "true"); }
+                        if let Some(val) = state.get("frequency") { ui.set_frequency(val.into()); }
+                        if let Some(val) = state.get("show_toast") { ui.set_show_toast(val == "true"); }
                     }
-                }).unwrap();
+                });
             }
         }
     });
@@ -221,6 +231,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("step".to_string(), ui.get_step().to_string()),
+                ("selected_agent".to_string(), ui.get_selected_agent().to_string()),
+                ("can_reply".to_string(), ui.get_can_reply().to_string()),
+                ("can_social".to_string(), ui.get_can_social().to_string()),
+                ("frequency".to_string(), ui.get_frequency().to_string()),
+                ("show_toast".to_string(), ui.get_show_toast().to_string()),
             ]);
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -245,11 +261,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                ui.set_step(step);
+                            }
+                        }
+                        if let Some(val) = state.get("tone") { ui.set_tone(val.into()); }
+                        if let Some(val) = state.get("focus_only_business") { ui.set_focus_only_business(val == "true"); }
+                        if let Some(val) = state.get("focus_avoid_competitors") { ui.set_focus_avoid_competitors(val == "true"); }
+                        if let Some(val) = state.get("focus_reply_spanish") { ui.set_focus_reply_spanish(val == "true"); }
                     }
-                }).unwrap();
+                });
             }
         }
     });
@@ -260,6 +285,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("step".to_string(), ui.get_step().to_string()),
+                ("tone".to_string(), ui.get_tone().to_string()),
+                ("focus_only_business".to_string(), ui.get_focus_only_business().to_string()),
+                ("focus_avoid_competitors".to_string(), ui.get_focus_avoid_competitors().to_string()),
+                ("focus_reply_spanish".to_string(), ui.get_focus_reply_spanish().to_string()),
             ]);
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -284,11 +314,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_website_builder_handle.upgrade() {
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                ui.set_step(step);
+                            }
+                        }
+                        if let Some(val) = state.get("selected_template") { ui.set_selected_template(val.into()); }
+                        if let Some(val) = state.get("primary_color") { ui.set_primary_color(val.into()); }
+                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
+                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                     }
-                }).unwrap();
+                });
             }
         }
     });
@@ -299,6 +340,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("step".to_string(), ui.get_step().to_string()),
+                ("selected_template".to_string(), ui.get_selected_template().to_string()),
+                ("primary_color".to_string(), ui.get_primary_color().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
             ]);
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -318,6 +366,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+    let init_grow_business_handle = grow_business_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                ui.set_step(step);
+                            }
+                        }
+                        if let Some(val) = state.get("selected_strategy") { ui.set_selected_strategy(val.into()); }
+                    }
+                });
+            }
+        }
+    });
+    grow_business_ui.on_save_state({
+        let ui_handle = grow_business_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("step".to_string(), ui.get_step().to_string()),
+                ("selected_strategy".to_string(), ui.get_selected_strategy().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
 
     let settings_ui = app::Settings::new()?;
     settings_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
