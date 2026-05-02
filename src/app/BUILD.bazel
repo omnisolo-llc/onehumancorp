@@ -148,6 +148,9 @@ rust_binary(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:open",
+        "@crates//:urlencoding",
+        "@crates//:web-sys",
     ],
 )
 
@@ -235,5 +238,8 @@ rust_test(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:open",
+        "@crates//:urlencoding",
+        "@crates//:web-sys",
     ],
 )

@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -200,7 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -239,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -278,7 +278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                    if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -327,7 +327,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_settings_handle.upgrade() {
+                    if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -356,7 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                    if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -483,6 +483,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |link| {
             if let Some(_ui) = ui_handle.upgrade() {
                 let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
+                let encoded_msg = urlencoding::encode(&pre_filled_msg);
+                let url = format!("https://x.com/intent/tweet?text={}", encoded_msg);
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.open_with_url_and_target(&url, "_blank");
+                    }
+                }
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let _ = open::that(&url);
+                }
 
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
@@ -627,6 +641,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    business_share_ui.on_share_to_instagram({
+                        let bs_handle_clone_for_ig = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_ig.upgrade() {
+                                let url = "https://instagram.com/"; // Instagram does not support text pre-filling via URL intent
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&url, "_blank");
+                                    }
+                                }
+
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    let _ = open::that(&url);
+                                }
+
+                                // Alternatively, since sharing specifically to Instagram via intent doesn't work well for text,
+                                // we fallback to copying to clipboard first:
+                                let text_to_encode = format!("Check out my store {} at {}", ui.get_business_name(), ui.get_share_link());
+                                CLIPBOARD.with(|cb| {
+                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                        let _ = ctx.set_contents(text_to_encode);
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_x({
+                        let bs_handle_clone_for_x = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_x.upgrade() {
+                                let text_to_encode = format!("Check out my store {} at {}", ui.get_business_name(), ui.get_share_link());
+                                let encoded_text = urlencoding::encode(&text_to_encode);
+                                let url = format!("https://x.com/intent/tweet?text={}", encoded_text);
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&url, "_blank");
+                                    }
+                                }
+
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    let _ = open::that(&url);
+                                }
+                            }
+                        }
+                    });
+
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
@@ -735,6 +802,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    welcome_checklist_ui.on_go_to_docs(|| {});
+    welcome_checklist_ui.on_go_to_video(|| {});
+    welcome_checklist_ui.on_go_to_support(|| {});
 
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
