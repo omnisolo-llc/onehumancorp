@@ -118,7 +118,7 @@ export component Dashboard inherits Window {
         VerticalBox {
             spacing: 16px;
 
-            if (root.width > 768px) : HorizontalBox {
+            HorizontalBox {
                 spacing: 16px;
 
                 GlassCard {
@@ -131,6 +131,7 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
+                        clicked => { action_see_analytics(); }
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Today's Sales"; color: #94a3b8; }
@@ -148,6 +149,7 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
+                        clicked => { action_view_orders(); }
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Orders to Ship"; color: #94a3b8; }
@@ -157,7 +159,7 @@ export component Dashboard inherits Window {
                 }
             }
 
-            if (root.width <= 768px) : VerticalBox {
+            HorizontalBox {
                 spacing: 16px;
 
                 GlassCard {
@@ -170,45 +172,7 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
-                    }
-                }
-            }
-
-            if (root.width > 768px) : HorizontalBox {
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
+                        // no callback available for helpers/tasks yet
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Active Helpers"; color: #94a3b8; }
@@ -226,45 +190,7 @@ export component Dashboard inherits Window {
                     TouchArea {
                         width: 100%;
                         height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
-                    }
-                }
-            }
-
-            if (root.width <= 768px) : VerticalBox {
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
+                        // no callback available for helpers/tasks yet
                         VerticalBox {
                             padding: 16px;
                             Text { text: "Current AI Tasks"; color: #94a3b8; }
