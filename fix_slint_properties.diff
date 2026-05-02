@@ -1,0 +1,8 @@
+<<<<<<< SEARCH
+    callback go_to_dashboard();
+=======
+    callback go_to_dashboard();
+    callback go_to_docs();
+    callback go_to_video();
+    callback go_to_support();
+>>>>>>> REPLACE
