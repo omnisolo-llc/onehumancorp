@@ -536,6 +536,8 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
+        let _ = self.hub.task_manager().broadcast_task(&task).await;
+
         Ok(Response::new(SharedTask {
             id: task.id,
             organization_id: task.organization_id,
@@ -940,7 +942,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+
+    // Start Mesh API server
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
+    ).await.expect("Failed to create MeshTransport");
+
+    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()).with_transport(mesh_transport.clone()));
     // let http_addr = "[::1]:8080".parse()?;
     // let hub_for_http = hub.clone();
     // tokio::spawn(async move {
@@ -993,16 +1002,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Start Mesh API server
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
-    ).await.expect("Failed to create MeshTransport");
+    // Register presence
+    let server_id = format!("server-{}", uuid::Uuid::new_v4());
+    let presence_transport = mesh_transport.clone();
+    let server_id_clone = server_id.clone();
+    tokio::spawn(async move {
+        loop {
+            let _ = presence_transport.register_presence(&server_id_clone, "online", 60).await;
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        }
+    });
 
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+
+        let presence_transport = builtin_transport.clone();
+        let agent_id_clone = agent_id.clone();
+        tokio::spawn(async move {
+            loop {
+                let _ = presence_transport.register_presence(&agent_id_clone, "online", 60).await;
+                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            }
+        });
         let cfg = ohc_builtin_agent::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
