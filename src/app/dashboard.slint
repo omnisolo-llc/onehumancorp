@@ -1,6 +1,4 @@
 import { TooltipElement } from "tooltip_element.slint";
-import { TooltipRegistry } from "tooltip_registry.slint";
-export { TooltipRegistry }
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
@@ -18,9 +16,8 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
-    preferred-width: 375px;
-    min-width: 375px;
-    preferred-height: 800px;
+    width: 375px;
+    height: 800px;
     title: "Dashboard";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
