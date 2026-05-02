@@ -1,7 +1,6 @@
-use std::time::Duration;
-
 pub struct ChaosEngine {}
 
+#[allow(dead_code)]
 impl ChaosEngine {
     // Placeholder for CorruptAgentLock, DropMeshSync
     // Implementation would be injected via traits
@@ -13,7 +12,9 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
+    use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
     use ohc_builtin_agent::legacy_mesh::DistributedLock;
@@ -25,7 +26,7 @@ mod tests {
         // and doesn't fail under Postgres mocked conditions vs SQLite.
         // We simulate a mock connection pool.
         let pool = PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
         let sip_db = SipDB::new(pool, "test_org".to_string());
