@@ -1586,9 +1586,9 @@ mod docs_tests {
         // Instead of next_step, trigger instant build explicitly
         // Since we didn't add a method, we can just set properties directly as the test does
         ui.set_is_instant_build(true);
-        ui.set_step(11);
+        ui.set_step(8);
 
-        assert_eq!(ui.get_step(), 11);
+        assert_eq!(ui.get_step(), 8);
 
         ui.set_instant_bio("I run an AI product shop.".into());
 
@@ -1601,7 +1601,7 @@ mod docs_tests {
 
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
-                u.set_step(9);
+                u.set_step(6);
             }
         });
 
