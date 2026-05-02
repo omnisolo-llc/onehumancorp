@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -200,7 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -239,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -278,7 +278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                    if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -327,7 +327,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_settings_handle.upgrade() {
+                    if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -356,7 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                    if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
