@@ -4,7 +4,7 @@ import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
     width: 400px;
-    height: 600px;
+    preferred-height: 600px;
     title: "One Human Corp - Login";
 
     property <bool> loading: false;
@@ -103,8 +103,13 @@ export component Login inherits Window {
                 }
 
                 Button {
-                    text: "Continue with SSO";
-                    clicked => { oauth_login("SSO"); }
+                    text: "Continue with Google";
+                    clicked => { oauth_login("Google"); }
+                }
+
+                Button {
+                    text: "Continue with Apple";
+                    clicked => { oauth_login("Apple"); }
                 }
                 
                 Button {

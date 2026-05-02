@@ -1,5 +1,5 @@
--- 053_harden_rls_policies.sql
--- Drop old vulnerable policies and create new hardened ones without the empty string check.
+-- 054_harden_remaining_rls.sql
+-- Drop old vulnerable policies from 049_missing_rls.sql and 050_transcripts_rls.sql and create new hardened ones without the empty string check.
 
 DROP POLICY IF EXISTS tenant_isolation_tasks ON tasks;
 CREATE POLICY tenant_isolation_tasks ON tasks USING (organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
