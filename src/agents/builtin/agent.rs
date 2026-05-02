@@ -41,6 +41,8 @@ pub struct AgentRunConfig {
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
+    pub enable_git_state_checkpointing: bool,
+    pub workspace_path: Option<String>,
     pub project_trusted: bool,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
@@ -69,6 +71,8 @@ impl Default for AgentRunConfig {
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
+            enable_git_state_checkpointing: false,
+            workspace_path: None,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
@@ -539,17 +543,16 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
-                        let err = format!("LLM Recoverable error: {}", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: format!("Error: {}", msg),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: err,
+                            error: msg.clone(),
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -633,14 +636,13 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
-                            let err = format!("LLM Recoverable error: {}", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
+                                result: format!("Error: {}", msg),
                                 iteration,
                             });
-                            error = err;
+                            error = msg.clone();
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
@@ -723,12 +725,6 @@ impl Agent {
             if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        // In a backend microservice context, executing global git commands is unsafe.
-                        // We skip executing global `git add/commit` here and only write to the
-                        // local scratchpad path. A proper implementation would either create an isolated
-                        // workspace/worktree, or rely on a Checkpointer database structure.
-                        // The Claude Code scratchpad concept is satisfied by storing the progress JSON.
-
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
@@ -736,6 +732,7 @@ impl Agent {
                     }
                 }
             }
+
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -1187,7 +1184,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
-        let client = Arc::new(MockLlmClient {
+        let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1346,7 +1343,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result.contains("LLM Recoverable error: missing parameter X")
+                name == "llm_recoverable_tool" && result.contains("missing parameter X") && !result.contains("LLM Recoverable error:")
             } else {
                 false
             }
@@ -1813,7 +1810,7 @@ mod tests {
             ]),
         });
 
-        let mut mutating_tool = Tool {
+        let mutating_tool = Tool {
             name: "mutating_tool".to_string(),
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
@@ -1850,4 +1847,5 @@ mod tests {
         }
         assert!(found_checkpoint_event);
     }
+
 }
