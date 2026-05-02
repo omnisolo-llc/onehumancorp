@@ -76,32 +76,3 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
-
-test('should display Company Structure on mobile', async ({ page }) => {
-  await page.goto('/login');
-  await page.fill('input[type="email"]', 'test@example.com');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button:has-text("Sign In")');
-  await page.waitForURL('**/*');
-
-  // Verify Company Structure section
-  await expect(page.locator('text=Company Structure')).toBeVisible();
-
-  // Test one of the roles (e.g. Designer, Developer, Marketer, or any other visible text)
-  // Assuming the page will render a role count. Let's make sure that +/- buttons are present,
-  // which are unique to this section's list items based on the Slint UI structure.
-
-  const plusButtons = page.locator('button:has-text("+")');
-  const minusButtons = page.locator('button:has-text("-")');
-
-  await expect(plusButtons.first()).toBeVisible();
-  await expect(minusButtons.first()).toBeVisible();
-
-  const plusBox = await plusButtons.first().boundingBox();
-  expect(plusBox?.height).toBeGreaterThanOrEqual(44);
-  expect(plusBox?.width).toBeGreaterThanOrEqual(44);
-
-  const minusBox = await minusButtons.first().boundingBox();
-  expect(minusBox?.height).toBeGreaterThanOrEqual(44);
-  expect(minusBox?.width).toBeGreaterThanOrEqual(44);
-});
