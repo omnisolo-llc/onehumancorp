@@ -587,6 +587,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
 
+                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                    match id.as_str() {
+                        "ask_ai" => "Ask AI for help".into(),
+                        "menu" => "Open Menu".into(),
+                        "add_product" => "Add a new product".into(),
+                        "view_orders" => "View your orders".into(),
+                        "messages" => "Check messages".into(),
+                        _ => "".into(),
+                    }
+                });
+
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
@@ -1841,6 +1852,17 @@ mod docs_tests {
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask AI for help".into(),
+                "menu" => "Open Menu".into(),
+                "add_product" => "Add a new product".into(),
+                "view_orders" => "View your orders".into(),
+                "messages" => "Check messages".into(),
+                _ => "".into(),
+            }
+        });
+
         dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
 
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1917,7 +1939,10 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
+        // Simulate a tooltip registry request to verify the Slint logic works directly
+        dashboard_ui.global::<app::TooltipRegistry>().invoke_show_tooltip("ask_ai".into(), 0.0, 0.0);
+        let active_text = dashboard_ui.global::<app::TooltipRegistry>().get_active_text();
+        assert_eq!(active_text, "Ask AI for help");
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
         // But we can verify it doesn't crash on Dashboard creation.
         // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
@@ -1925,6 +1950,17 @@ mod docs_tests {
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
+
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask AI for help".into(),
+                "menu" => "Open Menu".into(),
+                "add_product" => "Add a new product".into(),
+                "view_orders" => "View your orders".into(),
+                "messages" => "Check messages".into(),
+                _ => "".into(),
+            }
+        });
 
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
@@ -2207,6 +2243,17 @@ mod dashboard_docs_tests {
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask AI for help".into(),
+                "menu" => "Open Menu".into(),
+                "add_product" => "Add a new product".into(),
+                "view_orders" => "View your orders".into(),
+                "messages" => "Check messages".into(),
+                _ => "".into(),
+            }
+        });
+
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
             // Verify HelpCenter component can be instantiated
