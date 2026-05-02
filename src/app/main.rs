@@ -97,15 +97,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let login_ui_from_login = login_ui_handle.clone();
+    let login_setup_wizard_handle = setup_wizard_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
+        let sw_handle = login_setup_wizard_handle;
         move |email, _password| {
             if let Some(ui) = login_handle.upgrade() {
-                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
-                if ui.get_is_sign_up() {
-                    ui.invoke_start_setup_wizard();
-                } else {
-                    println!("Login as {}...", email);
+                if let Some(sw) = sw_handle.upgrade() {
+                    let step = sw.get_step();
+                    // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
+                    // For cross-device resume, if logging in and step is between 1 and 9, resume wizard.
+                    if ui.get_is_sign_up() || (step > 0 && step < 10) {
+                        ui.invoke_start_setup_wizard();
+                    } else {
+                        println!("Login as {}...", email);
+                    }
                 }
             }
         }
@@ -957,19 +963,45 @@ mod growth_e2e_tests {
     fn test_setup_wizard_resume_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let setup_wizard = app::SetupWizard::new().unwrap();
+
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
         // Simulating the resume process
-        let ui = app::SetupWizard::new().unwrap();
+        setup_wizard.set_step(3);
+        setup_wizard.set_business_type("Online Store".into());
+        setup_wizard.set_company_name("My Resumed Store".into());
+        setup_wizard.set_sell_physical(true);
 
-        // Test Setting various saved states
-        ui.set_step(3);
-        ui.set_business_type("Online Store".into());
-        ui.set_company_name("My Resumed Store".into());
-        ui.set_sell_physical(true);
+        assert_eq!(setup_wizard.get_step(), 3);
+        assert_eq!(setup_wizard.get_business_type(), "Online Store");
+        assert_eq!(setup_wizard.get_company_name(), "My Resumed Store");
+        assert_eq!(setup_wizard.get_sell_physical(), true);
 
-        assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_company_name(), "My Resumed Store");
-        assert_eq!(ui.get_sell_physical(), true);
+        // Bind the updated login handler logic that checks the wizard step
+        let login_ui_weak = login_ui.as_weak();
+        let setup_wizard_weak = setup_wizard.as_weak();
+        login_ui.on_login(move |_email, _password| {
+            if let Some(ui) = login_ui_weak.upgrade() {
+                if let Some(sw) = setup_wizard_weak.upgrade() {
+                    let step = sw.get_step();
+                    if ui.get_is_sign_up() || (step > 0 && step < 10) {
+                        ui.invoke_start_setup_wizard();
+                    }
+                }
+            }
+        });
+
+        login_ui.set_is_sign_up(false); // Existing user
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should launch for existing user resuming incomplete onboarding");
     }
 
     #[test]
