@@ -36,7 +36,7 @@ impl DB {
 
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let connect_future = sqlx::postgres::PgPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_secs(30))
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
@@ -45,8 +45,15 @@ impl DB {
                         Ok(true)
                     })
                 })
-                .connect(&database_url)
-                .await?;
+                .connect(&database_url);
+
+            let pool = if cfg!(test) {
+                tokio::time::timeout(std::time::Duration::from_millis(500), connect_future)
+                    .await
+                    .map_err(|_| -> Box<dyn std::error::Error> { "Database connection timed out".into() })??
+            } else {
+                connect_future.await?
+            };
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }

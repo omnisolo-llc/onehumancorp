@@ -479,7 +479,7 @@ mod tests {
     #[tokio::test]
     async fn test_referral_flow() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match PgPool::connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(100), PgPool::connect(&database_url)).await { Ok(Ok(p)) => p, _ => return, };
         let service = MyGrowthService::new(pool);
 
         let mut req = Request::new(CreateReferralRequest {

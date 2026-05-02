@@ -13,7 +13,7 @@ pub async fn bench_queue_latency() {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
+        let connect_future = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -21,9 +21,11 @@ pub async fn bench_queue_latency() {
                     Ok(true)
                 })
             })
-            .connect(&database_url).await;
+            .connect(&database_url);
 
-        if let Ok(pg_pool) = pool_res {
+        let pool_res = tokio::time::timeout(std::time::Duration::from_millis(500), connect_future).await;
+
+        if let Ok(Ok(pg_pool)) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
             bench_queue("Postgres", pg_queue).await;
         } else {
@@ -50,7 +52,7 @@ pub async fn bench_dashboard_snapshot() {
         return;
     }
 
-    let pool_res = sqlx::postgres::PgPoolOptions::new()
+    let connect_future = sqlx::postgres::PgPoolOptions::new()
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
@@ -58,12 +60,12 @@ pub async fn bench_dashboard_snapshot() {
                 Ok(true)
             })
         })
-        .connect(&database_url).await;
+        .connect(&database_url);
 
-    let pg_pool = match pool_res {
-        Ok(p) => p,
-        Err(e) => {
-            println!("Skipping bench_dashboard_snapshot due to missing db connection: {}", e);
+    let pg_pool = match tokio::time::timeout(std::time::Duration::from_millis(500), connect_future).await {
+        Ok(Ok(p)) => p,
+        _ => {
+            println!("Skipping bench_dashboard_snapshot due to missing db connection or timeout");
             return;
         }
     };
