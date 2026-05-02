@@ -7,14 +7,14 @@ test.describe('End-to-End Onboarding Flow', () => {
     await expect(page.locator('text="One Human Corp"')).toBeVisible();
 
     // Click Sign Up toggle
-    await page.locator('button:has-text("Sign Up")').nth(1).click();
+    await page.locator('button:has-text("Don\'t have an account? Sign Up")').click();
 
     // Fill in sign up details
     await page.fill('input[type="email"]', 'newuser@example.com');
     await page.fill('input[type="password"]', 'StrongPass123!');
 
     // Click Sign Up button
-    await page.locator('button:has-text("Sign Up")').first().click();
+    await page.locator('button:has-text("Sign Up")').click();
 
     // Now it should redirect to Setup Wizard step 1
     await expect(page.locator('text=/Welcome/i')).toBeVisible();

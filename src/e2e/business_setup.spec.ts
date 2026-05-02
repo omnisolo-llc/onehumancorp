@@ -5,10 +5,10 @@ test.describe('Business Setup Edge Cases', () => {
   test('should validate company name is required', async ({ page }) => {
     // Go to login -> signup -> get to step 3
     await page.goto('/login');
-    await page.locator('button:has-text("Sign Up")').nth(1).click();
+    await page.locator('button:has-text("Don\'t have an account? Sign Up")').click();
     await page.fill('input[type="email"]', 'newuser@example.com');
     await page.fill('input[type="password"]', 'StrongPass123!');
-    await page.locator('button:has-text("Sign Up")').first().click();
+    await page.locator('button:has-text("Sign Up")').click();
 
     await page.locator('button:has-text("Next")').click();
     await page.locator('text="🛒 Online Store"').click();
