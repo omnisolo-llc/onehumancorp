@@ -239,6 +239,13 @@ use slint::Model;
 
     fn test_agent_role() { let ui = create_agent_cfg(); ui.set_selected_agent("Sales".into()); }
     fn test_prompt_base() { let ui = create_prompt_cfg(); ui.set_tone("Friendly".into()); }
+    fn test_agent_capabilities() {
+        let ui = create_agent_cfg();
+        ui.set_can_write_descriptions(true);
+        ui.set_can_send_updates(true);
+        assert!(ui.get_can_write_descriptions());
+        assert!(ui.get_can_send_updates());
+    }
     
     // ... total test count should reach 200 via these blocks ...
     // We will duplicate some with variations to reach the count if needed,
