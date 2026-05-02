@@ -1,0 +1,48 @@
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component ProgressOverlay {
+    in property <string> status: "Your business is setting up…";
+    in property <string> details: "Deploying AI agents...\nBuilding website...";
+
+    width: 100%;
+    height: 100%;
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: rgba(13, 13, 26, 0.85); // Matches @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%)
+
+        VerticalBox {
+            alignment: center;
+            padding: 32px;
+
+            GlassCard {
+                height: 120px;
+                border-color: #a855f7; // Glowing border to match launch state
+
+                VerticalBox {
+                    alignment: center;
+                    padding: 24px;
+                    spacing: 16px;
+
+                    Text {
+                        text: status;
+                        font-size: 20px;
+                        font-family: "Outfit";
+                        color: #a855f7;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: details;
+                        font-size: 14px;
+                        font-family: "Inter";
+                        color: #94a3b8;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

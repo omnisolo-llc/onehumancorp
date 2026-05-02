@@ -10,6 +10,7 @@ cargo_build_script(
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",
+        "progress_overlay.slint",
         "wizard.slint",
         "service_manager.slint",
         "agent_hire.slint",

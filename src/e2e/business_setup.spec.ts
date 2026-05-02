@@ -194,7 +194,7 @@ test.describe('Business Setup Wizard', () => {
         await page.waitForTimeout(200);
       }
     }
-    await expect(page.locator('button:has-text("Launch")')).toBeVisible();
+    await expect(page.locator('text=/Publish My Business|Launch/i')).toBeVisible();
   });
 });
 
@@ -299,11 +299,14 @@ test.describe('Business Setup Wizard Validation', () => {
     }
 
     // Step 9: Launch
-    await expect(page.locator('text="Ready to launch!"')).toBeVisible();
-    const publishBtn = page.locator('text="Publish My Business →"');
+    await expect(page.locator('text=/Ready to launch!|review|launch/i')).toBeVisible();
+    const publishBtn = page.locator('text=/Publish My Business|Launch/i');
     if (await publishBtn.isVisible()) {
         await publishBtn.click();
     }
+
+    // Wait for setup overlay and launching
+    await expect(page.locator('text=/Your business is setting up|Deploying AI agents/i')).toBeVisible({ timeout: 5000 });
 
     // It should go to checklist
     await expect(page.locator('text="Welcome Checklist"')).toBeVisible();

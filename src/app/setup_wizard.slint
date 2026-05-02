@@ -1,11 +1,18 @@
 import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { ProgressOverlay } from "progress_overlay.slint";
 
 export component SetupWizard inherits Window {
     width: 375px;
     height: 800px;
     title: "Setup Wizard";
+
+    if (launching) : ProgressOverlay {
+        status: launch_status;
+        details: launch_details;
+        z: 100;
+    }
 
     in-out property <int> step: 0;
 
@@ -461,14 +468,6 @@ export component SetupWizard inherits Window {
                     }
                 }
 
-                if (launching) : GlassCard {
-                    VerticalBox {
-                        padding: 16px;
-                        alignment: center;
-                        Text { text: launch_status; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: launch_details; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
-                    }
-                }
             }
 
             // Step 11: Instant Build
