@@ -35,6 +35,8 @@ export component SetupWizard inherits Window {
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
+    in-out property <string> product_description: "";
+    in-out property <bool> product_photo_uploaded: false;
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
@@ -49,6 +51,8 @@ export component SetupWizard inherits Window {
 
     callback launch(string, string, string, string, string, string, string, string, string);
     callback generate_instant_preview();
+    callback generate_product_description();
+    callback upload_product_photo();
 
     callback next_step();
     callback select_business_type(string);
@@ -361,8 +365,23 @@ export component SetupWizard inherits Window {
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
+                Text { text: "AI Description"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                HorizontalBox {
+                    spacing: 8px;
+                    LineEdit { placeholder-text: "Product description"; text <=> product_description; height: 44px; }
+                    GlassCard {
+                        width: 44px; height: 44px;
+                        VerticalBox { alignment: center; Text { text: "✨"; horizontal-alignment: center; } }
+                        TouchArea { clicked => { generate_product_description(); } }
+                    }
+                }
+
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                HorizontalBox {
+                    spacing: 8px;
+                    Text { text: "$"; font-size: 18px; font-family: "Inter"; color: white; vertical-alignment: center; }
+                    LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                }
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
@@ -376,9 +395,10 @@ export component SetupWizard inherits Window {
                     height: 100px;
                     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
+                        Text { text: product_photo_uploaded ? "✅ Photo Uploaded" : "📷 Upload Photo (Crop)"; font-family: "Inter"; font-size: 16px; color: product_photo_uploaded ? #10b981 : white; font-weight: 700; horizontal-alignment: center;}
+                        Text { text: product_photo_uploaded ? "Tap to replace image" : "Tap to select and crop an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                     }
+                    TouchArea { clicked => { upload_product_photo(); } }
                 }
             }
 
@@ -527,7 +547,7 @@ export component SetupWizard inherits Window {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
                 animate background { duration: 1000ms; }
-                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Publish My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice);
