@@ -321,7 +321,7 @@ impl OpsService for MyOpsService {
                     role: req.role.clone(),
                     organization_id: "system".to_string(),
                     status: "IDLE".to_string(),
-                    provider_type: "mock".to_string(),
+                    provider_type: "docker".to_string(),
                 };
                 self.hub.register_agent(new_agent);
             }
