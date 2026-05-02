@@ -400,6 +400,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_ui = app::Pricing::new().unwrap();
     let pricing_handle = pricing_ui.as_weak();
 
+    let help_center_ui = app::HelpCenter::new().unwrap();
+    init_help_center(&help_center_ui);
+    let help_center_handle = help_center_ui.as_weak();
+
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
 
@@ -520,11 +524,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                let help_center_handle_clone = help_center_handle.clone();
+                dashboard.on_open_help_center(move || {
+                    if let Some(ui) = help_center_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
+                Box::leak(Box::new(help_center_ui));
             }
         }
     });
@@ -1760,6 +1772,32 @@ mod docs_tests {
     }
 
     #[test]
+    fn test_e2e_help_center_search_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let help_center = app::HelpCenter::new().unwrap();
+        init_help_center(&help_center);
+
+        use slint::Model;
+
+        // Before search, the model should contain all 6 default articles
+        let articles_model = help_center.get_articles();
+        assert_eq!(articles_model.row_count(), 6, "Help Center should initialize with 6 articles");
+
+        // Test search query changed
+        help_center.set_search_query("apple".into());
+        help_center.invoke_search_query_changed("apple".into());
+
+        let filtered_model = help_center.get_articles();
+        assert_eq!(filtered_model.row_count(), 1, "Help Center should filter down to 1 article for 'apple'");
+        if let Some(article) = filtered_model.row_data(0) {
+            assert_eq!(article.title, "How to accept Apple Pay");
+        } else {
+            panic!("Article data missing");
+        }
+    }
+
+    #[test]
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
@@ -1818,6 +1856,7 @@ mod docs_tests {
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
 
         let help_center = app::HelpCenter::new().unwrap();
+        init_help_center(&help_center);
         assert_eq!(help_center.get_search_query(), "");
     }
 
@@ -1865,7 +1904,8 @@ mod docs_tests {
     #[test]
     fn test_help_center_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
+        let hc = app::HelpCenter::new().unwrap();
+        init_help_center(&hc);
     }
     #[test]
     fn test_release_notes_creation() {
@@ -2085,6 +2125,59 @@ mod docs_tests {
 
 }
 
+pub fn init_help_center(help_center: &app::HelpCenter) {
+    use slint::Model;
+
+    let all_articles = vec![
+        app::HelpArticle {
+            category: "Getting Started".into(),
+            title: "Set up your store in 5 minutes".into(),
+            body: "Follow our simple guide to add your first product and go live.".into(),
+        },
+        app::HelpArticle {
+            category: "My Store".into(),
+            title: "How to add products".into(),
+            body: "Learn how to list new items, add photos, and set prices.".into(),
+        },
+        app::HelpArticle {
+            category: "Payments & Billing".into(),
+            title: "How to accept Apple Pay".into(),
+            body: "Enable Apple Pay with one click in your payment settings.".into(),
+        },
+        app::HelpArticle {
+            category: "AI Agents".into(),
+            title: "What can the Customer Success Agent do?".into(),
+            body: "Your agent can reply to customer emails and Instagram DMs automatically.".into(),
+        },
+        app::HelpArticle {
+            category: "Marketing".into(),
+            title: "How to run a promotion".into(),
+            body: "Learn how to create discount codes and share them on social media.".into(),
+        },
+        app::HelpArticle {
+            category: "Account & Billing".into(),
+            title: "How to change your subscription".into(),
+            body: "Find out how to upgrade or downgrade your plan and view past invoices.".into(),
+        },
+    ];
+
+    let model = std::rc::Rc::new(slint::VecModel::from(all_articles.clone()));
+    help_center.set_articles(model.clone().into());
+
+    let help_center_weak = help_center.as_weak();
+    help_center.on_search_query_changed(move |query| {
+        let ui = help_center_weak.unwrap();
+        let query_lower = query.to_string().to_lowercase();
+        let filtered: Vec<app::HelpArticle> = all_articles.iter().filter(|a| {
+            query_lower.is_empty() ||
+            a.title.to_string().to_lowercase().contains(&query_lower) ||
+            a.body.to_string().to_lowercase().contains(&query_lower) ||
+            a.category.to_string().to_lowercase().contains(&query_lower)
+        }).cloned().collect();
+        ui.set_articles(std::rc::Rc::new(slint::VecModel::from(filtered)).into());
+    });
+}
+
 #[cfg(test)]
 mod dashboard_docs_tests {
     use super::*;
@@ -2136,7 +2229,8 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
             // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
+            let help_center = app::HelpCenter::new().unwrap();
+            init_help_center(&help_center);
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");

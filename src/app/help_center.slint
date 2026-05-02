@@ -1,5 +1,11 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct HelpArticle {
+    category: string,
+    title: string,
+    body: string,
+}
+
 export component HelpCenter inherits Window {
     width: 600px;
     height: 800px;
@@ -7,6 +13,9 @@ export component HelpCenter inherits Window {
     background: #f8fafc;
 
     in-out property <string> search_query: "";
+    in-out property <[HelpArticle]> articles: [];
+
+    callback search_query_changed(string);
 
     VerticalBox {
         padding: 16px;
@@ -22,69 +31,28 @@ export component HelpCenter inherits Window {
         LineEdit {
             placeholder-text: "Search help articles...";
             text <=> search_query;
+            edited => { search_query_changed(self.text); }
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 16px;
 
-                Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                for article[index] in articles : VerticalBox {
+                    spacing: 8px;
+                    if index == 0 || article.category != articles[index - 1].category : Text {
+                        text: article.category;
+                        font-weight: 700;
+                        font-size: 18px;
+                        color: #334155;
                     }
-                }
-
-                Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to list new items, add photos, and set prices."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Enable Apple Pay with one click in your payment settings."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "AI Agents"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Your agent can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Marketing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to run a promotion"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to create discount codes and share them on social media."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Account & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to change your subscription"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Find out how to upgrade or downgrade your plan and view past invoices."; color: #64748b; wrap: word-wrap; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px;
+                            Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: article.body; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
             }
