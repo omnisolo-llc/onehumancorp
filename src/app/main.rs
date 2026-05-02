@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -200,7 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -239,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -278,27 +278,97 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                    if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
         }
     });
-    website_builder_ui.on_save_state({
+
+    let app_state_blocks = std::rc::Rc::new(std::cell::RefCell::new(vec![
+        app::BuilderBlock { id: "1".into(), block_type: "Hero".into(), title: "Welcome".into(), content: "Best products".into() }
+    ]));
+
+    website_builder_ui.on_block_moved({
+        let state_blocks = app_state_blocks.clone();
         let ui_handle = website_builder_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+        move |from, to| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let mut b = state_blocks.borrow_mut();
+                let f = from as usize;
+                let t = to as usize;
+                if f < b.len() && t < b.len() && f != t {
+                    let item = b.remove(f);
+                    b.insert(t, item);
+                    let model: slint::VecModel<app::BuilderBlock> = slint::VecModel::from(b.clone());
+                    ui.set_blocks(std::rc::Rc::new(model).into());
                 }
-            });
+            }
+        }
+    });
+
+    website_builder_ui.on_block_added({
+        let state_blocks = app_state_blocks.clone();
+        let ui_handle = website_builder_handle.clone();
+        move |t| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let mut b = state_blocks.borrow_mut();
+                let new_id = format!("{}", b.len() + 1);
+                let title = match t.as_str() {
+                    "Hero" => "New Hero",
+                    "Product Grid" => "New Products",
+                    "Testimonials" => "Happy Customers",
+                    _ => "New Block"
+                };
+                b.push(app::BuilderBlock { id: new_id.into(), block_type: t.into(), title: title.into(), content: "New Content".into() });
+                let mut model = slint::VecModel::default();
+                for blk in b.iter() {
+                    model.push(blk.clone());
+                }
+                ui.set_blocks(std::rc::Rc::new(model).into());
+            }
+        }
+    });
+
+    website_builder_ui.on_block_edited({
+        let state_blocks = app_state_blocks.clone();
+        let ui_handle = website_builder_handle.clone();
+        move |idx, title, content| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let mut b = state_blocks.borrow_mut();
+                let i = idx as usize;
+                if i < b.len() {
+                    b[i].title = title;
+                    b[i].content = content;
+                    let model: slint::VecModel<app::BuilderBlock> = slint::VecModel::from(b.clone());
+                    ui.set_blocks(std::rc::Rc::new(model).into());
+                }
+            }
+        }
+    });
+
+    website_builder_ui.on_block_deleted({
+        let state_blocks = app_state_blocks.clone();
+        let ui_handle = website_builder_handle.clone();
+        move |idx| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let mut b = state_blocks.borrow_mut();
+                let i = idx as usize;
+                if i < b.len() {
+                    b.remove(i);
+                    let model: slint::VecModel<app::BuilderBlock> = slint::VecModel::from(b.clone());
+                    ui.set_blocks(std::rc::Rc::new(model).into());
+                }
+            }
+        }
+    });
+
+    website_builder_ui.on_perform_publish({
+        let state_blocks = app_state_blocks.clone();
+        move || {
+            let blocks = state_blocks.borrow();
+            println!("Publishing Website Draft with {} blocks", blocks.len());
         }
     });
 
@@ -327,7 +397,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_settings_handle.upgrade() {
+                    if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -356,7 +426,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                    if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -1504,8 +1574,7 @@ mod tests {
     fn test_website_builder_viral_storefront_footer() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::WebsiteBuilder::new().unwrap();
-        ui.set_step(4);
-        assert_eq!(ui.get_step(), 4);
+
 
         let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let signup_opened_clone = signup_opened.clone();
@@ -1782,98 +1851,6 @@ mod docs_tests {
         assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 
-    #[test]
-    fn test_e2e_website_builder_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let ui = app::WebsiteBuilder::new().unwrap();
-
-        let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let publish_success_clone = publish_success.clone();
-
-        ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "E-commerce");
-            assert_eq!(color, "#34C759");
-            assert_eq!(product, "My Custom Product");
-            assert_eq!(price, "19.99");
-            assert_eq!(description, "A great custom product.");
-            assert_eq!(domain, "custom");
-            *publish_success_clone.borrow_mut() = true;
-        });
-
-        let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-        let copied_link_clone = copied_link.clone();
-        ui.on_copy_to_clipboard(move |link| {
-            *copied_link_clone.borrow_mut() = link.to_string();
-        });
-
-        let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let signup_opened_clone = signup_opened.clone();
-        ui.on_open_ohc_signup(move || {
-            *signup_opened_clone.borrow_mut() = true;
-        });
-
-        ui.on_upload_logo(|| {});
-        ui.on_generate_logo(|| {});
-        ui.on_generate_description(|| {});
-        ui.on_upload_photo(|| {});
-        ui.on_save_state(|| {});
-
-        assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        ui.invoke_save_state();
-        assert_eq!(ui.get_is_advanced(), true);
-
-        ui.set_selected_template("E-commerce".into());
-        ui.set_step(1);
-
-        ui.set_primary_color("#34C759".into());
-        ui.set_step(2);
-
-        ui.set_product_name("My Custom Product".into());
-        ui.set_product_price("19.99".into());
-        ui.set_product_description("A great custom product.".into());
-        ui.set_step(3);
-
-        ui.set_domain_choice("custom".into());
-        ui.set_step(4);
-
-        assert_eq!(ui.get_selected_template(), "E-commerce");
-        assert_eq!(ui.get_primary_color(), "#34C759");
-        assert_eq!(ui.get_product_name(), "My Custom Product");
-        assert_eq!(ui.get_domain_choice(), "custom");
-
-        ui.set_is_publishing(true);
-        ui.invoke_publish_site(
-            ui.get_selected_template(),
-            ui.get_primary_color(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_product_description(),
-            ui.get_domain_choice()
-        );
-        assert!(ui.get_is_publishing(), "Should be publishing");
-        assert!(*publish_success.borrow(), "Publish should have been called");
-
-        ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
-        assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
-
-        ui.invoke_open_ohc_signup();
-        assert!(*signup_opened.borrow(), "Viral storefront footer click should be successfully invoked");
-    }
 
     #[test]
     fn test_e2e_documentation_suite_flow() {
@@ -2746,7 +2723,7 @@ mod e2e_hybrid_blob_tests {
             *builder_published_clone.borrow_mut() = true;
         });
 
-        builder_ui.set_step(4); // Advance to the publish step
+
         builder_ui.invoke_publish_site(
             "E-commerce".into(),
             "#34C759".into(),
