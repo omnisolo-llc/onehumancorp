@@ -21,6 +21,23 @@ use slint::Global;
 
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
+    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
+    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+}
+
+fn set_global_is_advanced(val: bool) {
+    IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
+    ADVANCED_LISTENERS.with(|listeners| {
+        for listener in listeners.borrow().iter() {
+            listener(val);
+        }
+    });
+}
+
+fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
+    ADVANCED_LISTENERS.with(|listeners| {
+        listeners.borrow_mut().push(listener);
+    });
 }
 
 #[tokio::main]
@@ -69,7 +86,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let setup_wizard_ui = app::SetupWizard::new()?;
+    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let sw_ui_weak = setup_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = sw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
 
     let _ = setup_wizard_ui.hide();
 
@@ -128,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                         if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
                         if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                         if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
@@ -142,6 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = setup_wizard_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
@@ -175,7 +200,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let agent_config_ui = app::AgentConfig::new()?;
+    agent_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let agent_config_handle = agent_config_ui.as_weak();
+    let ac_ui_weak = agent_config_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = ac_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
     let init_agent_config_handle = agent_config_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -183,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_agent_config_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
@@ -193,6 +225,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = agent_config_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
@@ -206,7 +239,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let prompt_tuning_ui = app::PromptTuning::new()?;
+    prompt_tuning_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let prompt_tuning_handle = prompt_tuning_ui.as_weak();
+    let pt_ui_weak = prompt_tuning_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = pt_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -214,7 +254,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_prompt_tuning_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
@@ -224,6 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = prompt_tuning_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
@@ -237,7 +278,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
+    website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let website_builder_handle = website_builder_ui.as_weak();
+    let wb_ui_weak = website_builder_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = wb_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
     let init_website_builder_handle = website_builder_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -245,7 +293,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_website_builder_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
@@ -255,6 +303,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = website_builder_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
@@ -268,7 +317,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let grow_business_ui = app::GrowBusiness::new()?;
+    grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let grow_business_handle = grow_business_ui.as_weak();
+    let gb_ui_weak = grow_business_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = gb_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let settings_ui = app::Settings::new()?;
+    settings_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let settings_handle = settings_ui.as_weak();
+    let s_ui_weak = settings_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = s_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    let init_settings_handle = settings_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_settings_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+    settings_ui.on_save_state({
+        let ui_handle = settings_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
     let init_grow_business_handle = grow_business_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -276,7 +371,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_grow_business_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
@@ -286,6 +381,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = grow_business_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
@@ -2347,6 +2443,87 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_progressive_disclosure_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Manually implement listener logic here to prove pub-sub state
+        let setup_wizard = app::SetupWizard::new().unwrap();
+        setup_wizard.set_is_advanced(false);
+        let sw_weak = setup_wizard.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = sw_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        setup_wizard.on_save_state({
+            let ui_weak = setup_wizard.as_weak();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_global_is_advanced(ui.get_is_advanced());
+                }
+            }
+        });
+
+        let agent_config = app::AgentConfig::new().unwrap();
+        agent_config.set_is_advanced(false);
+        let ac_weak = agent_config.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = ac_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        let settings_ui = app::Settings::new().unwrap();
+        settings_ui.set_is_advanced(false);
+        let s_weak = settings_ui.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = s_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        settings_ui.on_save_state({
+            let ui_weak = settings_ui.as_weak();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_global_is_advanced(ui.get_is_advanced());
+                }
+            }
+        });
+
+        // Toggle in SetupWizard
+        assert_eq!(setup_wizard.get_is_advanced(), false);
+        setup_wizard.invoke_toggle_advanced();
+        assert_eq!(setup_wizard.get_is_advanced(), true);
+
+        // Verify that the global state is now updated in others
+        assert_eq!(agent_config.get_is_advanced(), true);
+        assert_eq!(settings_ui.get_is_advanced(), true);
+
+        // Toggle it off in Settings
+        settings_ui.set_is_advanced(false);
+        settings_ui.invoke_save_state();
+
+        // Verify global state is false everywhere
+        assert_eq!(setup_wizard.get_is_advanced(), false);
+        assert_eq!(agent_config.get_is_advanced(), false);
     }
 
     #[test]
