@@ -11,6 +11,7 @@ pub mod ohc {
 
 use slint::ComponentHandle;
 
+use slint::Model;
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
@@ -81,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -818,7 +819,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod growth_e2e_tests {
     use super::*;
-    use slint::Model;
 
     #[test]
     fn test_start_setup_wizard_transitions() {
@@ -1054,7 +1054,6 @@ mod growth_e2e_tests {
 
 #[cfg(test)]
 mod e2e_tests {
-    use slint::Model;
     use super::*;
 
     #[test]
@@ -2241,7 +2240,6 @@ mod dashboard_docs_tests {
 #[cfg(test)]
 mod cost_transparency_e2e_tests {
     use super::*;
-    use slint::Model;
 
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
@@ -2569,7 +2567,6 @@ mod cost_transparency_e2e_tests {
 #[cfg(test)]
 mod additional_tests {
     use crate::app;
-    use slint::Model;
 
     #[test]
     fn test_product_photo_and_description() {
