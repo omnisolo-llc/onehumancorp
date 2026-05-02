@@ -145,7 +145,7 @@ test.describe('Login Authentication', () => {
     await page.fill('input[type="email"]', 'wrong@example.com');
     await page.fill('input[type="password"]', 'wrongpassword');
     await page.locator('button:has-text("Sign In")').click();
-    await expect(page.locator('text=/invalid|incorrect|failed/i')).toBeVisible();
+    await expect(page.locator('text=/didn't recognize|try typing it again/i')).toBeVisible();
   });
 
   test('should show error for empty email', async ({ page }) => {
