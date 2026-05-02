@@ -170,12 +170,14 @@ if [[ -f "${TEST_TMPDIR:-/tmp}/server.log" ]]; then
   cat "${TEST_TMPDIR:-/tmp}/server.log" | tail -50
 fi
 
-# Run playwright
-if [[ -n "$spec_file" ]]; then
-  echo "[playwright] Running spec: $spec_file"
-  pnpm exec playwright test --config playwright.config.ts "src/e2e/$spec_file" 2>&1 || echo "[playwright] Playwright exited with code $?"
-else
-  echo "[playwright] Running all specs"
-  pnpm exec playwright test --config playwright.config.ts 2>&1 || echo "[playwright] Playwright exited with code $?"
-fi
+# Run playwright inside Docker to avoid host dependency issues (Node, glibc, etc.)
+# We use --network host so the container can reach the server running on the host port 18789
+echo "[playwright] Running tests inside Playwright Docker container..."
+docker run --rm --network host \
+  -v "$workspace_root:/work" \
+  -w /work \
+  -e CI=true \
+  -e BASE_URL="http://localhost:18789" \
+  mcr.microsoft.com/playwright:v1.40.0-jammy \
+  sh -c "corepack enable && pnpm install && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
 echo "[playwright] Playwright command finished"
