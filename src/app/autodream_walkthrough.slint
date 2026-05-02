@@ -1,6 +1,73 @@
-import { VerticalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
-export component AutodreamWalkthrough {
-    VerticalBox {
+export component AutodreamWalkthrough inherits Window {
+    width: 600px;
+    height: 800px;
+    background: transparent;
+
+    in-out property <int> current_step: 0;
+
+    GlassCard {
+        x: 20px;
+        y: 100px;
+        width: 335px;
+
+        Rectangle {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+            border-width: 1px;
+            x: parent.width / 2 - 6px;
+            y: parent.height - 6px;
+        }
+
+        VerticalBox {
+            padding: 20px;
+            spacing: 16px;
+
+            Text {
+                text: current_step == 0 ? "Activate your AI Support Agent" :
+                      current_step == 1 ? "AI Learns from Your Business" :
+                      current_step == 2 ? "Your AI Reads Past Answers" :
+                      "Your AI is Ready to Help";
+                font-size: 20px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+            }
+
+            Text {
+                text: current_step == 0 ? "Let's set up your AI Support Agent so it can reply to customers for you." :
+                      current_step == 1 ? "The agent reads your menu, prices, and past messages to understand how you talk." :
+                      current_step == 2 ? "When you reply to a customer, the AI remembers it so it knows what to say next time." :
+                      "Your AI is now ready to reply to emails and Instagram DMs automatically while you sleep!";
+                color: #94a3b8;
+                font-family: "Inter";
+                wrap: word-wrap;
+            }
+
+            HorizontalBox {
+                alignment: end;
+                spacing: 12px;
+
+                Button {
+                    text: "Skip tour";
+                    clicked => { root.visible = false; }
+                }
+
+                Button {
+                    text: current_step < 3 ? "Next" : "Done";
+                    clicked => {
+                        if (current_step < 3) {
+                            current_step += 1;
+                        } else {
+                            root.visible = false;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
