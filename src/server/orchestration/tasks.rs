@@ -95,6 +95,7 @@ impl TaskDecompositionService {
                     r#"
                     SELECT id, dependencies FROM shared_tasks_decomposition
                     WHERE status = 'PENDING'
+                    ORDER BY created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
@@ -344,7 +345,7 @@ impl TaskDecompositionService {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE SKIP LOCKED"
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
