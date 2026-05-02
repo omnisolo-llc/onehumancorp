@@ -1,7 +1,18 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
-# build_script removed as protos are now built with Bazel rules
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = [
+        "//src/proto:agent_service.proto",
+        "@protobuf//:protoc",
+    ],
+    edition = "2024",
+    deps = [
+        "@crates//:tonic-build",
+    ],
+)
 
 rust_library(
     name = "core",
@@ -66,8 +77,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         ":core",
-        "//src/proto:agent_service_tonic",
-        "//src/proto:common_prost",
+        ":build_script",
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
     ] + [

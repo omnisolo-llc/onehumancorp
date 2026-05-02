@@ -17,8 +17,6 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
-bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
-bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
@@ -29,20 +27,7 @@ rust.toolchain(
 )
 use_repo(rust, "rust_toolchains")
 
-register_toolchains("//bazel/toolchains:prost_toolchain")
 register_toolchains("@rust_toolchains//:all")
-
-# ── WASM bindgen support ──────────────────────────────────────────────────────
-# rules_rust_wasm_bindgen provides wasm-bindgen-cli 0.2.105, but our code uses 0.2.120
-# The wasm binary build succeeds, but binding generation fails due to version mismatch
-# Users should either:
-#   1. Wait for rules_rust_wasm_bindgen to release a version with wasm-bindgen 0.2.120
-#   2. Downgrade wasm-bindgen in Cargo.toml to 0.2.105 (requires also downgrading wasm-bindgen-futures)
-
-register_toolchains("@rules_rust_wasm_bindgen//:default_wasm_bindgen_toolchain")
-
-# Required for wasm32 builds - dummy CC toolchain workaround - TEMPORARILY DISABLED
-# register_toolchains("@rules_rust//rust/private/dummy_cc_toolchain:dummy_cc_wasm32_toolchain")
 
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.from_cargo(
@@ -64,19 +49,6 @@ crate.annotation(
     },
     crate = "rav1e",
 )
-crate.annotation(
-    crate = "protoc-gen-prost",
-    gen_binaries = ["protoc-gen-prost"],
-)
-crate.annotation(
-    crate = "protoc-gen-tonic",
-    gen_binaries = ["protoc-gen-tonic"],
-)
-
-# wasm-bindgen crate version must match what the toolchain provides
-# rules_rust_wasm_bindgen 0.70.0 ships with wasm-bindgen-cli 0.2.105
-# We accept this mismatch and the user will need to update rules_rust_wasm_bindgen
-# to a version that ships with 0.2.120
 use_repo(crate, "crates")
 
 rules_pkg_rpm = use_extension(
@@ -134,7 +106,6 @@ bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 buildbuddy.gcc_toolchain()
 use_repo(buildbuddy, "buildbuddy_toolchain")
-
 register_toolchains("@buildbuddy_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")

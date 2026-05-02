@@ -1,5 +1,4 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
@@ -22,13 +21,6 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-proto_rust_library(
-    name = "hub",
-    proto = ":hub_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
 
 
 # ── Model ──────────────────────────────────────────────────────────────────────
@@ -40,12 +32,6 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-proto_rust_library(
-    name = "model",
-    proto = ":model_proto",
-    visibility = ["//visibility:public"],
-)
-
 
 
 # ── Common ─────────────────────────────────────────────────────────────────────
@@ -53,12 +39,6 @@ proto_rust_library(
 proto_library(
     name = "common_proto",
     srcs = ["common.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "common",
-    proto = ":common_proto",
     visibility = ["//visibility:public"],
 )
 
@@ -73,12 +53,6 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-proto_rust_library(
-    name = "agent",
-    proto = ":agent_proto",
-    visibility = ["//visibility:public"],
-)
-
 
 
 # ── Agent Service ──────────────────────────────────────────────────────────────
@@ -86,13 +60,6 @@ proto_rust_library(
 proto_library(
     name = "agent_service_proto",
     srcs = ["agent_service.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "agent_service",
-    proto = ":agent_service_proto",
-    use_grpc = True,
     visibility = ["//visibility:public"],
 )
 
@@ -107,12 +74,6 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-proto_rust_library(
-    name = "skills",
-    proto = ":skills_proto",
-    visibility = ["//visibility:public"],
-)
-
 
 
 # ── Billing ────────────────────────────────────────────────────────────────────
@@ -120,12 +81,6 @@ proto_rust_library(
 proto_library(
     name = "billing_proto",
     srcs = ["billing.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "billing",
-    proto = ":billing_proto",
     visibility = ["//visibility:public"],
 )
 
@@ -137,12 +92,6 @@ proto_library(
     name = "organization_proto",
     srcs = ["organization.proto"],
     deps = [":common_proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "organization",
-    proto = ":organization_proto",
     visibility = ["//visibility:public"],
 )
 
@@ -158,12 +107,6 @@ proto_library(
         ":billing_proto",
         ":organization_proto",
     ],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "app",
-    proto = ":app_proto",
     visibility = ["//visibility:public"],
 )
 

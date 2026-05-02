@@ -521,25 +521,14 @@ fn random_bytes(n: usize) -> Vec<u8> {
 
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct AuthServiceServerImpl {
-    pub store: Arc<Store>,
-}
-
-impl AuthServiceServerImpl {
-    pub fn new(store: Arc<Store>) -> Self {
-        Self { store }
-    }
-}
-
 #[tonic::async_trait]
-impl AuthService for AuthServiceServerImpl {
+impl AuthService for Arc<Store> {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.as_ref().authenticate(&req.username, &req.password, &req.organization_id) {
             Ok(user) => {
-                match self.store.issue_token(&user) {
+                match self.as_ref().issue_token(&user) {
                     Ok(token) => {
                          let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
                          Ok(Response::new(LoginResponse {
@@ -562,9 +551,9 @@ impl AuthService for AuthServiceServerImpl {
             req.roles
         };
         
-        match self.store.create_user(req.username, req.email, req.password, roles, req.organization_id) {
+        match self.as_ref().create_user(req.username, req.email, req.password, roles, req.organization_id) {
             Ok(user) => {
-                match self.store.issue_token(&user) {
+                match self.as_ref().issue_token(&user) {
                     Ok(token) => {
                          let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
                          Ok(Response::new(LoginResponse {
@@ -584,10 +573,10 @@ impl AuthService for AuthServiceServerImpl {
             if let Ok(auth_str) = auth_header.to_str() {
                 if auth_str.starts_with("Bearer ") {
                     let token = &auth_str["Bearer ".len()..];
-                    if let Ok(claims) = self.store.validate_token(token).await {
+                    if let Ok(claims) = self.as_ref().validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp);
+                        let _ = self.as_ref().revoke_token(claims.jti, exp);
                     }
                 }
             }
@@ -607,10 +596,10 @@ impl AuthService for AuthServiceServerImpl {
         }
 
         let token = &auth_str["Bearer ".len()..];
-        let claims = self.store.validate_token(token).await
+        let claims = self.as_ref().validate_token(token).await
             .map_err(|e| Status::unauthenticated(e))?;
 
-        let user = self.store.get_user(&claims.sub, "")
+        let user = self.as_ref().get_user(&claims.sub, "")
             .ok_or_else(|| Status::not_found("user not found"))?;
 
         Ok(Response::new(UserProto {
@@ -628,7 +617,7 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
         let req = request.into_inner();
-        let users = self.store.list_users(&req.organization_id);
+        let users = self.as_ref().list_users(&req.organization_id);
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -646,7 +635,7 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
+        match self.as_ref().create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
             Ok(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
@@ -664,7 +653,7 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.get_user(&req.id, &req.organization_id) {
+        match self.as_ref().get_user(&req.id, &req.organization_id) {
             Some(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
@@ -682,7 +671,7 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
+        match self.as_ref().update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
             Ok(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
@@ -700,14 +689,14 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
-        match self.store.delete_user(&req.id, &req.organization_id) {
+        match self.as_ref().delete_user(&req.id, &req.organization_id) {
             Ok(_) => Ok(Response::new(EmptyResponse {})),
             Err(e) => Err(Status::not_found(e)),
         }
     }
 
     async fn list_roles(&self, _request: Request<EmptyRequest>) -> Result<Response<ListRolesResponse>, Status> {
-        let roles = self.store.roles.read().unwrap();
+        let roles = self.roles.read().unwrap();
         let proto_roles = roles.values().map(|r| RoleProto {
             id: r.id.clone(),
             name: r.name.clone(),
@@ -724,7 +713,7 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("role name is required"));
         }
         
-        let mut roles = self.store.roles.write().unwrap();
+        let mut roles = self.roles.write().unwrap();
         if roles.contains_key(&req.name) {
             return Err(Status::already_exists(format!("role {} already exists", req.name)));
         }
@@ -862,7 +851,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
+        let resp = s.login(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
     }
@@ -878,7 +867,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
+        let resp = s.register(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
     }
@@ -890,7 +879,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).list_users(req).await.unwrap();
+        let resp = s.list_users(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.users.len(), 1);
         assert_eq!(resp.users[0].username, "admin");
@@ -904,7 +893,7 @@ mod tests {
             permissions: vec!["read".to_string()],
         });
         
-        let resp = AuthServiceServerImpl::new(s).create_role(req).await.unwrap();
+        let resp = s.create_role(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.name, "new_role");
         assert_eq!(resp.permissions, vec!["read".to_string()]);

@@ -348,6 +348,8 @@ impl MeshTransport for RedisTransport {
         use futures_util::StreamExt;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
+        // We use into_pubsub to get a pubsub connection
+        // The deprecation warning indicates this uses a different underlying connection, which is what we want for subscribe anyway
         #[allow(deprecated)]
         let mut pubsub = self.client.get_async_connection().await.map_err(|e| e.to_string())?.into_pubsub();
 
@@ -376,7 +378,7 @@ impl MeshTransport for RedisTransport {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("ohc:lock:{}", resource);
+        let key = format!("lock:{}", resource);
         let result: bool = redis::cmd("SET")
             .arg(&key)
             .arg(owner)
@@ -393,7 +395,7 @@ impl MeshTransport for RedisTransport {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("ohc:lock:{}", resource);
+        let key = format!("lock:{}", resource);
 
         // Use a Lua script to ensure we only delete the lock if we own it
         let script = redis::Script::new(
@@ -580,7 +582,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_transport_standalone() {
-        let _transport = create_transport(None, false).await.unwrap();
+        let transport = create_transport(None, false).await.unwrap();
         // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
@@ -674,7 +676,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             let tx_clone = tx_arc.clone();
             tokio::spawn(async move {
-                let tx = tx_clone.lock().await;
+                let mut tx = tx_clone.lock().await;
                 let _ = tx.send(msg).await;
             });
         });

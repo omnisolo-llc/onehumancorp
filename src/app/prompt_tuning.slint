@@ -14,7 +14,6 @@ export component PromptTuning inherits Window {
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly";
     in-out property <bool> is_advanced: false;
-    in-out property <bool> show_toast: false;
     
     in-out property <bool> focus_only_business: false;
     in-out property <bool> focus_avoid_competitors: false;
@@ -137,7 +136,6 @@ export component PromptTuning inherits Window {
                         if (step < 3) {
                             next_step();
                         } else {
-                            show_toast = true;
                             save_prompt();
                         }
                     }
@@ -197,25 +195,5 @@ export component PromptTuning inherits Window {
                 }
             }
         }
-    }
-
-    if (show_toast) : GlassCard {
-        width: 300px;
-        height: 60px;
-        x: (parent.width - self.width) / 2;
-        y: parent.height - 100px;
-        background: rgba(16, 185, 129, 0.9); // Green background
-        VerticalBox {
-            alignment: center;
-            Text {
-                text: "Your agent has been updated ✓";
-                font-family: "Outfit";
-                font-size: 16px;
-                font-weight: 700;
-                color: white;
-                horizontal-alignment: center;
-            }
-        }
-        TouchArea { clicked => { show_toast = false; } }
     }
 }

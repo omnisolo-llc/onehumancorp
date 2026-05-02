@@ -2,7 +2,8 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message};
+use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
+use tracing::{info, warn};
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
@@ -47,21 +48,27 @@ impl TeammateMesh for TeammateMeshClient {
     }
 }
 
-pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn TeammateMesh>, String> {
-    match crate::mesh::transport::create_transport(redis_url, is_cloud).await {
-        Ok(transport) => {
-            Ok(Arc::new(TeammateMeshClient::new(transport)))
+pub async fn create_teammate_mesh(redis_url: Option<&str>) -> Arc<dyn TeammateMesh> {
+    if let Some(url) = redis_url {
+        match RedisTransport::new(url).await {
+            Ok(redis_transport) => {
+                info!("Successfully connected to Redis for TeammateMesh.");
+                return Arc::new(TeammateMeshClient::new(Arc::new(redis_transport)));
+            }
+            Err(e) => {
+                warn!("Failed to connect to Redis for TeammateMesh: {}. Falling back to MemoryTransport.", e);
+            }
         }
-        Err(e) => {
-            Err(format!("Failed to create TeammateMesh: {}", e))
-        }
+    } else {
+        info!("No Redis URL provided for TeammateMesh. Using MemoryTransport.");
     }
+
+    Arc::new(TeammateMeshClient::new(Arc::new(MemoryTransport::new())))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
 
@@ -100,8 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_teammate_mesh_fallback() {
         // Test fallback behavior with an invalid Redis URL
-        // We set is_cloud to false to allow fallback to work (since we don't have a valid redis and we aren't cloud)
-        let mesh = create_teammate_mesh(Some("redis://invalid-host:9999"), false).await.unwrap();
+        let mesh = create_teammate_mesh(Some("redis://invalid-host:9999")).await;
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
