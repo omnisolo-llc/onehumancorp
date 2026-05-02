@@ -46,7 +46,11 @@ if [[ -f "$CHROMIUM_SRC" ]]; then
     chmod 755 "$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome-sandbox"
   fi
 else
-  echo "[playwright] WARNING: No chromium found at $CHROMIUM_SRC, tests may fail"
+  echo "[playwright] WARNING: No chromium found at $CHROMIUM_SRC"
+  if [[ -n "${CI:-}" ]]; then
+    echo "[playwright] Running on CI, installing chromium via playwright..."
+    pnpm exec playwright install chromium --with-deps
+  fi
 fi
 # Set the executable path for playwright
 export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_BROWSERS_PATH/chromium-1222/chrome-linux64/chrome"
@@ -64,10 +68,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Copy docker-compose into sandbox since it may be a symlink
-mkdir -p "$workspace_root/deploy"
-if [[ -L "$workspace_root/deploy/docker-compose.e2e.yml" || "$(readlink -f "$workspace_root/deploy/docker-compose.e2e.yml" 2>/dev/null)" != "$(readlink -f "/home/kevin/mono/deploy/docker-compose.e2e.yml" 2>/dev/null)" ]]; then
-  cp /home/kevin/mono/deploy/docker-compose.e2e.yml "$workspace_root/deploy/docker-compose.e2e.yml"
+# Copy docker-compose into sandbox if it's missing or a symlink
+# In Bazel, the file should be available in the runfiles
+if [[ ! -f "$workspace_root/deploy/docker-compose.e2e.yml" ]]; then
+  # Try to find it in the runfiles
+  DOCKER_COMPOSE_SRC="$(find "$workspace_root" -name docker-compose.e2e.yml -type f | head -1)"
+  if [[ -n "$DOCKER_COMPOSE_SRC" ]]; then
+    mkdir -p "$workspace_root/deploy"
+    cp "$DOCKER_COMPOSE_SRC" "$workspace_root/deploy/docker-compose.e2e.yml"
+  fi
 fi
 
 # Ensure fresh infrastructure - stop any existing containers and remove volumes

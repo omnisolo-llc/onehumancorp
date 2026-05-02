@@ -33,6 +33,7 @@ def define_playwright_tests():
                 "no-remote-exec",
                 "requires-docker",
                 "exclusive",
+                "no-sandbox",
             ],
         )
         targets.append(":" + name)

@@ -25,6 +25,13 @@ actions:
             netcat-openbsd \
             psmisc
           
+          # Install Node.js (v20)
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          
+          # Install pnpm
+          sudo npm install -g pnpm
+          
           # Install Docker
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
           sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
@@ -38,6 +45,10 @@ actions:
           
           # Ensure docker can be run without sudo (optional, but good for some setups)
           sudo usermod -aG docker $USER || true
+          sudo service docker start || true
+          
+          # Install Node dependencies
+          pnpm install
       - run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
