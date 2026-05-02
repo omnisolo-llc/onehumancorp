@@ -241,25 +241,18 @@ impl AgentServiceImpl {
             req.model.clone()
         };
 
-        let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
-        } else {
-            vec![]
-        };
-
         let server_system_message = if req.system_prompt.is_empty() {
-            let base_prompt = if !department.is_empty() {
+            if !department.is_empty() {
                 if let Ok(dep) = Department::from_str(department) {
-                    get_department_config(dep).system_prompt
+                    get_department_config(dep).system_prompt.to_string()
                 } else {
-                    &self.cfg.system_prompt
+                    self.cfg.system_prompt.clone()
                 }
             } else {
-                &self.cfg.system_prompt
-            };
-            inject_memories_into_prompt(&memories, base_prompt)
+                self.cfg.system_prompt.clone()
+            }
         } else {
-            inject_memories_into_prompt(&memories, &req.system_prompt)
+            req.system_prompt.clone()
         };
 
         // Attempt to load AGENTS.md for user instructions
