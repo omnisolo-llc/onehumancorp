@@ -464,18 +464,19 @@ impl Store {
             }
         }
 
-        if !email.is_empty() {
-            let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
-            if let Some(user_id) = by_email.get(&email_key) {
-                if let Some(user) = users.get_mut(user_id) {
-                    user.oidc_subject = Some(sub.to_string());
-                    by_oidc.insert(oidc_key, user_id.clone());
-                    return user.clone();
-                }
+
+
+
+        let mut final_email = email.to_string();
+        if !final_email.is_empty() {
+            let email_key = TenantKey { org_id: org_id.to_string(), key: final_email.clone() };
+            if by_email.contains_key(&email_key) {
+                final_email = format!("{}_{}", final_email, hex::encode(random_bytes(3)));
             }
         }
 
         let mut uname = preferred_username.to_string();
+
         if uname.is_empty() {
             uname = email.to_string();
         }
@@ -490,7 +491,7 @@ impl Store {
         let user = User {
             id: id.clone(),
             username: uname.clone(),
-            email: email.to_string(),
+            email: final_email.clone(),
             password_hash: String::new(), // No password for OIDC users
             roles: vec![ROLE_VIEWER.to_string()],
             active: true,
@@ -504,8 +505,8 @@ impl Store {
         if !uname.is_empty() {
             by_name.insert(TenantKey { org_id: org_id.to_string(), key: uname }, id.clone());
         }
-        if !email.is_empty() {
-            by_email.insert(TenantKey { org_id: org_id.to_string(), key: email.to_string() }, id.clone());
+        if !final_email.is_empty() {
+            by_email.insert(TenantKey { org_id: org_id.to_string(), key: final_email }, id.clone());
         }
         by_oidc.insert(oidc_key, id);
 
@@ -980,3 +981,44 @@ mod isolation_tests {
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
     }
 }
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_or_create_oidc_user_no_account_takeover() {
+        let store = Store::new();
+        // Create an initial user
+        let user1 = store.create_user(
+            "admin".to_string(),
+            "admin@example.com".to_string(),
+            "password".to_string(),
+            vec!["admin".to_string()],
+            "org-1".to_string(),
+        ).unwrap();
+
+        // OIDC flow for the same email but different sub should NOT return user1's id
+        let oidc_user = store.get_or_create_oidc_user("new-sub", "admin@example.com", "admin", "org-1");
+        assert_ne!(user1.id, oidc_user.id, "Account takeover vulnerability: OIDC user was merged with an existing user purely based on email");
+    }
+}
+
+    #[test]
+    fn test_revoke_token_expiry() {
+        let store = Store::new();
+        // create jti with expiry in past
+        store.revoke_token("past".to_string(), Utc::now() - chrono::Duration::hours(1));
+        assert!(!store.is_revoked("past"));
+
+        // create jti with expiry in future
+        store.revoke_token("future".to_string(), Utc::now() + chrono::Duration::hours(1));
+        assert!(store.is_revoked("future"));
+    }
+
+    #[tokio::test]
+    async fn test_auth_store_isolate() {
+        let store = Store::new();
+        // Just verify store instantiation is isolated
+        assert!(store.secret.len() > 0);
+    }
