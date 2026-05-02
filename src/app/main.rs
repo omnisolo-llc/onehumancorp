@@ -2491,6 +2491,105 @@ mod cost_transparency_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_documentation_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Check Tooltips
+        let tooltip_registry = app::TooltipRegistry::get(&dashboard_ui);
+        let tooltips_json = include_str!("tooltips.json");
+        let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
+        tooltip_registry.on_request_tooltip_text(move |id: slint::SharedString| {
+            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+        });
+
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("ask_ai".into()), "Get help from the OHC AI assistant");
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("menu".into()), "Open the main navigation menu");
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("help_center".into()), "Access the Help Center for guides and support");
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("add_product".into()), "Add a new product to your store catalog");
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("view_orders".into()), "View and manage customer orders");
+        assert_eq!(tooltip_registry.invoke_request_tooltip_text("messages".into()), "Check messages from your customers");
+
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+            let help_center = app::HelpCenter::new().unwrap();
+            assert_eq!(help_center.get_search_query(), "");
+        });
+
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+            let ai_chat = app::AiHelpChat::new().unwrap();
+            assert_eq!(ai_chat.get_user_input(), "");
+        });
+
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+            let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+            assert_eq!(walkthrough.get_current_step(), 0);
+        });
+
+        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let api_docs_opened_clone = api_docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || {
+            *api_docs_opened_clone.borrow_mut() = true;
+            let _api_docs = app::ApiDocs::new().unwrap();
+        });
+
+        let video_tutorials_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let video_tutorials_opened_clone = video_tutorials_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || {
+            *video_tutorials_opened_clone.borrow_mut() = true;
+            let _video_tutorials = app::VideoTutorials::new().unwrap();
+        });
+
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+            let _release_notes = app::ReleaseNotes::new().unwrap();
+        });
+
+        // Trigger the callbacks from the dashboard
+        dashboard_ui.invoke_open_help_center();
+        assert!(*help_center_opened.borrow(), "Help Center should be opened");
+
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened");
+
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened");
+
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*api_docs_opened.borrow(), "API Docs should be opened");
+
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened");
+
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*release_notes_opened.borrow(), "Release Notes should be opened");
+    }
+
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
