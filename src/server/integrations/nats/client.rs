@@ -16,6 +16,7 @@ pub trait NatsClientWrapper: Send + Sync {
 pub struct RealNatsClient {
     client: Option<Client>,
     publish_counter: Counter<u64>,
+    receive_counter: Counter<u64>,
 }
 
 impl RealNatsClient {
@@ -23,13 +24,15 @@ impl RealNatsClient {
         let client = async_nats::connect(url).await?;
         let meter = global::meter("ohc.nats");
         let publish_counter = meter.u64_counter("ohc.nats.messages_published").build();
-        Ok(Self { client: Some(client), publish_counter })
+        let receive_counter = meter.u64_counter("ohc.nats.messages_received").build();
+        Ok(Self { client: Some(client), publish_counter, receive_counter })
     }
 
     pub fn dummy() -> Self {
         let meter = global::meter("ohc.nats");
         let publish_counter = meter.u64_counter("ohc.nats.messages_published").build();
-        Self { client: None, publish_counter }
+        let receive_counter = meter.u64_counter("ohc.nats.messages_received").build();
+        Self { client: None, publish_counter, receive_counter }
     }
 }
 
@@ -51,11 +54,10 @@ impl NatsClientWrapper for RealNatsClient {
         if let Some(client) = &self.client {
             let mut subscriber = client.subscribe(subject.to_string()).await.map_err(|e| e.to_string())?;
             let subject_string = subject.to_string();
+            let counter = self.receive_counter.clone();
 
             let worker = tokio::spawn(async move {
                 use futures::StreamExt;
-                let meter = global::meter("ohc.nats");
-                let counter: Counter<u64> = meter.u64_counter("ohc.nats.messages_received").build();
                 let labels = [KeyValue::new("subject", subject_string)];
                 while let Some(msg) = subscriber.next().await {
                     counter.add(1, &labels);
