@@ -8,8 +8,8 @@ test.describe('Dashboard UX', () => {
     await page.goto('/login');
 
     // Fill in credentials and sign in
-    await page.fill('input[type="email"]', 'admin@example.com');
-    await page.fill('input[type="password"]', 'admin123');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
 
     // Wait for Dashboard to load
@@ -30,8 +30,8 @@ test.describe('Dashboard UX', () => {
 
 test('should display Quick Actions on mobile', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[type="email"]', 'admin@example.com');
-  await page.fill('input[type="password"]', 'admin123');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
   await page.click('button:has-text("Sign In")');
   await page.waitForURL('**/*');
 
@@ -59,8 +59,8 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[type="email"]', 'admin@example.com');
-  await page.fill('input[type="password"]', 'admin123');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
   await page.click('button:has-text("Sign In")');
   await page.waitForURL('**/*');
 

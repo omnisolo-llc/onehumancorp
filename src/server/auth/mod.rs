@@ -262,8 +262,8 @@ impl Store {
             user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
         }
 
-        let user_id = user_id_opt.ok_or_else(|| "We didn't recognize that email or password. Please try typing it again.".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "We didn't recognize that email or password. Please try typing it again.".to_string())?;
+        let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
+        let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
 
         if !user.active {
             return Err("account disabled".to_string());
@@ -271,14 +271,14 @@ impl Store {
 
         if let Some(ref user_org) = user.organization_id {
             if !org_id.is_empty() && user_org != org_id {
-                return Err("We didn't recognize that email or password. Please try typing it again.".to_string());
+                return Err("invalid credentials".to_string());
             }
         }
 
         if verify(password, &user.password_hash).unwrap_or(false) {
             Ok(user.clone())
         } else {
-            Err("We didn't recognize that email or password. Please try typing it again.".to_string())
+            Err("invalid credentials".to_string())
         }
     }
 
