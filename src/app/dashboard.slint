@@ -55,10 +55,11 @@ export component Dashboard inherits Window {
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
 
-    Flickable {
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        Flickable {
+            VerticalBox {
+                spacing: 20px;
+                padding: 24px;
 
         // Header
         HorizontalBox {
@@ -356,4 +357,68 @@ export component Dashboard inherits Window {
         }
     }
 }
+
+        // Sticky Bottom Navigation
+        GlassCard {
+            border-radius: 0px;
+            border-width: 0px;
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 51, 0.95);
+            height: 64px;
+
+            HorizontalBox {
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                alignment: space-around;
+
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_add_product(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Add"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_view_orders(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Orders"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_check_messages(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Chat"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_see_analytics(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Stats"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+                TouchArea {
+                    width: 44px;
+                    height: 44px;
+                    clicked => { action_share_store(); }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Share"; font-size: 12px; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
+    }
 }

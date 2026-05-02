@@ -50,11 +50,41 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await questionMarkBtn.click();
   await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
 
-  await expect(page.locator('text=Add Product')).toBeVisible();
-  await expect(page.locator('text=View Orders')).toBeVisible();
-  await expect(page.locator('text=Messages')).toBeVisible();
-  await expect(page.locator('text=Analytics')).toBeVisible();
-  await expect(page.locator('text=Share Store')).toBeVisible();
+  await expect(page.locator('text=Add Product').first()).toBeVisible();
+  await expect(page.locator('text=View Orders').first()).toBeVisible();
+  await expect(page.locator('text=Messages').first()).toBeVisible();
+  await expect(page.locator('text=Analytics').first()).toBeVisible();
+  await expect(page.locator('text=Share Store').first()).toBeVisible();
+});
+
+test('should display Sticky Bottom Navigation on mobile', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  // Verify sticky bottom navigation labels are visible
+  const addBtn = page.locator('text=Add').last();
+  const ordersBtn = page.locator('text=Orders').last();
+  const chatBtn = page.locator('text=Chat').last();
+  const statsBtn = page.locator('text=Stats').last();
+  const shareBtn = page.locator('text=Share').last();
+
+  await expect(addBtn).toBeVisible();
+  await expect(ordersBtn).toBeVisible();
+  await expect(chatBtn).toBeVisible();
+  await expect(statsBtn).toBeVisible();
+  await expect(shareBtn).toBeVisible();
+
+  // Verify tap targets are appropriately sized (>= 44px)
+  const addBox = await addBtn.locator('..').locator('..').boundingBox();
+  expect(addBox?.height).toBeGreaterThanOrEqual(44);
+  expect(addBox?.width).toBeGreaterThanOrEqual(44);
+
+  const ordersBox = await ordersBtn.locator('..').locator('..').boundingBox();
+  expect(ordersBox?.height).toBeGreaterThanOrEqual(44);
+  expect(ordersBox?.width).toBeGreaterThanOrEqual(44);
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
