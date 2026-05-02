@@ -1,6 +1,6 @@
 {
   "name": "mono",
-  "version": "0.4.22",
+  "version": "0.4.21",
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
@@ -12,8 +12,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
-    "playwright": "^1.59.1"
+    "@playwright/test": "^1.59.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": []

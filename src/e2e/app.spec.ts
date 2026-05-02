@@ -1,41 +1,66 @@
 import { test, expect } from '@playwright/test';
 
-// Basic HTTP server tests - verify the web server is running and responding
-test.describe('Basic Web Server', () => {
-  test('should respond on port 18789', async ({ page }) => {
-    const response = await page.goto('/');
-    expect(response?.status()).toBeGreaterThan(0);
-  });
-
-  test('should serve HTML content', async ({ page }) => {
+test.describe('Dashboard', () => {
+  test('should load dashboard page', async ({ page }) => {
     await page.goto('/');
-    // Check for body content or canvas element (Slint app container)
-    const body = await page.locator('body').innerHTML();
-    expect(body.length).toBeGreaterThan(0);
+    await expect(page).toHaveTitle(/OneHuman/);
   });
 
-  test('should serve index.html at root with canvas', async ({ page }) => {
+  test('should display navigation', async ({ page }) => {
     await page.goto('/');
-    // The Slint app uses a canvas element
-    const canvas = await page.locator('#canvas');
-    await expect(canvas).toBeVisible();
+    await expect(page.locator('nav')).toBeVisible();
   });
+});
 
-  test('should serve HTML at /login route', async ({ page }) => {
-    await page.goto('/login');
-    const canvas = await page.locator('#canvas');
-    await expect(canvas).toBeVisible();
-  });
-
-  test('should serve HTML at /agents route', async ({ page }) => {
-    await page.goto('/agents');
-    const canvas = await page.locator('#canvas');
-    await expect(canvas).toBeVisible();
-  });
-
-  test('should serve HTML at /business-setup route', async ({ page }) => {
+test.describe('Business Setup Wizard', () => {
+  test('should show welcome step', async ({ page }) => {
     await page.goto('/business-setup');
-    const canvas = await page.locator('#canvas');
-    await expect(canvas).toBeVisible();
+    await expect(page.locator('text=Welcome')).toBeVisible();
+  });
+
+  test('should navigate through wizard steps', async ({ page }) => {
+    await page.goto('/business-setup');
+
+    // Step 0: Welcome -> Next
+    const nextButton = page.locator('button:has-text("Next")');
+    await nextButton.click();
+
+    // Step 1: Business type
+    await page.locator('input[type="text"]').first().fill('Online Store');
+    await nextButton.click();
+
+    // Step 2: Company name
+    await page.locator('input[type="text"]').first().fill('Test Company');
+    await nextButton.click();
+
+    // Verify we can proceed through steps
+    await expect(page.locator('text=What do you sell')).toBeVisible();
+  });
+});
+
+test.describe('Login', () => {
+  test('should show login form', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toBeVisible();
+  });
+
+  test('should allow password visibility toggle', async ({ page }) => {
+    await page.goto('/login');
+    const passwordInput = page.locator('input[type="password"]');
+    const toggleButton = page.locator('button:has-text("Show")');
+    await expect(toggleButton).toBeVisible();
+  });
+});
+
+test.describe('Agent Management', () => {
+  test('should show agents list', async ({ page }) => {
+    await page.goto('/agents');
+    await expect(page.locator('h1:has-text("Agents")')).toBeVisible();
+  });
+
+  test('should show hire agent button', async ({ page }) => {
+    await page.goto('/agents');
+    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
 });
