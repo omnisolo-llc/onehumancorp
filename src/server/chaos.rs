@@ -1,7 +1,6 @@
-use std::time::Duration;
-
 pub struct ChaosEngine {}
 
+#[allow(dead_code)]
 impl ChaosEngine {
     // Placeholder for CorruptAgentLock, DropMeshSync
     // Implementation would be injected via traits
@@ -13,7 +12,9 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
+    use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
     use ohc_builtin_agent::legacy_mesh::DistributedLock;
