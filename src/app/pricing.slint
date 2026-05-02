@@ -99,8 +99,10 @@ export component Pricing inherits Window {
                         if tier.is_recommended : Rectangle {
                             background: #a855f7;
                             border-radius: 4px;
-                            padding: 4px;
-                            Text { text: "Recommended / Best"; color: white; font-size: 12px; horizontal-alignment: center; }
+                            VerticalBox {
+                                padding: 4px;
+                                Text { text: "Recommended / Best"; color: white; font-size: 12px; horizontal-alignment: center; }
+                            }
                         }
 
                         Text { text: tier.name; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
@@ -141,8 +143,8 @@ export component Pricing inherits Window {
             Rectangle {
                 background: #f0fdf4;
                 border-radius: 8px;
-                padding: 16px;
                 VerticalBox {
+                    padding: 16px;
                     spacing: 8px;
                     Text { text: "100% Money Back Guarantee"; font-family: "Outfit"; font-weight: 700; color: #166534; }
                     Text { text: "Secure SSL Checkout"; color: #166534; }
