@@ -169,7 +169,11 @@ impl SyncService for MySyncService {
         &self,
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
-        let _md = request.metadata().clone();
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
+
         let req = request.into_inner();
         let payloads = req.payloads;
 
@@ -190,6 +194,7 @@ impl SyncService for MySyncService {
 
             let job = crate::queue::Job {
                 id: p.memory_id.clone(),
+                tenant_id: tenant_id.clone(),
                 parent_task_id: "escalation".to_string(),
                 agent_role: "SYSTEM".to_string(),
                 payload: p.context.clone(),
