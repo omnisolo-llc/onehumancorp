@@ -453,6 +453,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    business_share_ui.on_share_to_instagram({
+                        let bs_handle_clone_for_ig = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_ig.upgrade() {
+                                println!("Opening Instagram intent for shareable store link: {}", ui.get_share_link());
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_x({
+                        let bs_handle_clone_for_x = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_x.upgrade() {
+                                println!("Opening X intent for shareable store link: {}", ui.get_share_link());
+                            }
+                        }
+                    });
+
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
@@ -2297,6 +2315,48 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_viral_growth_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_store_called.borrow(), "Share store action should be triggered");
+
+        let business_share_ui = app::BusinessShare::new().unwrap();
+
+        let share_ig_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_ig_called_clone = share_ig_called.clone();
+        business_share_ui.on_share_to_instagram(move || { *share_ig_called_clone.borrow_mut() = true; });
+
+        let share_x_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_x_called_clone = share_x_called.clone();
+        business_share_ui.on_share_to_x(move || { *share_x_called_clone.borrow_mut() = true; });
+
+        business_share_ui.invoke_share_to_instagram();
+        assert!(*share_ig_called.borrow(), "Instagram share should work");
+
+        business_share_ui.invoke_share_to_x();
+        assert!(*share_x_called.borrow(), "X share should work");
     }
 
     #[test]
