@@ -116,18 +116,18 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
 pub mod ohc {
     pub mod orchestration {
-        tonic::include_proto!("ohc.orchestration");
+        pub use hub_proto::ohc::orchestration::*;
     }
     pub mod agent {
         pub mod service {
-            tonic::include_proto!("ohc.agent.service");
+            pub use agent_service_proto::ohc::agent::service::*;
         }
     }
     pub mod organization {
-        tonic::include_proto!("ohc.organization");
+        pub use organization_proto::ohc::organization::*;
     }
     pub mod common {
-        tonic::include_proto!("ohc.common");
+        pub use common_proto::ohc::common::*;
     }
 }
 
@@ -1111,7 +1111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
+        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .serve(addr)
         .await?;

@@ -1,11 +1,16 @@
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
-        tonic::include_proto!("ohc.orchestration");
+        pub use hub_proto::ohc::orchestration::*;
     }
 }
 
@@ -15,14 +20,29 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
+#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 
+#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
+
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
+    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+}
+
+#[cfg(test)]
+mod ui_tests;
 
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
@@ -39,6 +59,7 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -885,6 +906,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             });
+        }
+    });
+
+    login_ui.run()?;
+
+    Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn spawn<F>(f: F)
+where
+    F: std::future::Future<Output = ()> + 'static,
+{
+    wasm_bindgen_futures::spawn_local(f);
+}
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub async fn main_wasm() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+    run_app_wasm().await.map_err(|e| e.to_string().into())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let sw_ui_weak = setup_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = sw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let _ = setup_wizard_ui.hide();
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
         }
     });
 
