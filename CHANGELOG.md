@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
+### Cloud Scaling Improvements
+- chore: migrate protobufs to bazel and fix tests (#9343)
+
+### Privacy/Offline Improvements
+- chore: migrate protobufs to bazel and fix tests (#9343)
+
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
