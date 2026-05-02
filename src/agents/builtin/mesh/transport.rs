@@ -348,8 +348,6 @@ impl MeshTransport for RedisTransport {
         use futures_util::StreamExt;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
-        // We use into_pubsub to get a pubsub connection
-        // The deprecation warning indicates this uses a different underlying connection, which is what we want for subscribe anyway
         #[allow(deprecated)]
         let mut pubsub = self.client.get_async_connection().await.map_err(|e| e.to_string())?.into_pubsub();
 
@@ -378,7 +376,7 @@ impl MeshTransport for RedisTransport {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("lock:{}", resource);
+        let key = format!("ohc:lock:{}", resource);
         let result: bool = redis::cmd("SET")
             .arg(&key)
             .arg(owner)
@@ -395,7 +393,7 @@ impl MeshTransport for RedisTransport {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("lock:{}", resource);
+        let key = format!("ohc:lock:{}", resource);
 
         // Use a Lua script to ensure we only delete the lock if we own it
         let script = redis::Script::new(
