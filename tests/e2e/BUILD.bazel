@@ -1,4 +1,5 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 # Shell script wrapper for running playwright tests via docker compose
 sh_binary(
@@ -10,4 +11,16 @@ sh_binary(
         "//src/server:server",
     ],
     visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "run_playwright_e2e_test",
+    srcs = ["run_playwright.sh"],
+    data = [
+        "//scripts:run-playwright.mjs",
+        "//deploy:docker-compose.e2e.yml",
+        "//src/server:server",
+    ],
+    visibility = ["//visibility:public"],
+    tags = ["e2e", "external", "manual"],
 )
