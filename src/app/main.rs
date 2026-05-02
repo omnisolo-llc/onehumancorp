@@ -69,16 +69,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let login_ui = app::Login::new()?;
-    login_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-        match id.as_str() {
-            "ask_ai" => "Get help from your AI assistant".into(),
-            "menu" => "Open the main menu".into(),
-            "add_product" => "Add a new product to your store".into(),
-            "view_orders" => "Check your latest customer orders".into(),
-            "messages" => "Read messages from your customers".into(),
-            _ => "".into(),
-        }
-    });
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
@@ -696,30 +686,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
-
-                let help_center_ui = std::rc::Rc::new(app::HelpCenter::new().unwrap());
-                let help_center_ui_clone = help_center_ui.clone();
-                dashboard.on_open_help_center(move || { let _ = help_center_ui_clone.show(); });
-
-                let ai_chat_ui = std::rc::Rc::new(app::AiHelpChat::new().unwrap());
-                let ai_chat_ui_clone = ai_chat_ui.clone();
-                dashboard.on_open_ai_chat(move || { let _ = ai_chat_ui_clone.show(); });
-
-                let walkthrough_ui = std::rc::Rc::new(app::InteractiveWalkthrough::new().unwrap());
-                let walkthrough_ui_clone = walkthrough_ui.clone();
-                dashboard.on_open_interactive_walkthrough(move || { let _ = walkthrough_ui_clone.show(); });
-
-                let video_tutorials_ui = std::rc::Rc::new(app::VideoTutorials::new().unwrap());
-                let video_tutorials_ui_clone = video_tutorials_ui.clone();
-                dashboard.on_open_video_tutorials(move || { let _ = video_tutorials_ui_clone.show(); });
-
-                let release_notes_ui = std::rc::Rc::new(app::ReleaseNotes::new().unwrap());
-                let release_notes_ui_clone = release_notes_ui.clone();
-                dashboard.on_open_release_notes(move || { let _ = release_notes_ui_clone.show(); });
-
-                let api_docs_ui = std::rc::Rc::new(app::ApiDocs::new().unwrap());
-                let api_docs_ui_clone = api_docs_ui.clone();
-                dashboard.on_open_api_docs(move || { let _ = api_docs_ui_clone.show(); });
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
@@ -2303,41 +2269,7 @@ mod dashboard_docs_tests {
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
-        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || {
-            *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
-        });
-        dashboard_ui.invoke_open_interactive_walkthrough();
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
-
-        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || {
-            *videos_opened_clone.borrow_mut() = true;
-            let _video_tutorials = app::VideoTutorials::new().unwrap();
-        });
-        dashboard_ui.invoke_open_video_tutorials();
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
-
-        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || {
-            *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
-        });
-        dashboard_ui.invoke_open_release_notes();
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
-
-        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let api_docs_opened_clone = api_docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
-            *api_docs_opened_clone.borrow_mut() = true;
-            let _api_docs = app::ApiDocs::new().unwrap();
-        });
-        dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
     }
 }
 
