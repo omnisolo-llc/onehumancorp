@@ -1,5 +1,5 @@
 import { PasswordInput } from "password_input.slint";
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component SetupWizard inherits Window {
@@ -49,6 +49,10 @@ export component SetupWizard inherits Window {
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
 
+    in-out property <bool> welcome_prod_checked: false;
+    in-out property <bool> welcome_insta_checked: false;
+    in-out property <bool> welcome_share_checked: false;
+
     callback launch(string, string, string, string, string, string, string, string, string);
     callback generate_instant_preview();
     callback generate_product_description();
@@ -56,6 +60,7 @@ export component SetupWizard inherits Window {
 
     callback next_step();
     callback select_business_type(string);
+    callback checklist_changed(int, bool);
     callback toggle_sell_physical();
     callback toggle_sell_digital();
     callback toggle_sell_services();
@@ -64,6 +69,9 @@ export component SetupWizard inherits Window {
     callback select_payment_pref(string);
     callback select_template(string);
     callback go_to_dashboard();
+    callback go_to_docs();
+    callback go_to_video();
+    callback go_to_support();
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
@@ -499,18 +507,50 @@ export component SetupWizard inherits Window {
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_prod_checked;
+                                toggled => { root.checklist_changed(1, self.checked); }
+                            }
                             Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_insta_checked;
+                                toggled => { root.checklist_changed(2, self.checked); }
+                            }
                             Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_share_checked;
+                                toggled => { root.checklist_changed(3, self.checked); }
+                            }
                             Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                        }
+
+                        if (welcome_prod_checked && welcome_insta_checked && welcome_share_checked) : Text {
+                            text: "Congratulations! You are complete and ready to grow your business.";
+                            color: #10b981;
+                            font-family: "Outfit";
+                            font-weight: 700;
+                        }
+
+                        HorizontalBox {
+                            spacing: 10px;
+                            TouchArea {
+                                clicked => { root.go_to_docs(); }
+                                Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; }
+                            }
+                            TouchArea {
+                                clicked => { root.go_to_video(); }
+                                Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; }
+                            }
+                            TouchArea {
+                                clicked => { root.go_to_support(); }
+                                Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; }
+                            }
                         }
                     }
                 }
