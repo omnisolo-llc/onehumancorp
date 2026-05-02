@@ -82,7 +82,6 @@ impl SyncService for MySyncService {
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
         let _md = request.metadata().clone();
         let _req = request.into_inner();
-        println!("PowerSync received push request.");
 
         Ok(Response::new(PowerSyncPushResponse {
             status: "ok".to_string(),
@@ -93,7 +92,6 @@ impl SyncService for MySyncService {
         &self,
         _request: Request<PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
-        println!("PowerSync received pull request");
         Ok(Response::new(PowerSyncPullResponse {
             payload: "[]".to_string(),
         }))

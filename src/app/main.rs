@@ -25,7 +25,6 @@ thread_local! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("App starting...");
 
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
@@ -46,7 +45,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
-                println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
                         id: "agent_1".into(),
@@ -57,13 +55,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         provider_type: "Standard".into(),
                     }),
                 });
-                match client.register_agent(request).await {
-                    Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
-                }
+                let _ = client.register_agent(request).await;
             }
             Err(e) => {
-                println!("Could not connect to server: {:?}", e);
             }
         }
     });
@@ -95,7 +89,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if ui.get_is_sign_up() {
                     ui.invoke_start_setup_wizard();
                 } else {
-                    println!("Login as {}...", email);
                 }
             }
         }
@@ -311,28 +304,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
-                        if let Ok(resp) = response {
-                            let referrals = resp.into_inner().referrals;
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle.upgrade() {
-                                    let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
-                                        app::UiReferral {
-                                            referral_code: r.referral_code.into(),
-                                            user_id: r.user_id.into(),
-                                            clicks: r.clicks,
-                                            conversions: r.conversions,
-                                            created_at: "".into(), // Simplified
-                                        }
-                                    }).collect();
-                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
-                                }
-                            }).unwrap();
-                        }
+                let client_res = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await;
+                if let Ok(mut client) = client_res {
+                    let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                    if let Ok(resp) = response {
+                        let referrals = resp.into_inner().referrals;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
+                                    app::UiReferral {
+                                        referral_code: r.referral_code.into(),
+                                        user_id: r.user_id.into(),
+                                        clicks: r.clicks,
+                                        conversions: r.conversions,
+                                        created_at: "".into(), // Simplified
+                                    }
+                                }).collect();
+                                ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
+                            }
+                        }).unwrap();
                     }
-                    Err(e) => println!("Failed to connect for referrals: {:?}", e),
                 }
             });
         }
@@ -347,12 +338,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
                         if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
-                            println!("Failed to copy to clipboard: {:?}", e);
                         } else {
-                            println!("Share message copied to clipboard: {}", pre_filled_msg);
                         }
                     } else {
-                        println!("Clipboard not initialized, failed to copy share link");
                     }
                 });
             }
@@ -364,24 +352,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    Ok(mut client) => {
-                        let req = ohc::orchestration::CreateReferralRequest {
-                            user_id: "current_user".to_string(), // In production, use actual user_id
-                            referral_code: "".to_string(),
-                        };
-                        let response = client.create_referral(tonic::Request::new(req)).await;
-                        if let Ok(resp) = response {
-                            let referral = resp.into_inner();
-                            let link = format!("ohc://join?ref={}", referral.referral_code);
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle.upgrade() {
-                                    ui.set_my_referral_link(link.into());
-                                }
-                            }).unwrap();
-                        }
+                let client_res = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await;
+                if let Ok(mut client) = client_res {
+                    let req = ohc::orchestration::CreateReferralRequest {
+                        user_id: "current_user".to_string(), // In production, use actual user_id
+                        referral_code: "".to_string(),
+                    };
+                    let response = client.create_referral(tonic::Request::new(req)).await;
+                    if let Ok(resp) = response {
+                        let referral = resp.into_inner();
+                        let link = format!("ohc://join?ref={}", referral.referral_code);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_my_referral_link(link.into());
+                            }
+                        }).unwrap();
                     }
-                    Err(e) => println!("Failed to create referral: {:?}", e),
                 }
             });
         }
@@ -455,12 +441,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 CLIPBOARD.with(|cb| {
                                     if let Some(ctx) = cb.borrow_mut().as_mut() {
                                         if let Err(e) = ctx.set_contents(link.to_string()) {
-                                            println!("Failed to copy to clipboard: {:?}", e);
                                         } else {
-                                            println!("Shareable Store Link copied to clipboard: {}", link);
                                         }
                                     } else {
-                                        println!("Clipboard not initialized, failed to copy store link");
                                     }
                                 });
                             }
@@ -734,11 +717,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             state,
                         });
                         if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
                         }
                     }
                     Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
                     }
                 }
             });

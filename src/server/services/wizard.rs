@@ -148,6 +148,51 @@ impl WizardService for MyWizardService {
             });
         }
 
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        if !db_url.is_empty() {
+            let pool_res = sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(500))
+                .connect_lazy(&db_url);
+
+            if let Ok(pool) = pool_res {
+                let backlog: Result<i64, _> = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
+                    .fetch_one(&pool).await;
+
+                if let Ok(count) = backlog {
+                    health_checks.push(DiagnosticCheckProto {
+                        check: "mission_sync_backlog".to_string(),
+                        status: if count < 100 { "ok".to_string() } else { "degraded".to_string() },
+                        message: format!("Backlog size: {}", count),
+                    });
+                } else {
+                    is_all_healthy = false;
+                    health_checks.push(DiagnosticCheckProto {
+                        check: "mission_sync_backlog".to_string(),
+                        status: "error".to_string(),
+                        message: "Failed to query backlog".to_string(),
+                    });
+                }
+
+                let errors: Result<i64, _> = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL")
+                    .fetch_one(&pool).await;
+
+                if let Ok(count) = errors {
+                    health_checks.push(DiagnosticCheckProto {
+                        check: "hybrid_mode_sync_errors".to_string(),
+                        status: if count == 0 { "ok".to_string() } else { "degraded".to_string() },
+                        message: format!("Sync errors: {}", count),
+                    });
+                } else {
+                    is_all_healthy = false;
+                    health_checks.push(DiagnosticCheckProto {
+                        check: "hybrid_mode_sync_errors".to_string(),
+                        status: "error".to_string(),
+                        message: "Failed to query sync errors".to_string(),
+                    });
+                }
+            }
+        }
+
         let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
         let mode = if is_standalone { "standalone" } else { "cloud" };
 

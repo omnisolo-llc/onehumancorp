@@ -38,12 +38,6 @@ impl SipDB {
             .execute(&self.pool)
             .await?;
             
-        // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
         // 2. Mark missions as FAILED if they exceed the absolute age threshold
         sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
             .bind(fail_threshold)
