@@ -14,16 +14,16 @@ actions:
     steps:
       - run: |
           # Install dependencies for Docker and xvfb
-          sudo apt-get update -qq
-          sudo apt-get install -y \
-            apt-transport-https \
-            ca-certificates \
-            curl \
-            gnupg-agent \
-            software-properties-common \
-            xvfb \
-            netcat-openbsd \
-            psmisc
+          # sudo apt-get update -qq
+          # sudo apt-get install -y \
+          #   apt-transport-https \
+          #   ca-certificates \
+          #   curl \
+          #   gnupg-agent \
+          #   software-properties-common \
+          #   xvfb \
+          #   netcat-openbsd \
+          #   psmisc
           
           # Install Docker
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -

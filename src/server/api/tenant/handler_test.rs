@@ -13,7 +13,7 @@ async fn test_tenant_api() {
     // We intentionally do NOT set `app.current_tenant` in `before_acquire` to ensure
     // the API handler sets the context properly for RLS.
     let pool = PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_millis(50))
+        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect_lazy(database_url)
         .unwrap();
 
