@@ -19,6 +19,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // SAFETY: This is only called at build time and does not concurrently access env
     unsafe { std::env::set_var("PROTOC", protoc_path) };
 
+    if std::env::var("TARGET").map(|t| t.contains("wasm32")).unwrap_or(false) {
+        return Ok(());
+    }
+
     tonic_build::configure()
         .compile_protos(
             &["../proto/hub.proto"],
