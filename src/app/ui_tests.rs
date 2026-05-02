@@ -9,6 +9,9 @@ use slint::Model;
         test_wizard_step_navigation();
         test_ref_code();
         test_build_step();
+        test_login_verification_state();
+        test_product_description_auto_generate();
+        test_launch_success_copy();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -54,6 +57,14 @@ use slint::Model;
     // #[test] fn test_login_remember_me() { let ui = create_login(); ui.set_remember_me(true); assert!(ui.get_remember_me()); }
     // #[test] fn test_login_view_password() { let ui = create_login(); ui.set_show_password(true); assert!(ui.get_show_password()); }
 
+    fn test_login_verification_state() {
+        let ui = create_login();
+        ui.set_show_verification(true);
+        ui.set_verification_message("Check email".into());
+        assert!(ui.get_show_verification());
+        assert_eq!(ui.get_verification_message(), "Check email");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // SETUP WIZARD TESTS (50 cases)
     // ─────────────────────────────────────────────────────────────────────────
@@ -65,6 +76,17 @@ use slint::Model;
     fn test_wizard_step_navigation() { let ui = create_wizard(); ui.set_step(1); assert_eq!(ui.get_step(), 1); ui.set_step(2); assert_eq!(ui.get_step(), 2); }
     fn test_wizard_business_type() { let ui = create_wizard(); ui.set_business_type("SaaS".into()); assert_eq!(ui.get_business_type(), "SaaS"); }
     fn test_wizard_company_name() { let ui = create_wizard(); ui.set_company_name("Acme".into()); assert_eq!(ui.get_company_name(), "Acme"); }
+    fn test_product_description_auto_generate() {
+        let ui = create_wizard();
+        ui.set_product_name("Cake".into());
+        ui.set_product_description("A premium Cake".into());
+        assert_eq!(ui.get_product_description(), "A premium Cake");
+    }
+    fn test_launch_success_copy() {
+        let ui = create_wizard();
+        ui.set_launch_success(true);
+        assert!(ui.get_launch_success());
+    }
     fn test_wizard_sell_physical() { let ui = create_wizard(); ui.set_sell_physical(true); assert!(ui.get_sell_physical()); }
     fn test_wizard_sell_digital() { let ui = create_wizard(); ui.set_sell_digital(true); assert!(ui.get_sell_digital()); }
     fn test_wizard_sell_services() { let ui = create_wizard(); ui.set_sell_services(true); assert!(ui.get_sell_services()); }
