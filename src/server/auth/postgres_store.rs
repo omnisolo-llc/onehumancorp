@@ -19,8 +19,6 @@ impl PgUserRepository {
 #[async_trait]
 impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, _org_id: &str) -> Result<(), String> {
-        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
@@ -31,7 +29,7 @@ impl UserRepository for PgUserRepository {
         .bind(&user.username)
         .bind(&user.email)
         .bind(&user.password_hash)
-        .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
+        .bind(&user.roles)
         .bind(user.active)
         .bind(&user.organization_id)
         .bind(&user.oidc_subject)
@@ -58,8 +56,7 @@ impl UserRepository for PgUserRepository {
         }.map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -89,8 +86,7 @@ impl UserRepository for PgUserRepository {
             sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await
         }.map_err(|e| e.to_string())?;
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -120,8 +116,7 @@ impl UserRepository for PgUserRepository {
             sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await
         }.map_err(|e| e.to_string())?;
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -151,8 +146,7 @@ impl UserRepository for PgUserRepository {
             sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await
         }.map_err(|e| e.to_string())?;
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -183,8 +177,7 @@ impl UserRepository for PgUserRepository {
 
         let mut users = Vec::new();
         for row in rows {
-            let roles_json: String = row.get("roles");
-            let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+            let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
             users.push(User {
                 id: row.get("id"),
@@ -203,8 +196,6 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
-        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
         let query = if org_id.is_empty() {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
@@ -225,7 +216,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.username)
                 .bind(&user.email)
                 .bind(&user.password_hash)
-                .bind(roles_json)
+                .bind(&user.roles)
                 .bind(user.active)
                 .bind(&user.organization_id)
                 .bind(&user.oidc_subject)
@@ -238,7 +229,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.username)
                 .bind(&user.email)
                 .bind(&user.password_hash)
-                .bind(roles_json)
+                .bind(&user.roles)
                 .bind(user.active)
                 .bind(&user.organization_id)
                 .bind(&user.oidc_subject)
