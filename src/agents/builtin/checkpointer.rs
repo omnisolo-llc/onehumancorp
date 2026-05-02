@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -164,7 +163,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
     decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
+
     Ok(decompressed)
 }
 

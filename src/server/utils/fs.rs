@@ -3,7 +3,9 @@ use std::io::{self, Write};
 use std::path::Path;
 use rand::Rng;
 use rand::distributions::Alphanumeric;
+#[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
 /// WriteFileAtomic writes data to a file atomically by writing to a temporary file first
@@ -25,11 +27,13 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) ->
     
     let tmp_name = dir.join(format!("{}.{}.tmp", base_name_str, random_suffix));
     
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(mode)
-        .open(&tmp_name)?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+
+    #[cfg(unix)]
+    options.mode(mode);
+
+    let mut file = options.open(&tmp_name)?;
 
     file.write_all(data)?;
     file.sync_all()?;
@@ -66,9 +70,12 @@ mod tests {
         file.read_to_end(&mut content).unwrap();
         assert_eq!(content, data);
 
-        let metadata = fs::metadata(&filename).unwrap();
-        let perm = metadata.permissions();
-        assert_eq!(perm.mode() & 0o777, mode);
+        #[cfg(unix)]
+        {
+            let metadata = fs::metadata(&filename).unwrap();
+            let perm = metadata.permissions();
+            assert_eq!(perm.mode() & 0o777, mode);
+        }
 
         fs::remove_file(&filename).unwrap();
     }

@@ -30,10 +30,11 @@ impl MyAgentManagerService {
         );
         let agents = agents.unwrap_or_else(|_| vec![]);
         let meetings = meetings.unwrap_or_else(|_| vec![]);
-        
+
+        let cost_auditor = self.hub.get_cost_auditor();
         let costs = Summary {
-            total_cost_usd: 100.0,
-            total_tokens: 50000,
+            total_cost_usd: cost_auditor.get_total_cost(),
+            total_tokens: cost_auditor.get_total_tokens(),
         };
 
         let mut status_map = std::collections::HashMap::new();
@@ -199,8 +200,16 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let hub_clone1 = self.hub.clone();
+        let hub_clone2 = self.hub.clone();
+
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub_clone1.get_agents()),
+            tokio::task::spawn_blocking(move || hub_clone2.get_meetings())
+        );
+        let agents = agents_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let mut msg_count = 0;
         for m in &meetings {
             msg_count += m.transcript.len() as i32;
