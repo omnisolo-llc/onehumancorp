@@ -27,57 +27,19 @@ pub struct SharedTask {
     pub proposed_content: Option<String>,
 }
 
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
-use std::sync::Arc;
-use prost::Message as _;
-
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
-    pub(crate) pool: Option<sqlx::PgPool>,
-    pub(crate) transport: Option<Arc<dyn MeshTransport>>,
 }
 
 impl TaskManager {
     pub fn new() -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
-            pool: None,
-            transport: None,
         }
-    }
-
-    pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
-        self.pool = Some(pool);
-        self
-    }
-
-    pub fn with_transport(mut self, transport: Arc<dyn MeshTransport>) -> Self {
-        self.transport = Some(transport);
-        self
     }
 
     pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
-    }
-
-    pub async fn broadcast_task(&self, task: &SharedTask) -> Result<(), String> {
-        if let Some(transport) = &self.transport {
-            let mut payload = Vec::new();
-            // We want to broadcast a RunTaskRequest to the mesh.
-            // Since SharedTask is internal, we convert it to RunTaskRequest.
-            let req = crate::ohc::agent::service::RunTaskRequest {
-                task_id: task.id.clone(),
-                task: format!("{} - {}", task.title, task.description.as_deref().unwrap_or_default()),
-                organization_id: task.organization_id.clone(),
-                ..Default::default()
-            };
-            req.encode(&mut payload).map_err(|e| e.to_string())?;
-            transport.publish("agent_jobs", MeshMessage {
-                topic: "agent_jobs".to_string(),
-                payload,
-            }).await?;
-        }
-        Ok(())
     }
 
     pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
@@ -134,14 +96,7 @@ impl TaskManager {
         }
     }
 
-    pub async fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
-        if let Some(transport) = &self.transport {
-            let lock_key = format!("task:{}", task_id);
-            if !transport.acquire_lock(&lock_key, &agent_id, 30).await? {
-                return Ok(None);
-            }
-        }
-
+    pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
             if task.status == "PENDING" {
@@ -249,28 +204,28 @@ mod tests {
         assert_eq!(fetched.id, task.id);
     }
 
-    #[tokio::test]
-    async fn test_claim_task() {
+    #[test]
+    fn test_claim_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
-        let claimed = tm.claim_task(&task.id, "agent1".to_string()).await.unwrap();
+        let claimed = tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         assert!(claimed.is_some());
         let claimed = claimed.unwrap();
         assert_eq!(claimed.status, "IN_PROGRESS");
         assert_eq!(claimed.assigned_agent_id, Some("agent1".to_string()));
         
         // Try to claim again
-        let claimed_again = tm.claim_task(&task.id, "agent2".to_string()).await.unwrap();
+        let claimed_again = tm.claim_task(&task.id, "agent2".to_string()).unwrap();
         assert!(claimed_again.is_none());
     }
 
-    #[tokio::test]
-    async fn test_review_task() {
+    #[test]
+    fn test_review_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
-        tm.claim_task(&task.id, "agent1".to_string()).await.unwrap();
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         
         tm.review_task(&task.id, "agent1").unwrap();
         
@@ -281,12 +236,12 @@ mod tests {
         assert!(tm.review_task(&task.id, "agent2").is_err());
     }
 
-    #[tokio::test]
-    async fn test_complete_task() {
+    #[test]
+    fn test_complete_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
         
-        tm.claim_task(&task.id, "agent1".to_string()).await.unwrap();
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         
         tm.complete_task(&task.id, "agent1", "Success result".to_string()).unwrap();
         
