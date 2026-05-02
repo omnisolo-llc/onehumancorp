@@ -61,9 +61,9 @@ pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
-    use crate::mesh::transport::MemoryTransport;
 
     #[tokio::test]
     async fn test_teammate_mesh_client() {

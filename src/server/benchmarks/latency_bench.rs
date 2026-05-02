@@ -14,17 +14,10 @@ pub async fn bench_queue_latency() {
 
     if database_url != "postgres://localhost/dummy" {
         let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    let _ = conn.execute("RESET app.current_tenant").await;
-                    Ok(true)
-                })
-            })
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
                     Ok(true)
                 })
             })
@@ -58,17 +51,10 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     let pool_res = sqlx::postgres::PgPoolOptions::new()
-        .after_release(|conn, _meta| {
-            Box::pin(async move {
-                use sqlx::Executor;
-                let _ = conn.execute("RESET app.current_tenant").await;
-                Ok(true)
-            })
-        })
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
+                conn.execute("SET app.current_tenant = 'system'").await?;
                 Ok(true)
             })
         })
@@ -134,6 +120,7 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
         join_handles.push(tokio::spawn(async move {
             let job = Job {
                 id: format!("job_{}_{}_{}", name, run_id, i),
+                tenant_id: "benchmark_tenant".to_string(),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
                 agent_role: "test_agent".to_string(),
                 payload: "{}".to_string(),
