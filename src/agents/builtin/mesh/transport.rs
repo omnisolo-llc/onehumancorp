@@ -348,10 +348,7 @@ impl MeshTransport for RedisTransport {
         use futures_util::StreamExt;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
-        // We use into_pubsub to get a pubsub connection
-        // The deprecation warning indicates this uses a different underlying connection, which is what we want for subscribe anyway
-        #[allow(deprecated)]
-        let mut pubsub = self.client.get_async_connection().await.map_err(|e| e.to_string())?.into_pubsub();
+        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
 
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
