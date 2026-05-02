@@ -280,7 +280,8 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool, transport));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -298,7 +299,8 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool, transport));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncContextRequest {
@@ -322,7 +324,8 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool, transport));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -343,7 +346,8 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool, transport));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncContextRequest {

@@ -808,11 +808,8 @@ impl HubService for MyHubService {
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
         
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(caps) => Ok(caps),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
+        let rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx)
+            .map(Ok);
             
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
@@ -830,11 +827,8 @@ impl HubService for MyHubService {
         
         let rx = self.hub.subscribe_mesh_events(req.topic);
         
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(event) => Ok(event),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
+        let rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx)
+            .map(Ok);
             
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
@@ -870,11 +864,8 @@ impl HubService for MyHubService {
         
         let rx = self.hub.subscribe_teammate_mesh(req.topic);
         
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(event) => Ok(event),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
+        let rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx)
+            .map(Ok);
             
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamTeammateMeshStream))
     }
@@ -940,7 +931,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+
+    // Start Mesh API server
+    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        is_cloud
+    ).await.expect("Failed to create MeshTransport");
+
+    let hub = Arc::new(Hub::new(event_tx, db.pool.clone(), mesh_transport.clone()));
     // let http_addr = "[::1]:8080".parse()?;
     // let hub_for_http = hub.clone();
     // tokio::spawn(async move {
@@ -993,12 +992,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Start Mesh API server
-    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        is_cloud
-    ).await.expect("Failed to create MeshTransport");
 
     // Initialize Handoff Manager
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
@@ -1132,7 +1125,8 @@ mod tests {
         let db = Arc::new(crate::db::DB::new().await.ok()?);
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(Hub::new(event_tx, db.pool.clone(), transport));
         Some(MyHubService::new(hub, db.pool.clone(), db))
     }
 

@@ -1,5 +1,5 @@
 use crate::ohc::orchestration::SyncStateHandoff;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, MeshEnvelope};
 use std::sync::Arc;
 use prost::Message;
 use crate::db::{DB, DbStore};
@@ -19,8 +19,8 @@ impl HandoffManager {
         let db = self.db.clone();
         let is_cloud = self.is_cloud;
 
-        let handler = Box::new(move |msg: MeshMessage| {
-            if let Ok(handoff) = SyncStateHandoff::decode(&msg.payload[..]) {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
+            if let Ok(handoff) = SyncStateHandoff::decode(&envelope.payload[..]) {
                 // Prevent reflection (don't process messages we sent)
                 let current_mode = if is_cloud { "cloud" } else { "standalone" };
                 if handoff.mode_source == current_mode {
@@ -75,12 +75,12 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        let msg = MeshMessage {
+        let envelope = MeshEnvelope {
             topic: "mesh:coordination:handoff".to_string(),
             payload: buf,
         };
 
-        self.transport.publish("mesh:coordination:handoff", msg).await
+        self.transport.publish("mesh:coordination:handoff", envelope).await
     }
 }
 
@@ -141,12 +141,12 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        let msg = MeshMessage {
+        let envelope = MeshEnvelope {
             topic: "mesh:coordination:handoff".to_string(),
             payload: buf,
         };
 
-        transport.publish("mesh:coordination:handoff", msg).await.unwrap();
+        transport.publish("mesh:coordination:handoff", envelope).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -171,12 +171,12 @@ mod tests {
         let mut buf2 = Vec::new();
         handoff2.encode(&mut buf2).unwrap();
 
-        let msg2 = MeshMessage {
+        let envelope2 = MeshEnvelope {
             topic: "mesh:coordination:handoff".to_string(),
             payload: buf2,
         };
 
-        transport.publish("mesh:coordination:handoff", msg2).await.unwrap();
+        transport.publish("mesh:coordination:handoff", envelope2).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;

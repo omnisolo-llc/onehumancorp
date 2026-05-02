@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, MeshEnvelope};
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
@@ -40,29 +40,29 @@ impl PubSubManager {
         let mut buf = Vec::new();
         let _ = event.encode(&mut buf);
 
-        let message = Message {
+        let envelope = MeshEnvelope {
             topic: formatted_topic.clone(),
             payload: buf,
         };
-        self.transport.publish(&formatted_topic, message).await
+        self.transport.publish(&formatted_topic, envelope).await
     }
 
     pub async fn subscribe(
         &self,
         tenant_id: &str,
         topic: &str,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
+        handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
-        let wrapped_handler = Box::new(move |msg: Message| {
+        let wrapped_handler = Box::new(move |envelope: MeshEnvelope| {
             use prost::Message as ProstMessage;
-            if let Ok(event) = crate::ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
-                let mut new_msg = msg.clone();
-                new_msg.payload = event.payload;
-                handler(new_msg);
+            if let Ok(event) = crate::ohc::orchestration::TeammateMeshEvent::decode(&envelope.payload[..]) {
+                let mut new_envelope = envelope.clone();
+                new_envelope.payload = event.payload;
+                handler(new_envelope);
             } else {
-                handler(msg);
+                handler(envelope);
             }
         });
 
@@ -84,9 +84,9 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
             // In standalone, topic is NOT prefixed
-            if msg.topic == "test_topic" && msg.payload == b"hello" {
+            if envelope.topic == "test_topic" && envelope.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -114,9 +114,9 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
             // In cloud, topic IS prefixed with tenant_id
-            if msg.topic == "tenant_123:test_topic" && msg.payload == b"hello" {
+            if envelope.topic == "tenant_123:test_topic" && envelope.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });

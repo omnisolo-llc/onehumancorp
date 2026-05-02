@@ -3,6 +3,7 @@ use std::sync::RwLock;
 use std::sync::OnceLock;
 use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, MeshEnvelope};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
@@ -27,9 +28,7 @@ pub struct Hub {
     inbox: RwLock<HashMap<String, Vec<Message>>>,
     subs: RwLock<HashMap<String, broadcast::Sender<Message>>>,
     minimax_api_key: String,
-    caps_tx: broadcast::Sender<AgentCapabilities>,
-    mesh_events: RwLock<HashMap<String, broadcast::Sender<MeshEvent>>>,
-    teammate_events: RwLock<HashMap<String, broadcast::Sender<TeammateMeshEvent>>>,
+    mesh_transport: Arc<dyn MeshTransport>,
     tracker: Tracker,
     task_manager: TaskManager,
     scheduler: Scheduler,
@@ -43,19 +42,16 @@ pub struct Hub {
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool, mesh_transport: Arc<dyn MeshTransport>) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-        let (caps_tx, _) = broadcast::channel(100);
         Hub {
             agents: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
             inbox: RwLock::new(HashMap::new()),
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
-            caps_tx,
+            mesh_transport,
             pool,
-            mesh_events: RwLock::new(HashMap::new()),
-            teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
@@ -297,50 +293,108 @@ impl Hub {
     }
 
     pub fn advertise_capabilities(&self, caps: AgentCapabilities) -> Result<(), String> {
-        let _ = self.caps_tx.send(caps);
+        use prost::Message;
+        let mut buf = Vec::new();
+        caps.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let envelope = MeshEnvelope {
+            topic: "mesh:capabilities".to_string(),
+            payload: buf,
+        };
+
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let _ = transport.publish("mesh:capabilities", envelope).await;
+        });
         Ok(())
     }
 
-    pub fn subscribe_capabilities(&self) -> broadcast::Receiver<AgentCapabilities> {
-        self.caps_tx.subscribe()
+    pub fn subscribe_capabilities(&self) -> mpsc::Receiver<AgentCapabilities> {
+        use prost::Message;
+        let (tx, rx) = mpsc::channel(100);
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let handler = Box::new(move |envelope: MeshEnvelope| {
+                if let Ok(caps) = AgentCapabilities::decode(&envelope.payload[..]) {
+                    let _ = tx.try_send(caps);
+                }
+            });
+            let _ = transport.subscribe("mesh:capabilities", handler).await;
+            // Note: cancel handle is dropped here, which might be an issue if we want to unsubscribe later.
+            // For Hub singleton it's usually fine to keep it alive.
+            std::future::pending::<()>().await;
+        });
+        rx
     }
 
     pub fn publish_mesh_event(&self, event: MeshEvent) -> Result<(), String> {
-        let mut mesh_events = self.mesh_events.write().unwrap();
-        let tx = mesh_events.entry(event.topic.clone()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
+        use prost::Message;
+        let mut buf = Vec::new();
+        event.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let topic = format!("mesh:events:{}", event.topic);
+        let envelope = MeshEnvelope {
+            topic: topic.clone(),
+            payload: buf,
+        };
+
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let _ = transport.publish(&topic, envelope).await;
         });
-        let _ = tx.send(event);
         Ok(())
     }
 
-    pub fn subscribe_mesh_events(&self, topic: String) -> broadcast::Receiver<MeshEvent> {
-        let mut mesh_events = self.mesh_events.write().unwrap();
-        let tx = mesh_events.entry(topic).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
+    pub fn subscribe_mesh_events(&self, topic: String) -> mpsc::Receiver<MeshEvent> {
+        use prost::Message;
+        let (tx, rx) = mpsc::channel(100);
+        let mesh_topic = format!("mesh:events:{}", topic);
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let handler = Box::new(move |envelope: MeshEnvelope| {
+                if let Ok(event) = MeshEvent::decode(&envelope.payload[..]) {
+                    let _ = tx.try_send(event);
+                }
+            });
+            let _ = transport.subscribe(&mesh_topic, handler).await;
+            std::future::pending::<()>().await;
         });
-        tx.subscribe()
+        rx
     }
 
     pub fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
-        let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
+        use prost::Message;
+        let mut buf = Vec::new();
+        event.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let topic = format!("mesh:teammate:{}", channel);
+        let envelope = MeshEnvelope {
+            topic: topic.clone(),
+            payload: buf,
+        };
+
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let _ = transport.publish(&topic, envelope).await;
         });
-        let _ = tx.send(event);
         Ok(())
     }
 
-    pub fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
-        let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
+    pub fn subscribe_teammate_mesh(&self, channel: String) -> mpsc::Receiver<TeammateMeshEvent> {
+        use prost::Message;
+        let (tx, rx) = mpsc::channel(100);
+        let topic = format!("mesh:teammate:{}", channel);
+        let transport = self.mesh_transport.clone();
+        tokio::spawn(async move {
+            let handler = Box::new(move |envelope: MeshEnvelope| {
+                if let Ok(event) = TeammateMeshEvent::decode(&envelope.payload[..]) {
+                    let _ = tx.try_send(event);
+                }
+            });
+            let _ = transport.subscribe(&topic, handler).await;
+            std::future::pending::<()>().await;
         });
-        tx.subscribe()
+        rx
     }
 
     pub fn tracker(&self) -> &Tracker {
@@ -583,6 +637,55 @@ mod tests {
     use tokio::sync::mpsc;
 
     #[tokio::test]
+    async fn test_hub_mesh_capabilities() {
+        let (tx, _) = mpsc::channel(100);
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").unwrap();
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Hub::new(tx, pool, transport);
+
+        let mut rx = hub.subscribe_capabilities();
+
+        // Give subscription time to settle
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let caps = AgentCapabilities {
+            agent_id: "test-agent".to_string(),
+            supported_skills: vec!["coding".to_string()],
+            max_concurrent_tasks: 5,
+        };
+
+        hub.advertise_capabilities(caps.clone()).unwrap();
+
+        let received = tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await.unwrap();
+        assert_eq!(received.unwrap().agent_id, "test-agent");
+    }
+
+    #[tokio::test]
+    async fn test_hub_mesh_events() {
+        let (tx, _) = mpsc::channel(100);
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").unwrap();
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Hub::new(tx, pool, transport);
+
+        let mut rx = hub.subscribe_mesh_events("test-topic".to_string());
+
+        // Give subscription time to settle
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let event = MeshEvent {
+            event_id: "evt-1".to_string(),
+            topic: "test-topic".to_string(),
+            payload: b"hello mesh".to_vec(),
+            timestamp: 12345,
+        };
+
+        hub.publish_mesh_event(event.clone()).unwrap();
+
+        let received = tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await.unwrap();
+        assert_eq!(received.unwrap().event_id, "evt-1");
+    }
+
+    #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
@@ -596,7 +699,8 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
-        let hub = Hub::new(tx, pool);
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Hub::new(tx, pool, transport);
 
         let health = hub.check_health().await.unwrap();
 

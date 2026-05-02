@@ -773,9 +773,9 @@ pub async fn start_builtin_agent(
     let handler = {
         let transport = transport.clone();
         let svc = svc.clone();
-        Box::new(move |msg: crate::mesh::transport::Message| {
+        Box::new(move |envelope: crate::mesh::transport::MeshEnvelope| {
             use prost::Message;
-            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&envelope.payload[..]) {
                 tracing::info!("Received job from mesh: {}", req.task_id);
                 let svc = svc.clone();
                 let transport = transport.clone();
@@ -788,7 +788,7 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
-                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::MeshEnvelope {
                                         topic: "agent_events".to_string(),
                                         payload: buf,
                                     }).await;
@@ -801,7 +801,7 @@ pub async fn start_builtin_agent(
                     }
                 });
             }
-        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+        }) as Box<dyn Fn(crate::mesh::transport::MeshEnvelope) + Send + Sync>
     };
 
     if let Err(e) = transport.subscribe("agent_jobs", handler).await {
@@ -812,16 +812,16 @@ pub async fn start_builtin_agent(
 
     let handler_ralph = {
         let svc = svc.clone();
-        Box::new(move |msg: crate::mesh::transport::Message| {
+        Box::new(move |envelope: crate::mesh::transport::MeshEnvelope| {
             use prost::Message;
-            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
+            if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&envelope.payload[..]) {
                 tracing::info!("Received Ralph job from mesh: {}", req.task_id);
                 let svc = svc.clone();
                 tokio::spawn(async move {
                     svc.run_ralph_loop(req).await;
                 });
             }
-        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+        }) as Box<dyn Fn(crate::mesh::transport::MeshEnvelope) + Send + Sync>
     };
 
     if let Err(e) = transport.subscribe("ralph_jobs", handler_ralph).await {

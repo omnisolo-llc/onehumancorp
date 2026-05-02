@@ -68,7 +68,8 @@ pub async fn bench_dashboard_snapshot() {
         }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
+    let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool, transport));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();

@@ -2,15 +2,15 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
+use crate::mesh::transport::{MeshTransport, MeshEnvelope, MemoryTransport, RedisTransport};
 use tracing::{info, warn};
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
-    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
-    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct TeammateMeshClient {
@@ -26,24 +26,24 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:tasks", Message {
+        self.transport.publish("mesh:tasks", MeshEnvelope {
             topic: "mesh:tasks".to_string(),
             payload,
         }).await
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:coordination", Message {
+        self.transport.publish("mesh:coordination", MeshEnvelope {
             topic: "mesh:coordination".to_string(),
             payload,
         }).await
     }
 
-    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:tasks", handler).await
     }
 
-    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:coordination", handler).await
     }
 }

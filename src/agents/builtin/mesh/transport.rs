@@ -5,7 +5,7 @@ use tokio::sync::broadcast;
 use dashmap::DashMap;
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, prost::Message)]
-pub struct Message {
+pub struct MeshEnvelope {
     #[prost(string, tag = "1")]
     pub topic: String,
     #[prost(bytes = "vec", tag = "2")]
@@ -14,8 +14,8 @@ pub struct Message {
 
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn publish(&self, topic: &str, envelope: MeshEnvelope) -> Result<(), String>;
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
@@ -25,7 +25,7 @@ pub trait MeshTransport: Send + Sync {
 }
 
 pub struct MemoryTransport {
-    subs: DashMap<String, broadcast::Sender<Message>>,
+    subs: DashMap<String, broadcast::Sender<MeshEnvelope>>,
     presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
     locks: DashMap<String, (String, std::time::Instant)>, // resource -> (owner, expires_at)
 }
@@ -42,14 +42,14 @@ impl MemoryTransport {
 
 #[async_trait]
 impl MeshTransport for MemoryTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, envelope: MeshEnvelope) -> Result<(), String> {
         if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
+            let _ = tx.send(envelope);
         }
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
@@ -58,8 +58,8 @@ impl MeshTransport for MemoryTransport {
         let mut rx = tx.subscribe();
 
         let worker = tokio::spawn(async move {
-            while let Ok(msg) = rx.recv().await {
-                handler(msg);
+            while let Ok(envelope) = rx.recv().await {
+                handler(envelope);
             }
         });
 
@@ -132,7 +132,7 @@ impl MeshTransport for MemoryTransport {
 #[derive(Clone)]
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
-    subs: DashMap<String, broadcast::Sender<Message>>,
+    subs: DashMap<String, broadcast::Sender<MeshEnvelope>>,
 }
 
 impl IpcTransport {
@@ -191,7 +191,7 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { topic: topic.clone(), payload });
+                        let _ = tx.send(MeshEnvelope { topic: topic.clone(), payload });
                     }
                 }
             }
@@ -208,23 +208,23 @@ impl IpcTransport {
 
 #[async_trait]
 impl MeshTransport for IpcTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, envelope: MeshEnvelope) -> Result<(), String> {
         sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
-            .bind(&message.payload)
+            .bind(&envelope.payload)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
         // Deliver to local subscribers without polling delay
         if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
+            let _ = tx.send(envelope);
         }
 
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
@@ -329,21 +329,21 @@ impl RedisTransport {
 
 #[async_trait]
 impl MeshTransport for RedisTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, envelope: MeshEnvelope) -> Result<(), String> {
         use prost::Message as ProstMessage;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
         let mut conn = self.publish_conn.lock().await;
 
         let mut buf = Vec::new();
-        message.encode(&mut buf).unwrap();
+        envelope.encode(&mut buf).unwrap();
         let payload_b64 = STANDARD.encode(&buf);
 
         let _: () = conn.publish(topic, payload_b64).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(MeshEnvelope) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use prost::Message as ProstMessage;
         use futures_util::StreamExt;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -358,8 +358,8 @@ impl MeshTransport for RedisTransport {
             while let Some(msg) = stream.next().await {
                 if let Ok(payload_b64) = msg.get_payload::<String>() {
                     if let Ok(buf) = STANDARD.decode(&payload_b64) {
-                        if let Ok(message) = Message::decode(&buf[..]) {
-                            handler(message);
+                        if let Ok(envelope) = MeshEnvelope::decode(&buf[..]) {
+                            handler(envelope);
                         }
                     }
                 }
@@ -505,8 +505,8 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
-            if msg.topic == "ipc_test_topic" && msg.payload == b"ipc_hello" {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
+            if envelope.topic == "ipc_test_topic" && envelope.payload == b"ipc_hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -514,12 +514,12 @@ mod tests {
         let cancel = transport.subscribe("ipc_test_topic", handler).await.unwrap();
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let msg = Message {
+        let envelope = MeshEnvelope {
             topic: "ipc_test_topic".to_string(),
             payload: b"ipc_hello".to_vec(),
         };
 
-        transport.publish("ipc_test_topic", msg).await.unwrap();
+        transport.publish("ipc_test_topic", envelope).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -557,20 +557,20 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
-            if msg.topic == "test_topic" && msg.payload == b"hello" {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
+            if envelope.topic == "test_topic" && envelope.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
 
         let cancel = transport.subscribe("test_topic", handler).await.unwrap();
 
-        let msg = Message {
+        let envelope = MeshEnvelope {
             topic: "test_topic".to_string(),
             payload: b"hello".to_vec(),
         };
 
-        transport.publish("test_topic", msg).await.unwrap();
+        transport.publish("test_topic", envelope).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -671,11 +671,11 @@ mod tests {
         // Setup channel for verification
         let (tx, mut rx) = tokio::sync::mpsc::channel(10);
         let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |envelope: MeshEnvelope| {
             let tx_clone = tx_arc.clone();
             tokio::spawn(async move {
                 let tx = tx_clone.lock().await;
-                let _ = tx.send(msg).await;
+                let _ = tx.send(envelope).await;
             });
         });
 
@@ -687,22 +687,22 @@ mod tests {
         // Wait for subscription to propagate
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let msg = Message {
+        let envelope = MeshEnvelope {
             topic: "test_topic_redis".to_string(),
             payload: b"hello redis".to_vec(),
         };
 
-        transport.publish("test_topic_redis", msg.clone()).await.unwrap();
+        transport.publish("test_topic_redis", envelope.clone()).await.unwrap();
 
         // Use timeout to prevent hanging test
         let result = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
 
         assert!(result.is_ok());
-        if let Ok(Some(received_msg)) = result {
-             assert_eq!(received_msg.topic, "test_topic_redis");
-             assert_eq!(received_msg.payload, b"hello redis");
+        if let Ok(Some(received_envelope)) = result {
+             assert_eq!(received_envelope.topic, "test_topic_redis");
+             assert_eq!(received_envelope.payload, b"hello redis");
         } else {
-             panic!("Did not receive message");
+             panic!("Did not receive envelope");
         }
 
         cancel();
