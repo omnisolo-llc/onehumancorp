@@ -98,7 +98,7 @@ impl DiscoveryProxy {
     pub async fn request_tool_svid(&self, tool_name: &str) -> Result<SVID, String> {
         Ok(SVID {
             id: format!("spiffe://local.standalone/tool/{}", tool_name),
-            token: "mock-local-token-12345".to_string(),
+            token: "client-local-token-12345".to_string(),
         })
     }
 }
