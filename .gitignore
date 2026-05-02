@@ -117,3 +117,4 @@ playwright-report/
 *.tar.gz
 *.tar.xz
 debian-binary
+.pnpm-store/
