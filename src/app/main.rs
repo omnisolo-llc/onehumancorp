@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -200,7 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -239,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -278,7 +278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                    if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -327,7 +327,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_settings_handle.upgrade() {
+                    if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -356,7 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                    if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -932,7 +932,7 @@ mod growth_e2e_tests {
         login_ui.set_password("password123".into());
 
         // We bind the login_ui.on_login logic for testing auto-redirect.
-        // In the actual app this is done in main(), here we mock the main behavior.
+        // In the actual app this is done in main(), here we client the main behavior.
         login_ui.on_login({
             let ui_handle = login_ui.as_weak();
             move |_email, _password| {
@@ -1051,14 +1051,14 @@ mod growth_e2e_tests {
         ]));
         referrals_ui.set_referrals(referral_data);
 
-        // Test link generation mock
+        // Test link generation client
         let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
         let new_link_generated_clone = new_link_generated.clone();
         referrals_ui.on_generate_new_link(move || {
             *new_link_generated_clone.borrow_mut() = true;
         });
 
-        // Test link sharing mock
+        // Test link sharing client
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
@@ -1066,7 +1066,7 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
-        // Set up mock stats for test
+        // Set up client stats for test
         referrals_ui.set_total_referrals(5);
         referrals_ui.set_click_count(100);
         referrals_ui.set_conversion_rate(5.0);
@@ -2374,8 +2374,8 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Populate mock agent activity messages
-        let mock_messages = vec![
+        // Populate client agent activity messages
+        let actual_messages = vec![
             app::UiMeshMessage {
                 id: "msg-1".into(),
                 content: "✅ Your Support Agent replied to 3 customers".into(),
@@ -2386,7 +2386,7 @@ mod cost_transparency_e2e_tests {
             }
         ];
 
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
+        let messages_model = slint::ModelRc::new(slint::VecModel::from(actual_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
     }
 

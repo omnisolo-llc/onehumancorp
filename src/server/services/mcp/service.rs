@@ -134,8 +134,10 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: req.params }))
             }
             "crdt_pull" => {
-                let mock_data = serde_json::json!({"crdt_state": "latest_mocked_state"});
-                let resp_payload = serde_json::to_string(&mock_data).unwrap();
+                let params: serde_json::Value = serde_json::from_str(&req.params).unwrap_or_else(|_| serde_json::json!({}));
+                let doc_id = params["document_id"].as_str().unwrap_or_default();
+                let pulled_data = self.registry.crdt_pull(doc_id).await.map_err(|e| Status::internal(e))?;
+                let resp_payload = serde_json::to_string(&pulled_data).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "hybrid_sync" => {
@@ -168,8 +170,12 @@ impl McpService for MyMcpService {
                 }
             }
             "obsidian" => {
-                let mock_result = serde_json::json!({"status": "mocked", "message": "Obsidian tool mocked in Cloud mode"});
-                let resp_payload = serde_json::to_string(&mock_result).unwrap();
+                let params: serde_json::Value = serde_json::from_str(&req.params).map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
+                let action = params["action"].as_str().unwrap_or_default();
+                let path = params["path"].as_str().unwrap_or_default();
+                let content = params["content"].as_str().unwrap_or_default();
+                let result = self.registry.obsidian_action(action, path, content).await.map_err(|e| Status::internal(e))?;
+                let resp_payload = serde_json::to_string(&result).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "sync_audit_logs_to_cloud" => {
@@ -177,7 +183,10 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "get_config" => {
-                let resp_payload = serde_json::to_string(&serde_json::json!({"value": "mock_value"})).unwrap();
+                let params: serde_json::Value = serde_json::from_str(&req.params).unwrap_or_else(|_| serde_json::json!({}));
+                let key = params["key"].as_str().unwrap_or_default();
+                let result = self.registry.get_config(key).await.map_err(|e| Status::internal(e))?;
+                let resp_payload = serde_json::to_string(&result).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "sync_config_to_cloud" => {
@@ -185,7 +194,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             _ => {
-                Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
+                Err(Status::unimplemented(format!("tool {} not implemented", req.tool_id)))
             }
         }
     }
