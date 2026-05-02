@@ -42,6 +42,7 @@ pub async fn bench_queue_latency() {
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
+    let mesh = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
@@ -68,7 +69,7 @@ pub async fn bench_dashboard_snapshot() {
         }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
+    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool, None, mesh));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();

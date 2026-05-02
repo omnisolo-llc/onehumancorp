@@ -940,7 +940,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+
+    // Start Mesh API server
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
+    ).await.expect("Failed to create MeshTransport");
+
+    let sqlite_pool = if let crate::db::DbStore::Sqlite(pool) = &db.store {
+        Some(pool.clone())
+    } else {
+        None
+    };
+
+    let hub = Arc::new(Hub::new(event_tx, db.pool.clone(), sqlite_pool, mesh_transport.clone()));
     // let http_addr = "[::1]:8080".parse()?;
     // let hub_for_http = hub.clone();
     // tokio::spawn(async move {
@@ -993,16 +1006,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Start Mesh API server
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
-    ).await.expect("Failed to create MeshTransport");
-
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+
+        let mesh_for_presence = builtin_transport.clone();
+        let agent_id_for_presence = agent_id.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                interval.tick().await;
+                let _ = mesh_for_presence.register_presence(&agent_id_for_presence, "online", 60).await;
+            }
+        });
+
         let cfg = ohc_builtin_agent::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
@@ -1121,7 +1139,8 @@ mod tests {
         let db = Arc::new(crate::db::DB::new().await.ok()?);
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+        let mesh = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Arc::new(Hub::new(event_tx, db.pool.clone(), None, mesh));
         Some(MyHubService::new(hub, db.pool.clone(), db))
     }
 

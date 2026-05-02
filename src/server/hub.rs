@@ -3,6 +3,7 @@ use std::sync::RwLock;
 use std::sync::OnceLock;
 use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
@@ -40,12 +41,25 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
+    pub(crate) _sqlite_pool: Option<sqlx::SqlitePool>,
+    mesh_transport: Arc<dyn MeshTransport>,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool, sqlite_pool: Option<sqlx::SqlitePool>, mesh_transport: Arc<dyn MeshTransport>) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
+
+        let task_pool = if let Some(ref sp) = sqlite_pool {
+            crate::tasks::TaskPool::Sqlite(sp.clone())
+        } else {
+            crate::tasks::TaskPool::Postgres(pool.clone())
+        };
+
+        let task_manager = TaskManager::new()
+            .with_pool(task_pool)
+            .with_mesh(mesh_transport.clone());
+
         Hub {
             agents: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
@@ -54,10 +68,11 @@ impl Hub {
             minimax_api_key,
             caps_tx,
             pool,
+            _sqlite_pool: sqlite_pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
-            task_manager: TaskManager::new(),
+            task_manager,
             scheduler: Scheduler::new(),
             cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
             recent_events: RwLock::new(Vec::new()),
@@ -65,6 +80,7 @@ impl Hub {
             get_token_usage: None,
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
+            mesh_transport,
         }
     }
 
@@ -140,6 +156,19 @@ impl Hub {
         let subs = self.subs.read().unwrap();
         
         let to_agent = msg.to_agent.clone();
+
+        // Publish to mesh transport for cross-node delivery
+        let mesh_msg = ohc_builtin_agent::mesh::transport::Message {
+            topic: format!("inbox:{}", to_agent),
+            payload: serde_json::to_vec(&msg).map_err(|e| e.to_string())?,
+        };
+        let mesh = self.mesh_transport.clone();
+        let topic = format!("inbox:{}", to_agent);
+        tokio::spawn(async move {
+            if let Err(e) = mesh.publish(&topic, mesh_msg).await {
+                eprintln!("Failed to publish message to mesh: {}", e);
+            }
+        });
 
         // Check rate limiting
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
@@ -226,10 +255,30 @@ impl Hub {
 
     pub fn subscribe(&self, agent_id: String) -> broadcast::Receiver<Message> {
         let mut subs = self.subs.write().unwrap();
-        let tx = subs.entry(agent_id).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100); // Buffer of 100
-            tx
-        });
+        let entry = subs.entry(agent_id.clone());
+
+        let tx = match entry {
+            std::collections::hash_map::Entry::Occupied(o) => o.into_mut(),
+            std::collections::hash_map::Entry::Vacant(v) => {
+                let (tx, _) = broadcast::channel(100);
+                let tx_clone = tx.clone();
+
+                // Subscribe to mesh transport for this agent's inbox
+                let mesh = self.mesh_transport.clone();
+                let topic = format!("inbox:{}", agent_id);
+                tokio::spawn(async move {
+                    let handler = Box::new(move |mesh_msg: ohc_builtin_agent::mesh::transport::Message| {
+                        if let Ok(msg) = serde_json::from_slice::<Message>(&mesh_msg.payload) {
+                            let _ = tx_clone.send(msg);
+                        }
+                    });
+                    let _ = mesh.subscribe(&topic, handler).await;
+                });
+
+                v.insert(tx)
+            }
+        };
+
         tx.subscribe()
     }
 
@@ -522,23 +571,37 @@ impl Hub {
             Err(_) => 0,
         };
 
+        let mesh_ping = match self.mesh_transport.acquire_lock("health_probe", "hub", 1).await {
+            Ok(_) => {
+                let _ = self.mesh_transport.release_lock("health_probe", "hub").await;
+                true
+            },
+            Err(_) => false,
+        };
+
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
         } else {
             "cloud"
         };
 
-        let status = if db_ping > 0 { "healthy" } else { "degraded" };
-        let mesh_active = db_ping > 0;
+        let status = if db_ping > 0 && mesh_ping { "healthy" } else { "degraded" };
+        let mesh_active = mesh_ping;
         let cloud_connected = mode != "standalone";
 
-        let mission_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
-            .fetch_one(&self.pool)
-            .await
-        {
-            Ok(count) => count,
-            Err(_) => 0,
+        let mission_sync_backlog: i64 = if let Some(ref sp) = self._sqlite_pool {
+            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
+                .fetch_one(sp)
+                .await
+                .unwrap_or(0)
+        } else {
+            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
+                .fetch_one(&self.pool)
+                .await
+                .unwrap_or(0)
         };
+
+        let active_agents = self.mesh_transport.get_active_agents().await.unwrap_or_default();
 
         Ok(serde_json::json!({
             "mode": mode,
@@ -547,6 +610,7 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
+            "active_agents_count": active_agents.len(),
         }))
     }
 }
@@ -596,7 +660,8 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
-        let hub = Hub::new(tx, pool);
+        let mesh = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let hub = Hub::new(tx, pool, None, mesh);
 
         let health = hub.check_health().await.unwrap();
 
