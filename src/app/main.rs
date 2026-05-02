@@ -574,6 +574,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    welcome_checklist_ui.on_go_to_docs({
+        move || {
+            println!("Navigating to docs...");
+            // Simulated navigation to docs
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_video({
+        move || {
+            println!("Navigating to video tutorials...");
+            // Simulated navigation to video tutorials
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_support({
+        move || {
+            println!("Navigating to support...");
+            // Simulated navigation to support
+        }
+    });
+
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
         move || {
