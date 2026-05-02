@@ -69,6 +69,11 @@ CREATE POLICY tenant_isolation_task_dependencies ON task_dependencies USING (
     task_id IN (SELECT id FROM shared_tasks WHERE organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system')
 );
 
+DROP POLICY IF EXISTS referrals_isolation_policy ON referrals;
+CREATE POLICY referrals_isolation_policy ON referrals USING (
+    organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system'
+);
+
 DROP POLICY IF EXISTS tenant_isolation_meeting_transcripts ON meeting_transcripts;
 CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING (
     meeting_id IN (
@@ -76,4 +81,9 @@ CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING 
         WHERE organization_id = current_setting('app.current_tenant', true)
            OR current_setting('app.current_tenant', true) = 'system'
     )
+);
+
+DROP POLICY IF EXISTS tenant_isolation_onboarding_state ON onboarding_state;
+CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state USING (
+    organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system'
 );
