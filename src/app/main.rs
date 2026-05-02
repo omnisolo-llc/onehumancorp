@@ -557,12 +557,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    my_plan_ui.on_view_history(move || {
+        // Handle view history (e.g. open an invoice history modal or trigger backend flow)
+    });
+
+    my_plan_ui.on_cancel_subscription(move || {
+        // Handle cancel subscription (e.g. Stripe API call)
+    });
+
+    my_plan_ui.on_update_payment(move || {
+        // Handle update payment method
+    });
+
+    my_plan_ui.on_download_invoice(move || {
+        // Handle download invoice
+    });
+
     let my_plan_handle_pricing_clone = my_plan_handle.clone();
     pricing_ui.on_select_plan(move |plan| {
         if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
             ui.set_tier(plan.into());
             let _ = ui.show();
         }
+    });
+
+    pricing_ui.on_toggle_billing_cycle(move || {
+        // Logic for toggling billing cycle
     });
 
             if let Ok(dashboard) = app::Dashboard::new() {
@@ -2603,6 +2623,16 @@ mod cost_transparency_e2e_tests {
         my_plan_ui.invoke_view_details();
         assert!(*view_details_opened.borrow(), "View Cost Details should be opened from MyPlan");
 
+        my_plan_ui.on_view_history(move || {});
+        my_plan_ui.on_cancel_subscription(move || {});
+        my_plan_ui.on_update_payment(move || {});
+        my_plan_ui.on_download_invoice(move || {});
+
+        my_plan_ui.invoke_view_history();
+        my_plan_ui.invoke_cancel_subscription();
+        my_plan_ui.invoke_update_payment();
+        my_plan_ui.invoke_download_invoice();
+
         let pricing_ui = app::Pricing::new().unwrap();
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
@@ -2611,6 +2641,9 @@ mod cost_transparency_e2e_tests {
         });
         pricing_ui.invoke_select_plan("Pro".into());
         assert_eq!(*plan_selected.borrow(), "Pro");
+
+        pricing_ui.on_toggle_billing_cycle(move || {});
+        pricing_ui.invoke_toggle_billing_cycle();
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
