@@ -4238,6 +4238,7 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "sqlx",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tokio-tungstenite",

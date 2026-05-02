@@ -29,5 +29,6 @@ rust_library(
         "@crates//:uuid",
         "@crates//:base64",
         "@crates//:dashmap",
+        "@crates//:tempfile",
     ],
 )
