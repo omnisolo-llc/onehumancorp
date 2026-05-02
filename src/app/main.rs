@@ -302,8 +302,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
+                            let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle.upgrade() {
+                                if let Some(ui) = handle_clone.upgrade() {
                                     let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
                                         app::UiReferral {
                                             referral_code: r.referral_code.into(),
@@ -317,11 +318,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }).unwrap();
                         }
+
+                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(stats_resp) = stats_response {
+                            let stats = stats_resp.into_inner();
+                            let handle_clone = handle.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    ui.set_total_referrals(stats.total_referrals);
+                                    ui.set_click_count(stats.click_count);
+                                    ui.set_conversion_rate(stats.conversion_rate as f32);
+                                    let formatted_balance = format!("${}.{:02}", stats.reward_balance_cents / 100, stats.reward_balance_cents % 100);
+                                    ui.set_reward_balance(formatted_balance.into());
+                                    ui.set_bonus_credit(stats.bonus_credit);
+                                    ui.set_download_count(stats.download_count);
+                                    ui.set_waitlist_position(stats.waitlist_position);
+                                }
+                            }).unwrap();
+                        }
+
+                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(vc_resp) = vc_response {
+                            let vc = vc_resp.into_inner();
+                            let handle_clone = handle.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    ui.set_viral_coefficient(vc.k_factor as f32);
+                                }
+                            }).unwrap();
+                        }
                     }
                     Err(e) => println!("Failed to connect for referrals: {:?}", e),
                 }
             });
         }
+    });
+
+    referrals_ui.on_copy_link({
+        let ui_handle = referrals_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let link = ui.get_my_referral_link();
+                CLIPBOARD.with(|cb| {
+                    if let Some(ctx) = cb.borrow_mut().as_mut() {
+                        if let Err(e) = ctx.set_contents(link.into()) {
+                            println!("Failed to copy to clipboard: {:?}", e);
+                        } else {
+                            println!("Share link copied to clipboard");
+                        }
+                    } else {
+                        println!("Clipboard not initialized, failed to copy share link");
+                    }
+                });
+            }
+        }
+    });
+
+    referrals_ui.on_export_data(|| {
+        println!("Exporting referral data...");
+    });
+
+    referrals_ui.on_view_history(|| {
+        println!("Viewing referral history...");
     });
 
     referrals_ui.on_share_link({
@@ -457,6 +515,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
                         if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                            ui.invoke_refresh();
                             let _ = ui.show();
                         }
                     });
@@ -481,6 +540,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
                         if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                            ui.invoke_refresh();
                             let _ = ui.show();
                         }
                     });
@@ -890,6 +950,12 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
+        // Set up mock stats for test
+        referrals_ui.set_total_referrals(5);
+        referrals_ui.set_click_count(100);
+        referrals_ui.set_conversion_rate(5.0);
+        referrals_ui.set_reward_balance("$50.00".into());
+
         // Trigger dashboard action
         dashboard_ui.invoke_action_open_referrals();
         assert!(*share_store_called.borrow(), "action_open_referrals should be invoked");
@@ -898,6 +964,8 @@ mod growth_e2e_tests {
         assert_eq!(referrals_ui.get_referrals().row_count(), 1);
         let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
         assert_eq!(first_row.referral_code, "DASHBOARD2024");
+        assert_eq!(referrals_ui.get_total_referrals(), 5);
+        assert_eq!(referrals_ui.get_click_count(), 100);
 
         // Trigger interactions on referrals window
         referrals_ui.invoke_generate_new_link();

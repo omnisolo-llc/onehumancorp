@@ -18,9 +18,21 @@ export component Referrals inherits Window {
 
     in property <[UiReferral]> referrals;
     in property <string> my_referral_link: "ohc://join?ref=DEFAULT";
+    in property <int> total_referrals: 0;
+    in property <int> click_count: 0;
+    in property <float> conversion_rate: 0.0;
+    in property <string> reward_balance: "$0.00";
+    in property <int> bonus_credit: 0;
+    in property <float> viral_coefficient: 0.0;
+    in property <int> download_count: 0;
+    in property <int> waitlist_position: 0;
+
     callback refresh();
     callback share_link(string);
     callback generate_new_link();
+    callback copy_link();
+    callback export_data();
+    callback view_history();
 
     VerticalBox {
         spacing: 20px;
@@ -43,7 +55,12 @@ export component Referrals inherits Window {
                 Text { text: my_referral_link; color: #64748b; font-size: 14px; }
                 HorizontalBox {
                     Button {
-                        text: "Copy & Share";
+                        text: "Copy";
+                        primary: true;
+                        clicked => { copy_link(); }
+                    }
+                    Button {
+                        text: "Share";
                         primary: true;
                         clicked => { share_link(my_referral_link); }
                     }
@@ -52,6 +69,61 @@ export component Referrals inherits Window {
                         clicked => { generate_new_link(); }
                     }
                 }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 10px;
+                Text { text: "Referral Statistics"; font-weight: 700; color: #1e293b; }
+                HorizontalBox {
+                    Text { text: "Total Referrals: " + total_referrals; color: #64748b; font-size: 14px; }
+                    Text { text: "Click Count: " + click_count; color: #64748b; font-size: 14px; }
+                    Text { text: "Conversion Rate: " + conversion_rate + "%"; color: #64748b; font-size: 14px; }
+                }
+                HorizontalBox {
+                    Text { text: "Reward Balance: " + reward_balance; color: #64748b; font-size: 14px; }
+                    Text { text: "Bonus Credit: " + bonus_credit; color: #64748b; font-size: 14px; }
+                }
+                HorizontalBox {
+                    Text { text: "Viral Coefficient: " + viral_coefficient; color: #64748b; font-size: 14px; }
+                    Text { text: "Download Count: " + download_count; color: #64748b; font-size: 14px; }
+                    Text { text: "Waitlist Position: " + waitlist_position; color: #64748b; font-size: 14px; }
+                }
+                HorizontalBox {
+                    Button {
+                        text: "History";
+                        clicked => { view_history(); }
+                    }
+                    Button {
+                        text: "Export";
+                        clicked => { export_data(); }
+                    }
+                }
+                Text { text: "Recent Activity"; font-weight: 700; color: #1e293b; }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 10px;
+                Text { text: "Referral Program Admin"; font-weight: 700; color: #1e293b; }
+                Text { text: "Settings Configure"; font-weight: 700; color: #1e293b; }
+                HorizontalBox {
+                    Text { text: "Reward Amount:"; vertical-alignment: center; }
+                    TextInput { text: "25"; width: 100px; height: 32px; }
+                }
+                HorizontalBox {
+                    Text { text: "Program Enabled"; vertical-alignment: center; }
+                    Rectangle {
+                        width: 40px; height: 20px; border-radius: 10px; background: #a855f7;
+                        Rectangle { width: 16px; height: 16px; border-radius: 8px; background: white; x: 22px; y: 2px; }
+                    }
+                }
+                Text { text: "Leaderboard Rank: #1"; color: #64748b; font-size: 14px; }
+                Text { text: "Top Award: Platinum Level"; color: #64748b; font-size: 14px; }
             }
         }
 
