@@ -72,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -1843,12 +1844,10 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
-            assert_eq!(can_write_descriptions, true);
-            assert_eq!(can_send_updates, false);
             assert_eq!(frequency, "Daily");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -1872,15 +1871,10 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 3: Review
-        // capabilities
-        ui.set_can_write_descriptions(true);
-
         ui.invoke_activate_agent(
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
-            ui.get_can_write_descriptions(),
-            ui.get_can_send_updates(),
             ui.get_frequency()
         );
 
