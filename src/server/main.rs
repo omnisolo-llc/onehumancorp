@@ -914,9 +914,15 @@ impl HubService for MyHubService {
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let is_mobile = request.metadata().get("x-client-type").map(|v| v.to_str().unwrap_or("")) == Some("mobile");
+        let mut meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if is_mobile {
+            for m in &mut meetings {
+                m.transcript.clear();
+            }
+        }
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
 
