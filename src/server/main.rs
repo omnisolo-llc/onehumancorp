@@ -1109,6 +1109,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
+    // Start HTTP status server on port 5000 (Replit preview port)
+    tokio::spawn(async {
+        let status_app = axum::Router::new()
+            .route("/", axum::routing::get(|| async {
+                axum::response::Html(r#"<!DOCTYPE html>
+<html>
+<head><title>OHC - One Human Corp</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .card { text-align: center; padding: 40px; border: 1px solid #222; border-radius: 12px; max-width: 480px; }
+  h1 { font-size: 2rem; margin: 0 0 8px; }
+  p { color: #888; margin: 8px 0; }
+  .badge { display: inline-block; padding: 4px 12px; background: #1a1a1a; border-radius: 20px; font-size: 0.85rem; margin: 4px; color: #0f0; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>OHC</h1>
+  <p>One Human Corp - Agentic OS</p>
+  <p>
+    <span class="badge">gRPC :50051</span>
+    <span class="badge">Mesh WS :8081</span>
+    <span class="badge">HTTP :5000</span>
+  </p>
+  <p style="margin-top:16px; font-size:0.9rem; color:#555;">Server is running in standalone mode</p>
+</div>
+</body>
+</html>"#)
+            }))
+            .route("/health", axum::routing::get(|| async { "OK" }))
+            .route("/api/status", axum::routing::get(|| async {
+                axum::Json(serde_json::json!({
+                    "status": "running",
+                    "version": "0.1.0",
+                    "services": {
+                        "grpc": ":50051",
+                        "mesh_ws": ":8081",
+                        "http": ":5000"
+                    }
+                }))
+            }));
+
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:5000").await
+            .expect("Failed to bind HTTP server on port 5000");
+        println!("HTTP status server listening on 0.0.0.0:5000");
+        if let Err(e) = axum::serve(listener, status_app.into_make_service()).await {
+            eprintln!("HTTP status server error: {}", e);
+        }
+    });
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))

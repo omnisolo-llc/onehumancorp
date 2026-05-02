@@ -4199,6 +4199,103 @@ dependencies = [
 ]
 
 [[package]]
+name = "ohc-builtin-agent"
+version = "0.1.0"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "base64",
+ "chrono",
+ "dashmap",
+ "flate2",
+ "futures",
+ "futures-util",
+ "glob",
+ "hex",
+ "hmac",
+ "ohc-builtin-agent-core",
+ "ohc-builtin-agent-llm",
+ "ohc-builtin-agent-tools",
+ "once_cell",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "prost",
+ "qrcode",
+ "rand 0.8.6",
+ "redis",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
+name = "ohc-builtin-agent-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hmac",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "ohc-builtin-agent-llm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "ohc-builtin-agent-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "ohc-builtin-agent-tools"
+version = "0.1.0"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "base64",
+ "chrono",
+ "dashmap",
+ "glob",
+ "ohc-builtin-agent-core",
+ "qrcode",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
 name = "ohc-mono"
 version = "0.1.0"
 dependencies = [
@@ -4220,6 +4317,10 @@ dependencies = [
  "hex",
  "hmac",
  "jsonwebtoken",
+ "ohc-builtin-agent",
+ "ohc-builtin-agent-core",
+ "ohc-builtin-agent-llm",
+ "ohc-builtin-agent-tools",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
