@@ -204,29 +204,27 @@ impl McpService for MyMcpService {
 
         let req = request.into_inner();
 
+        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
+        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
+        let sip_db = if let Some(root) = ctx_root {
+            sip_db.with_context_root(root)
+        } else {
+            sip_db
+        };
+
+        let grounding_content = sip_db.load_grounding_content().await;
+
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
-            let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) \
-                         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) \
-                         ON CONFLICT (id) DO UPDATE SET \
-                             status = CASE WHEN $4 OR agent_missions.status != EXCLUDED.status THEN EXCLUDED.status ELSE agent_missions.status END, \
-                             payload = CASE WHEN $4 OR agent_missions.payload != EXCLUDED.payload THEN EXCLUDED.payload ELSE agent_missions.payload END, \
-                             updated_at = CASE WHEN $4 OR agent_missions.status != EXCLUDED.status OR agent_missions.payload != EXCLUDED.payload THEN CURRENT_TIMESTAMP ELSE agent_missions.updated_at END";
-            
-            sqlx::query(query)
-                .bind(&m.id)
-                .bind(&m.status)
-                .bind(&m.payload)
-                .bind(m.force_local)
-                .bind(&tenant_id)
-                .execute(&mut *tx)
+            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         Ok(Response::new(EmptyResponse {}))
     }
 
