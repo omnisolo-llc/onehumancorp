@@ -5,14 +5,24 @@ use sqlx::Row;
 pub struct SyncEscalator {
     pool: sqlx::PgPool,
     client: reqwest::Client,
+    cloud_url: String,
 }
 
 impl SyncEscalator {
     pub fn new(pool: sqlx::PgPool) -> Self {
         SyncEscalator {
             pool,
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(5))
+                .build()
+                .unwrap_or_default(),
+            cloud_url: "https://cloud.onehumancorp.com/api/v1/orchestration/escalate".to_string(),
         }
+    }
+
+    pub fn with_cloud_url(mut self, url: String) -> Self {
+        self.cloud_url = url;
+        self
     }
 
     pub fn start(self: Arc<Self>, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>, interval: Duration) {
@@ -47,7 +57,7 @@ impl SyncEscalator {
 
             let payload_str = format!(r#"{{"id": "{}", "tenant_id": "{}", "data": "{}"}}"#, id, tenant_id, payload);
             
-            let mut req = self.client.post("https://cloud.onehumancorp.com/api/v1/orchestration/escalate")
+            let mut req = self.client.post(&self.cloud_url)
                 .header("Content-Type", "application/json")
                 .body(payload_str);
 
@@ -82,13 +92,34 @@ impl SyncEscalator {
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use axum::{routing::post, Router, response::IntoResponse, http::StatusCode};
+    use tokio::net::TcpListener;
 
     #[tokio::test]
     async fn test_sync_escalator() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-            let escalator = Arc::new(SyncEscalator::new(pool));
+
+            // Create the local_mcp_rag_tasks table so we don't fail querying
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS local_mcp_rag_tasks (id VARCHAR, tenant_id VARCHAR, payload VARCHAR, escalation_status VARCHAR)")
+                .execute(&pool).await;
+
+            // Start local axum mock server
+            let app = Router::new().route(
+                "/api/v1/orchestration/escalate",
+                post(|| async { (StatusCode::OK, "ok") }),
+            );
+
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let mock_url = format!("http://127.0.0.1:{}/api/v1/orchestration/escalate", port);
+
+            tokio::spawn(async move {
+                axum::serve(listener, app).await.unwrap();
+            });
+
+            let escalator = Arc::new(SyncEscalator::new(pool).with_cloud_url(mock_url));
 
             let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
 
@@ -97,6 +128,9 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(50)).await;
 
             shutdown_tx.send(()).unwrap();
+
+            // Allow time for shutdown to process
+            tokio::time::sleep(Duration::from_millis(20)).await;
         }
     }
 }
