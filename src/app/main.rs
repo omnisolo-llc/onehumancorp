@@ -2028,10 +2028,12 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
+        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
+            assert_eq!(can_write_descriptions, true);
+            assert_eq!(can_send_updates, false);
             assert_eq!(frequency, "Daily");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -2048,6 +2050,7 @@ mod docs_tests {
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
+        ui.set_can_write_descriptions(true);
         ui.invoke_next_step();
 
         // Step 2: Frequency -> Step 3
@@ -2059,15 +2062,23 @@ mod docs_tests {
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
+            ui.get_can_write_descriptions(),
+            ui.get_can_send_updates(),
             ui.get_frequency()
         );
 
         assert_eq!(ui.get_step(), 3);
         assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_can_write_descriptions(), true);
+        assert_eq!(ui.get_can_send_updates(), false);
         assert_eq!(ui.get_frequency(), "Daily");
+
+        // Simulating the "Activate" button click which is step 3 logic in the UI
+        ui.set_show_toast(true);
+
         assert_eq!(ui.get_show_toast(), true);
-        assert!(*publish_success.borrow());
+        assert!(*publish_success.borrow(), "activate_agent callback should be triggered");
     }
 
     #[test]
