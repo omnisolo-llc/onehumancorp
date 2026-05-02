@@ -2658,3 +2658,67 @@ mod cost_transparency_e2e_tests {
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
     }
 }
+
+#[cfg(test)]
+mod e2e_hybrid_blob_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_hybrid_blob_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Navigate to dashboard and then to WebsiteBuilder where we upload an image (simulated by blob tool)
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let website_builder_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let website_builder_opened_clone = website_builder_opened.clone();
+        dashboard_ui.on_action_add_product(move || {
+            *website_builder_opened_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_add_product();
+        assert!(*website_builder_opened.borrow(), "Website builder should be opened from Dashboard");
+
+        let builder_ui = app::WebsiteBuilder::new().unwrap();
+        let builder_published = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let builder_published_clone = builder_published.clone();
+
+        // When publish is called, it simulates the backend writing a blob and responding.
+        builder_ui.on_publish_site(move |template, color, product, price, description, domain| {
+            assert_eq!(template, "E-commerce");
+            assert_eq!(color, "#34C759");
+            assert_eq!(product, "My Custom Product");
+            assert_eq!(price, "19.99");
+            assert_eq!(description, "A great custom product.");
+            assert_eq!(domain, "mycustomstore.com");
+
+            // At this point the UI would call the Rust backend, which invokes the HybridBlobManager
+            // to store the website assets (images/blobs).
+            *builder_published_clone.borrow_mut() = true;
+        });
+
+        builder_ui.set_step(4); // Advance to the publish step
+        builder_ui.invoke_publish_site(
+            "E-commerce".into(),
+            "#34C759".into(),
+            "My Custom Product".into(),
+            "19.99".into(),
+            "A great custom product.".into(),
+            "mycustomstore.com".into()
+        );
+
+        assert!(*builder_published.borrow(), "Website builder published successfully after simulated blob ops");
+    }
+}

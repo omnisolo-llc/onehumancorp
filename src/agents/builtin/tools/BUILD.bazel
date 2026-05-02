@@ -27,5 +27,7 @@ rust_library(
         "@crates//:tracing",
         "@crates//:urlencoding",
         "@crates//:uuid",
+        "@crates//:base64",
+        "@crates//:dashmap",
     ],
 )

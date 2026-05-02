@@ -22,6 +22,7 @@ pub mod finance;
 pub mod local_fs_sync;
 pub mod ollama;
 pub mod subagent;
+pub mod hybrid_blob;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -99,5 +100,6 @@ pub fn all_tools(
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(),
+        hybrid_blob::hybrid_blob_tool(),
     ]
 }
