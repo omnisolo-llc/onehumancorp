@@ -16,8 +16,9 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
-    width: 375px;
-    height: 800px;
+    preferred-width: 375px;
+    min-width: 375px;
+    preferred-height: 800px;
     title: "Dashboard";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
