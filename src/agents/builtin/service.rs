@@ -304,6 +304,8 @@ impl AgentServiceImpl {
             enable_llm_judge: false,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
+            thread_id: None,
+            resume_from_checkpoint_id: None,
         }
     }
 
@@ -494,6 +496,8 @@ impl AgentService for AgentServiceImpl {
                 enable_llm_judge: false,
                 enable_state_checkpointing: false,
                 state_scratchpad_path: None,
+                thread_id: None,
+                resume_from_checkpoint_id: None,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
