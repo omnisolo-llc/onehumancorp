@@ -8,6 +8,14 @@ export component WelcomeChecklist inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
+    property <float> confetti_y: -100;
+    property <float> confetti_opacity: 1.0;
+
+    init => {
+        confetti_y = 600;
+        confetti_opacity = 0.0;
+    }
+
     callback go_to_dashboard();
     callback go_to_add_products();
     callback go_to_connect_instagram();
@@ -76,6 +84,16 @@ export component WelcomeChecklist inherits Window {
                 }
             }
         }
+    }
+
+    Text {
+        text: "🎊🎉🎊🎉🎊🎉🎊🎉";
+        font-size: 40px;
+        x: root.width / 2 - self.width / 2;
+        y: confetti_y * 1px;
+        opacity: confetti_opacity;
+        animate y { duration: 2500ms; easing: ease-out; }
+        animate opacity { duration: 2500ms; }
     }
 }
 
