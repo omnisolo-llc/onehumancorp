@@ -113,3 +113,6 @@ site/
 /src/app/macos/Flutter/GeneratedPluginRegistrant.swift
 /src/app/**/ephemeral/
 playwright-report/
+debian-binary
+/*.diff
+/srcs/
