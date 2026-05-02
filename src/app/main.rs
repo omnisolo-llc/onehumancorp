@@ -504,6 +504,70 @@ fn main_internal() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    business_share_ui.on_share_to_instagram({
+                        let bs_handle_clone_for_ig = business_share_handle.clone();
+                        move || {
+                            if let Some(_ui) = bs_handle_clone_for_ig.upgrade() {
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    if let Err(e) = open::that("https://instagram.com") {
+                                        println!("Failed to open Instagram: {:?}", e);
+                                    }
+                                }
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target("https://instagram.com", "_blank");
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_x({
+                        let bs_handle_clone_for_x = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_x.upgrade() {
+                                let link = ui.get_share_link();
+                                let intent_url = format!("https://x.com/intent/tweet?text=Check%20out%20my%20store:%20{}", urlencoding::encode(&link));
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    if let Err(e) = open::that(&intent_url) {
+                                        println!("Failed to open X: {:?}", e);
+                                    }
+                                }
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&intent_url, "_blank");
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    business_share_ui.on_share_to_whatsapp({
+                        let bs_handle_clone_for_wa = business_share_handle.clone();
+                        move || {
+                            if let Some(ui) = bs_handle_clone_for_wa.upgrade() {
+                                let link = ui.get_share_link();
+                                let intent_url = format!("https://wa.me/?text=Check%20out%20my%20store:%20{}", urlencoding::encode(&link));
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    if let Err(e) = open::that(&intent_url) {
+                                        println!("Failed to open WhatsApp: {:?}", e);
+                                    }
+                                }
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if let Some(window) = web_sys::window() {
+                                        let _ = window.open_with_url_and_target(&intent_url, "_blank");
+                                    }
+                                }
+                            }
+                        }
+                    });
+
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
@@ -2469,6 +2533,10 @@ mod cost_transparency_e2e_tests {
         let share_to_x_called_clone = share_to_x_called.clone();
         business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
 
+        let share_to_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_to_wa_called_clone = share_to_wa_called.clone();
+        business_share_ui.on_share_to_whatsapp(move || { *share_to_wa_called_clone.borrow_mut() = true; });
+
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
         business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
@@ -2485,6 +2553,9 @@ mod cost_transparency_e2e_tests {
 
         business_share_ui.invoke_share_to_x();
         assert!(*share_to_x_called.borrow());
+
+        business_share_ui.invoke_share_to_whatsapp();
+        assert!(*share_to_wa_called.borrow());
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());

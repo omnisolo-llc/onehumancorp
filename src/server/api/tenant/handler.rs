@@ -1,3 +1,4 @@
+use axum::response::Html;
 use axum::{
     extract::{State, Path},
     response::IntoResponse,
@@ -32,6 +33,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     Router::new()
         .route("/", post(create_tenant))
         .route("/:id", get(get_tenant))
+        .route("/share/:id", get(share_tenant))
         .with_state(db)
 }
 
@@ -240,4 +242,69 @@ mod tests {
 
         let _db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
     }
+}
+
+
+async fn share_tenant(
+    State(db): State<Arc<DB>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let mut tx = match db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    use sqlx::Executor;
+    if let Err(e) = tx.execute("SET LOCAL app.current_tenant = 'system'").await {
+        let _ = tx.rollback().await;
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
+    }
+
+    let row = match sqlx::query("SELECT name, business_type FROM tenants WHERE id = $1")
+        .bind(&id)
+        .fetch_optional(&mut *tx)
+        .await
+    {
+        Ok(Some(r)) => r,
+        Ok(None) => return (axum::http::StatusCode::NOT_FOUND, "Tenant not found").into_response(),
+        Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    use sqlx::Row;
+    let name: String = row.get("name");
+    let btype: String = row.get("business_type");
+
+    let safe_name = html_escape::encode_text(&name);
+    let safe_btype = html_escape::encode_text(&btype);
+
+    let domain = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://onehumancorp.io".to_string());
+    let og_url = format!("{}/share/{}", domain, id);
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{}</title>
+    <meta property="og:title" content="{}" />
+    <meta property="og:description" content="Check out my {} store on OneHumanCorp!" />
+    <meta property="og:url" content="{}" />
+    <meta property="og:image" content="{}/static/images/default_cover.png" />
+    <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+    <h1>{}</h1>
+    <p>Check out my {} store on OneHumanCorp!</p>
+    <script>
+        // Redirect to the actual app/storefront after 2 seconds or let the crawler scrape
+        setTimeout(() => {{
+            window.location.href = "/storefront/{}";
+        }}, 2000);
+    </script>
+</body>
+</html>"#,
+        safe_name, safe_name, safe_btype, og_url, domain, safe_name, safe_btype, id
+    );
+
+    Html(html).into_response()
 }
