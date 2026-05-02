@@ -5,6 +5,7 @@ use std::sync::OnceLock;
 pub struct AppConfig {
     pub listen_addr: String,
     pub grpc_addr: String,
+    pub mesh_addr: String,
     pub database_url: Option<String>,
     pub standalone: bool,
     pub sqlite_encryption_key: Option<String>,
@@ -54,8 +55,9 @@ pub fn get() -> &'static AppConfig {
 fn load() -> Result<AppConfig, config::ConfigError> {
     let s = config::Config::builder()
         // Defaults
-        .set_default("listen_addr", ":8080")?
-        .set_default("grpc_addr", ":9090")?
+        .set_default("listen_addr", "0.0.0.0:18789")?
+        .set_default("grpc_addr", "0.0.0.0:50051")?
+        .set_default("mesh_addr", "0.0.0.0:8081")?
         .set_default("agent_address", "127.0.0.1:50051")?
         .set_default("max_tokens", 2048)?
         .set_default("s3_bucket_blobs", "ohc-blobs")?
@@ -142,7 +144,7 @@ mod tests {
         }
 
         let cfg = load().unwrap();
-        assert_eq!(cfg.listen_addr, ":8080");
+        assert_eq!(cfg.listen_addr, "0.0.0.0:18789");
         assert_eq!(cfg.max_tokens, 2048);
         assert_eq!(cfg.s3_bucket_blobs, "ohc-blobs");
     }

@@ -1,0 +1,10 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "tools_test",
+    srcs = ["e2e_test.go"],
+    deps = [
+        "//srcs/backend/tools/impl",
+        "//srcs/backend/tools/registry",
+    ],
+)

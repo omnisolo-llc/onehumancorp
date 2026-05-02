@@ -5,6 +5,10 @@ use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
 
+fn is_mobile<T>(req: &Request<T>) -> bool {
+    req.metadata().get("x-client-type").map(|v| v.to_str().unwrap_or("")) == Some("mobile")
+}
+
 pub struct MyAgentManagerService {
     hub: Arc<Hub>,
     skills: RwLock<Vec<SkillPack>>,
@@ -20,22 +24,31 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(&self) -> DashboardSnapshot {
+    async fn get_snapshot(&self, is_mobile: bool) -> DashboardSnapshot {
         let hub_clone1 = self.hub.clone();
         let hub_clone2 = self.hub.clone();
+        let hub_clone3 = self.hub.clone();
 
-        let (agents, meetings) = tokio::join!(
+        let (agents, meetings, costs) = tokio::join!(
             tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
+            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
+            tokio::task::spawn_blocking(move || {
+                let cost_auditor = hub_clone3.get_cost_auditor();
+                Summary {
+                    total_cost_usd: cost_auditor.get_total_cost(),
+                    total_tokens: cost_auditor.get_total_tokens(),
+                }
+            })
         );
         let agents = agents.unwrap_or_else(|_| vec![]);
-        let meetings = meetings.unwrap_or_else(|_| vec![]);
-        
-        let cost_auditor = self.hub.get_cost_auditor();
-        let costs = Summary {
-            total_cost_usd: cost_auditor.get_total_cost(),
-            total_tokens: cost_auditor.get_total_tokens(),
-        };
+        let mut meetings = meetings.unwrap_or_else(|_| vec![]);
+        let costs = costs.unwrap_or_else(|_| Summary { total_cost_usd: 0.0, total_tokens: 0 });
+
+        if is_mobile {
+            for m in &mut meetings {
+                m.transcript.clear();
+            }
+        }
 
         let mut status_map = std::collections::HashMap::new();
         for a in &agents {
@@ -61,6 +74,7 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<HireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let is_mob = is_mobile(&request);
         let req = request.into_inner();
         if req.name.is_empty() || req.role.is_empty() {
             return Err(Status::invalid_argument("name and role are required"));
@@ -78,13 +92,14 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.register_agent(agent);
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot(is_mob).await))
     }
 
     async fn fire_agent(
         &self,
         request: Request<FireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let is_mob = is_mobile(&request);
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agentId is required"));
@@ -92,13 +107,14 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.fire_agent(&req.agent_id);
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot(is_mob).await))
     }
 
     async fn delegate_task(
         &self,
         request: Request<DelegateTaskRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let is_mob = is_mobile(&request);
         let req = request.into_inner();
         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
         
@@ -109,7 +125,7 @@ impl AgentManagerService for MyAgentManagerService {
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot(is_mob).await))
     }
 
     async fn get_agent_providers(
@@ -244,11 +260,38 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<RestoreSnapshotRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let is_mob = is_mobile(&request);
         let req = request.into_inner();
         if req.snapshot_id.is_empty() {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot(is_mob).await))
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use tonic::metadata::MetadataValue;
+
+    #[test]
+    fn test_is_mobile_header_present() {
+        let mut req = Request::new(());
+        req.metadata_mut().insert("x-client-type", MetadataValue::from_static("mobile"));
+        assert!(is_mobile(&req));
+    }
+
+    #[test]
+    fn test_is_mobile_header_absent() {
+        let req = Request::new(());
+        assert!(!is_mobile(&req));
+    }
+
+    #[test]
+    fn test_is_mobile_header_different() {
+        let mut req = Request::new(());
+        req.metadata_mut().insert("x-client-type", MetadataValue::from_static("desktop"));
+        assert!(!is_mobile(&req));
     }
 }
