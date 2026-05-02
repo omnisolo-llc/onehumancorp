@@ -23,6 +23,7 @@ pub mod local_fs_sync;
 pub mod ollama;
 pub mod subagent;
 pub mod hybrid_blob;
+pub mod anthropic_memory;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -74,8 +75,9 @@ pub fn all_tools(
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
+    memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
 ) -> Vec<Tool> {
-    vec![
+    let mut tools = vec![
         bash::bash_tool(working_dir.clone()),
         read::read_tool(working_dir.clone()),
         write::write_tool(working_dir.clone()),
@@ -101,5 +103,12 @@ pub fn all_tools(
         ollama::ollama_tool(),
         subagent::subagent_tool(),
         hybrid_blob::hybrid_blob_tool(),
-    ]
+    ];
+
+    if let Some(accessor) = memory_accessor {
+        tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
+        tools.push(anthropic_memory::transcript_search_tool(accessor));
+    }
+
+    tools
 }

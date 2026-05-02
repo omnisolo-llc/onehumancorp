@@ -146,6 +146,9 @@ pub struct Agent {
 }
 
 impl Agent {
+    pub fn add_tool(&mut self, tool: Tool) {
+        self.tools.push(tool);
+    }
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
         Self {
             llm,
@@ -260,6 +263,15 @@ impl Agent {
                 }
                 Err(e) => {
                     tracing::warn!("Failed to retrieve long term memory: {}", e);
+                }
+            }
+
+            // 3-Tier Memory Mechanic: Lightweight Index
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    combined_system.push_str("\n\n[Lightweight Memory Index]\n");
+                    combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    combined_system.push_str(&index_content);
                 }
             }
         }
