@@ -2376,7 +2376,7 @@ mod dashboard_docs_tests {
 }
 
 #[cfg(test)]
-mod cost_transparency_e2e_tests {
+mod remaining_e2e_tests {
     use super::*;
     use slint::Model;
 
@@ -2574,6 +2574,12 @@ mod cost_transparency_e2e_tests {
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.set_business_tagline("Best vegan cakes".into());
+        assert_eq!(business_share_ui.get_business_tagline(), "Best vegan cakes");
+
+        business_share_ui.set_share_link("ohc://share?b=maya".into());
+        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=maya");
 
         business_share_ui.invoke_copy_link();
         assert!(*copy_link_called.borrow());
