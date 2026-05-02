@@ -595,6 +595,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    welcome_checklist_ui.on_checklist_changed({
+        let handle = welcome_checklist_handle.clone();
+        move |index, checked| {
+            if let Some(ui) = handle.upgrade() {
+                if index == 1 {
+                    ui.set_prod_checked(checked);
+                } else if index == 2 {
+                    ui.set_insta_checked(checked);
+                } else if index == 3 {
+                    ui.set_share_checked(checked);
+                }
+            }
+        }
+    });
+
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
         move || {
