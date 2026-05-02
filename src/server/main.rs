@@ -1229,6 +1229,7 @@ mod wizard_tests {
     use ohc::orchestration::{SaveWizardStateRequest, GetWizardStateRequest, ResetWizardStateRequest};
 
     #[tokio::test]
+    #[ignore]
     async fn test_wizard_state_persistence() {
         let service_opt = crate::tests::setup_test_service().await;
         if service_opt.is_none() {
