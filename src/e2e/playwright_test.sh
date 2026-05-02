@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+
 # playwright_test.sh — Bazel sh_test wrapper for individual Playwright specs.
 #
 # Usage (invoked by Bazel):
@@ -37,15 +38,36 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Copy docker-compose into sandbox if it's missing or a symlink
-# In Bazel, the file should be available in the runfiles
-if [[ ! -f "$workspace_root/deploy/docker-compose.e2e.yml" ]]; then
-  # Try to find it in the runfiles
-  DOCKER_COMPOSE_SRC="$(find "$workspace_root" -name docker-compose.e2e.yml -type f | head -1)"
-  if [[ -n "$DOCKER_COMPOSE_SRC" ]]; then
-    mkdir -p "$workspace_root/deploy"
-    cp "$DOCKER_COMPOSE_SRC" "$workspace_root/deploy/docker-compose.e2e.yml"
+# Helper to copy if symlink
+ensure_real_file() {
+  local target="$1"
+  if [[ -L "$target" ]]; then
+    local real_path
+    real_path="$(readlink -f "$target")"
+    rm "$target"
+    cp "$real_path" "$target"
   fi
+}
+
+# Copy docker-compose and manifests into sandbox if they're symlinks
+for f in "deploy/docker-compose.e2e.yml" "package.json" "pnpm-lock.yaml" "playwright.config.ts"; do
+  if [[ -f "$workspace_root/$f" ]]; then
+    ensure_real_file "$workspace_root/$f"
+  else
+    # Try to find it in the runfiles
+    SRC="$(find "$workspace_root" -name "$(basename "$f")" -type f | head -1)"
+    if [[ -n "$SRC" ]]; then
+      mkdir -p "$(dirname "$workspace_root/$f")"
+      cp "$SRC" "$workspace_root/$f"
+    fi
+  fi
+done
+
+# Copy all files in src/e2e if they are symlinks
+if [[ -d "$workspace_root/src/e2e" ]]; then
+  find "$workspace_root/src/e2e" -maxdepth 1 -type l | while read -r symlink; do
+    ensure_real_file "$symlink"
+  done
 fi
 
 # Ensure fresh infrastructure - stop any existing containers and remove volumes
@@ -121,24 +143,6 @@ else
   echo "[playwright] Warning: server binary not found, tests may fail"
 fi
 
-# Run the specific spec file
-export CI=true
-export BASE_URL="${BASE_URL:-http://localhost:18789}"
-
-# Check server status before running tests
-echo "[playwright] Checking server status..."
-if nc -z 127.0.0.1 18789 2>/dev/null; then
-  echo "[playwright] Server is running on port 18789"
-else
-  echo "[playwright] Server is NOT running on port 18789"
-fi
-
-# Check server log if it exists
-if [[ -f "${TEST_TMPDIR:-/tmp}/server.log" ]]; then
-  echo "[playwright] Server log contents:"
-  cat "${TEST_TMPDIR:-/tmp}/server.log" | tail -50
-fi
-
 # Run playwright inside Docker to avoid host dependency issues (Node, glibc, etc.)
 # We use --network host so the container can reach the server running on the host port 18789
 echo "[playwright] Running tests inside Playwright Docker container..."
@@ -147,6 +151,7 @@ docker run --rm --network host \
   -w /work \
   -e CI=true \
   -e BASE_URL="http://localhost:18789" \
+  -e spec_file="$spec_file" \
   mcr.microsoft.com/playwright:v1.40.0-jammy \
   sh -c "corepack enable && pnpm install --frozen-lockfile && (pnpm exec playwright install chromium || true) && pnpm exec playwright test --config playwright.config.ts ${spec_file:+src/e2e/$spec_file}"
 echo "[playwright] Playwright command finished"

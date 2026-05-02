@@ -22,6 +22,10 @@ def define_playwright_tests():
             args = [spec],
             data = native.glob(["*.spec.ts"]) + [
                 "//src/server:server",
+                "//deploy:docker-compose.e2e.yml",
+                "//:package.json",
+                "//:pnpm-lock.yaml",
+                "//:playwright.config.ts",
             ],
             env = {
                 "BASE_URL": "http://localhost:18789",
