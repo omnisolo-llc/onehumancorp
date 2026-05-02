@@ -6,7 +6,7 @@ export component Settings inherits Window {
     title: "Settings";
 
     property <bool> standalone_mode: true;
-    property <bool> expert_mode: false;
+    in-out property <bool> is_advanced: false;
     property <string> backend_url;
     in-out property <string> user_name;
     in-out property <string> user_email;
@@ -17,6 +17,7 @@ export component Settings inherits Window {
     callback start_stop_service();
     callback run_doctor();
     callback trigger_hybrid_sync();
+    callback save_state();
 
     background: #f8fafc;
 
@@ -110,10 +111,10 @@ export component Settings inherits Window {
 
         // Other Settings
         HorizontalBox {
-            Text { text: "Expert Mode"; color: #1e293b; }
+            Text { text: "Advanced mode"; color: #1e293b; }
             CheckBox {
-                checked: expert_mode;
-                toggled => { expert_mode = !expert_mode; }
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; save_state(); }
             }
         }
 
