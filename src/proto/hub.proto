@@ -126,6 +126,14 @@ message TeammateMeshEvent {
   bytes payload = 4;
 }
 
+message SyncStateHandoff {
+  string tenant_id = 1;
+  string state_id = 2;
+  bytes serialized_state = 3;
+  string mode_source = 4; // "cloud" or "standalone"
+  int64 timestamp = 5;
+}
+
 message PublishTeammateMeshEventRequest {
   string channel = 1;
   TeammateMeshEvent event = 2;
