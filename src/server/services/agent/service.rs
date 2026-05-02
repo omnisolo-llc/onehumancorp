@@ -5,10 +5,17 @@ use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
 
+struct CachedData {
+    costs: Summary,
+    statuses: Vec<StatusCount>,
+    expires_at: std::time::Instant,
+}
+
 pub struct MyAgentManagerService {
     hub: Arc<Hub>,
     skills: RwLock<Vec<SkillPack>>,
     snapshots: RwLock<Vec<OrgSnapshot>>,
+    cache: RwLock<Option<CachedData>>,
 }
 
 impl MyAgentManagerService {
@@ -17,31 +24,38 @@ impl MyAgentManagerService {
             hub,
             skills: RwLock::new(Vec::new()),
             snapshots: RwLock::new(Vec::new()),
+            cache: RwLock::new(None),
         }
     }
 
-    async fn get_snapshot(&self) -> DashboardSnapshot {
-        let hub_clone1 = self.hub.clone();
-        let hub_clone2 = self.hub.clone();
+    pub async fn get_snapshot(&self) -> DashboardSnapshot {
+        // Optimized: Remove spawn_blocking for in-memory operations
+        let agents = self.hub.get_agents();
+        let mut meetings = self.hub.get_meetings();
 
-        let (agents, meetings) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
-        );
-        let agents = agents.unwrap_or_else(|_| vec![]);
-        let meetings = meetings.unwrap_or_else(|_| vec![]);
-
-        let cost_auditor = self.hub.get_cost_auditor();
-        let costs = Summary {
-            total_cost_usd: cost_auditor.get_total_cost(),
-            total_tokens: cost_auditor.get_total_tokens(),
-        };
-
-        let mut status_map = std::collections::HashMap::new();
-        for a in &agents {
-            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        // Mobile Payload Optimization: Truncate transcripts to last 5 messages for dashboard preview
+        for meeting in &mut meetings {
+            if meeting.transcript.len() > 5 {
+                let start = meeting.transcript.len() - 5;
+                meeting.transcript = meeting.transcript.drain(start..).collect();
+            }
         }
-        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+
+        let now = std::time::Instant::now();
+        let (costs, statuses) = {
+            let cache_read = self.cache.read().unwrap();
+            if let Some(ref c) = *cache_read {
+                if c.expires_at > now {
+                    (c.costs.clone(), c.statuses.clone())
+                } else {
+                    drop(cache_read);
+                    self.refresh_cache(now, &agents)
+                }
+            } else {
+                drop(cache_read);
+                self.refresh_cache(now, &agents)
+            }
+        };
 
         DashboardSnapshot {
             meetings,
@@ -52,6 +66,29 @@ impl MyAgentManagerService {
             queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
         }
+    }
+
+    fn refresh_cache(&self, now: std::time::Instant, agents: &[Agent]) -> (Summary, Vec<StatusCount>) {
+        let cost_auditor = self.hub.get_cost_auditor();
+        let costs = Summary {
+            total_cost_usd: cost_auditor.get_total_cost(),
+            total_tokens: cost_auditor.get_total_tokens(),
+        };
+
+        let mut status_map = std::collections::HashMap::new();
+        for a in agents {
+            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        }
+        let statuses: Vec<StatusCount> = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+
+        let mut cache_write = self.cache.write().unwrap();
+        *cache_write = Some(CachedData {
+            costs: costs.clone(),
+            statuses: statuses.clone(),
+            expires_at: now + std::time::Duration::from_secs(5),
+        });
+
+        (costs, statuses)
     }
 }
 

@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
+use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
@@ -28,13 +27,13 @@ pub struct SharedTask {
 }
 
 pub struct TaskManager {
-    pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
+    pub(crate) tasks: DashMap<String, SharedTask>,
 }
 
 impl TaskManager {
     pub fn new() -> Self {
         TaskManager {
-            tasks: RwLock::new(HashMap::new()),
+            tasks: DashMap::new(),
         }
     }
 
@@ -69,25 +68,21 @@ impl TaskManager {
             proposed_content: None,
         };
         
-        let mut tasks = self.tasks.write().unwrap();
-        tasks.insert(id, task.clone());
+        self.tasks.insert(id, task.clone());
         
         Ok(task)
     }
 
     pub fn insert_task(&self, task: SharedTask) {
-        let mut tasks = self.tasks.write().unwrap();
-        tasks.insert(task.id.clone(), task);
+        self.tasks.insert(task.id.clone(), task);
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
-        let tasks = self.tasks.read().unwrap();
-        tasks.get(task_id).cloned().ok_or_else(|| "task not found".to_string())
+        self.tasks.get(task_id).map(|r| r.value().clone()).ok_or_else(|| "task not found".to_string())
     }
 
     pub fn update_task_status(&self, task_id: &str, new_status: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(task_id) {
+        if let Some(mut task) = self.tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
             Ok(())
@@ -97,8 +92,7 @@ impl TaskManager {
     }
 
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
-        let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(task_id) {
+        if let Some(mut task) = self.tasks.get_mut(task_id) {
             if task.status == "PENDING" {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
@@ -110,8 +104,7 @@ impl TaskManager {
     }
 
     pub fn review_task(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(task_id) {
+        if let Some(mut task) = self.tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
@@ -124,8 +117,7 @@ impl TaskManager {
     }
 
     pub fn complete_task(&self, task_id: &str, agent_id: &str, result: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(task_id) {
+        if let Some(mut task) = self.tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "COMPLETED".to_string();
                 
@@ -150,8 +142,7 @@ impl TaskManager {
 
 
     pub fn approve_task(&self, task_id: &str, is_approved: bool) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(task_id) {
+        if let Some(mut task) = self.tasks.get_mut(task_id) {
             task.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
             if is_approved {
                 task.status = "APPROVED".to_string();
@@ -166,10 +157,10 @@ impl TaskManager {
     }
 
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
-        let mut tasks = self.tasks.write().unwrap();
         let mut claimed_tasks = Vec::new();
         
-        for task in tasks.values_mut() {
+        for mut task_ref in self.tasks.iter_mut() {
+            let task = task_ref.value_mut();
             if task.status == "PENDING" {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id.to_string());

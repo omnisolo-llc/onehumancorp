@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::OnceLock;
+use dashmap::{DashMap, DashSet};
 use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
@@ -22,22 +23,22 @@ pub struct HubEvent {
 }
 
 pub struct Hub {
-    agents: RwLock<HashMap<String, Agent>>,
-    meetings: RwLock<HashMap<String, MeetingRoom>>,
-    inbox: RwLock<HashMap<String, Vec<Message>>>,
-    subs: RwLock<HashMap<String, broadcast::Sender<Message>>>,
+    agents: DashMap<String, Agent>,
+    meetings: DashMap<String, MeetingRoom>,
+    inbox: DashMap<String, Vec<Message>>,
+    subs: DashMap<String, broadcast::Sender<Message>>,
     minimax_api_key: String,
     caps_tx: broadcast::Sender<AgentCapabilities>,
-    mesh_events: RwLock<HashMap<String, broadcast::Sender<MeshEvent>>>,
-    teammate_events: RwLock<HashMap<String, broadcast::Sender<TeammateMeshEvent>>>,
+    mesh_events: DashMap<String, broadcast::Sender<MeshEvent>>,
+    teammate_events: DashMap<String, broadcast::Sender<TeammateMeshEvent>>,
     tracker: Tracker,
     task_manager: TaskManager,
     scheduler: Scheduler,
     cost_auditor: Arc<CostAuditor>,
     recent_events: RwLock<Vec<HubEvent>>,
-    token_usage_history: RwLock<HashMap<String, Vec<i64>>>,
+    token_usage_history: DashMap<String, Vec<i64>>,
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
-    auto_cor_track: RwLock<std::collections::HashSet<String>>,
+    auto_cor_track: DashSet<String>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
 }
@@ -47,23 +48,23 @@ impl Hub {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         Hub {
-            agents: RwLock::new(HashMap::new()),
-            meetings: RwLock::new(HashMap::new()),
-            inbox: RwLock::new(HashMap::new()),
-            subs: RwLock::new(HashMap::new()),
+            agents: DashMap::new(),
+            meetings: DashMap::new(),
+            inbox: DashMap::new(),
+            subs: DashMap::new(),
             minimax_api_key,
             caps_tx,
             pool,
-            mesh_events: RwLock::new(HashMap::new()),
-            teammate_events: RwLock::new(HashMap::new()),
+            mesh_events: DashMap::new(),
+            teammate_events: DashMap::new(),
             tracker: Tracker::new(),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
             recent_events: RwLock::new(Vec::new()),
-            token_usage_history: RwLock::new(HashMap::new()),
+            token_usage_history: DashMap::new(),
             get_token_usage: None,
-            auto_cor_track: RwLock::new(std::collections::HashSet::new()),
+            auto_cor_track: DashSet::new(),
             event_log_tx,
         }
     }
@@ -73,49 +74,38 @@ impl Hub {
     }
 
     pub fn register_agent(&self, agent: Agent) {
-        let mut agents = self.agents.write().unwrap();
-        agents.insert(agent.id.clone(), agent);
+        self.agents.insert(agent.id.clone(), agent);
     }
 
     pub fn get_agent(&self, id: &str) -> Option<Agent> {
-        let agents = self.agents.read().unwrap();
-        agents.get(id).cloned()
+        self.agents.get(id).map(|r| r.value().clone())
     }
 
     pub fn get_agents_count(&self) -> usize {
-        let agents = self.agents.read().unwrap();
-        agents.len()
+        self.agents.len()
     }
 
     pub fn fire_agent(&self, id: &str) {
-        let mut agents = self.agents.write().unwrap();
-        let mut inbox = self.inbox.write().unwrap();
-        
-        agents.remove(id);
-        inbox.remove(id);
+        self.agents.remove(id);
+        self.inbox.remove(id);
     }
 
     pub fn get_agents(&self) -> Vec<Agent> {
-        let agents = self.agents.read().unwrap();
-        let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
+        let mut agents_vec: Vec<Agent> = self.agents.iter().map(|r| r.value().clone()).collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
         agents_vec
     }
 
     pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
-        let agents = self.agents.read().unwrap();
-        let mut agents_vec: Vec<Agent> = agents.values()
-            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
-            .cloned()
+        let mut agents_vec: Vec<Agent> = self.agents.iter()
+            .filter(|r| r.value().organization_id == org_id || r.key().starts_with(&format!("{}-", org_id)))
+            .map(|r| r.value().clone())
             .collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
         agents_vec
     }
 
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
-        let mut meetings = self.meetings.write().unwrap();
-        let mut agents = self.agents.write().unwrap();
-        
         let meeting = MeetingRoom {
             id: id.clone(),
             agenda,
@@ -123,10 +113,10 @@ impl Hub {
             transcript: vec![],
         };
         
-        meetings.insert(id, meeting.clone());
+        self.meetings.insert(id, meeting.clone());
         
         for participant in participants {
-            if let Some(agent) = agents.get_mut(&participant) {
+            if let Some(mut agent) = self.agents.get_mut(&participant) {
                 agent.status = "IN_MEETING".to_string();
             }
         }
@@ -135,10 +125,6 @@ impl Hub {
     }
 
     pub fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
-        let mut inbox = self.inbox.write().unwrap();
-        let mut meetings = self.meetings.write().unwrap();
-        let subs = self.subs.read().unwrap();
-        
         let to_agent = msg.to_agent.clone();
 
         // Check rate limiting
@@ -154,12 +140,11 @@ impl Hub {
         });
         
         // Add to recipient's inbox
-        let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
-        messages.push(msg.clone());
+        self.inbox.entry(to_agent.clone()).or_insert_with(Vec::new).push(msg.clone());
         
         // Add to meeting transcript if applicable
         if !msg.meeting_id.is_empty() {
-            if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
+            if let Some(mut meeting) = self.meetings.get_mut(&msg.meeting_id) {
                 meeting.transcript.push(msg.clone());
                 
                 // Aggressive AI Context Summarization
@@ -179,8 +164,7 @@ impl Hub {
                         
                         match client.reason(&prompt).await {
                             Ok(summary) => {
-                                let mut meetings = hub.meetings.write().unwrap();
-                                if let Some(mtg) = meetings.get_mut(&m_id) {
+                                if let Some(mut mtg) = hub.meetings.get_mut(&m_id) {
                                     let mut new_transcript = vec![Message {
                                         id: format!("summary-{}", Utc::now().timestamp()),
                                         from_agent: "SYSTEM_SUMMARIZER".to_string(),
@@ -207,7 +191,7 @@ impl Hub {
         }
         
         // Notify subscribers
-        if let Some(tx) = subs.get(&to_agent) {
+        if let Some(tx) = self.subs.get(&to_agent) {
             let _ = tx.send(msg);
         }
         
@@ -215,18 +199,15 @@ impl Hub {
     }
 
     pub fn get_meetings(&self) -> Vec<MeetingRoom> {
-        let meetings = self.meetings.read().unwrap();
-        meetings.values().cloned().collect()
+        self.meetings.iter().map(|r| r.value().clone()).collect()
     }
 
     pub fn get_inbox(&self, agent_id: &str) -> Vec<Message> {
-        let mut inbox = self.inbox.write().unwrap();
-        inbox.remove(agent_id).unwrap_or_default()
+        self.inbox.remove(agent_id).map(|(_, v)| v).unwrap_or_default()
     }
 
     pub fn subscribe(&self, agent_id: String) -> broadcast::Receiver<Message> {
-        let mut subs = self.subs.write().unwrap();
-        let tx = subs.entry(agent_id).or_insert_with(|| {
+        let tx = self.subs.entry(agent_id).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100); // Buffer of 100
             tx
         });
@@ -236,10 +217,10 @@ impl Hub {
     pub fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
         
-        if !self.agents.read().unwrap().contains_key(&from_agent_id) {
+        if !self.agents.contains_key(&from_agent_id) {
             return Err("sender agent is not registered".to_string());
         }
-        if !self.agents.read().unwrap().contains_key(&to_agent_id) {
+        if !self.agents.contains_key(&to_agent_id) {
             return Err("recipient agent is not registered".to_string());
         }
         
@@ -258,9 +239,7 @@ impl Hub {
     ) -> Result<String, String> {
         check_documentation_gate(instruction)?;
 
-        let mut agents = self.agents.write().unwrap();
-        
-        if agents.len() >= 10 {
+        if self.agents.len() >= 10 {
             return Err("VRAM quota limit exceeded".to_string());
         }
 
@@ -274,8 +253,7 @@ impl Hub {
             provider_type: "builtin".to_string(),
         };
 
-        agents.insert(sub_agent_id.clone(), sub_agent);
-        drop(agents);
+        self.agents.insert(sub_agent_id.clone(), sub_agent);
 
         let msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
@@ -306,8 +284,7 @@ impl Hub {
     }
 
     pub fn publish_mesh_event(&self, event: MeshEvent) -> Result<(), String> {
-        let mut mesh_events = self.mesh_events.write().unwrap();
-        let tx = mesh_events.entry(event.topic.clone()).or_insert_with(|| {
+        let tx = self.mesh_events.entry(event.topic.clone()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
         });
@@ -316,8 +293,7 @@ impl Hub {
     }
 
     pub fn subscribe_mesh_events(&self, topic: String) -> broadcast::Receiver<MeshEvent> {
-        let mut mesh_events = self.mesh_events.write().unwrap();
-        let tx = mesh_events.entry(topic).or_insert_with(|| {
+        let tx = self.mesh_events.entry(topic).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
         });
@@ -325,8 +301,7 @@ impl Hub {
     }
 
     pub fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
-        let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
+        let tx = self.teammate_events.entry(channel).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
         });
@@ -335,8 +310,7 @@ impl Hub {
     }
 
     pub fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
-        let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
+        let tx = self.teammate_events.entry(channel).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
         });
@@ -400,13 +374,12 @@ impl Hub {
         if let Some(ref get_usage) = self.get_token_usage {
             let usages = get_usage();
             
-            let mut history = self.token_usage_history.write().unwrap();
             let mut active_orgs = HashMap::new();
             
             for (org_id, total_tokens) in usages {
                 active_orgs.insert(org_id.clone(), true);
                 if total_tokens > 0 {
-                    let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                    let mut hist = self.token_usage_history.entry(org_id.clone()).or_insert_with(Vec::new);
                     hist.push(total_tokens);
                     
                     if hist.len() > 5 {
@@ -418,27 +391,23 @@ impl Hub {
                         // Removed noisy log for signal hygiene
                     }
                 } else {
-                    history.remove(&org_id);
+                    self.token_usage_history.remove(&org_id);
                 }
             }
             
-            history.retain(|org_id, _| active_orgs.contains_key(org_id));
+            self.token_usage_history.retain(|org_id, _| active_orgs.contains_key(org_id));
         }
     }
 
     pub fn tool_parameter_auto_correction(&self, event_id: &str, agent_id: &str, payload: &[u8]) -> Result<(), String> {
-        let mut auto_cor_track = self.auto_cor_track.write().unwrap();
-        if auto_cor_track.contains(event_id) {
+        if !self.auto_cor_track.insert(event_id.to_string()) {
             return Err("event already being processed".to_string());
         }
-        auto_cor_track.insert(event_id.to_string());
-        drop(auto_cor_track);
         
         struct Guard<'a>(&'a Hub, &'a str);
         impl<'a> Drop for Guard<'a> {
             fn drop(&mut self) {
-                let mut track = self.0.auto_cor_track.write().unwrap();
-                track.remove(self.1);
+                self.0.auto_cor_track.remove(self.1);
             }
         }
         let _guard = Guard(self, event_id);
@@ -469,9 +438,7 @@ impl Hub {
     }
 
     pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
-        let mut agents = self.agents.write().unwrap();
-        
-        let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
+        let parent = self.agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.value().clone();
         
         let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
         let child = Agent {
@@ -483,14 +450,10 @@ impl Hub {
             provider_type: parent.provider_type.clone(),
         };
         
-        agents.insert(child_id.clone(), child);
-        drop(agents); // Release lock before calling publish!
+        self.agents.insert(child_id.clone(), child);
         
         // Copy history
-        let history = {
-            let inbox = self.inbox.read().unwrap();
-            inbox.get(parent_id).cloned().unwrap_or_default()
-        };
+        let history = self.inbox.get(parent_id).map(|r| r.value().clone()).unwrap_or_default();
         
         for msg in history {
             let mut child_msg = msg.clone();
