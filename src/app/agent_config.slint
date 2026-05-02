@@ -55,7 +55,17 @@ export component AgentConfig inherits Window {
                         Text { text: "🎧 Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "The Ambassador"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
                     }
+                    FocusScope {
                     TouchArea { clicked => { selected_agent = "Customer Support"; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            selected_agent = "Customer Support";
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                 }
                 GlassCard {
                     height: 80px;
@@ -64,7 +74,17 @@ export component AgentConfig inherits Window {
                         Text { text: "📱 Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "The Promoter"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
                     }
+                    FocusScope {
                     TouchArea { clicked => { selected_agent = "Social Media Manager"; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            selected_agent = "Social Media Manager";
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                 }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }
@@ -162,6 +182,16 @@ export component AgentConfig inherits Window {
                 horizontal-alignment: center;
             }
         }
-        TouchArea { clicked => { show_toast = false; } }
+        FocusScope {
+                    TouchArea { clicked => { show_toast = false; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            show_toast = false;
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
     }
 }

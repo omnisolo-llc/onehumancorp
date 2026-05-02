@@ -59,19 +59,49 @@ export component PromptTuning inherits Window {
                         height: 50px;
                         background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Formal"; } }
+                        FocusScope {
+                    TouchArea { clicked => { tone = "Formal"; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            tone = "Formal";
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                     }
                     GlassCard {
                         height: 50px;
                         background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Friendly"; } }
+                        FocusScope {
+                    TouchArea { clicked => { tone = "Friendly"; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            tone = "Friendly";
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                     }
                     GlassCard {
                         height: 50px;
                         background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "Concise"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Concise"; } }
+                        FocusScope {
+                    TouchArea { clicked => { tone = "Concise"; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            tone = "Concise";
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                     }
                 }
                 Text { text: "Selected: " + tone; color: #a855f7; }
@@ -86,19 +116,49 @@ export component PromptTuning inherits Window {
                     height: 40px;
                     background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    FocusScope {
                     TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            focus_only_business = !focus_only_business;
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                 }
                 GlassCard {
                     height: 40px;
                     background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    FocusScope {
                     TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            focus_avoid_competitors = !focus_avoid_competitors;
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                 }
                 GlassCard {
                     height: 40px;
                     background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    FocusScope {
                     TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == "\n") {
+                            focus_reply_spanish = !focus_reply_spanish;
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
+                }
                 }
             }
 
