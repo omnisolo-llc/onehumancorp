@@ -542,6 +542,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+    Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
