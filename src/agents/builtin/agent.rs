@@ -45,6 +45,7 @@ pub struct AgentRunConfig {
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
+    pub working_dir: String,
 }
 
 impl Default for AgentRunConfig {
@@ -71,6 +72,7 @@ impl Default for AgentRunConfig {
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            working_dir: ".".to_string(),
         }
     }
 }
@@ -100,7 +102,75 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+const MAX_AGENTS_MD_BYTES: usize = 32768; // 32 KiB cap
+
+pub async fn gather_cascading_agents_md(start_dir: &str) -> std::io::Result<String> {
+    let mut current_dir = std::path::PathBuf::from(start_dir);
+    if !current_dir.is_absolute() {
+        if let Ok(pwd) = std::env::current_dir() {
+            current_dir = pwd.join(current_dir);
+        }
+    }
+
+    // Canonicalize if possible to resolve `.` and `..`
+    if let Ok(canonical) = current_dir.canonicalize() {
+        current_dir = canonical;
+    }
+
+    let mut contents = Vec::new();
+    let max_depth = 20; // Safe-guard against infinite loops
+    let mut depth = 0;
+
+    loop {
+        if depth >= max_depth {
+            break;
+        }
+
+        let agents_md_path = current_dir.join("AGENTS.md");
+        if agents_md_path.exists() && agents_md_path.is_file() {
+            if let Ok(content) = tokio::fs::read_to_string(&agents_md_path).await {
+                let display_path = agents_md_path.to_string_lossy().to_string();
+                contents.push((display_path, content));
+            }
+        }
+
+        // Stop if we hit a git root to avoid traversing up to the entire file system root in monorepos
+        if current_dir.join(".git").exists() {
+            break;
+        }
+
+        if !current_dir.pop() {
+            break;
+        }
+
+        depth += 1;
+    }
+
+    // Root-most first, deepest last (for highest attention)
+    contents.reverse();
+
+    let mut final_content = String::new();
+    for (path, content) in contents {
+        let section = format!("---\nSource: {}\n---\n{}\n", path, content);
+        final_content.push_str(&section);
+    }
+
+    if final_content.len() > MAX_AGENTS_MD_BYTES {
+        // We want to keep the deeply-nested parts (end of string) because they are more specific.
+        // So we truncate from the front.
+        let bytes_to_remove = final_content.len() - MAX_AGENTS_MD_BYTES;
+        // Find the next char boundary to avoid panics
+        let mut split_idx = bytes_to_remove;
+        while split_idx < final_content.len() && !final_content.is_char_boundary(split_idx) {
+            split_idx += 1;
+        }
+        final_content = format!("...[Truncated to fit 32KiB cap]...\n{}", &final_content[split_idx..]);
+    }
+
+    Ok(final_content)
+}
+
+pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, cascading_agents_md: &str) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
         while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
@@ -122,12 +192,21 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
         combined_system.push_str("[Developer Instructions]\n");
         combined_system.push_str(&cfg.developer_instructions);
     }
-    if !user_instr.is_empty() {
+
+    let mut final_user_instr = String::new();
+    if !cascading_agents_md.is_empty() {
+        final_user_instr.push_str("[Directory Context (AGENTS.md)]\n");
+        final_user_instr.push_str(cascading_agents_md);
+        final_user_instr.push_str("\n\n");
+    }
+    final_user_instr.push_str(user_instr);
+
+    if !final_user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
         }
         combined_system.push_str("[User Instructions]\n");
-        combined_system.push_str(user_instr);
+        combined_system.push_str(&final_user_instr);
     }
     combined_system
 }
@@ -212,7 +291,11 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg);
+        // Codex Prompt Construction: Cascade AGENTS.md files
+        let cascading_agents_md = gather_cascading_agents_md(&cfg.working_dir)
+            .await
+            .unwrap_or_default();
+        let mut combined_system = build_hierarchical_system_prompt(cfg, &cascading_agents_md);
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self.memory_store {
@@ -1456,7 +1539,7 @@ mod tests {
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, "");
         assert_eq!(
             prompt,
             "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -1470,7 +1553,7 @@ mod tests {
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, "");
         assert_eq!(
             prompt,
             "Server System Message\n\n[User Instructions]\nUser Instructions"
@@ -1480,7 +1563,7 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2);
+        let prompt2 = build_hierarchical_system_prompt(&cfg2, "");
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
@@ -1498,7 +1581,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, "");
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
@@ -1513,7 +1596,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, "");
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
@@ -1559,6 +1642,46 @@ mod tests {
         assert!(result.is_ok());
         let content = result.unwrap();
         assert_eq!(content, "Better answer");
+    }
+
+    #[tokio::test]
+    async fn test_gather_cascading_agents_md() {
+        // Create a unique temporary directory name using std::env::temp_dir() and uuid
+        let temp_base = std::env::temp_dir().join(format!("test_agents_md_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_base).unwrap();
+
+        let a_dir = temp_base.join("a");
+        let b_dir = a_dir.join("b");
+        let c_dir = b_dir.join("c");
+        std::fs::create_dir_all(&c_dir).unwrap();
+
+        // Write root AGENTS.md
+        let root_content = "Root context";
+        std::fs::write(a_dir.join("AGENTS.md"), root_content).unwrap();
+
+        // Write deepest AGENTS.md
+        let leaf_content = "Deep context";
+        std::fs::write(c_dir.join("AGENTS.md"), leaf_content).unwrap();
+
+        let gathered = gather_cascading_agents_md(&c_dir.to_string_lossy()).await.unwrap();
+
+        // Check that both are included and in the correct order (root first, deepest last)
+        let root_idx = gathered.find(root_content).unwrap();
+        let leaf_idx = gathered.find(leaf_content).unwrap();
+        assert!(root_idx < leaf_idx);
+
+        // Test 32 KiB truncation
+        let huge_content = "A".repeat(40000);
+        std::fs::write(a_dir.join("AGENTS.md"), huge_content).unwrap();
+        let gathered_huge = gather_cascading_agents_md(&c_dir.to_string_lossy()).await.unwrap();
+
+        // Ensure cap
+        assert!(gathered_huge.len() <= 32768 + 100); // 100 buffer for "...[Truncated" header
+        // Ensure deepest is still there, because we truncate from the front!
+        assert!(gathered_huge.contains(leaf_content));
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_base);
     }
 
     #[tokio::test]
