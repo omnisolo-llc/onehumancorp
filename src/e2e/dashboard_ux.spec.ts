@@ -76,3 +76,31 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
+
+test.describe('Dashboard UX Desktop Viewport', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('should display responsive layout cleanly on desktop', async ({ page }) => {
+    // Navigate to login page
+    await page.goto('/login');
+
+    // Fill in credentials and sign in
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    // Wait for Dashboard to load
+    await page.waitForURL('**/*');
+
+    // Verify main business label and stat cards at desktop width
+    await expect(page.locator('text=My Business').first()).toBeVisible();
+    await expect(page.locator('text=Today\'s Sales')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
+    await expect(page.locator('text=Active Helpers')).toBeVisible();
+    await expect(page.locator('text=Current AI Tasks')).toBeVisible();
+
+    // The preferred-width logic fixes binding loops on window resize, so
+    // elements should not overflow or break visually.
+    await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
+  });
+});
