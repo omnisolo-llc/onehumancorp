@@ -435,7 +435,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
                 let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let check_messages_called_clone = check_messages_called.clone();
-                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+                dashboard.on_action_check_messages(move || {
+                    *check_messages_called_clone.borrow_mut() = true;
+                    if let Ok(inbox_ui) = app::Inbox::new() {
+                        let mock_messages = vec![
+                            app::UiInboxMessage {
+                                id: "msg-1".into(),
+                                customer_name: "Maya".into(),
+                                customer_message: "Do you do vegan cakes?".into(),
+                                ai_draft: "Hi Maya! Yes, we absolutely do vegan cakes. Let me know what flavor you're interested in!".into(),
+                                is_ai_drafted: true,
+                            }
+                        ];
+                        let messages_model = std::rc::Rc::new(slint::VecModel::from(mock_messages));
+                        inbox_ui.set_messages(messages_model.into());
+
+                        inbox_ui.on_send_reply(move |id| {
+                            println!("Sending reply for message {}", id);
+                        });
+                        inbox_ui.on_edit_reply(move |id| {
+                            println!("Editing reply for message {}", id);
+                        });
+                        inbox_ui.on_auto_handle(move |id| {
+                            println!("Auto-handling similar messages for {}", id);
+                        });
+                        let _ = inbox_ui.show();
+                    }
+                });
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
@@ -1309,6 +1335,11 @@ mod tests {
     fn test_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Chat::new().unwrap();
+    }
+    #[test]
+    fn test_inbox_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Inbox::new().unwrap();
     }
     #[test]
     fn test_channels_creation() {
