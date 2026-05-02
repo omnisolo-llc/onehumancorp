@@ -1,4 +1,5 @@
 import { TooltipElement } from "tooltip_element.slint";
+import { CheckBox } from "std-widgets.slint";
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
@@ -32,6 +33,13 @@ export component Dashboard inherits Window {
     in property <[UiMeshMessage]> mesh_messages;
 
     in-out property <bool> show_milestone: false;
+    in-out property <bool> show_welcome_checklist: false;
+    callback checklist_go_to_add_products();
+    callback checklist_go_to_connect_instagram();
+    callback checklist_go_to_share_link();
+    in-out property <bool> checklist_prod_checked: false;
+    in-out property <bool> checklist_insta_checked: false;
+    in-out property <bool> checklist_share_checked: false;
     in property <string> milestone_title: "";
     in property <string> milestone_message: "";
     callback dismiss_milestone();
@@ -83,6 +91,41 @@ export component Dashboard inherits Window {
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+            }
+        }
+
+        if (show_welcome_checklist) : GlassCard {
+            border-color: #a855f7;
+            border-width: 1px;
+            background: rgba(168, 85, 247, 0.1);
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Welcome Checklist"; font-size: 20px; font-weight: 700; color: white; }
+                HorizontalBox {
+                    spacing: 8px;
+                    Text { text: "✓"; color: #10b981; }
+                    Text { text: "Business live"; color: white; }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    CheckBox { checked <=> checklist_prod_checked; }
+                    TouchArea { clicked => { checklist_go_to_add_products(); } Text { text: "Add 3 more products"; color: white; } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    CheckBox { checked <=> checklist_insta_checked; }
+                    TouchArea { clicked => { checklist_go_to_connect_instagram(); } Text { text: "Connect Instagram"; color: white; } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    CheckBox { checked <=> checklist_share_checked; }
+                    TouchArea { clicked => { checklist_go_to_share_link(); } Text { text: "Share your link with a friend"; color: white; } }
+                }
+                if (checklist_prod_checked && checklist_insta_checked && checklist_share_checked) : Text {
+                    text: "Congratulations! You are complete and ready to grow your business.";
+                    color: #10b981;
+                }
             }
         }
 

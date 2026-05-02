@@ -91,18 +91,18 @@ test.describe('Onboarding Flow', () => {
 
 test.describe('Onboarding Welcome Checklist', () => {
   test('should display welcome checklist', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     await expect(page.locator('text=/checklist|welcome/i')).toBeVisible();
   });
 
   test('should show checklist items', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const item = page.locator('[class*="item"], [class*="checklist"]').first();
     await expect(item).toBeVisible();
   });
 
   test('should mark item as complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const checkbox = page.locator('input[type="checkbox"]').first();
     if (await checkbox.isVisible()) {
       await checkbox.check();
@@ -111,13 +111,13 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should show completion progress', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const progress = page.locator('text=/\\d+ of \\d+|\\d+%/').first();
     await expect(progress).toBeVisible();
   });
 
   test('should mark all items complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const checkboxes = page.locator('input[type="checkbox"]');
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
@@ -127,7 +127,7 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should show congratulations message', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const checkboxes = page.locator('input[type="checkbox"]');
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
@@ -138,7 +138,7 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should link to documentation', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const docLink = page.locator('a:has-text("Documentation"), a:has-text("Docs")').first();
     if (await docLink.isVisible()) {
       await docLink.click();
@@ -147,7 +147,7 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should link to video tutorials', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const videoLink = page.locator('a:has-text("Video"), a:has-text("Tutorial")').first();
     if (await videoLink.isVisible()) {
       await videoLink.click();
@@ -156,7 +156,7 @@ test.describe('Onboarding Welcome Checklist', () => {
   });
 
   test('should offer to contact support', async ({ page }) => {
-    await page.goto('/welcome-checklist');
+    await page.goto('/dashboard'); await page.locator('text="Welcome Checklist"').waitFor();
     const supportLink = page.locator('text=/support|help|contact/i').first();
     await expect(supportLink).toBeVisible();
   });

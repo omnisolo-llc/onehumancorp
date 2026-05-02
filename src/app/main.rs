@@ -1915,6 +1915,22 @@ mod docs_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2138,6 +2154,22 @@ mod docs_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2202,6 +2234,22 @@ mod dashboard_docs_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2310,6 +2358,22 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2370,6 +2434,22 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2421,6 +2501,22 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
@@ -2513,6 +2609,22 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
+        let dashboard_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_checklist_go_to_add_products({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_connect_instagram({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
+        dashboard_ui.on_checklist_go_to_share_link({
+            let _d = dashboard_handle.clone();
+            move || {
+            }
+        });
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
