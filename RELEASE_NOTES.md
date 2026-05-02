@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
+- Scaling (Cloud): chore: remove xvfb installation step from buildbuddy CI configuration (#8a65281)
+- Privacy/Offline (Standalone): chore: remove xvfb installation step from buildbuddy CI configuration (#8a65281)
+
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 - Scaling (Cloud): 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
 - Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
