@@ -167,7 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn bench_telemetry_sync_parallel() {
-        // If we are in the Bazel sandbox without an active HTTP client or DB, just exit cleanly to avoid timeouts
+        // If we are in the Bazel sandbox without an active HTTP mock or DB, just exit cleanly to avoid timeouts
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
         // Fast fail for tests
@@ -191,16 +191,16 @@ mod tests {
             return;
         }
 
-        // Start a dummy client server to accept telemetry and return 200 OK
-        let server = axum::Router::new()
+        // Start a dummy mock server to accept telemetry and return 200 OK
+        let mock_server = axum::Router::new()
             .route("/api/telemetry/sync", axum::routing::post(|| async { axum::http::StatusCode::OK }));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
-        let url = format!("http://127.0.0.1:{}", port);
+        let mock_url = format!("http://127.0.0.1:{}", port);
 
         tokio::spawn(async move {
-            axum::serve(listener, server).await.unwrap();
+            axum::serve(listener, mock_server).await.unwrap();
         });
 
         // Ensure table exists
@@ -230,7 +230,7 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Sequential);
+        let daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Sequential);
         let start = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), daemon.sync_metrics()).await;
         let seq_duration = start.elapsed();
@@ -246,7 +246,7 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let par_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
+        let par_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         let start_par = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_daemon.sync_metrics()).await;
         let par_duration = start_par.elapsed();

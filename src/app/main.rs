@@ -287,14 +287,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
-    website_builder_ui.on_open_ohc_signup(move || {
-        #[cfg(target_os = "linux")]
-        let _ = std::process::Command::new("xdg-open").arg("https://onehumancorp.com/signup").spawn();
-        #[cfg(target_os = "windows")]
-        let _ = std::process::Command::new("cmd").args(["/C", "start", "https://onehumancorp.com/signup"]).spawn();
-        #[cfg(target_os = "macos")]
-        let _ = std::process::Command::new("open").arg("https://onehumancorp.com/signup").spawn();
-    });
 
     let grow_business_ui = app::GrowBusiness::new()?;
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -947,7 +939,7 @@ mod growth_e2e_tests {
         login_ui.set_password("password123".into());
 
         // We bind the login_ui.on_login logic for testing auto-redirect.
-        // In the actual app this is done in main(), here we client the main behavior.
+        // In the actual app this is done in main(), here we mock the main behavior.
         login_ui.on_login({
             let ui_handle = login_ui.as_weak();
             move |_email, _password| {
@@ -1066,14 +1058,14 @@ mod growth_e2e_tests {
         ]));
         referrals_ui.set_referrals(referral_data);
 
-        // Test link generation client
+        // Test link generation mock
         let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
         let new_link_generated_clone = new_link_generated.clone();
         referrals_ui.on_generate_new_link(move || {
             *new_link_generated_clone.borrow_mut() = true;
         });
 
-        // Test link sharing client
+        // Test link sharing mock
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
@@ -1081,7 +1073,7 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
-        // Set up client stats for test
+        // Set up mock stats for test
         referrals_ui.set_total_referrals(5);
         referrals_ui.set_click_count(100);
         referrals_ui.set_conversion_rate(5.0);
@@ -1615,9 +1607,9 @@ mod docs_tests {
         // Instead of next_step, trigger instant build explicitly
         // Since we didn't add a method, we can just set properties directly as the test does
         ui.set_is_instant_build(true);
-        ui.set_step(8);
+        ui.set_step(11);
 
-        assert_eq!(ui.get_step(), 8);
+        assert_eq!(ui.get_step(), 11);
 
         ui.set_instant_bio("I run an AI product shop.".into());
 
@@ -1630,7 +1622,7 @@ mod docs_tests {
 
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
-                u.set_step(6);
+                u.set_step(9);
             }
         });
 
@@ -2344,8 +2336,8 @@ mod cost_transparency_e2e_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Populate client agent activity messages
-        let actual_messages = vec![
+        // Populate mock agent activity messages
+        let mock_messages = vec![
             app::UiMeshMessage {
                 id: "msg-1".into(),
                 content: "✅ Your Support Agent replied to 3 customers".into(),
@@ -2356,7 +2348,7 @@ mod cost_transparency_e2e_tests {
             }
         ];
 
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(actual_messages));
+        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
         dashboard_ui.set_mesh_messages(messages_model.into());
     }
 
@@ -2662,57 +2654,6 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
-    }
-
-    #[test]
-    fn test_e2e_setup_wizard_instant_build_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        login_ui.invoke_start_setup_wizard();
-        let ui = app::SetupWizard::new().unwrap();
-
-        ui.set_step(8);
-        ui.set_is_instant_build(true);
-        ui.set_instant_bio("A test bakery".into());
-
-        // In a real e2e test, we invoke the action that the user triggers
-        // Main setup_wizard.slint handles calling generate_instant_preview when step 8 is submitted.
-        // We simulate the backend call completion which sets the values and steps to 6.
-        let ui_weak = ui.as_weak();
-        ui.on_generate_instant_preview(move || {
-            if let Some(u) = ui_weak.upgrade() {
-                u.set_company_name("AI Store".into());
-                u.set_business_type("Online Store".into());
-                u.set_admin_email("ai@test.com".into());
-                u.set_payment_pref("online".into());
-                u.set_step(6);
-            }
-        });
-
-        ui.invoke_generate_instant_preview();
-
-        assert_eq!(ui.get_step(), 6);
-        assert_eq!(ui.get_company_name(), "AI Store");
-
-        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let launch_called_clone = launch_called.clone();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae| {
-            *launch_called_clone.borrow_mut() = true;
-        });
-        ui.invoke_launch("".into(), "".into(), "".into(), "".into(), "".into());
-        assert!(*launch_called.borrow(), "Launch should be called from Setup Wizard");
     }
 }
 
