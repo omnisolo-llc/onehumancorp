@@ -16,22 +16,29 @@ pub struct ConnectQuery {
 }
 
 
-#[derive(Deserialize)]
+#[derive(serde::Serialize, Deserialize)]
 pub struct BroadcastRequest {
-    pub topic: String,
-    pub payload: String,
+    pub agent_id: String,
+    pub channel: String,
+    pub event_type: String,
+    pub data: serde_json::Value,
 }
 
 pub async fn mesh_broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     Json(req): Json<BroadcastRequest>,
 ) -> impl IntoResponse {
-    let payload_bytes = req.payload.into_bytes();
-    let msg = MeshMessage {
-        topic: req.topic.clone(),
-        payload: payload_bytes,
+    let payload_json = match serde_json::to_string(&req) {
+        Ok(s) => s,
+        Err(e) => return (axum::http::StatusCode::BAD_REQUEST, format!("Invalid OHC-SIP payload: {}", e)).into_response(),
     };
-    match transport.publish(&req.topic, msg).await {
+
+    let msg = MeshMessage {
+        topic: req.channel.clone(),
+        payload: payload_json.into_bytes(),
+    };
+
+    match transport.publish(&req.channel, msg).await {
         Ok(_) => (axum::http::StatusCode::OK, "Broadcasted successfully").into_response(),
         Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
@@ -135,9 +142,15 @@ mod tests {
         let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
         // Test sending a message from client to server (publish)
+        let test_payload = serde_json::json!({
+            "agent_id": "test_agent",
+            "channel": "test_chan",
+            "event_type": "TEST_EVENT",
+            "data": {"foo": "bar"}
+        });
         let test_msg = MeshMessage {
             topic: "test_chan".to_string(),
-            payload: b"ws_test".to_vec(),
+            payload: serde_json::to_vec(&test_payload).unwrap(),
         };
         let mut buf = Vec::new();
         test_msg.encode(&mut buf).unwrap();
@@ -147,9 +160,15 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
+        let srv_payload = serde_json::json!({
+            "agent_id": "srv_agent",
+            "channel": "test_chan",
+            "event_type": "SRV_EVENT",
+            "data": {"baz": "qux"}
+        });
         let srv_msg = MeshMessage {
             topic: "test_chan".to_string(),
-            payload: b"srv_test".to_vec(),
+            payload: serde_json::to_vec(&srv_payload).unwrap(),
         };
         transport_clone.publish("test_chan", srv_msg.clone()).await.unwrap();
 
@@ -159,7 +178,8 @@ mod tests {
                 if let TungsteniteMessage::Text(text) = msg {
                     let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
                     let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
-                    if received_mesh_msg.payload == b"srv_test" {
+                    let received_json: serde_json::Value = serde_json::from_slice(&received_mesh_msg.payload).unwrap();
+                    if received_json["agent_id"] == "srv_agent" {
                         assert_eq!(received_mesh_msg.topic, "test_chan");
                         found = true;
                         break;
@@ -167,6 +187,49 @@ mod tests {
                 }
             }
         }
-        assert!(found, "Did not receive the srv_test message");
+        assert!(found, "Did not receive the srv_agent message");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_broadcast_handler_compliance() {
+        use axum::routing::post;
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let app = Router::new()
+            .route("/api/mesh/broadcast", post(mesh_broadcast_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/broadcast", addr);
+
+        // Test compliant payload
+        let compliant_payload = serde_json::json!({
+            "agent_id": "test_agent",
+            "channel": "test_chan",
+            "event_type": "TEST_EVENT",
+            "data": {"foo": "bar"}
+        });
+        let resp = client.post(&url).json(&compliant_payload).send().await.unwrap();
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+
+        // Test non-compliant payload (missing agent_id)
+        let non_compliant_payload = serde_json::json!({
+            "channel": "test_chan",
+            "event_type": "TEST_EVENT",
+            "data": {"foo": "bar"}
+        });
+        let resp = client.post(&url).json(&non_compliant_payload).send().await.unwrap();
+        assert_eq!(resp.status(), axum::http::StatusCode::UNPROCESSABLE_ENTITY); // Axum returns 422 for Json deserialization failure
     }
 }
