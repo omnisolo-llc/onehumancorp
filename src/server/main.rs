@@ -938,16 +938,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
 
-    let addr = "[::1]:50051".parse()?;
+    let addr: std::net::SocketAddr = crate::config::get().grpc_addr.parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
-    // let http_addr = "[::1]:8080".parse()?;
-    // let hub_for_http = hub.clone();
-    // tokio::spawn(async move {
-    //     if let Err(e) = http::run(http_addr, hub_for_http).await {
-    //         eprintln!("HTTP server error: {}", e);
-    //     }
-    // });
+    
+    let http_addr = crate::config::get().listen_addr.parse()?;
+    let hub_for_http = hub.clone();
+    tokio::spawn(async move {
+        if let Err(e) = crate::http::run(http_addr, hub_for_http).await {
+            eprintln!("HTTP server error: {}", e);
+        }
+    });
     
 
     // Start AutoDream worker
@@ -1028,8 +1029,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         .nest("/api/v1/tenant", api::tenant::handler::router(db.clone())).with_state(mesh_transport);
 
-    let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
-    let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
+    let mesh_addr: std::net::SocketAddr = crate::config::get().mesh_addr.parse().unwrap();
+    let listener = match tokio::net::TcpListener::bind(&mesh_addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("Failed to bind mesh server to {}: {}", mesh_addr, e);
+            return Err(e.into());
+        }
+    };
     tokio::spawn(async move {
         println!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {

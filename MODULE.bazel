@@ -8,7 +8,7 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "bazel-diff", version = "18.1.0")
 bazel_dep(name = "protobuf", version = "34.1")
-bazel_dep(name = "rules_python", version = "1.9.0")
+bazel_dep(name = "rules_python", version = "0.34.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
@@ -17,10 +17,12 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2024",
+    extra_target_triples = ["wasm32-unknown-unknown"],
     versions = [
         "1.95.0",
     ],
@@ -106,6 +108,7 @@ bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 buildbuddy.gcc_toolchain()
 use_repo(buildbuddy, "buildbuddy_toolchain")
+
 register_toolchains("@buildbuddy_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
