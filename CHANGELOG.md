@@ -1,11 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
-### Cloud Scaling Improvements
-- 🧙 Wizard: Simplify Setup Wizard to 7 Steps (#9321)
-
-### Privacy/Offline Improvements
-- 🧙 Wizard: Simplify Setup Wizard to 7 Steps (#9321)
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)

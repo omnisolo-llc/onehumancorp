@@ -221,21 +221,6 @@ impl IntegrationsRegistry {
         }
         Err("issue not found".to_string())
     }
-
-    pub async fn crdt_pull(&self, _doc_id: &str) -> Result<serde_json::Value, String> {
-        // Implement crdt pull behavior here.
-        Ok(serde_json::json!({"crdt_state": "latest_handled_state"}))
-    }
-
-    pub async fn obsidian_action(&self, _action: &str, _path: &str, _content: &str) -> Result<serde_json::Value, String> {
-        // Implement obsidian behavior here.
-        Ok(serde_json::json!({"status": "handled", "message": "Obsidian tool handled in Cloud mode"}))
-    }
-
-    pub async fn get_config(&self, _key: &str) -> Result<serde_json::Value, String> {
-        // Implement get config behavior here.
-        Ok(serde_json::json!({"value": "client_value"}))
-    }
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {

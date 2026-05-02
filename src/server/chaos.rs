@@ -22,8 +22,8 @@ mod tests {
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
         // In this test, we verify that PruneStaleMissions functions correctly
-        // and doesn't fail under Postgres cliented conditions vs SQLite.
-        // We simulate a client connection pool.
+        // and doesn't fail under Postgres mocked conditions vs SQLite.
+        // We simulate a mock connection pool.
         let pool = PgPoolOptions::new()
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
             .unwrap();
