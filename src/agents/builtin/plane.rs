@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 
 use std::sync::Mutex;
 use std::sync::OnceLock;

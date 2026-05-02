@@ -98,13 +98,13 @@ impl CloudSynchronizer for CloudSynchronizerImpl {
 
 #[cfg(test)]
 mod tests {
+    use crate::services::sync::local_repository::LocalMission;
     use super::*;
 
 
     use std::sync::Mutex;
     use std::collections::HashMap;
 
-    use crate::services::sync::local_repository::{LocalMission, MissionPayload};
 
     struct MockLocalRepository {
         pending: Mutex<Vec<LocalMission>>,

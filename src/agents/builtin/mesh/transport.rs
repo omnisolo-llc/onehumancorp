@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use dashmap::DashMap;
-use std::time::Instant;
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, prost::Message)]
 pub struct Message {
@@ -377,7 +376,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        use redis::AsyncCommands;
+//         use redis::AsyncCommands;
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -395,7 +394,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        use redis::AsyncCommands;
+//         use redis::AsyncCommands;
         let mut conn = self.publish_conn.lock().await;
 
         let key = format!("lock:{}", resource);
@@ -417,7 +416,7 @@ impl MeshTransport for RedisTransport {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
-        use redis::AsyncCommands;
+//         use redis::AsyncCommands;
 
         let key = "mesh:presence";
 
@@ -587,7 +586,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_transport_standalone() {
-        let transport = create_transport(None, false).await.unwrap();
+        let _transport = create_transport(None, false).await.unwrap();
         // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
@@ -681,7 +680,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             let tx_clone = tx_arc.clone();
             tokio::spawn(async move {
-                let mut tx = tx_clone.lock().await;
+                let tx = tx_clone.lock().await;
                 let _ = tx.send(msg).await;
             });
         });

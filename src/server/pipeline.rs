@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::collections::HashMap;
 use std::sync::RwLock;
 use chrono::{DateTime, Utc};

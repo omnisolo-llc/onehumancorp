@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
@@ -324,7 +323,6 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
 }
@@ -336,7 +334,6 @@ impl Manager {
         let docker_backend = Arc::new(DockerBackend::new());
         Manager {
             config,
-            validator,
             local_backend,
             docker_backend,
         }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use tonic::{Request, Status};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;

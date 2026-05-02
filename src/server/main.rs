@@ -1,4 +1,5 @@
 pub mod api;
+use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
@@ -132,7 +133,6 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -172,7 +172,7 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -183,7 +183,7 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         println!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
@@ -1111,8 +1111,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ohc::orchestration::*;
-    use crate::ohc::agent::service::*;
+//     use crate::ohc::orchestration::*;
+//     use crate::ohc::agent::service::*;
     use tonic::Request;
 
     // Helper to create a dummy hub and service for testing
@@ -1215,7 +1215,7 @@ mod wizard_tests {
         let service = service_opt.unwrap();
 
         let org_id = "test_org_wizard";
-        let tenant_id = "test_org_wizard";
+        let _tenant_id = "test_org_wizard";
         let user_id = "test_spiffe_id";
 
         // Clean up any previous state

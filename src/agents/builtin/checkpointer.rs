@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -15,7 +14,6 @@ pub struct Checkpoint {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
-    #[allow(dead_code)]
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
