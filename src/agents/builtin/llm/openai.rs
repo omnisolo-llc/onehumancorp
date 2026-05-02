@@ -39,6 +39,7 @@ impl OpenAIClient {
 // ── Wire types ────────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct OpenAIMessage {
     role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,6 +99,7 @@ struct OpenAIChoice {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct OpenAIResponseMessage {
     role: String,
     content: Option<String>,

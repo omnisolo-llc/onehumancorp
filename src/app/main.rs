@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -2488,7 +2488,6 @@ mod cost_transparency_e2e_tests {
 #[cfg(test)]
 mod additional_tests {
     use crate::app;
-    use slint::Model;
 
     #[test]
     fn test_product_photo_and_description() {

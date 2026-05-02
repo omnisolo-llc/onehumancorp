@@ -100,6 +100,7 @@ struct AnthropicResponseContent {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct AnthropicUsage {
     input_tokens: i32,
     output_tokens: i32,
