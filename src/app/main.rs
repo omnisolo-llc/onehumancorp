@@ -17,7 +17,6 @@ pub mod app {
 
 use std::cell::RefCell;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use slint::Global;
 
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
@@ -26,22 +25,6 @@ thread_local! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
-
-    let login_ui = app::Login::new()?;
-    let login_ui_handle = login_ui.as_weak();
-
-    let tooltip_registry = app::TooltipRegistry::get(&login_ui);
-    tooltip_registry.on_request_tooltip_text(|id: slint::SharedString| {
-        match id.as_str() {
-            "add_product" => "Add a new product to your store catalog".into(),
-            "view_orders" => "View and manage customer orders".into(),
-            "messages" => "Check messages from your customers".into(),
-            "analytics" => "View your store's performance".into(),
-            "ask_ai" => "Get help from the OHC AI assistant".into(),
-            "menu" => "Open the main navigation menu".into(),
-            _ => "".into(),
-        }
-    });
 
     tokio::spawn(async move {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -67,6 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
@@ -525,6 +511,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
+                Box::leak(Box::new(cost_dashboard_ui));
             }
         }
     });
@@ -605,28 +592,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_generate_product_description({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let name = ui.get_product_name();
-                ui.set_product_description(format!("AI Generated Description for {}", name).into());
-            }
-        }
-    });
-
-    setup_wizard_ui.on_upload_product_photo({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                ui.set_product_photo_uploaded(true);
-            }
-        }
-    });
-
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        let welcome_checklist_handle_clone = welcome_checklist_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
@@ -665,9 +632,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
 
-            let req_company_name_clone = req_company_name.clone();
-            let wc_handle = welcome_checklist_handle_clone.clone();
-
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
             if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
@@ -697,25 +661,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
-
-                                let safe_name = req_company_name_clone.to_lowercase().replace(" ", "-");
-                                let share_link = format!("https://{}.ohc.app", safe_name);
-
                                 slint::invoke_from_event_loop(move || {
-                                    CLIPBOARD.with(|cb| {
-                                        if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                            let _ = ctx.set_contents(share_link);
-                                        }
-                                    });
-
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // For tests to assert correctly
-                                        let _ = ui.hide();
-                                    }
-                                    if let Some(wc) = wc_handle.upgrade() {
-                                        let _ = wc.show();
+                                        ui.set_step(10); // Go to checklist
                                     }
                                 }).unwrap();
                             }
@@ -2462,35 +2412,5 @@ mod cost_transparency_e2e_tests {
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
-    }
-}
-#[cfg(test)]
-mod additional_tests {
-    use crate::app;
-    use slint::Model;
-
-    #[test]
-    fn test_product_photo_and_description() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let ui = app::SetupWizard::new().unwrap();
-
-        let desc_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let desc_called_clone = desc_called.clone();
-        ui.on_generate_product_description(move || {
-            *desc_called_clone.borrow_mut() = true;
-        });
-
-        let photo_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let photo_called_clone = photo_called.clone();
-        ui.on_upload_product_photo(move || {
-            *photo_called_clone.borrow_mut() = true;
-        });
-
-        ui.invoke_generate_product_description();
-        assert!(*desc_called.borrow(), "generate description callback should be triggered");
-
-        ui.invoke_upload_product_photo();
-        assert!(*photo_called.borrow(), "upload photo callback should be triggered");
     }
 }

@@ -29,4 +29,7 @@ pub trait Provider: Send + Sync {
     
     /// WriteBlob writes the content of a blob.
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()>;
+
+    /// GetTenantUsage returns the total size of all blobs for a given tenant.
+    async fn get_tenant_usage(&self, tenant_id: &str) -> io::Result<i64>;
 }
