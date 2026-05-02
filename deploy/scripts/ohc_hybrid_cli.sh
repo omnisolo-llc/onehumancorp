@@ -15,42 +15,6 @@ echo -e "${BOLD}${BLUE}======================================================${R
 echo -e "${BOLD}${CYAN}      OHC Hybrid Agentic OS - Master CLI              ${RESET}"
 echo -e "${BOLD}${BLUE}======================================================${RESET}"
 
-check_system() {
-    echo -e "\n${BOLD}${BLUE}--- Deep System Diagnostics ---${RESET}"
-    local missing=0
-
-    echo -n "Checking for redis-cli... "
-    if command -v redis-cli &> /dev/null; then
-        echo -e "${GREEN}✓ Found${RESET}"
-    else
-        echo -e "${PURPLE}✗ Missing${RESET}"
-        missing=$((missing + 1))
-    fi
-
-    echo -n "Checking for sqlite3... "
-    if command -v sqlite3 &> /dev/null; then
-        echo -e "${GREEN}✓ Found${RESET}"
-    else
-        echo -e "${PURPLE}✗ Missing${RESET}"
-        missing=$((missing + 1))
-    fi
-
-    echo -n "Checking for docker... "
-    if command -v docker &> /dev/null; then
-        echo -e "${GREEN}✓ Found${RESET}"
-    else
-        echo -e "${PURPLE}✗ Missing${RESET}"
-        missing=$((missing + 1))
-    fi
-
-    if [ $missing -eq 0 ]; then
-        echo -e "${GREEN}All required system dependencies are installed.${RESET}"
-    else
-        echo -e "${PURPLE}Warning: $missing system dependencies are missing.${RESET}"
-    fi
-    echo -e "${BOLD}${BLUE}-------------------------------${RESET}\n"
-}
-
 while true; do
     echo -e "\n${BOLD}Select an action:${RESET}"
     echo -e "  1) Run Developer Setup"
@@ -59,7 +23,6 @@ while true; do
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
     echo -e "  6) Standalone DB Health Check"
-    echo -e "  7) Verify System State (Deep Diagnostics)"
     echo -e "  8) Seed Database with Mock Data"
     echo -e "  0) Exit"
     read -p "Choice: " choice
@@ -80,7 +43,6 @@ while true; do
                 echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
-        7) check_system ;;
         8) (set -e; bash "$SCRIPT_DIR/ohc-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;

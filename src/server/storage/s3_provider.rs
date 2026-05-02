@@ -48,9 +48,4 @@ impl Provider for S3Provider {
         // STUB
         Ok(())
     }
-
-    async fn get_tenant_usage(&self, _tenant_id: &str) -> io::Result<i64> {
-        // STUB
-        Ok(0)
-    }
 }

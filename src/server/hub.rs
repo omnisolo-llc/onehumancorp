@@ -13,8 +13,6 @@ use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::calculator::CostConfig;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
-use prost::Message as _;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -42,7 +40,6 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
-    pub(crate) transport: Option<Arc<dyn MeshTransport>>,
 }
 
 impl Hub {
@@ -56,11 +53,11 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
-            pool: pool.clone(),
+            pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
-            task_manager: TaskManager::new().with_db(pool),
+            task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
             recent_events: RwLock::new(Vec::new()),
@@ -68,14 +65,7 @@ impl Hub {
             get_token_usage: None,
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
-            transport: None,
         }
-    }
-
-    pub fn with_transport(mut self, transport: Arc<dyn MeshTransport>) -> Self {
-        self.task_manager = self.task_manager.with_transport(transport.clone());
-        self.transport = Some(transport);
-        self
     }
 
     pub fn get_cost_auditor(&self) -> Arc<CostAuditor> {
@@ -145,20 +135,6 @@ impl Hub {
     }
 
     pub fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
-        if let Some(transport) = &self.transport {
-            let mut payload = Vec::new();
-            msg.encode(&mut payload).map_err(|e| e.to_string())?;
-            let transport_clone = transport.clone();
-            let msg_id = msg.id.clone();
-            tokio::spawn(async move {
-                if let Err(e) = transport_clone.publish("agent_messages", MeshMessage {
-                    topic: "agent_messages".to_string(),
-                    payload,
-                }).await {
-                    eprintln!("Failed to publish message {} to mesh: {}", msg_id, e);
-                }
-            });
-        }
         let mut inbox = self.inbox.write().unwrap();
         let mut meetings = self.meetings.write().unwrap();
         let subs = self.subs.read().unwrap();
@@ -552,14 +528,8 @@ impl Hub {
             "cloud"
         };
 
-        let mesh_presence = if let Some(transport) = &self.transport {
-            transport.get_active_agents().await.unwrap_or_default()
-        } else {
-            vec![]
-        };
-
-        let status = if db_ping > 0 && !mesh_presence.is_empty() { "healthy" } else { "degraded" };
-        let mesh_active = db_ping > 0 && !mesh_presence.is_empty();
+        let status = if db_ping > 0 { "healthy" } else { "degraded" };
+        let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
 
         let mission_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
@@ -577,7 +547,6 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
-            "active_mesh_nodes": mesh_presence.len(),
         }))
     }
 }

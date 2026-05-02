@@ -1,5 +1,5 @@
 import { PasswordInput } from "password_input.slint";
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component SetupWizard inherits Window {
@@ -35,6 +35,8 @@ export component SetupWizard inherits Window {
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
+    in-out property <string> product_description: "";
+    in-out property <bool> product_photo_uploaded: false;
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
@@ -47,11 +49,18 @@ export component SetupWizard inherits Window {
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
 
+    in-out property <bool> welcome_prod_checked: false;
+    in-out property <bool> welcome_insta_checked: false;
+    in-out property <bool> welcome_share_checked: false;
+
     callback launch(string, string, string, string, string, string, string, string, string);
     callback generate_instant_preview();
+    callback generate_product_description();
+    callback upload_product_photo();
 
     callback next_step();
     callback select_business_type(string);
+    callback checklist_changed(int, bool);
     callback toggle_sell_physical();
     callback toggle_sell_digital();
     callback toggle_sell_services();
@@ -60,6 +69,9 @@ export component SetupWizard inherits Window {
     callback select_payment_pref(string);
     callback select_template(string);
     callback go_to_dashboard();
+    callback go_to_docs();
+    callback go_to_video();
+    callback go_to_support();
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
@@ -361,8 +373,23 @@ export component SetupWizard inherits Window {
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
+                Text { text: "AI Description"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                HorizontalBox {
+                    spacing: 8px;
+                    LineEdit { placeholder-text: "Product description"; text <=> product_description; height: 44px; }
+                    GlassCard {
+                        width: 44px; height: 44px;
+                        VerticalBox { alignment: center; Text { text: "✨"; horizontal-alignment: center; } }
+                        TouchArea { clicked => { generate_product_description(); } }
+                    }
+                }
+
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                HorizontalBox {
+                    spacing: 8px;
+                    Text { text: "$"; font-size: 18px; font-family: "Inter"; color: white; vertical-alignment: center; }
+                    LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                }
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
@@ -376,9 +403,10 @@ export component SetupWizard inherits Window {
                     height: 100px;
                     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
+                        Text { text: product_photo_uploaded ? "✅ Photo Uploaded" : "📷 Upload Photo (Crop)"; font-family: "Inter"; font-size: 16px; color: product_photo_uploaded ? #10b981 : white; font-weight: 700; horizontal-alignment: center;}
+                        Text { text: product_photo_uploaded ? "Tap to replace image" : "Tap to select and crop an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                     }
+                    TouchArea { clicked => { upload_product_photo(); } }
                 }
             }
 
@@ -479,18 +507,50 @@ export component SetupWizard inherits Window {
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_prod_checked;
+                                toggled => { root.checklist_changed(1, self.checked); }
+                            }
                             Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_insta_checked;
+                                toggled => { root.checklist_changed(2, self.checked); }
+                            }
                             Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            CheckBox {
+                                checked <=> welcome_share_checked;
+                                toggled => { root.checklist_changed(3, self.checked); }
+                            }
                             Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                        }
+
+                        if (welcome_prod_checked && welcome_insta_checked && welcome_share_checked) : Text {
+                            text: "Congratulations! You are complete and ready to grow your business.";
+                            color: #10b981;
+                            font-family: "Outfit";
+                            font-weight: 700;
+                        }
+
+                        HorizontalBox {
+                            spacing: 10px;
+                            TouchArea {
+                                clicked => { root.go_to_docs(); }
+                                Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; }
+                            }
+                            TouchArea {
+                                clicked => { root.go_to_video(); }
+                                Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; }
+                            }
+                            TouchArea {
+                                clicked => { root.go_to_support(); }
+                                Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; }
+                            }
                         }
                     }
                 }
@@ -527,7 +587,7 @@ export component SetupWizard inherits Window {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
                 animate background { duration: 1000ms; }
-                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Publish My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice);

@@ -18,10 +18,4 @@ export global TooltipRegistry {
     public function hide_tooltip() {
         is_visible = false;
     }
-
-    public function update_tooltip(id: string, text: string) {
-        if (active_text == request_tooltip_text(id)) {
-            active_text = text;
-        }
-    }
 }

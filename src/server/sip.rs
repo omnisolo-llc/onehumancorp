@@ -43,12 +43,6 @@ impl SipDB {
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;
-
-        // 1c. Recover "dangling" SYNCED missions missing a cloud_mission_id
-        sqlx::query("UPDATE agent_missions SET synced_to_cloud = FALSE, sync_error = 'Dangling SYNCED state' WHERE synced_to_cloud = TRUE AND cloud_mission_id IS NULL AND organization_id = $1")
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
             
         // 2. Mark missions as FAILED if they exceed the absolute age threshold
         sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
@@ -73,7 +67,6 @@ impl SipDB {
 
 
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
-        // Ensure organization_id is set for RLS if needed, although SipDB has it.
         let mut tx = self.pool.begin().await?;
 
         let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
