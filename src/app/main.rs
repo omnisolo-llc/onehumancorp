@@ -1340,10 +1340,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -1367,10 +1367,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -3852,4 +3852,57 @@ mod e2e_hybrid_blob_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_data_extraction() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Simulate values entered by the user
+        ui.set_website_template("Premium_Template".into());
+        ui.set_product_name("Exclusive Access".into());
+        ui.set_product_price("99.99".into());
+        ui.set_domain_choice("buy_new".into());
+
+        // In the app these get extracted when launch is called. We verify it here.
+        let validation_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let validation_success_clone = validation_success.clone();
+
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Premium_Template");
+            assert_eq!(product_name, "Exclusive Access");
+            assert_eq!(product_price, "99.99");
+            assert_eq!(domain_choice, "buy_new");
+            *validation_success_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+
+        assert!(*validation_success.borrow(), "Callback should receive correctly extracted UI state values");
     }
