@@ -166,6 +166,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                                "grow_business" => "Grow Business".into(),
+                                "referrals" => "Referrals".into(),
+                                "stats" => "Stats".into(),
+                                "share" => "Share".into(),
+                                "add_product" => "Add".into(),
+                                "view_orders" => "Orders".into(),
+                                "messages" => "Chat".into(),
                                 _ => "".into(),
                             }
                         });
@@ -203,6 +211,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                                "grow_business" => "Grow Business".into(),
+                                "referrals" => "Referrals".into(),
+                                "stats" => "Stats".into(),
+                                "share" => "Share".into(),
+                                "add_product" => "Add".into(),
+                                "view_orders" => "Orders".into(),
+                                "messages" => "Chat".into(),
                                 _ => "".into(),
                             }
                         });
@@ -901,94 +917,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
-                if let Ok(business_share_ui) = app::BusinessShare::new() {
-                    let business_share_handle = business_share_ui.as_weak();
+                let business_share_ui = app::BusinessShare::new().unwrap();
+                let business_share_handle = business_share_ui.as_weak();
 
-                    business_share_ui.on_copy_link({
-                        let bs_handle_clone_for_copy = business_share_handle.clone();
-                        move || {
-                            if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
-                                let link = ui.get_share_link();
+                business_share_ui.on_copy_link({
+                    let bs_handle_clone_for_copy = business_share_handle.clone();
+                    move || {
+                        if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
+                            let link = ui.get_share_link();
 
-                                CLIPBOARD.with(|cb| {
-                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                        if let Err(e) = ctx.set_contents(link.to_string()) {
-                                            println!("Failed to copy to clipboard: {:?}", e);
-                                        } else {
-                                            println!("Shareable Store Link copied to clipboard: {}", link);
-                                        }
+                            CLIPBOARD.with(|cb| {
+                                if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                    if let Err(e) = ctx.set_contents(link.to_string()) {
+                                        println!("Failed to copy to clipboard: {:?}", e);
                                     } else {
-                                        println!("Clipboard not initialized, failed to copy store link");
+                                        println!("Shareable Store Link copied to clipboard: {}", link);
                                     }
-                                });
-                            }
+                                } else {
+                                    println!("Clipboard not initialized, failed to copy store link");
+                                }
+                            });
                         }
-                    });
+                    }
+                });
 
-                    let bs_handle_ig = business_share_handle.clone();
-                    business_share_ui.on_share_to_instagram(move || {
-                        if let Some(ui) = bs_handle_ig.upgrade() {
-                            let link = ui.get_share_link();
-                            let ig_url = format!("https://www.instagram.com/?url={}", link);
-                            open_url(&ig_url);
-                        }
-                    });
-                    let bs_handle_x = business_share_handle.clone();
-                    business_share_ui.on_share_to_x(move || {
-                        if let Some(ui) = bs_handle_x.upgrade() {
-                            let link = ui.get_share_link();
-                            let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
-                            open_url(&x_url);
-                        }
-                    });
-                    let bs_handle_wa = business_share_handle.clone();
-                    business_share_ui.on_share_to_whatsapp(move || {
-                        if let Some(ui) = bs_handle_wa.upgrade() {
-                            let link = ui.get_share_link();
-                            let wa_url = format!("https://wa.me/?text={}", link);
-                            open_url(&wa_url);
-                        }
-                    });
-                    let bs_handle_clone = business_share_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = bs_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
+                let bs_handle_ig = business_share_handle.clone();
+                business_share_ui.on_share_to_instagram(move || {
+                    if let Some(ui) = bs_handle_ig.upgrade() {
+                        let link = ui.get_share_link();
+                        let ig_url = format!("https://www.instagram.com/?url={}", link);
+                        open_url(&ig_url);
+                    }
+                });
+                let bs_handle_x = business_share_handle.clone();
+                business_share_ui.on_share_to_x(move || {
+                    if let Some(ui) = bs_handle_x.upgrade() {
+                        let link = ui.get_share_link();
+                        let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
+                        open_url(&x_url);
+                    }
+                });
+                let bs_handle_wa = business_share_handle.clone();
+                business_share_ui.on_share_to_whatsapp(move || {
+                    if let Some(ui) = bs_handle_wa.upgrade() {
+                        let link = ui.get_share_link();
+                        let wa_url = format!("https://wa.me/?text={}", link);
+                        open_url(&wa_url);
+                    }
+                });
+                let bs_handle_clone = business_share_handle.clone();
+                let ref_handle_clone_for_open = referrals_handle.clone();
+                dashboard.on_action_open_referrals(move || {
+                    if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                        ui.invoke_refresh();
+                        let _ = ui.show();
+                    }
+                });
+                dashboard.on_action_share_store(move || {
+                    *share_store_called_clone.borrow_mut() = true;
+                    if let Some(ui) = bs_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
 
-                    let business_share_close_clone = business_share_handle.clone();
-                    business_share_ui.on_close(move || {
-                        if let Some(ui) = business_share_close_clone.upgrade() {
-                            let _ = ui.hide();
-                        }
-                    });
+                let business_share_close_clone = business_share_handle.clone();
+                business_share_ui.on_close(move || {
+                    if let Some(ui) = business_share_close_clone.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
 
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
-                } else {
-                    let referrals_handle_clone = referrals_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = referrals_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                }
+                // Keep strong reference alive indefinitely on the main thread via Box::leak
+                Box::leak(Box::new(business_share_ui));
 
                 let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
@@ -1007,6 +1007,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
+
+                let all_articles = vec![
+                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
+                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
+                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
+                ];
+                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+
+                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
+
+                let hc_weak_for_search = help_center_ui.as_weak();
+                let articles_for_search = all_articles_rc.clone();
+                help_center_ui.on_execute_search(move || {
+                    if let Some(ui) = hc_weak_for_search.upgrade() {
+                        let query = ui.get_search_query().to_string().to_lowercase();
+                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                            a.title.to_lowercase().contains(&query) ||
+                            a.description.to_lowercase().contains(&query) ||
+                            a.category.to_lowercase().contains(&query)
+                        }).cloned().collect();
+                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                    }
+                });
+
                 let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
@@ -1330,10 +1357,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
-            let req_first_product_name = product_name.to_string();
-            let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let req_website_template = ui.get_website_template().to_string();
+            let req_first_product_name = ui.get_product_name().to_string();
+            let req_first_product_price = ui.get_product_price().to_string();
+            let req_domain_choice = ui.get_domain_choice().to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1713,10 +1740,9 @@ mod e2e_tests {
 
     #[test]
     fn test_cuj_draft_for_review_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_cuj_draft_for_review_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1791,10 +1817,9 @@ mod e2e_tests {
 
     #[test]
     fn test_e2e_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1929,10 +1954,9 @@ mod tests {
 
     #[test]
     fn test_welcome_checklist_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_welcome_checklist_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::WelcomeChecklist::new().unwrap();
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1965,10 +1989,9 @@ mod tests {
 
     #[test]
     fn test_login_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_login_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
@@ -1976,10 +1999,9 @@ mod tests {
 
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_role(), "");
@@ -1988,10 +2010,9 @@ mod tests {
 
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
@@ -2000,10 +2021,9 @@ mod tests {
 
     #[test]
     fn test_landing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_landing_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::Landing::new().unwrap();
         assert_eq!(ui.get_is_variant_b(), false);
     }
@@ -2505,6 +2525,19 @@ mod docs_tests {
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2634,10 +2667,37 @@ mod docs_tests {
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
 
         let help_center = app::HelpCenter::new().unwrap();
-        assert_eq!(help_center.get_search_query(), "");
+        let all_articles = vec![
+            app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
+            app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+        ];
+        let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+        help_center.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
 
-        help_center.set_search_query("how to add products".into());
-        assert_eq!(help_center.get_search_query(), "how to add products");
+        let hc_weak_for_search = help_center.as_weak();
+        let articles_for_search = all_articles_rc.clone();
+        help_center.on_execute_search(move || {
+            if let Some(ui) = hc_weak_for_search.upgrade() {
+                let query = ui.get_search_query().to_string().to_lowercase();
+                let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                    a.title.to_lowercase().contains(&query) ||
+                    a.description.to_lowercase().contains(&query) ||
+                    a.category.to_lowercase().contains(&query)
+                }).cloned().collect();
+                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+            }
+        });
+
+        use slint::Model;
+        assert_eq!(help_center.get_search_query(), "");
+        assert_eq!(help_center.get_articles().row_count(), 2);
+
+        help_center.set_search_query("add products".into());
+        help_center.invoke_execute_search(); // Must invoke callback to execute search in test
+        assert_eq!(help_center.get_search_query(), "add products");
+        assert_eq!(help_center.get_articles().row_count(), 1, "Articles should be filtered by search query");
+
+        // Assert InteractiveWalkthrough creation/state behavior is validated elsewhere
     }
 
 #[test]
@@ -2682,6 +2742,14 @@ mod docs_tests {
                 "ask_ai" => "Ask the AI Assistant".into(),
                 "menu" => "Open Menu".into(),
                 "help_center" => "Help Center".into(),
+                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                "grow_business" => "Grow Business".into(),
+                "referrals" => "Referrals".into(),
+                "stats" => "Stats".into(),
+                "share" => "Share".into(),
+                "add_product" => "Add".into(),
+                "view_orders" => "Orders".into(),
+                "messages" => "Chat".into(),
                 _ => "".into(),
             }
         });
@@ -3095,10 +3163,9 @@ mod dashboard_docs_tests {
 
     #[test]
     fn test_documentation_components_e2e_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         // 1. Start from the home page after user login via the UI
         let login_ui = app::Login::new().unwrap();
