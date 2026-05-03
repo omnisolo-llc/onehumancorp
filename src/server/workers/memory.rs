@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
+#[allow(unused_imports)]
 use crate::minimax::LocalLLMClient;
+#[allow(unused_imports)]
 use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
