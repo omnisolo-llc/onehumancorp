@@ -75,11 +75,66 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "teammate" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let mailbox_dir = std::path::PathBuf::from(".agent_mailboxes");
+            if !mailbox_dir.exists() {
+                let _ = tokio::fs::create_dir_all(&mailbox_dir).await;
+            }
+            let mailbox_file = mailbox_dir.join(format!("{}.log", task_id));
+
+            let mut req = SubAgentRequest::default();
+            req.task = format!("{}\n\nWhen you are done, use the 'SendMessage' tool to report back to '{}'.", task, task_id);
+
+            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+            let res = async {
+                let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                    .map_err(|e| format!("invalid sub-agent address: {}", e))?
+                    .connect()
+                    .await
+                    .map_err(|e| format!("connect to sub-agent: {}", e))?;
+                let mut client = AgentServiceClient::new(channel);
+                client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
+            }.await;
+
+            if let Err(e) = res {
+                return Err(ToolError::LlmRecoverable(format!("Failed to spawn teammate subagent: {}", e)));
+            }
+
+            // Wait for message in mailbox
+            let mut summary = String::new();
+            let mut got_response = false;
+            for _ in 0..60 { // wait up to 60 seconds
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                if mailbox_file.exists() {
+                    if let Ok(content) = tokio::fs::read_to_string(&mailbox_file).await {
+                        for line in content.lines() {
+                            if let Ok(msg) = serde_json::from_str::<super::sendmessage::MailboxMessage>(line) {
+                                summary.push_str(&format!("[Subagent (Teammate)] Result: {}\n", msg.content));
+                            }
+                        }
+                        if !summary.is_empty() {
+                            got_response = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Cleanup the file if we got a response.
+            // Note: If we timeout, we might leave an orphaned file if the subagent eventually writes to it.
+            // Ideally we'd cancel the remote task.
+            let _ = tokio::fs::remove_file(&mailbox_file).await;
+
+            if !got_response {
+                Ok(format!("[Subagent (Teammate)] Task started, but no response was received in the mailbox within the timeout."))
+            } else {
+                Ok(summary)
+            }
         } else {
-            // For fork/teammate, we return the demonstration message for now as they aren't fully implemented in Rust yet.
+            // For fork we return the demonstration message for now
             let summary = match mode {
                 "fork" => format!("[Subagent (Fork)] Completed task: {}. Summary: I have verified the conditions locally within a cloned context.", task),
-                "teammate" => format!("[Subagent (Teammate)] Completed task: {}. Summary: I successfully worked in parallel and updated the required systems.", task),
                 _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
             };
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -165,5 +220,21 @@ mod tests {
         let res_str = result.unwrap();
         assert!(res_str.contains("[Subagent (Fork)]"));
         assert!(res_str.contains("do something"));
+    }
+
+    #[tokio::test]
+    async fn test_subagent_teammate_timeout() {
+        let executor = SubagentExecutor;
+        let args = json!({
+            "task": "do something teammate",
+            "mode": "teammate"
+        });
+
+        let result = executor.execute(args).await;
+        if let Err(ToolError::LlmRecoverable(e)) = result {
+            assert!(e.contains("Failed to spawn teammate subagent"));
+        } else {
+            panic!("Expected connection failure for missing gRPC server");
+        }
     }
 }
