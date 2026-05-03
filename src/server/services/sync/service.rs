@@ -80,9 +80,73 @@ impl SyncService for MySyncService {
         &self,
         request: Request<PowerSyncPushRequest>,
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
-        let _md = request.metadata().clone();
-        let _req = request.into_inner();
+        let md = request.metadata().clone();
+        let req = request.into_inner();
         println!("PowerSync received push request.");
+
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let mut tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            tenant_id = "system".to_string();
+        }
+
+        let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).unwrap_or_default();
+        if items.is_empty() {
+            return Ok(Response::new(PowerSyncPushResponse {
+                status: "ok".to_string(),
+            }));
+        }
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        for item in items {
+            if item["table"].as_str() == Some("agent_missions") {
+                let id = item["id"].as_str().unwrap_or("");
+                let status = item["status"].as_str().unwrap_or("PENDING");
+                let payload = item["payload"].as_str().unwrap_or("");
+                let org_id = item["organization_id"].as_str().unwrap_or(&tenant_id);
+                let updated_at_str = item["updated_at"].as_str().unwrap_or("");
+                let version = item["version"].as_i64().unwrap_or(1);
+
+                let updated_at = chrono::DateTime::parse_from_rfc3339(updated_at_str)
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO agent_missions (id, status, payload, organization_id, updated_at, _sync_status, version)
+                    VALUES ($1, $2, $3, $4, $5, 'synced', $6)
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = excluded.status,
+                        payload = excluded.payload,
+                        organization_id = excluded.organization_id,
+                        updated_at = excluded.updated_at,
+                        _sync_status = 'synced',
+                        version = excluded.version
+                    WHERE agent_missions.updated_at < excluded.updated_at
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(status)
+                    .bind(payload)
+                    .bind(org_id)
+                    .bind(updated_at)
+                    .bind(version as i32)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    eprintln!("failed to upsert agent_missions via PowerSync: {}", e);
+                }
+            }
+        }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(PowerSyncPushResponse {
             status: "ok".to_string(),
@@ -91,11 +155,73 @@ impl SyncService for MySyncService {
 
     async fn power_sync_pull(
         &self,
-        _request: Request<PowerSyncPullRequest>,
+        request: Request<PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
+        use sqlx::Row;
         println!("PowerSync received pull request");
+
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let mut tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            tenant_id = "system".to_string();
+        }
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = match sqlx::query(
+            "SELECT id, status, payload, organization_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
+        )
+        .fetch_all(&mut *tx)
+        .await {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("failed to fetch pending agent_missions for pull: {}", e);
+                return Err(Status::internal("database error"));
+            }
+        };
+
+        let mut payload_items = Vec::new();
+        let mut pulled_ids = Vec::new();
+
+        for row in rows {
+            let id: String = row.get("id");
+            let status: String = row.get("status");
+            let payload: String = row.get("payload");
+            let org_id: String = row.get("organization_id");
+            let updated_at: chrono::DateTime<chrono::Utc> = row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
+            let version: i32 = row.try_get("version").unwrap_or(1);
+
+            payload_items.push(serde_json::json!({
+                "table": "agent_missions",
+                "id": id,
+                "status": status,
+                "payload": payload,
+                "organization_id": org_id,
+                "updated_at": updated_at.to_rfc3339(),
+                "version": version
+            }));
+
+            pulled_ids.push(id);
+        }
+
+        if !pulled_ids.is_empty() {
+            for id in pulled_ids {
+                let _ = sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = $1")
+                    .bind(id)
+                    .execute(&mut *tx)
+                    .await;
+            }
+        }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let payload_str = serde_json::to_string(&payload_items).unwrap_or_else(|_| "[]".to_string());
+
         Ok(Response::new(PowerSyncPullResponse {
-            payload: "[]".to_string(),
+            payload: payload_str,
         }))
     }
 
@@ -249,19 +375,73 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPushRequest { payload: "test payload".to_string() });
+        let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
     }
 
     #[tokio::test]
     async fn test_power_sync_pull() {
+        // Will fail to fetch if table doesn't exist, so this will only pass with empty payload if error happens, but we actually check the fallback.
+        // In the mock we expect error from the query, but we don't have migrations applied.
+        // This is safe since we only check that it doesn't panic.
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
-        let resp = service.power_sync_pull(req).await.unwrap();
-        assert_eq!(resp.get_ref().payload, "[]");
+        let resp = service.power_sync_pull(req).await;
+        // The query fails because migrations are not run on dummy. Thus it returns internal error.
+        assert!(resp.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_power_sync_push_and_pull() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            // Only run e2e flow if real test db is available. Dummy will fail.
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap();
+
+        let service = MySyncService::new(pool.clone());
+
+        let mission_id = "test_mission_push_pull";
+        let payload_json = serde_json::json!([{
+            "table": "agent_missions",
+            "id": mission_id,
+            "status": "COMPLETED",
+            "payload": "test data",
+            "organization_id": "system",
+            "updated_at": chrono::Utc::now().to_rfc3339(),
+            "version": 2
+        }]).to_string();
+
+        let mut push_req = Request::new(PowerSyncPushRequest { payload: payload_json });
+        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/system".parse().unwrap());
+
+        let push_resp = service.power_sync_push(push_req).await.unwrap();
+        assert_eq!(push_resp.get_ref().status, "ok");
+
+        // Manually set status to 'pending' to simulate cloud modifications ready for pull
+        sqlx::query("UPDATE agent_missions SET _sync_status = 'pending' WHERE id = $1")
+            .bind(mission_id)
+            .execute(&pool)
+            .await.unwrap();
+
+        let pull_req = Request::new(PowerSyncPullRequest {});
+        let pull_resp = service.power_sync_pull(pull_req).await.unwrap();
+
+        let pulled_items: Vec<serde_json::Value> = serde_json::from_str(&pull_resp.get_ref().payload).unwrap();
+
+        let found = pulled_items.iter().find(|i| i["id"] == mission_id);
+        assert!(found.is_some());
+        assert_eq!(found.unwrap()["status"], "COMPLETED");
+
+        sqlx::query("DELETE FROM agent_missions WHERE id = $1").bind(mission_id).execute(&pool).await.unwrap();
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
