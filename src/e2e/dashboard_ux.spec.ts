@@ -25,6 +25,9 @@ test.describe('Dashboard UX', () => {
 
     // Verify softer wording for drafts
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
+
+    // Verify "My Helpers" text is visible instead of "Company Structure"
+    await expect(page.locator('text=My Helpers')).toBeVisible();
   });
 });
 
@@ -71,7 +74,7 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 
   await expect(page.locator('button:has-text("Help Center")')).toBeVisible();
   await expect(page.locator('button:has-text("Billing")')).toBeVisible();
-  await expect(page.locator('button:has-text("API Docs")')).toBeVisible();
+  await expect(page.locator('button:has-text("API Docs")')).not.toBeVisible();
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
