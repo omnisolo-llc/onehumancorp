@@ -1,9 +1,10 @@
-use super::{StateManager, standalone::StandaloneStateManager};
-use crate::db::{DB, DbStore};
+#![allow(unused_imports)]
 use crate::tasks::SharedTask;
-use std::sync::Arc;
 use tokio::test;
 use chrono::Utc;
+use super::{StateManager, standalone::StandaloneStateManager};
+use crate::db::{DB, DbStore};
+use std::sync::Arc;
 use sqlx::sqlite::SqlitePoolOptions;
 
 async fn setup_db() -> Arc<DB> {
@@ -137,7 +138,7 @@ use super::cloud::CloudStateManager;
 async fn test_cloud_dag_workflow_mock() {
     let db = setup_db().await;
     // For unit coverage we instantiate it
-    let state_manager = CloudStateManager::new(db.clone(), None);
+    let _state_manager = CloudStateManager::new(db.clone(), None);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
