@@ -111,3 +111,7 @@ fn is_sensitive_key(key: &str) -> bool {
 fn is_email(s: &str) -> bool {
     s.contains('@') && s.contains('.')
 }
+
+pub async fn record_autodream_consolidation_total(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_consolidation_total", "counter", count, serde_json::json!({})).await
+}
