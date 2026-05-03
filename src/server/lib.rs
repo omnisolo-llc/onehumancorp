@@ -134,6 +134,7 @@ pub mod ohc {
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ohc::orchestration::growth_service_server::GrowthServiceServer;
+use ohc::orchestration::sync_service_server::SyncServiceServer;
 use ohc::orchestration::*;
 
 pub struct MyHubService {
@@ -1055,6 +1056,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
+    let sync_service = crate::services::sync::service::MySyncService::new(db.pool.clone());
     
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
@@ -1129,6 +1131,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(SyncServiceServer::with_interceptor(sync_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
