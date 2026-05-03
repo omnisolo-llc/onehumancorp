@@ -20,6 +20,24 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+fn open_url(url: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            let _ = window.open_with_url_and_target(url, "_blank");
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        #[cfg(target_os = "windows")]
+        let _ = std::process::Command::new("cmd").args(["/C", "start", url]).spawn();
+        #[cfg(target_os = "macos")]
+        let _ = std::process::Command::new("open").arg(url).spawn();
+        #[cfg(target_os = "linux")]
+        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
 #[cfg(not(target_arch = "wasm32"))]
@@ -908,11 +926,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
 
                     let bs_handle_ig = business_share_handle.clone();
-                    business_share_ui.on_share_to_instagram(move || { if let Some(ui) = bs_handle_ig.upgrade() { println!("Sharing to IG: {}", ui.get_share_link()); } });
+                    business_share_ui.on_share_to_instagram(move || {
+                        if let Some(ui) = bs_handle_ig.upgrade() {
+                            let link = ui.get_share_link();
+                            let ig_url = format!("https://www.instagram.com/?url={}", link);
+                            open_url(&ig_url);
+                        }
+                    });
                     let bs_handle_x = business_share_handle.clone();
-                    business_share_ui.on_share_to_x(move || { if let Some(ui) = bs_handle_x.upgrade() { println!("Sharing to X: {}", ui.get_share_link()); } });
+                    business_share_ui.on_share_to_x(move || {
+                        if let Some(ui) = bs_handle_x.upgrade() {
+                            let link = ui.get_share_link();
+                            let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
+                            open_url(&x_url);
+                        }
+                    });
                     let bs_handle_wa = business_share_handle.clone();
-                    business_share_ui.on_share_to_whatsapp(move || { if let Some(ui) = bs_handle_wa.upgrade() { println!("Sharing to WhatsApp: {}", ui.get_share_link()); } });
+                    business_share_ui.on_share_to_whatsapp(move || {
+                        if let Some(ui) = bs_handle_wa.upgrade() {
+                            let link = ui.get_share_link();
+                            let wa_url = format!("https://wa.me/?text={}", link);
+                            open_url(&wa_url);
+                        }
+                    });
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
