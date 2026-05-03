@@ -265,6 +265,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
+    agent_config_ui.on_activate_agent({
+        let ui_handle = agent_config_handle.clone();
+        move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+            let ui_handle_err = ui_handle.clone();
+            tokio::spawn(async move {
+                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                match HubServiceClient::connect(url).await {
+                    Ok(mut client) => {
+                        let mut capabilities = std::collections::HashMap::new();
+                        capabilities.insert("can_reply".to_string(), can_reply);
+                        capabilities.insert("can_social".to_string(), can_social);
+                        capabilities.insert("can_write_descriptions".to_string(), can_write_descriptions);
+                        capabilities.insert("can_send_updates".to_string(), can_send_updates);
+
+                        let work_hours = match frequency.as_str() {
+                            "Real-time" => 24.0,
+                            "Hourly" => 8.0,
+                            "Daily" => 1.0,
+                            "Weekly" => 0.1,
+                            _ => 2.0,
+                        };
+
+                        let mut req = tonic::Request::new(ohc::orchestration::AgentConfig {
+                            role: agent.to_string(),
+                            provider: "default".to_string(),
+                            capabilities,
+                            work_hours,
+                        });
+                        // Pass x-spiffe-id as system
+                        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                        if let Err(e) = client.handle_config_wizard(req).await {
+                            eprintln!("Failed to handle config wizard: {}", e);
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_err.upgrade() {
+                                    ui.set_show_toast(false);
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_err.upgrade() {
+                                ui.set_show_toast(false);
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
 
     let prompt_tuning_ui = app::PromptTuning::new()?;
     prompt_tuning_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -341,10 +392,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
                         if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
 
-                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                        let mut prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
                             personality: tone.to_string(),
                             domain_focus,
                         });
+                        prompt_request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
                             eprintln!("Failed to handle prompt tuning: {}", e);
                             let ui_err_clone = ui_handle_err.clone();
@@ -1707,12 +1759,22 @@ mod tests {
         ui.invoke_next_step();
 
         // Step 2: Examples -> Step 3
+
+        let example_added = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let example_added_clone = example_added.clone();
+        ui.on_add_example(move || {
+            *example_added_clone.borrow_mut() = true;
+        });
+        ui.invoke_add_example();
+        assert!(*example_added.borrow(), "on_add_example should be called");
+
         ui.invoke_next_step();
 
         // Verify state
         assert_eq!(ui.get_tone(), "Concise");
         assert_eq!(ui.get_focus_only_business(), true);
         assert_eq!(ui.get_focus_avoid_competitors(), true);
+        assert_eq!(ui.get_step(), 3);
 
         let save_prompt_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let save_prompt_called_clone = save_prompt_called.clone();
@@ -1883,16 +1945,41 @@ mod docs_tests {
         // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
 
         // New steps in onboarding
         ui.invoke_select_template("Classic".into());
+        assert_eq!(ui.get_step(), 7);
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.0".into());
         ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 8);
 
         ui.invoke_select_domain("subdomain".into());
-
         assert_eq!(ui.get_step(), 9);
+
+        // Test going back from step 9 to step 11
+        ui.set_is_instant_build(true);
+        ui.set_step(11);
+        ui.set_instant_bio("A cool test bakery".into());
+        ui.invoke_generate_instant_preview();
+        // Since we are mocking, reset to 9 and launching=true
+        ui.set_is_instant_build(false);
+        ui.set_step(9);
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        let ui_weak = ui.as_weak();
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
+            *launch_called_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_launching(false);
+                u.set_step(10);
+            }
+        });
+
+        ui.set_launching(true);
         // Step 9: Launch -> Step 10
         ui.invoke_launch(
             ui.get_business_type(),
@@ -1905,11 +1992,9 @@ mod docs_tests {
             ui.get_product_price(),
             ui.get_domain_choice()
         );
-        assert_eq!(ui.get_launching(), true);
-
-        // Simulate background launch completing
-        ui.set_launching(false);
-        ui.set_step(10);
+        assert!(*launch_called.borrow());
+        assert_eq!(ui.get_launching(), false);
+        assert_eq!(ui.get_step(), 10);
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2343,10 +2428,27 @@ mod docs_tests {
         dashboard_ui.on_open_ai_chat(move || {
             let ui = app::AiConfig::new().unwrap();
             let provider_called = add_provider_called_clone.clone();
+
+            let providers = slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiAiConfigProvider {
+                    id: "openai".into(),
+                    name: "OpenAI".into(),
+                    base_url: "api.openai.com".into(),
+                    is_official: true,
+                    models: slint::ModelRc::new(slint::VecModel::from(vec!["gpt-4".into()])),
+                }
+            ]));
+            ui.set_providers(providers);
+
             ui.on_add_provider(move || {
                 *provider_called.borrow_mut() = true;
             });
             ui.invoke_add_provider();
+
+            use slint::Model;
+            assert_eq!(ui.get_providers().row_count(), 1);
+            let first_provider = ui.get_providers().row_data(0).unwrap();
+            assert_eq!(first_provider.name, "OpenAI");
         });
 
         dashboard_ui.invoke_open_ai_chat();
