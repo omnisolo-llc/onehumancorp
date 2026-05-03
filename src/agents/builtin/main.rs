@@ -95,6 +95,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
+            let heartbeat_transport = transport.clone();
+            let heartbeat_agent_id = agent_id.clone();
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "active", 30).await {
+                        tracing::error!("Failed to register presence: {}", e);
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+                }
+            });
             ohc_builtin_agent::start_builtin_agent(transport, svc_for_redis).await;
         }
         Err(e) => {
