@@ -29,5 +29,8 @@ rust_library(
         "@crates//:uuid",
         "@crates//:base64",
         "@crates//:dashmap",
+        "@crates//:image",
+        "@crates//:webp",
+        "@crates//:redis",
     ],
 )

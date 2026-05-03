@@ -55,6 +55,8 @@ rust_binary(
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
         "@crates//:walkdir",
+        "@crates//:image",
+        "@crates//:webp",
     ],
 )
 
@@ -114,6 +116,8 @@ rust_test(
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",
+        "@crates//:image",
+        "@crates//:webp",
     ],
 )
 

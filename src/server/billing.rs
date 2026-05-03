@@ -43,6 +43,14 @@ impl Tracker {
         }
     }
 
+    pub async fn record_storage_used(&self, tenant_id: &str, size_bytes: i64) -> Result<(), String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.record_storage_used(tenant_id, size_bytes).await
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await

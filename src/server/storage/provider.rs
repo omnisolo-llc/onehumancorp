@@ -27,6 +27,6 @@ pub trait Provider: Send + Sync {
     /// ReadBlob reads the content of a blob.
     async fn read_blob(&self, key: &str) -> io::Result<Vec<u8>>;
     
-    /// WriteBlob writes the content of a blob.
-    async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()>;
+    /// WriteBlob writes the content of a blob and returns the final key.
+    async fn write_blob(&self, tenant_id: &str, key: &str, data: &[u8]) -> io::Result<String>;
 }

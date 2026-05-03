@@ -7,13 +7,15 @@ use super::provider::{BlobMetadata, Provider};
 
 pub struct LocalProvider {
     base_path: PathBuf,
+    redis_client: Option<redis::Client>,
 }
 
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path })
+        let redis_client = std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok());
+        Ok(LocalProvider { base_path: abs_path, redis_client })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
@@ -95,12 +97,57 @@ impl Provider for LocalProvider {
         tokio::fs::read(path).await
     }
 
-    async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
-        let path = self.get_local_path(key)?;
+    async fn write_blob(&self, tenant_id: &str, key: &str, data: &[u8]) -> io::Result<String> {
+        let mut final_data = data.to_vec();
+        let mut final_key = key.to_string();
+
+        if key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") {
+            let data_clone = data.to_vec();
+            if let Ok(Some(webp_data)) = tokio::task::spawn_blocking(move || {
+                if let Ok(img) = image::load_from_memory(&data_clone) {
+                    if let Ok(encoder) = webp::Encoder::from_image(&img) {
+                        return Some(encoder.encode(80.0).to_vec());
+                    }
+                }
+                None
+            }).await {
+                final_data = webp_data;
+                let p = std::path::Path::new(key);
+                if let Some(stem) = p.file_stem() {
+                    if let Some(parent) = p.parent() {
+                        let new_path = parent.join(format!("{}.webp", stem.to_string_lossy()));
+                        final_key = new_path.to_string_lossy().to_string();
+                    } else {
+                        final_key = format!("{}.webp", stem.to_string_lossy());
+                    }
+                }
+            }
+        }
+
+        if let Some(client) = &self.redis_client {
+            let limiter = crate::pricing::rate_limit::RedisRateLimiter::new(client.clone());
+            match limiter.check_storage_quota(tenant_id, final_data.len() as i64).await {
+                Ok(status) => {
+                    if status.soft_limit_reached {
+                        return Err(io::Error::new(io::ErrorKind::Other, format!("Storage quota exceeded: {}", status.user_message.unwrap_or_default())));
+                    }
+                }
+                Err(e) => eprintln!("Failed to check storage quota: {}", e),
+            }
+        }
+
+        let path = self.get_local_path(&final_key)?;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        tokio::fs::write(path, data).await
+        tokio::fs::write(path, &final_data).await?;
+
+        if let Some(client) = &self.redis_client {
+            let limiter = crate::pricing::rate_limit::RedisRateLimiter::new(client.clone());
+            let _ = limiter.record_storage_used(tenant_id, final_data.len() as i64).await;
+        }
+
+        Ok(final_key)
     }
 }
 
@@ -216,7 +263,7 @@ mod tests {
         let content = b"test data";
         let key = "test/blob.bin";
 
-        p.write_blob(key, content).await.unwrap();
+        p.write_blob("system", key, content).await.unwrap();
 
         let read_content = p.read_blob(key).await.unwrap();
         assert_eq!(read_content, content);

@@ -78,6 +78,7 @@ pub fn all_tools(
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
+    tenant_id: Option<String>,
 ) -> Vec<Tool> {
     let mut tools = vec![
         bash::bash_tool(working_dir.clone()),
@@ -106,7 +107,7 @@ pub fn all_tools(
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(),
-        hybrid_blob::hybrid_blob_tool(),
+        hybrid_blob::hybrid_blob_tool(tenant_id),
     ];
 
     if let Some(accessor) = memory_accessor {

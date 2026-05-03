@@ -127,6 +127,46 @@ impl RedisRateLimiter {
             user_message: None,
         })
     }
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, size_bytes: i64) -> Result<RateLimitStatus, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let tenant_key = format!("tenant:{}:storage_used", tenant_id);
+        let current_used: i64 = redis::cmd("GET").arg(&tenant_key).query_async(&mut conn).await.unwrap_or(0);
+
+        if let Some(limit_mb) = tier.storage_limit_mb() {
+            let limit_bytes = (limit_mb as i64) * 1024 * 1024;
+            if current_used + size_bytes > limit_bytes {
+                return Ok(RateLimitStatus {
+                    is_allowed: false, // Enforce limit
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "You have reached your {} tier storage limit of {} MB. Consider upgrading to keep your business running smoothly!",
+                        match tier {
+                            PlanTier::Free => "Free",
+                            PlanTier::Starter => "Starter",
+                            _ => "Current",
+                        },
+                        limit_mb
+                    )),
+                });
+            }
+        }
+
+        Ok(RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        })
+    }
+
+    pub async fn record_storage_used(&self, tenant_id: &str, size_bytes: i64) -> Result<(), String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tenant_key = format!("tenant:{}:storage_used", tenant_id);
+        let _: i64 = conn.incr(&tenant_key, size_bytes).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
