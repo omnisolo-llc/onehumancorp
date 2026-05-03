@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-use crate::minimax::LocalLLMClient;
-use chrono::Utc;
-use ohc_builtin_agent::memory_store::EmbeddingRecord;
+
+
+
 
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
@@ -41,53 +41,17 @@ impl MemoryConsolidationWorker {
             return Ok(());
         }
 
-        let llm_client = LocalLLMClient::new();
-
         for (a, b) in conflicts {
-            let prompt = format!(
-                "Synthesize the following two conflicting memories into a single concise summary:\n1. {}\n2. {}",
-                a.content, b.content
-            );
+            let a_score = (a.owner_override, a.reliability_score, a.created_at);
+            let b_score = (b.owner_override, b.reliability_score, b.created_at);
 
-            let summary = match llm_client.reason(&prompt).await {
-                Ok(res) => res,
-                Err(e) => {
-                    eprintln!("Failed to synthesize memories: {}", e);
-                    continue;
-                }
+            let (_winner, loser) = if a_score >= b_score {
+                (a, b)
+            } else {
+                (b, a)
             };
 
-            let embedding = match llm_client.generate_embedding(&summary).await {
-                Ok(emb) => emb,
-                Err(e) => {
-                    eprintln!("Failed to generate embedding for merged summary: {}", e);
-                    continue;
-                }
-            };
-
-            let merged_id = uuid::Uuid::new_v4().to_string();
-            let merged_record = EmbeddingRecord {
-                id: merged_id,
-                tenant_id: a.tenant_id.clone(),
-                agent_id: a.agent_id.clone(),
-                content: format!("MERGED_SUMMARY: {}", summary),
-                embedding,
-                source_type: "MERGED_SUMMARY".to_string(),
-                created_at: Utc::now(),
-                last_referenced_at: Utc::now(),
-                reference_count: std::cmp::max(a.reference_count, b.reference_count),
-                reliability_score: std::cmp::max(a.reliability_score, b.reliability_score),
-                owner_override: a.owner_override || b.owner_override,
-                metadata: None,
-            };
-
-            if let Err(e) = repository.upsert(&merged_record).await {
-                eprintln!("Failed to insert merged memory: {}", e);
-                continue;
-            }
-
-            let _ = repository.delete(&a.id).await;
-            let _ = repository.delete(&b.id).await;
+            let _ = repository.delete(&loser.id).await;
         }
 
         Ok(())
