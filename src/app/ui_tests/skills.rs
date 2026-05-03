@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::Skills { crate::ui_tests::init(); app::Skills::new().unwrap() }
 

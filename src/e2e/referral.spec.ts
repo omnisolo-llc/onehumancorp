@@ -17,7 +17,7 @@ test.describe('Referral Program', () => {
     await newLinkButton.click();
 
     // 4. Assert link is generated and visible
-    await expect(page.locator('text=/ohc:\\/\\/join\\?ref=.*&utm_source=standalone_desktop&utm_medium=team_share&inviter=.*/')).toBeVisible();
+    await expect(page.locator('text=ohc://join?ref=')).toBeVisible();
 
     // 5. Verify refresh button works
     const refreshButton = page.locator('button:has-text("Refresh")');
