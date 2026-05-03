@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "tools",
@@ -16,6 +16,8 @@ rust_library(
     ],
     deps = [
         "//src/agents/builtin:core",
+        "//src/proto:agent_service_tonic",
+                "@crates//:tonic",
         "@crates//:chrono",
         "@crates//:glob",
         "@crates//:qrcode",
@@ -31,4 +33,10 @@ rust_library(
         "@crates//:dashmap",
         "@crates//:tempfile",
     ],
+)
+
+rust_test(
+    name = "tools_test",
+    crate = ":tools",
+    edition = "2024",
 )
