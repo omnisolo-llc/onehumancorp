@@ -618,11 +618,15 @@ impl TaskQueueService {
 
 pub struct SqliteTaskQueue {
     pool: sqlx::SqlitePool,
+    lock: std::sync::Arc<tokio::sync::Mutex<()>>,
 }
 
 impl SqliteTaskQueue {
     pub fn new(pool: sqlx::SqlitePool) -> Self {
-        SqliteTaskQueue { pool }
+        SqliteTaskQueue {
+            pool,
+            lock: std::sync::Arc::new(tokio::sync::Mutex::new(())),
+        }
     }
 
     pub async fn init(&self) -> Result<(), sqlx::Error> {
@@ -659,6 +663,8 @@ impl TaskQueue for SqliteTaskQueue {
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
         if roles.is_empty() { return Ok(None); }
+
+        let _guard = self.lock.lock().await;
 
         // SQLite doesn't support SELECT ... FOR UPDATE SKIP LOCKED.
         // We will do a simple select and update approach in a transaction.

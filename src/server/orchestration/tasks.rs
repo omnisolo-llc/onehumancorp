@@ -6,11 +6,15 @@ use chrono::Utc;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
+    sqlite_lock: tokio::sync::Mutex<()>,
 }
 
 impl TaskDecompositionService {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self {
+            db,
+            sqlite_lock: tokio::sync::Mutex::new(()),
+        }
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
@@ -48,6 +52,7 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let _guard = self.sqlite_lock.lock().await;
                 let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
                 let payload_str = if task.payload.is_empty() { "{}" } else { &task.payload };
                 let deliberation_str = task.deliberation_log.as_deref().unwrap_or("[]");
@@ -175,6 +180,7 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let _guard = self.sqlite_lock.lock().await;
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
@@ -506,6 +512,7 @@ impl TaskDecompositionService {
                 Ok(())
             },
             DbStore::Sqlite(pool) => {
+                let _guard = self.sqlite_lock.lock().await;
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
@@ -605,6 +612,7 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let _guard = self.sqlite_lock.lock().await;
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
