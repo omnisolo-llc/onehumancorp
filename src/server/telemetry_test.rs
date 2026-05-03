@@ -52,10 +52,12 @@ mod tests {
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(&db_url).await {
+                Ok(p) => p,
+                Err(_) => return,
+            };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;

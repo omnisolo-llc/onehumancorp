@@ -1132,6 +1132,14 @@ mod tests {
     pub(crate) async fn setup_test_service() -> Option<MyHubService> {
         let _ = std::env::var("DATABASE_URL").ok()?;
 
+        // Fast timeout connect for hermetic tests
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(&std::env::var("DATABASE_URL").unwrap()).await {
+                Ok(p) => p,
+                Err(_) => return None,
+            };
+
         let db = Arc::new(crate::db::DB::new().await.ok()?);
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);

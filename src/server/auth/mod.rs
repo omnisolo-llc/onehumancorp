@@ -193,15 +193,15 @@ impl Store {
             password_hash: hash,
             roles: vec![ROLE_ADMIN.to_string()],
             active: true,
-            organization_id: None,
+            organization_id: Some("sys".to_string()),
             created_at: now,
             updated_at: now,
             oidc_subject: None,
         };
 
         self.users.write().unwrap().insert(id.clone(), admin);
-        self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+        self.by_name.write().unwrap().insert(TenantKey { org_id: "sys".to_string(), key: admin_user }, id.clone());
+        self.by_email.write().unwrap().insert(TenantKey { org_id: "sys".to_string(), key: admin_email }, id);
     }
 
     pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
@@ -286,15 +286,15 @@ impl Store {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
         
-        if !org_id.is_empty() {
-            if let Some(ref user_org) = u.organization_id {
-                if user_org != org_id {
-                    return None;
-                }
-            } else {
+        // Removed empty org_id bypass to enforce multi-tenant isolation
+        if let Some(ref user_org) = u.organization_id {
+            if user_org != org_id {
                 return None;
             }
+        } else {
+            return None;
         }
+
         Some(u.clone())
     }
 
@@ -302,7 +302,8 @@ impl Store {
         let users = self.users.read().unwrap();
         users.values()
             .filter(|u| {
-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
+                // Removed empty org_id bypass to enforce multi-tenant isolation
+                u.organization_id.as_deref() == Some(org_id)
             })
             .cloned()
             .collect()
@@ -750,7 +751,7 @@ mod tests {
         }
         
         let s = Store::new();
-        let users = s.list_users("");
+        let users = s.list_users("sys");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
     }
@@ -758,20 +759,20 @@ mod tests {
     #[test]
     fn test_store_create_and_authenticate() {
         let s = Store::new();
-        let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
+        let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "org1".to_string()).unwrap();
         
-        let got = s.authenticate("alice", "hunter2!", "").unwrap();
+        let got = s.authenticate("alice", "hunter2!", "org1").unwrap();
         assert_eq!(got.id, u.id);
         
-        assert!(s.authenticate("alice", "wrongpass", "").is_err());
-        assert!(s.authenticate("nobody", "x", "").is_err());
+        assert!(s.authenticate("alice", "wrongpass", "org1").is_err());
+        assert!(s.authenticate("nobody", "x", "org1").is_err());
     }
 
     #[test]
     fn test_store_duplicate_username() {
         let s = Store::new();
-        s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
-        assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).is_err());
+        s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "org1".to_string()).unwrap();
+        assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "org1".to_string()).is_err());
     }
 
     #[test]
@@ -799,7 +800,7 @@ mod tests {
     #[tokio::test]
     async fn test_jwt_round_trip() {
         let s = Store::new();
-        let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
+        let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "org1".to_string()).unwrap();
         
         let token = s.issue_token(&u).unwrap();
         assert!(!token.is_empty());
@@ -812,7 +813,7 @@ mod tests {
     #[tokio::test]
     async fn test_jwt_revoked_token() {
         let s = Store::new();
-        let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
+        let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "org1".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
@@ -848,7 +849,7 @@ mod tests {
         let req = Request::new(LoginRequest {
             username: "admin".to_string(),
             password: "admin".to_string(),
-            organization_id: "".to_string(),
+            organization_id: "sys".to_string(),
         });
         
         let resp = s.login(req).await.unwrap();
@@ -864,7 +865,7 @@ mod tests {
             email: "new@test.com".to_string(),
             password: "password123".to_string(),
             roles: vec![],
-            organization_id: "".to_string(),
+            organization_id: "org1".to_string(),
         });
         
         let resp = s.register(req).await.unwrap();
@@ -876,7 +877,7 @@ mod tests {
     async fn test_auth_service_list_users() {
         let s = Arc::new(Store::new());
         let req = Request::new(ListUsersRequest {
-            organization_id: "".to_string(),
+            organization_id: "sys".to_string(),
         });
         
         let resp = s.list_users(req).await.unwrap();
@@ -969,8 +970,8 @@ mod isolation_tests {
         // Querying with the correct org_id should succeed
         assert!(s.get_user(&org_user.id, "org-1").is_some());
 
-        // Querying with empty org_id should succeed (admin context)
-        assert!(s.get_user(&org_user.id, "").is_some());
+        // Querying with empty org_id should fail since empty does not bypass anymore for some
+        assert!(s.get_user(&org_user.id, "").is_none());
 
         // Querying with "sys" should fail because "sys" is no longer a bypass
         assert!(s.get_user(&org_user.id, "sys").is_none());

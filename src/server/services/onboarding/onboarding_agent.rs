@@ -179,6 +179,12 @@ mod tests {
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;
+        // Try to connect to postgres with a 50ms timeout to avoid hanging the test
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(&std::env::var("DATABASE_URL").unwrap()).await;
+        if pool.is_err() { return None; }
+
         let db = Arc::new(DB::new().await.ok()?);
         Some(db)
     }

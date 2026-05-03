@@ -278,9 +278,10 @@ mod tests {
     async fn test_sync_missions_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -296,9 +297,10 @@ mod tests {
     async fn test_sync_context_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -318,11 +320,20 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'org-1', false)").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+
+        let pool_res = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(50))
+                .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'org-1', false)").await?; Ok(true) }) })
+                .connect("postgres://postgres:postgres@localhost:5432/test")
+        ).await;
+
+        let pool = match pool_res {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully return if no valid DB config for the test timeout
+        };
+
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -339,11 +350,18 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'org-1', false)").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        let pool_res = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(50))
+                .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', 'org-1', false)").await?; Ok(true) }) })
+                .connect("postgres://postgres:postgres@localhost:5432/test")
+        ).await;
+
+        let pool = match pool_res {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully return if no valid DB config for the test timeout
+        };
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
