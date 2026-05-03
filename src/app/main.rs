@@ -1017,6 +1017,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
+                let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+                let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
+                Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
+
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
                 Box::leak(Box::new(video_tutorials_ui));
@@ -1044,6 +1048,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 dashboard.on_open_help_center(move || {
                     if let Some(ui) = help_center_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_kairos_orchestration_walkthrough(move || {
+                    if let Some(ui) = kairos_orchestration_walkthrough_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -2722,6 +2732,11 @@ mod docs_tests {
         app::InteractiveWalkthrough::new().unwrap();
     }
     #[test]
+    fn test_kairos_orchestration_walkthrough_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::KairosOrchestrationWalkthrough::new().unwrap();
+    }
+    #[test]
     fn test_ai_help_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::AiHelpChat::new().unwrap();
@@ -2827,6 +2842,34 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::InteractiveWalkthrough::new().unwrap();
+
+        assert_eq!(ui.get_current_step(), 0);
+        ui.set_current_step(1);
+        assert_eq!(ui.get_current_step(), 1);
+        ui.set_current_step(2);
+        assert_eq!(ui.get_current_step(), 2);
+        ui.set_current_step(3);
+        assert_eq!(ui.get_current_step(), 3);
+    }
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
 
         assert_eq!(ui.get_current_step(), 0);
         ui.set_current_step(1);
@@ -3165,6 +3208,16 @@ mod dashboard_docs_tests {
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+
+        // Test KAIROS Orchestration Walkthrough
+        let kairos_walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_walkthrough_opened_clone = kairos_walkthrough_opened.clone();
+        dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
+            *kairos_walkthrough_opened_clone.borrow_mut() = true;
+            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap();
+        });
+        dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
+        assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
 
         // 6. Test Video Tutorials
         let video_tutorials_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
