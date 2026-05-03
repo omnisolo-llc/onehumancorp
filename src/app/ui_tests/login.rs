@@ -146,3 +146,51 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+// --- Grandmother UI/UX Verification Tests ---
+
+#[test]
+fn test_e2e_login_plain_language() {
+    let ui = create();
+    assert!(!ui.get_is_sign_up());
+    ui.invoke_login("u1".into(), "p1".into());
+}
+
+#[test]
+fn test_e2e_login_flow_toggle_signup() {
+    let ui = create();
+    ui.set_is_sign_up(true);
+    assert!(ui.get_is_sign_up());
+    ui.invoke_login("u1".into(), "p1".into());
+}
+
+#[test]
+fn test_e2e_login_flow_sso() {
+    let ui = create();
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let c = counter.clone();
+    ui.on_oauth_login(move |_| { *c.borrow_mut() += 1; });
+    ui.invoke_oauth_login("SSO".into());
+    assert_eq!(*counter.borrow(), 1);
+}
+
+#[test]
+fn test_e2e_login_flow_settings() {
+    let ui = create();
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let c = counter.clone();
+    ui.on_open_settings(move || { *c.borrow_mut() += 1; });
+    ui.invoke_open_settings();
+    assert_eq!(*counter.borrow(), 1);
+}
+
+#[test]
+fn test_e2e_login_flow_resend_verification() {
+    let ui = create();
+    ui.set_show_verification(true);
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let c = counter.clone();
+    ui.on_resend_verification(move |_| { *c.borrow_mut() += 1; });
+    ui.invoke_resend_verification("u1".into());
+    assert_eq!(*counter.borrow(), 1);
+}

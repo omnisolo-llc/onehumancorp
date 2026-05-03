@@ -3,7 +3,8 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
-    width: 400px;
+    min-width: 375px;
+    preferred-width: 400px;
     height: 600px;
     title: "One Human Corp - Login";
 
@@ -61,11 +62,13 @@ export component Login inherits Window {
                 LineEdit {
                     placeholder-text: "Email or Username";
                     text <=> username;
+                    height: 44px;
                 }
 
                 PasswordInput {
                     placeholder-text: "Password";
                     text <=> password;
+                    height: 44px;
                 }
 
                 if (show_verification) : VerticalBox {
@@ -75,6 +78,7 @@ export component Login inherits Window {
                     Button {
                         text: "Resend Verification Email";
                         clicked => { resend_verification(username); }
+                        height: 44px;
                     }
                 }
 
@@ -88,6 +92,7 @@ export component Login inherits Window {
                 Button {
                     text: is_sign_up ? "Sign Up" : "Sign In";
                     clicked => { login(username, password); }
+                    height: 44px;
                 }
 
                 Button {
@@ -95,6 +100,7 @@ export component Login inherits Window {
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
+                    height: 44px;
                 }
 
                 HorizontalBox {
@@ -105,11 +111,13 @@ export component Login inherits Window {
                 Button {
                     text: "Continue with Google/Apple";
                     clicked => { oauth_login("SSO"); }
+                    height: 44px;
                 }
                 
                 Button {
-                    text: "⚙ Fix Login Issues";
+                    text: "App Settings";
                     clicked => { open_settings(); }
+                    height: 44px;
                 }
             }
         }
