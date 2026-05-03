@@ -1289,7 +1289,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -1303,10 +1303,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), website_template.to_string()),
-                ("product_name".to_string(), product_name.to_string()),
-                ("product_price".to_string(), product_price.to_string()),
-                ("domain_choice".to_string(), domain_choice.to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -1330,10 +1330,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
-            let req_first_product_name = product_name.to_string();
-            let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let req_website_template = ui.get_website_template().to_string();
+            let req_first_product_name = ui.get_product_name().to_string();
+            let req_first_product_price = ui.get_product_price().to_string();
+            let req_domain_choice = ui.get_domain_choice().to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
