@@ -190,8 +190,7 @@ impl StateManager for CloudStateManager {
                   JOIN swarm_tasks dep ON dep.id::text = dep_id
                   WHERE dep.status != 'COMPLETED'
               )
-            LIMIT $1
-            FOR UPDATE SKIP LOCKED
+            LIMIT $1 FOR UPDATE SKIP LOCKED
             "#
         )
         .bind(limit)
