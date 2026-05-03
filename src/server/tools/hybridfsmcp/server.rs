@@ -1,13 +1,13 @@
 use std::sync::Arc;
 use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
-use super::provider::FileSystemProvider;
+use super::provider::BlobProvider;
 
 pub struct HybridFSMcpServer {
-    provider: Arc<dyn FileSystemProvider>,
+    provider: Arc<dyn BlobProvider>,
 }
 
 impl HybridFSMcpServer {
-    pub fn new(provider: Arc<dyn FileSystemProvider>) -> Self {
+    pub fn new(provider: Arc<dyn BlobProvider>) -> Self {
         Self { provider }
     }
 
