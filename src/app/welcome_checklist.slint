@@ -2,8 +2,9 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
-    width: 600px;
-    height: 400px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 400px;
     title: "Welcome Checklist";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);

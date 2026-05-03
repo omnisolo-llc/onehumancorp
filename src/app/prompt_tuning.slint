@@ -7,8 +7,9 @@ export struct UiPromptExample {
 }
 
 export component PromptTuning inherits Window {
-    width: 700px;
-    height: 500px;
+    preferred-width: 700px;
+    min-width: 375px;
+    preferred-height: 500px;
     title: "Tune Helper";
 
     in-out property <int> step: 0;

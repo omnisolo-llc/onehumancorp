@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Scaling inherits Window {
-    width: 700px;
-    height: 600px;
+    preferred-width: 700px;
+    min-width: 375px;
+    preferred-height: 600px;
     title: "Dynamic Scaling";
 
     in-out property <string> selected_role: "SOFTWARE_ENGINEER";

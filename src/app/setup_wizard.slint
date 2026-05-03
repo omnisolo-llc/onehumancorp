@@ -3,8 +3,9 @@ import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-wi
 import { GlassCard } from "glass_card.slint";
 
 export component SetupWizard inherits Window {
-    width: 375px;
-    height: 800px;
+    preferred-width: 375px;
+    min-width: 375px;
+    preferred-height: 800px;
     title: "Setup Wizard";
 
     in-out property <int> step: 0;

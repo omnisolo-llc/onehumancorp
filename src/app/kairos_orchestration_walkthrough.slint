@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component KairosOrchestrationWalkthrough inherits Window {
-    width: 600px;
-    height: 600px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 600px;
     title: "KAIROS Orchestration Walkthrough";
 
     in-out property <int> current_step: 0;

@@ -2,8 +2,9 @@ import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollV
 import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
-    width: 600px;
-    height: 500px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 500px;
     title: "Configure Helper";
 
     callback activate_agent(string, bool, bool, bool, bool, string);

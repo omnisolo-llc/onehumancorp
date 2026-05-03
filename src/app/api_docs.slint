@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export component ApiDocs inherits Window {
-    width: 800px;
-    height: 600px;
+    preferred-width: 800px;
+    min-width: 375px;
+    preferred-height: 600px;
     title: "Connect Custom Software";
     background: #f8fafc;
     in-out property <string> api_key: "sk_live_...";

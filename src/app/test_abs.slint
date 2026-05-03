@@ -1,6 +1,8 @@
 import { Window, TouchArea } from "std-widgets.slint";
 export component TestWindow inherits Window {
-    width: 200px; height: 200px;
+    preferred-width: 200px;
+    min-width: 375px;
+    preferred-height: 200px;
     t := TouchArea {
         width: 100px; height: 100px;
         property <length> px: self.absolute-position.x;

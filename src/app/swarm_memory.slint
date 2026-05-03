@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component SwarmMemory inherits Window {
-    width: 900px;
-    height: 600px;
+    preferred-width: 900px;
+    min-width: 375px;
+    preferred-height: 600px;
     title: "System Memory";
 
     callback view_walkthrough();
