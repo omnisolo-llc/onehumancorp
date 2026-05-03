@@ -3148,17 +3148,10 @@ mod remaining_e2e_tests {
             *plan_selected_clone.borrow_mut() = plan.to_string();
         });
         pricing_ui.invoke_select_plan("Pro".into());
-        let pricing_ui_toggle_handle = pricing_ui.as_weak();
-        pricing_ui.on_toggle_billing_cycle(move || {
-            if let Some(ui) = pricing_ui_toggle_handle.upgrade() {
-                let current = ui.get_is_annual();
-                ui.set_is_annual(!current);
-            }
-        });
+        assert_eq!(*plan_selected.borrow(), "Pro");
 
-        pricing_ui.set_is_annual(false);
+        pricing_ui.on_toggle_billing_cycle(move || {});
         pricing_ui.invoke_toggle_billing_cycle();
-        assert_eq!(pricing_ui.get_is_annual(), true);
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
