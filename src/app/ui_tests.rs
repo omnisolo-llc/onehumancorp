@@ -1,7 +1,6 @@
-#![allow(dead_code)]
 #[cfg(test)]
 use crate::app;
-//use slint::ComponentHandle;
+use slint::ComponentHandle;
 use slint::Model;
 
     // #[test]

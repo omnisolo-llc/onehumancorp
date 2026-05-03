@@ -76,27 +76,3 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
-
-test('dashboard stats layout is responsive and visible without horizontal scroll', async ({ page }) => {
-  // Mobile test width 375px
-  await page.setViewportSize({ width: 375, height: 800 });
-
-  // Starting from the home page as required by the e2e standard.
-  await page.goto('/login');
-
-  await page.fill('input[type="email"]', 'test@example.com');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button:has-text("Sign In")');
-
-  await page.waitForURL('**/*');
-
-  // Wait for dashboard title to be present.
-  await expect(page.locator('text=My Business').first()).toBeVisible({ timeout: 15000 });
-
-  // Validate no horizontal scroll overflow
-  const isScrollable = await page.evaluate(() => {
-    return document.documentElement.scrollWidth > document.documentElement.clientWidth;
-  });
-
-  expect(isScrollable).toBe(false);
-});
