@@ -643,6 +643,14 @@ impl Hub {
             Err(_) => 0,
         };
 
+        let local_to_cloud_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'")
+            .fetch_one(&self.pool)
+            .await
+        {
+            Ok(count) => count,
+            Err(_) => 0,
+        };
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -650,6 +658,7 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
+            "local_to_cloud_sync_backlog": local_to_cloud_sync_backlog,
         }))
     }
 }

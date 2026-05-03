@@ -951,6 +951,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
+    // Start Mission Pruning Worker
+    let db_for_pruning = db.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600)); // Every hour
+        loop {
+            interval.tick().await;
+            let sip_db = crate::sip::SipDB::new(db_for_pruning.pool.clone(), "system".to_string());
+            if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(1)).await {
+                eprintln!("failed to prune stale missions: {}", e);
+            }
+        }
+    });
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
