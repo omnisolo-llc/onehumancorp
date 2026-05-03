@@ -62,9 +62,11 @@ impl ShellSession {
         let env_snapshot_path = self.sandbox_dir.join("env_snapshot.sh");
         let cwd_snapshot_path = self.sandbox_dir.join("cwd_snapshot.txt");
 
+        let memory_dir_export = format!("export OHC_MEMORY_DIR='{}';", self.memory_dir.display());
+
         let wrapper_cmd = format!(
-            "trap '_S=$?; declare -p | grep -v \"^declare -[^ ]*r\" > \"{}\"; pwd -P > \"{}\"; exit $_S' EXIT\nexport OHC_MEMORY_DIR='{}'\nsource '{}' 2>/dev/null || true\n{}",
-            env_snapshot_path.display(), cwd_snapshot_path.display(), self.memory_dir.display(), env_snapshot_path.display(), command
+            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p > '{}'; pwd -P > '{}'",
+            memory_dir_export, env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
         );
 
         let mut cmd = Command::new("bash");
