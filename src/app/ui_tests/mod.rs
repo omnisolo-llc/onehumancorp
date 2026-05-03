@@ -42,39 +42,42 @@ pub mod prompt_tuning;
 pub mod secure_agent_config;
 pub mod agent_config;
 
-use std::sync::Once;
-static INIT: Once = Once::new();
-
 pub fn init() {
-    INIT.call_once(|| {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            struct HeadlessPlatform;
-            impl slint::platform::Platform for HeadlessPlatform {
-                fn create_window_adapter(
-                    &self,
-                ) -> Result<std::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
-                    let window = slint::platform::software_renderer::MinimalSoftwareWindow::new(
-                        slint::platform::software_renderer::RepaintBufferType::NewBuffer,
-                    );
-                    struct AdapterWrapper(
-                        std::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow>,
-                    );
-                    impl slint::platform::WindowAdapter for AdapterWrapper {
-                        fn window(&self) -> &slint::Window {
-                            self.0.window()
-                        }
-                        fn size(&self) -> slint::PhysicalSize {
-                            self.0.size()
-                        }
-                        fn renderer(&self) -> &dyn slint::platform::Renderer {
-                            self.0.renderer()
-                        }
-                    }
-                    Ok(std::rc::Rc::new(AdapterWrapper(window)))
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        struct HeadlessPlatform;
+        impl slint::platform::Platform for HeadlessPlatform {
+            fn create_window_adapter(
+                &self,
+            ) -> Result<std::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
+                thread_local! {
+                    static WINDOW: std::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow> = {
+                        slint::platform::software_renderer::MinimalSoftwareWindow::new(
+                            slint::platform::software_renderer::RepaintBufferType::NewBuffer,
+                        )
+                    };
                 }
+                let window = WINDOW.with(|w| w.clone());
+                struct AdapterWrapper(
+                    std::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow>,
+                );
+                impl slint::platform::WindowAdapter for AdapterWrapper {
+                    fn window(&self) -> &slint::Window {
+                        self.0.window()
+                    }
+                    fn size(&self) -> slint::PhysicalSize {
+                        self.0.size()
+                    }
+                    fn renderer(&self) -> &dyn slint::platform::Renderer {
+                        self.0.renderer()
+                    }
+                }
+                Ok(std::rc::Rc::new(AdapterWrapper(window)))
             }
-            let _ = slint::platform::set_platform(Box::new(HeadlessPlatform));
+            fn run_event_loop(&self) -> Result<(), slint::PlatformError> {
+                Ok(())
+            }
         }
-    });
+        let _ = slint::platform::set_platform(Box::new(HeadlessPlatform));
+    }
 }

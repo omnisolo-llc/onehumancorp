@@ -57,7 +57,7 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 
 #[test]
 fn create_a_verify_selected_agent() {
-    let ui = create_a();
+    let ui = create_c();
     ui.set_selected_agent("Support Bot".into());
     assert_eq!(ui.get_selected_agent(), "Support Bot");
     ui.set_selected_agent("".into());
@@ -68,7 +68,7 @@ fn create_a_verify_selected_agent() {
 
 #[test]
 fn create_a_verify_frequency_value() {
-    let ui = create_a();
+    let ui = create_c();
     ui.set_frequency_value(0.21);
     assert_eq!(ui.get_frequency_value(), 0.21);
     ui.set_frequency_value(0.22);

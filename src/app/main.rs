@@ -1549,7 +1549,6 @@ mod tests {
 
     #[test]
     fn test_welcome_checklist_creation() {
-        ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_welcome_checklist_creation because no display server is available.");
             return;
