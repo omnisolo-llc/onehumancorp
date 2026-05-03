@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod services {
+    pub mod dashboard;
     pub mod wizard;
     pub mod billing {
         pub mod auditor;
@@ -129,6 +130,9 @@ pub mod ohc {
     }
     pub mod common {
         pub use common_proto::ohc::common::*;
+    }
+    pub mod app {
+        pub use app_proto::ohc::api::v1::*;
     }
 }
 
@@ -1125,10 +1129,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone());
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
