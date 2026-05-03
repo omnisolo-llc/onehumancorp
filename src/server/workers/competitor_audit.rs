@@ -100,6 +100,7 @@ impl CompetitorAuditWorker {
 mod tests {
     use super::*;
 
+
     #[tokio::test]
     async fn test_worker_initialization() {
         // Skip full DB initialization in fast unit tests because connection timeout

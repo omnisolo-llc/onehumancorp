@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey};
 use tonic::{Request, Response, Status};
 
 pub mod postgres_store;
@@ -136,7 +136,7 @@ impl Store {
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
-            secret,
+            secret: secret,
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,

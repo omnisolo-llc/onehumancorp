@@ -7,7 +7,6 @@ use rand::distributions::Alphanumeric;
 use std::os::unix::fs::OpenOptionsExt;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-
 /// WriteFileAtomic writes data to a file atomically by writing to a temporary file first
 /// and then renaming it to the final path. This prevents file corruption on process crash.
 pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) -> io::Result<()> {
