@@ -68,6 +68,70 @@ fn create() -> app::UserManagement { crate::ui_tests::init(); app::UserManagemen
     assert_eq!(*called.borrow(), "user-99");
 }
 
+#[test] fn users_flow_generate_viral_invite_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_generate_viral_invite(move || { *c.borrow_mut() = true; });
+    ui.invoke_generate_viral_invite();
+    assert!(*called.borrow());
+}
+
+#[test] fn users_flow_open_referrals_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_open_referrals(move || { *c.borrow_mut() = true; });
+    ui.invoke_open_referrals();
+    assert!(*called.borrow());
+}
+
+#[test] fn users_create_verify_users_list() {
+    let ui = create();
+    let users = slint::VecModel::from(vec![
+        app::UiUser {
+            id: "u1".into(),
+            username: "u1".into(),
+            email: "u1@test.com".into(),
+            role: "Role".into(),
+            joined_at: "now".into(),
+            avatar_letter: "U".into(),
+        }
+    ]);
+    ui.set_users(Rc::new(users).into());
+    assert_eq!(ui.get_users().row_count(), 1);
+    let r = ui.get_users().row_data(0).unwrap();
+    assert_eq!(r.id, "u1");
+}
+
+#[test] fn users_create_verify_delete_user() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_delete_user(move |id| { *c.borrow_mut() = id.to_string(); });
+    ui.invoke_delete_user("u2".into());
+    assert_eq!(*called.borrow(), "u2");
+}
+
+#[test] fn users_create_verify_generate_viral_invite() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_generate_viral_invite(move || { *c.borrow_mut() = true; });
+    ui.invoke_generate_viral_invite();
+    assert!(*called.borrow());
+}
+
+#[test] fn users_create_verify_open_referrals() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_open_referrals(move || { *c.borrow_mut() = true; });
+    ui.invoke_open_referrals();
+    assert!(*called.borrow());
+}
+
+
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---

@@ -1630,6 +1630,71 @@ mod growth_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_growth_user_management_referral_loop() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Navigate to dashboard
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let users_ui = app::UserManagement::new().unwrap();
+        let users_ui_handle = users_ui.as_weak();
+
+        // Let's connect actual backend logic like in production
+        dashboard_ui.on_action_check_messages(move || {
+            if let Some(ui) = users_ui_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        let referrals_ui = app::Referrals::new().unwrap();
+        let referrals_ui_handle = referrals_ui.as_weak();
+
+        users_ui.on_generate_viral_invite(move || {
+            println!("Generate viral invite triggered in E2E");
+        });
+
+        users_ui.on_open_referrals(move || {
+            if let Some(ui) = referrals_ui_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        // End-to-end user navigation
+        dashboard_ui.invoke_action_check_messages();
+
+        // From User Management, user clicks buttons
+        users_ui.invoke_generate_viral_invite();
+        users_ui.invoke_open_referrals();
+
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiReferral {
+                referral_code: "E2E_GROWTH".into(),
+                user_id: "user_growth".into(),
+                clicks: 5,
+                conversions: 2,
+                created_at: "now".into(),
+            }
+        ]));
+        referrals_ui.set_referrals(referral_data);
+        assert_eq!(referrals_ui.get_referrals().row_count(), 1);
+        let first_row = referrals_ui.get_referrals().row_data(0).unwrap();
+        assert_eq!(first_row.referral_code, "E2E_GROWTH");
+    }
+
+    #[test]
     fn test_e2e_growth_referrals_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

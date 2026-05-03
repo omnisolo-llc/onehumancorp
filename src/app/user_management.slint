@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { Referrals } from "referrals.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiUser {
     id: string,
@@ -17,6 +18,8 @@ export component UserManagement inherits Window {
 
     in property <[UiUser]> users;
     callback delete_user(string);
+    callback generate_viral_invite();
+    callback open_referrals();
 
     background: #f8fafc;
 
@@ -28,6 +31,30 @@ export component UserManagement inherits Window {
             Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Invite User"; }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Grow Your Business"; font-size: 16px; font-weight: 700; color: #1e293b; }
+                Text {
+                    text: "Invite other business owners to OneHumanCorp! When they join, you both get 1 month of Pro for free.";
+                    color: #64748b;
+                    wrap: word-wrap;
+                }
+                HorizontalBox {
+                    Button {
+                        text: "Generate Invite Link";
+                        primary: true;
+                        clicked => { generate_viral_invite(); }
+                    }
+                    Button {
+                        text: "Open Referrals Dashboard";
+                        clicked => { open_referrals(); }
+                    }
+                }
+            }
         }
 
         VerticalBox {
