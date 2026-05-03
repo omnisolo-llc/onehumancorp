@@ -1,19 +1,19 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::{AgentServiceServer, AgentService},
+    proto::agent_service_server::{AgentServiceServer},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-use prost::Message;
-use tokio_stream::StreamExt;
+
+
 use opentelemetry::{global, KeyValue};
 use opentelemetry_sdk::{
     propagation::TraceContextPropagator,
     runtime,
-    trace::{self, Sampler},
+
     Resource,
 };
 use opentelemetry_otlp::WithExportConfig;
