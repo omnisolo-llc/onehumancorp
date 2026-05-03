@@ -23,16 +23,20 @@ impl MyAgentManagerService {
     async fn get_snapshot(&self) -> DashboardSnapshot {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
+        let hub3 = self.hub.clone();
+        let hub4 = self.hub.clone();
+        let (agents_res, meetings_res, cost_res, tokens_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || hub3.get_cost_auditor().get_total_cost()),
+            tokio::task::spawn_blocking(move || hub4.get_cost_auditor().get_total_tokens())
         );
         let agents = agents_res.unwrap();
         let meetings = meetings_res.unwrap();
-        let cost_auditor = self.hub.get_cost_auditor();
+
         let costs = Summary {
-            total_cost_usd: cost_auditor.get_total_cost(),
-            total_tokens: cost_auditor.get_total_tokens(),
+            total_cost_usd: cost_res.unwrap(),
+            total_tokens: tokens_res.unwrap(),
         };
 
         let mut status_map = std::collections::HashMap::new();
@@ -137,7 +141,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
-        let agents = self.hub.get_agents();
+        let hub_clone = self.hub.clone();
+        let agents = tokio::task::spawn_blocking(move || hub_clone.get_agents()).await.unwrap();
         let now = Utc::now();
         let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
             agent_id: a.id.clone(),

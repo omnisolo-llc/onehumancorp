@@ -294,7 +294,8 @@ impl OpsService for MyOpsService {
             return Err(Status::invalid_argument("role is required"));
         }
 
-        let agents = self.hub.get_agents();
+        let hub_clone = self.hub.clone();
+        let agents = tokio::task::spawn_blocking(move || hub_clone.get_agents()).await.unwrap();
         let mut current_count = 0;
         let mut idle_agent_ids = Vec::new();
         let mut active_agent_ids = Vec::new();
