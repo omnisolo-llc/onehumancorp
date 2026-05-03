@@ -137,8 +137,8 @@ impl AutoDreamWorker {
             // source_type will identify where the task originated
             let source_type = format!("TASK_{}", table.to_uppercase());
             
-            // Insert into the proper KAIROS autodream_memories table
-            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            // Insert into the proper KAIROS knowledge_embeddings table
+            db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             println!("AutoDream: ingested completed task {} from {}", id, table);
@@ -159,7 +159,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -175,7 +175,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
