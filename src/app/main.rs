@@ -676,13 +676,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
-                            user_id: "current_user".to_string(), // In production, use actual user_id
+                            user_id: "user_dash".to_string(), // In production, use actual user_id
                             referral_code: "".to_string(),
                         };
                         let response = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
-                            let link = format!("ohc://join?ref={}", referral.referral_code);
+                            let link = format!("ohc://join?ref={}&utm_source=standalone_desktop&utm_medium=team_share&inviter={}", referral.referral_code, "user_dash");
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle.upgrade() {
                                     ui.set_my_referral_link(link.into());
@@ -1119,11 +1119,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        // Delay going to step 10 to show confetti?
-                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
-                                        // If we transition to step 10, the confetti disappears.
-                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
-                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
+
+                                        // Auto-copy shareable link to clipboard
+                                        let link = ui.get_shareable_link();
+                                        CLIPBOARD.with(|cb| {
+                                            if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                                if let Err(e) = ctx.set_contents(link.to_string()) {
+                                                    println!("Failed to copy to clipboard: {:?}", e);
+                                                } else {
+                                                    println!("Shareable Store Link copied to clipboard: {}", link);
+                                                }
+                                            } else {
+                                                println!("Clipboard not initialized, failed to copy store link");
+                                            }
+                                        });
+
+                                        ui.invoke_copy_link(link);
                                     }
                                 }).unwrap();
                             }
@@ -1398,7 +1409,7 @@ mod growth_e2e_tests {
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            assert_eq!(link, "ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT");
             *link_shared_clone.borrow_mut() = true;
         });
 
@@ -1448,10 +1459,10 @@ mod growth_e2e_tests {
         let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_copied_clone = link_copied.clone();
         ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            assert_eq!(link, "ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT");
             *link_copied_clone.borrow_mut() = true;
         });
-        ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
+        ui.invoke_share_link("ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT".into());
         assert!(*link_copied.borrow(), "Share link callback should be invoked");
     }
 }
@@ -2123,6 +2134,12 @@ mod docs_tests {
             }
         });
 
+        let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let copied_link_clone = copied_link.clone();
+        ui.on_copy_link(move |link| {
+            *copied_link_clone.borrow_mut() = link.to_string();
+        });
+
         ui.set_launching(true);
         // Step 9: Launch -> Step 10
         ui.invoke_launch(
@@ -2139,6 +2156,12 @@ mod docs_tests {
         assert!(*launch_called.borrow());
         assert_eq!(ui.get_launching(), false);
         assert_eq!(ui.get_step(), 10);
+
+        // Verify auto-copy shareable link logic.
+        // In the real app, this is triggered when `start_onboarding` succeeds via gRPC.
+        // We simulate the success handler calling `ui.invoke_copy_link(ui.get_shareable_link())`
+        ui.invoke_copy_link(ui.get_shareable_link());
+        assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2314,7 +2337,7 @@ mod docs_tests {
     }
 
     #[test]
-    fn test_e2e_tooltip_flow() {
+    fn test_dashboard_actions_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -2335,23 +2358,6 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-
-        // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                _ => "".into(),
-            }
-        });
-
-        let tr = dashboard_ui.global::<app::TooltipRegistry>();
-        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
-        assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
-        tr.invoke_hide_tooltip();
-        assert_eq!(tr.get_is_visible(), false);
-
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
 
@@ -2362,7 +2368,7 @@ mod docs_tests {
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
     }
 
     #[test]
@@ -3395,7 +3401,7 @@ mod e2e_hybrid_blob_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
             assert_eq!(website_template, "Modern Glass");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");

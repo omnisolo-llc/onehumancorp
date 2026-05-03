@@ -1,5 +1,5 @@
 use crate::app;
-use slint::ComponentHandle;
+
 
 fn create() -> app::WelcomeChecklist { crate::ui_tests::init(); app::WelcomeChecklist::new().unwrap() }
 
