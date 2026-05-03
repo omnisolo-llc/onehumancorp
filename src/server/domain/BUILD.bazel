@@ -6,11 +6,10 @@ go_library(
         "mesh.go",
         "tasks.go",
     ],
-    importpath = "onehumancorp/srcs/server/domain",
+    importpath = "onehumancorp/src/server/domain",
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_go_proto",
-        "@org_golang_google_protobuf//proto",
     ],
 )
 
