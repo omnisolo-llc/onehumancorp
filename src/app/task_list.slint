@@ -50,7 +50,7 @@ export component TaskList inherits Window {
                         Text { text: t.status; color: #a855f7; }
                     }
                     
-                    if (t.agent_id != "") : Text { text: "Agent: " + t.agent_id; color: #64748b; }
+                    if (t.agent_id != "") : Text { text: "Helper: " + t.agent_id; color: #64748b; }
                     if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #64748b; font-size: 12px; }
                     if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #64748b; font-size: 12px; }
                     if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #64748b; font-size: 12px; }
