@@ -142,6 +142,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                            match id.as_str() {
+                                "ask_ai" => "Ask the AI Assistant".into(),
+                                "menu" => "Open Menu".into(),
+                                "help_center" => "Help Center".into(),
+                                _ => "".into(),
+                            }
+                        });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -171,6 +179,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                            match id.as_str() {
+                                "ask_ai" => "Ask the AI Assistant".into(),
+                                "menu" => "Open Menu".into(),
+                                "help_center" => "Help Center".into(),
+                                _ => "".into(),
+                            }
+                        });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -924,6 +940,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+
+                let help_center_ui = app::HelpCenter::new().unwrap();
+                let help_center_handle = help_center_ui.as_weak();
+                Box::leak(Box::new(help_center_ui));
+
+                let ai_chat_ui = app::AiHelpChat::new().unwrap();
+                let ai_chat_handle = ai_chat_ui.as_weak();
+
+                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                Box::leak(Box::new(interactive_walkthrough_ui));
+
+                let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                let video_tutorials_handle = video_tutorials_ui.as_weak();
+                Box::leak(Box::new(video_tutorials_ui));
+
+                let api_docs_ui = app::ApiDocs::new().unwrap();
+                let api_docs_handle = api_docs_ui.as_weak();
+                Box::leak(Box::new(api_docs_ui));
+
+                let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                let release_notes_handle = release_notes_ui.as_weak();
+                Box::leak(Box::new(release_notes_ui));
+
+                ai_chat_ui.on_send_message({
+                    let chat_handle = ai_chat_handle.clone();
+                    move || {
+                        if let Some(ui) = chat_handle.upgrade() {
+                            let input = ui.get_user_input();
+                            println!("User asked AI Help: {}", input);
+                            ui.set_user_input("".into());
+                            // In a real implementation this would query the backend
+                        }
+                    }
+                });
+                Box::leak(Box::new(ai_chat_ui));
+
+                dashboard.on_open_help_center(move || {
+                    if let Some(ui) = help_center_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_ai_chat(move || {
+                    if let Some(ui) = ai_chat_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_interactive_walkthrough(move || {
+                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_video_tutorials(move || {
+                    if let Some(ui) = video_tutorials_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_api_docs(move || {
+                    if let Some(ui) = api_docs_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_release_notes(move || {
+                    if let Some(ui) = release_notes_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 let gb_handle_for_dashboard = grow_business_handle.clone();
                 dashboard.on_action_grow_business(move || {
                     if let Some(ui) = gb_handle_for_dashboard.upgrade() {
@@ -1177,10 +1265,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2527,6 +2615,7 @@ mod docs_tests {
             match id.as_str() {
                 "ask_ai" => "Ask the AI Assistant".into(),
                 "menu" => "Open Menu".into(),
+                "help_center" => "Help Center".into(),
                 _ => "".into(),
             }
         });
