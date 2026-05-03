@@ -1,4 +1,5 @@
 import { TooltipElement } from "tooltip_element.slint";
+import { TooltipRegistry } from "tooltip_registry.slint";
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -362,6 +363,28 @@ export component Dashboard inherits Window {
                     Button { text: "+"; width: 44px; height: 44px; }
                 }
             }
+        }
+    }
+
+    if (TooltipRegistry.is_visible): Rectangle {
+        x: TooltipRegistry.active_x;
+        y: TooltipRegistry.active_y + 10px;
+        width: max(tooltip_text.preferred-width + 16px, 100px);
+        max-width: min(root.width - self.x - 16px, 300px);
+        height: tooltip_text.preferred-height + 16px;
+        background: #1e293b;
+        border-radius: 8px;
+        z: 1000;
+
+        tooltip_text := Text {
+            x: 8px;
+            y: 8px;
+            width: parent.width - 16px;
+            text: TooltipRegistry.active_text;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            wrap: word-wrap;
         }
     }
 }
