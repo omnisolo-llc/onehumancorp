@@ -24,6 +24,47 @@ impl OnboardingAgent {
 
         self.seed_default_agents(&org_id).await?;
 
+        // Dispatch async job to Marketing/Ops
+        let task_id = format!("task-{}", uuid::Uuid::new_v4());
+        let mission_id = format!("mission-{}", uuid::Uuid::new_v4());
+        let parent_plan_id = format!("plan-{}", uuid::Uuid::new_v4());
+        let agent_id = format!("{}-marketing", org_id); // Marketing department
+
+        let payload = json!({
+            "action": "provision_initial_state",
+            "business_type": business_type,
+            "company_name": company_name,
+            "company_description": req.company_description,
+        });
+
+        sqlx::query(
+            r#"
+            INSERT INTO shared_tasks_decomposition (
+                id, organization_id, mission_id, parent_plan_id, dependencies,
+                title, description, status, priority, payload, deliberation_log,
+                depth, created_at, updated_at, assigned_agent_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            "#
+        )
+        .bind(&task_id)
+        .bind(&org_id)
+        .bind(&mission_id)
+        .bind(&parent_plan_id)
+        .bind(json!([]))
+        .bind("Provision Initial State")
+        .bind("Generate website layout and policies based on user input")
+        .bind("PENDING")
+        .bind("P0")
+        .bind(&payload)
+        .bind(json!([]))
+        .bind(0)
+        .bind(chrono::Utc::now())
+        .bind(chrono::Utc::now())
+        .bind(&agent_id)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
