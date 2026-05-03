@@ -1031,16 +1031,99 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
-            if let Some(ui) = ui_weak.upgrade() {
-                // Here we would normally call an AI endpoint.
-                // For now, we simulate the extraction as requested by the test and the design doc.
-                ui.set_company_name("AI Generated Store".into());
-                ui.set_business_type("Online Store".into());
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let bio = ui.get_instant_bio().to_string();
+                tokio::spawn(async move {
+                    let mut company_name = "AI Generated Store".to_string();
+                    let mut business_type = "Online Store".to_string();
 
-                ui.set_admin_email("admin@ai-generated.test".into());
-                ui.set_payment_pref("online".into());
-                ui.set_step(9); // Skip straight to Review & Launch
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other).", bio);
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "setup_wizard".into(),
+                        });
+                        let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                        if let Ok(resp) = response {
+                            let content = resp.into_inner().content;
+                            // Simple JSON extraction attempt
+                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+                                if let Some(n) = v.get("company_name").and_then(|n| n.as_str()) { company_name = n.to_string(); }
+                                if let Some(t) = v.get("business_type").and_then(|t| t.as_str()) { business_type = t.to_string(); }
+                            }
+                        }
+                    }
+
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_handle.upgrade() {
+                            ui.set_company_name(company_name.into());
+                            ui.set_business_type(business_type.into());
+                            ui.set_admin_email("admin@ai-generated.test".into());
+                            ui.set_payment_pref("online".into());
+                            ui.set_is_generating_instant_preview(false);
+                            ui.set_step(9); // Skip straight to Review & Launch
+                        }
+                    }).unwrap();
+                });
             }
+        }
+    });
+
+    setup_wizard_ui.on_generate_company_description({
+        let ui_weak = setup_wizard_handle.clone();
+        move |name, biz_type| {
+            let ui_handle = ui_weak.clone();
+            let name = name.to_string();
+            let biz_type = biz_type.to_string();
+            tokio::spawn(async move {
+                let mut description = format!("{} is a premium {} business.", name, biz_type);
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = format!("Generate a catchy 1-sentence tagline/description for a business named \"{}\" which is a \"{}\".", name, biz_type);
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "setup_wizard".into(),
+                    });
+                    let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                    if let Ok(resp) = response {
+                        description = resp.into_inner().content.trim().to_string();
+                    }
+                }
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_company_description(description.into());
+                        ui.set_is_generating_company_description(false);
+                    }
+                }).unwrap();
+            });
+        }
+    });
+
+    setup_wizard_ui.on_generate_product_description({
+        let ui_weak = setup_wizard_handle.clone();
+        move |prod_name| {
+            let ui_handle = ui_weak.clone();
+            let prod_name = prod_name.to_string();
+            tokio::spawn(async move {
+                let mut description = format!("A premium {}.", prod_name);
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "setup_wizard".into(),
+                    });
+                    let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                    if let Ok(resp) = response {
+                        description = resp.into_inner().content.trim().to_string();
+                    }
+                }
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_product_description(description.into());
+                        ui.set_is_generating_product_description(false);
+                    }
+                }).unwrap();
+            });
         }
     });
 
