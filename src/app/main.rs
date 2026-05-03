@@ -2305,6 +2305,9 @@ mod docs_tests {
             match id.as_str() {
                 "ask_ai" => "Ask the AI Assistant".into(),
                 "menu" => "Open Menu".into(),
+                "add_product" => "Add a new product to your store catalog".into(),
+                "view_orders" => "View and manage your customer orders".into(),
+                "messages" => "Check messages from your customers".into(),
                 _ => "".into(),
             }
         });
@@ -2315,6 +2318,21 @@ mod docs_tests {
         assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
+
+        tr.invoke_show_tooltip("add_product".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "Add a new product to your store catalog");
+        tr.invoke_hide_tooltip();
+
+        tr.invoke_show_tooltip("view_orders".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "View and manage your customer orders");
+        tr.invoke_hide_tooltip();
+
+        tr.invoke_show_tooltip("messages".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "Check messages from your customers");
+        tr.invoke_hide_tooltip();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
