@@ -175,10 +175,14 @@ impl GrowthService for MyGrowthService {
         }
 
         let referral_code = if req.referral_code.is_empty() {
-            referral_api::generate_referral_link(&req.user_id)
-                .map_err(|e| Status::internal(e))?
-                .split('=')
-                .last()
+            let generated_link = referral_api::generate_referral_link(&req.user_id)
+                .map_err(|e| Status::internal(e))?;
+
+            generated_link
+                .split("&utm_source=")
+                .next()
+                .unwrap_or("")
+                .strip_prefix("ohc://join?ref=")
                 .unwrap_or("error")
                 .to_string()
         } else {
