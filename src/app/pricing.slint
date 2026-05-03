@@ -53,9 +53,9 @@ export component Pricing inherits Window {
             features: ["Multiple Locations", "Pro Agents", "Priority Support"],
         },
         {
-            name: "Enterprise",
+            name: "Business",
             price: "Custom",
-            description: "Enterprise features and support.",
+            description: "Business features and support.",
             is_recommended: false,
             agent_limit: "Unlimited number of agents",
             storage_limit: "Unlimited storage limit",
@@ -131,7 +131,7 @@ export component Pricing inherits Window {
                             height: 44px;
                             clicked => { select_plan(tier.name); }
                         }
-                        if tier.name == "Enterprise" || tier.name == "Business" : Button {
+                        if tier.name == "Business" : Button {
                             text: "Contact Sales";
                             height: 44px;
                             clicked => { select_plan(tier.name); }
