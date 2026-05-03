@@ -22,7 +22,7 @@ export component BusinessShare inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Share Your Store"; font-size: 24px; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Share Your Store"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
@@ -45,9 +45,9 @@ export component BusinessShare inherits Window {
                     Text { text: "Logo / Cover Image"; color: #cbd5e1; horizontal-alignment: center; vertical-alignment: center; }
                 }
 
-                Text { text: business_name; font-size: 20px; font-weight: 700; color: white; horizontal-alignment: center; }
-                Text { text: business_tagline; font-size: 14px; color: #cbd5e1; horizontal-alignment: center; wrap: word-wrap; }
-                Text { text: share_link; font-size: 12px; color: #a855f7; horizontal-alignment: center; }
+                Text { text: business_name; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
+                Text { text: business_tagline; font-size: 14px; font-family: "Inter"; color: #cbd5e1; horizontal-alignment: center; wrap: word-wrap; }
+                Text { text: share_link; font-size: 12px; font-family: "Inter"; color: #a855f7; horizontal-alignment: center; }
             }
         }
 
