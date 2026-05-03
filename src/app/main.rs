@@ -142,6 +142,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        let my_plan_ui = app::MyPlan::new().unwrap();
+                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                        let my_plan_handle_clone = my_plan_ui.as_weak();
+                        dashboard.on_open_billing(move || {
+                            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                        my_plan_ui.on_view_details(move || {
+                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -152,6 +166,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
+                        Box::leak(Box::new(my_plan_ui));
+                        Box::leak(Box::new(cost_dashboard_ui));
                     }
                 }
             }
@@ -179,6 +195,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        let my_plan_ui = app::MyPlan::new().unwrap();
+                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                        let my_plan_handle_clone = my_plan_ui.as_weak();
+                        dashboard.on_open_billing(move || {
+                            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                        my_plan_ui.on_view_details(move || {
+                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -189,6 +219,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
+                        Box::leak(Box::new(my_plan_ui));
+                        Box::leak(Box::new(cost_dashboard_ui));
                     }
                 }
             }
@@ -766,7 +798,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
-    Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_toggle = pricing_handle.clone();
     pricing_ui.on_toggle_billing_cycle(move || {
@@ -1023,6 +1054,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(dashboard));
 
                 Box::leak(Box::new(my_plan_ui));
+                Box::leak(Box::new(cost_dashboard_ui));
                 Box::leak(Box::new(pricing_ui));
             }
         }
