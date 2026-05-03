@@ -1,5 +1,5 @@
 import { PasswordInput } from "password_input.slint";
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, TextEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component SetupWizard inherits Window {
@@ -30,6 +30,11 @@ export component SetupWizard inherits Window {
     in-out property <string> admin_password: "";
 
     in-out property <bool> is_advanced: false;
+
+    // Instant Build Text Input
+    in-out property <string> conversational_input: "";
+    in-out property <bool> is_generating_conversational: false;
+
 
     // New Steps State
     in-out property <string> website_template: "";
@@ -139,7 +144,7 @@ export component SetupWizard inherits Window {
         }
 
         ScrollView {
-            // Step 0: Welcome
+            // Step 0: Welcome (Conversational)
             if (step == 0) : VerticalBox {
                 spacing: 24px;
                 alignment: center;
@@ -152,23 +157,28 @@ export component SetupWizard inherits Window {
                     horizontal-alignment: center;
                 }
                 Text {
-                    text: "Zero tech skills needed. We do the heavy lifting.";
+                    text: "Tell us about your business.";
                     font-size: 16px;
                     font-family: "Inter";
                     color: #94a3b8;
                     horizontal-alignment: center;
                 }
+
+                TextEdit {
+                    text <=> conversational_input;
+                    height: 100px;
+                }
+
                 GlassCard {
                     height: 54px;
                     background: rgba(168, 85, 247, 0.8);
-                    VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { next_step(); } }
-                }
-                GlassCard {
-                    height: 54px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                    VerticalBox { alignment: center; Text { text: "Start My Business →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => {
+                        is_instant_build = true;
+                        step = 11;
+                        instant_bio = conversational_input;
+                        save_state();
+                    } }
                 }
             }
 

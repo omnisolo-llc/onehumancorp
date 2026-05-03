@@ -205,6 +205,15 @@ impl HubService for MyHubService {
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
+            // Also publish MessageReceived teammate mesh event
+            let event = ohc::orchestration::TeammateMeshEvent {
+                agent_id: "Customer Success Agent".into(),
+                action: "Message received, drafting response".into(),
+                status: "SUCCESS".into(),
+                payload: vec![],
+            };
+            let _ = self.hub.publish_teammate_event("default_org".into(), event);
+
             match self.hub.clone().publish(msg) {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
@@ -653,6 +662,18 @@ impl HubService for MyHubService {
         cs_task.approval_status = Some("PENDING".to_string());
         cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
         self.hub.task_manager().insert_task(cs_task);
+
+        // Publish OrderPlaced event
+        let event = ohc::orchestration::TeammateMeshEvent {
+            agent_id: "Operations Agent".into(),
+            action: "New order placed".into(),
+            status: "SUCCESS".into(),
+            payload: vec![],
+        };
+        let _ = self.hub.publish_teammate_event("default_org".into(), event);
+
+        // Also publish MessageReceived if applicable, or we can add a new endpoint if it exists?
+        // Let's just publish MessageReceived randomly or look for where messages are sent.
 
         Ok(Response::new(TriggerCustomOrderResponse {
             success: true,

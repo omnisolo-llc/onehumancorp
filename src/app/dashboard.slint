@@ -6,6 +6,12 @@ import { StatCard } from "stat_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 
+export struct UiAgentActivity {
+    agent_name: string,
+    action: string,
+    time: string,
+}
+
 export struct UiPendingApproval {
     task_id: string,
     title: string,
@@ -31,6 +37,7 @@ export component Dashboard inherits Window {
     in property <bool> is_loading: false;
 
     in property <[UiPendingApproval]> pending_approvals;
+    in property <[UiAgentActivity]> agent_activity_feed;
     in property <[UiRoleCount]> role_counts;
 
 
@@ -185,6 +192,31 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
             }
         }
+        // Agent Activity Feed
+        if (agent_activity_feed.length > 0) : VerticalBox {
+            spacing: 12px;
+            Text { text: "Agent Actions Today"; font-size: 20px; font-weight: 700; color: white; }
+
+            for activity in agent_activity_feed : GlassCard {
+                border-color: #3b82f6;
+                border-width: 1px;
+                background: rgba(59, 130, 246, 0.1);
+
+                HorizontalBox {
+                    padding: 12px;
+                    spacing: 12px;
+
+                    Text { text: "🤖"; font-size: 24px; vertical-alignment: center; }
+
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: activity.agent_name + " " + activity.time; font-size: 12px; color: #94a3b8; }
+                        Text { text: activity.action; font-size: 14px; color: white; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
             Text { text: "Drafts Ready for Review"; font-size: 20px; font-weight: 700; color: #b91c1c; }

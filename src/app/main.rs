@@ -15,9 +15,60 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+use slint::Model;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
+}
+
+
+fn setup_agent_activity_feed(dashboard_weak: slint::Weak<app::Dashboard>) {
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let request = tonic::Request::new(ohc::orchestration::EventStreamRequest {
+                topic: "default_org".into(),
+            });
+            if let Ok(resp) = client.stream_teammate_mesh(request).await {
+                let mut stream = resp.into_inner();
+                while let Ok(Some(event)) = stream.message().await {
+                    // Use a oneshot channel to get the alive status back from the UI thread without blocking the async worker
+                    let (tx, rx) = tokio::sync::oneshot::channel();
+                    let dw = dashboard_weak.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let _ = tx.send(dw.upgrade().is_some());
+                    });
+
+                    if let Ok(is_alive) = rx.await {
+                        if !is_alive {
+                            break;
+                        }
+                    } else {
+                        break; // Channel closed, UI thread probably dead
+                    }
+
+                    let agent_name = event.agent_id.clone();
+                    let action = event.action.clone();
+                    let dw = dashboard_weak.clone();
+
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = dw.upgrade() {
+                            let mut feed: Vec<app::UiAgentActivity> = ui.get_agent_activity_feed().iter().collect();
+                            feed.insert(0, app::UiAgentActivity {
+                                agent_name: agent_name.into(),
+                                action: action.into(),
+                                time: chrono::Utc::now().format("%H:%M").to_string().into(),
+                            });
+                            if feed.len() > 10 {
+                                feed.truncate(10);
+                            }
+                            let model = slint::ModelRc::new(slint::VecModel::from(feed));
+                            ui.set_agent_activity_feed(model.into());
+                        }
+                    }).unwrap();
+                }
+            }
+        }
+    });
 }
 
 fn open_url(url: &str) {
@@ -160,7 +211,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
+                                        if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -205,7 +257,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
+                                        if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -781,7 +834,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -794,7 +848,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -882,7 +937,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 let dashboard_handle = dashboard.as_weak();
                 let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1172,7 +1228,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -1186,7 +1243,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -1213,7 +1271,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
+                                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_agent_activity_feed(dashboard.as_weak());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1825,7 +1884,27 @@ mod e2e_tests {
         assert_eq!(ui.get_password(), "secret");
     }
 
-    #[test]
+        #[test]
+    fn test_e2e_agent_activity_feed_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let activities = vec![
+            app::UiAgentActivity {
+                agent_name: "Promoter Agent".into(),
+                action: "Drafted a welcome post".into(),
+                time: "Just now".into(),
+            }
+        ];
+
+        let activity_model = slint::ModelRc::new(slint::VecModel::from(activities));
+        dashboard_ui.set_agent_activity_feed(activity_model.into());
+
+        assert_eq!(dashboard_ui.get_agent_activity_feed().row_count(), 1);
+    }
+
+#[test]
     fn test_e2e_wizard_flow() {
         crate::ui_tests::init();
 
