@@ -196,6 +196,7 @@ pub fn hybrid_blob_tool() -> Tool {
         name: "hybrid_blob".to_string(),
         description: "Reads and writes blobs across standalone and cloud environments".to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

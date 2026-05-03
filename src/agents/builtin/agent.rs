@@ -567,7 +567,7 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &cfg.model).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -687,7 +687,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools).await {
+                    match self.execute_tool(&tc, &session_tools, &cfg.model).await {
                         Ok(r) => {
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
@@ -958,13 +958,37 @@ impl Agent {
         &self,
         tc: &ToolCall,
         session_tools: &[Tool],
+        model: &str,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let result = tool.execute.execute(tc.arguments.clone()).await;
+
+        match result {
+            Ok(output) => {
+                if tool.is_subagent {
+                    let summary_prompt = format!("Please condense the following subagent output into a concise summary of actions taken and results, omitting raw context loops to save tokens:\n\n{}", output);
+                    let req = ohc_builtin_agent_core::types::ChatRequest {
+                        model: model.to_string(),
+                        messages: vec![ohc_builtin_agent_core::types::Message::user(&summary_prompt)],
+                        system: String::new(),
+                        temperature: 0.0,
+                        max_tokens: 1024,
+                        tools: vec![],
+                    };
+                    match self.llm.chat(req).await {
+                        Ok(res) => Ok(res.message.content),
+                        Err(e) => Err(ToolError::Transient(format!("Failed to condense subagent output: {}", e))),
+                    }
+                } else {
+                    Ok(output)
+                }
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -1057,6 +1081,7 @@ mod tests {
                 name: "read_tool".to_string(),
                 description: "read".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1160,6 +1185,7 @@ mod tests {
                 description: "A heavy tool".to_string(),
                 parameters: serde_json::Value::Null,
                 is_read_only: false,
+                is_subagent: false,
                 execute: Arc::new(DummyToolExecutor),
             }
         ]);
@@ -1205,6 +1231,7 @@ mod tests {
                 name: "read_tool".to_string(),
                 description: "read".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1212,6 +1239,7 @@ mod tests {
                 name: "mutating_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1219,6 +1247,7 @@ mod tests {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1260,6 +1289,7 @@ mod tests {
                 name: "unallowed_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1301,6 +1331,7 @@ mod tests {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1394,6 +1425,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
         }];
@@ -1483,6 +1515,7 @@ mod tests {
                 name: "test_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             }
@@ -1589,6 +1622,7 @@ mod tests {
                 name: "transient_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
                 execute: Arc::new(FourTierErrorToolExecutor { name: "transient_tool".to_string() }),
             },
@@ -1596,6 +1630,7 @@ mod tests {
                 name: "llm_recoverable_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
                 execute: Arc::new(FourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string() }),
             },
@@ -1603,6 +1638,7 @@ mod tests {
                 name: "user_fixable_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
                 execute: Arc::new(FourTierErrorToolExecutor { name: "user_fixable_tool".to_string() }),
             },
@@ -1610,6 +1646,7 @@ mod tests {
                 name: "fatal_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
                 execute: Arc::new(FourTierErrorToolExecutor { name: "fatal_tool".to_string() }),
             }
@@ -1788,6 +1825,7 @@ mod tests {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1795,6 +1833,7 @@ mod tests {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1838,6 +1877,7 @@ mod tests {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1882,6 +1922,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "A test tool".to_string(),
             is_read_only: true,
+            is_subagent: false,
             parameters: serde_json::json!({"type": "object"}),
             execute: std::sync::Arc::new(MockToolExecutor),
         };
@@ -2101,6 +2142,7 @@ mod tests {
             name: "read_tool".to_string(),
             description: "".to_string(),
             is_read_only: false, // Mutating tool triggers Claude Code local checkpoints, but our new DB checkpointer triggers on every iteration.
+            is_subagent: false,
             parameters: serde_json::Value::Null,
             execute: Arc::new(StateMockToolExecutor { result: "read_ok".to_string() }),
         };
@@ -2190,6 +2232,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: serde_json::Value::Null,
             is_read_only: false,
+            is_subagent: false,
             execute: Arc::new(MockToolExecutor),
         };
 
@@ -2264,6 +2307,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
             is_read_only: false,
+            is_subagent: false,
             execute: Arc::new(MockToolExecutor),
         };
 

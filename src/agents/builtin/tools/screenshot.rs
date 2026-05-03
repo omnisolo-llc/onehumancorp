@@ -83,6 +83,7 @@ pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         description: "Takes a screenshot of a web page at the specified URL using Playwright. Use this to visually verify web application functionality. \
             Returns the path to the saved screenshot.".to_string(),
         is_read_only: true, // It writes a file locally but doesn't change the remote state, treating as read-only or safe to run concurrently
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

@@ -43,6 +43,7 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
         name: "LazyLoadTools".to_string(),
         description: "Loads additional tools into your context window. Use this when you discover tools via ToolSearch that you need to use.".to_string(),
         is_read_only: false, // State mutation for the agent context
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
