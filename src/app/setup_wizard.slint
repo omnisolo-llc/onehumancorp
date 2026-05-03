@@ -102,21 +102,23 @@ export component SetupWizard inherits Window {
                 color: white;
             }
             HorizontalBox {
-                spacing: 8px;
+                spacing: 12px;
                 alignment: end;
-                Text { text: "Advanced mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "Advanced mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
                 TouchArea {
-                    width: 20px;
-                    height: 20px;
+                    width: 44px;
+                    height: 44px;
                     clicked => { toggle_advanced(); }
                     Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
+                        width: 24px;
+                        height: 24px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 6px;
                         border-color: #a855f7;
-                        border-width: 1px;
+                        border-width: 2px;
                         background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; }
                     }
                 }
             }

@@ -21,7 +21,7 @@ test.describe('Dashboard UX', () => {
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
     await expect(page.locator('text=Active Helpers')).toBeVisible();
-    await expect(page.locator('text=Current AI Tasks')).toBeVisible();
+    await expect(page.locator('text=Current Tasks')).toBeVisible();
 
     // Verify softer wording for drafts
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
@@ -51,7 +51,7 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
 
   await expect(page.locator('text=Add Product')).toBeVisible();
-  await expect(page.locator('text=View Orders')).toBeVisible();
+  await expect(page.locator('text=Orders')).toBeVisible();
   await expect(page.locator('text=Messages')).toBeVisible();
   await expect(page.locator('text=Analytics')).toBeVisible();
   await expect(page.locator('text=Share Store')).toBeVisible();

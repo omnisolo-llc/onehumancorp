@@ -15,6 +15,28 @@ export struct UiRoleCount {
     count: int,
 }
 
+component StatCard inherits GlassCard {
+    in property <string> label;
+    in property <string> value;
+    in property <color> value-color;
+
+    border-color: #e2e8f0;
+    border-width: 1px;
+    border-radius: 12px;
+    width: 100%;
+    min-height: 88px;
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        VerticalBox {
+            padding: 16px;
+            Text { text: label; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            Text { text: value; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: value-color; }
+        }
+    }
+}
+
 export component Dashboard inherits Window {
     width: 375px;
     height: 800px;
@@ -23,9 +45,13 @@ export component Dashboard inherits Window {
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <string> todays_sales: "$0.00";
-    in property <int> new_orders_count: 0;
+    in-out property <int> orders_to_ship_count: 0;
     in property <int> active_helpers_count: 0;
-    in property <int> tasks_in_progress_count: 0;
+    in-out property <int> current_tasks_count: 0;
+
+    // Backward compatibility for old names if needed by Rust, but better to update Rust too
+    in-out property <int> new_orders_count <=> orders_to_ship_count;
+    in-out property <int> tasks_in_progress_count <=> current_tasks_count;
 
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
@@ -55,6 +81,7 @@ export component Dashboard inherits Window {
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
+    in-out property <bool> is_loading: false;
 
     Flickable {
     VerticalBox {
@@ -65,25 +92,29 @@ export component Dashboard inherits Window {
         HorizontalBox {
             spacing: 16px;
             Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            if (is_loading) : Rectangle {
+                width: 12px;
+                height: 12px;
+                background: #a855f7;
+                border-radius: 6px;
+            }
             Rectangle {} // Spacer
             TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } } }
             TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
         }
 
-        if (show_menu) : Rectangle {
-            border-color: rgba(255, 255, 255, 0.1);
+        if (show_menu) : GlassCard {
+            border-color: rgba(255, 255, 255, 0.2);
             border-width: 1px;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.2);
             VerticalBox {
                 padding: 16px;
-                spacing: 8px;
-                Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
-                Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
-                Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
-                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+                spacing: 12px;
+                Button { text: "👂 Help Center"; height: 48px; clicked => { open_help_center(); show_menu = false; } }
+                Button { text: "💳 Billing & Plan"; height: 48px; clicked => { open_billing(); show_menu = false; } }
+                Button { text: "📚 API Docs"; height: 48px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "🎥 Video Tutorials"; height: 48px; clicked => { open_video_tutorials(); show_menu = false; } }
+                Button { text: "🚀 App Tour"; height: 48px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "🔔 What's New"; height: 48px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
 
@@ -116,168 +147,25 @@ export component Dashboard inherits Window {
         }
 
         // Stat Cards
-        VerticalBox {
+        if (root.width > 768px) : VerticalBox {
             spacing: 16px;
-
             HorizontalBox {
-                visible: root.width > 768px;
                 spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "New Orders"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
-                    }
-                }
+                StatCard { label: "Today's Sales"; value: todays_sales; value-color: #a855f7; }
+                StatCard { label: "Orders to Ship"; value: orders_to_ship_count; value-color: #06b6d4; }
             }
-
-            VerticalBox {
-                visible: root.width <= 768px;
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "New Orders"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
-                    }
-                }
-            }
-
             HorizontalBox {
-                visible: root.width > 768px;
                 spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active AI Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Tasks in Progress"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
-                    }
-                }
+                StatCard { label: "Active Helpers"; value: active_helpers_count; value-color: #10b981; }
+                StatCard { label: "Current Tasks"; value: current_tasks_count; value-color: #f59e0b; }
             }
-
-            VerticalBox {
-                visible: root.width <= 768px;
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active AI Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Tasks in Progress"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
-                    }
-                }
-            }
+        }
+        if (root.width <= 768px) : VerticalBox {
+            spacing: 16px;
+            StatCard { label: "Today's Sales"; value: todays_sales; value-color: #a855f7; }
+            StatCard { label: "Orders to Ship"; value: orders_to_ship_count; value-color: #06b6d4; }
+            StatCard { label: "Active Helpers"; value: active_helpers_count; value-color: #10b981; }
+            StatCard { label: "Current Tasks"; value: current_tasks_count; value-color: #f59e0b; }
         }
 
         // Quick Actions Navigation
@@ -289,22 +177,26 @@ export component Dashboard inherits Window {
                 Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
             }
-            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
-            HorizontalBox {
-                spacing: 8px;
-                TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
-                TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
-                TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
+            if (show_quick_actions_hint) : GlassCard {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px;
+                Text { text: "These buttons are shortcuts to your most common daily tasks. Tap them to jump straight to work!"; color: #cbd5e1; font-size: 14px; wrap: word-wrap; font-family: "Inter"; }
             }
             HorizontalBox {
                 spacing: 8px;
-                Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
-                Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
-                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                TooltipElement { tooltip_id: "add_product"; Button { text: "📦 Add Product"; height: 48px; clicked => { action_add_product(); } } }
+                TooltipElement { tooltip_id: "view_orders"; Button { text: "🚚 Orders"; height: 48px; clicked => { action_view_orders(); } } }
+                TooltipElement { tooltip_id: "messages"; Button { text: "💬 Messages"; height: 48px; clicked => { action_check_messages(); } } }
             }
             HorizontalBox {
                 spacing: 8px;
-                Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } }
+                Button { text: "📈 Analytics"; height: 48px; clicked => { action_see_analytics(); } }
+                Button { text: "🔗 Share Store"; height: 48px; clicked => { action_share_store(); } }
+                Button { text: "🤝 Referrals"; height: 48px; clicked => { action_open_referrals(); } }
+            }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "🚀 Grow Business"; height: 48px; clicked => { action_grow_business(); } }
             }
         }
         if (pending_approvals.length > 0) : VerticalBox {
@@ -343,7 +235,21 @@ export component Dashboard inherits Window {
         }
 
         // My Team
-        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        in-out property <bool> show_team_hint: false;
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_team_hint = !show_team_hint; } }
+            }
+            if (show_team_hint) : GlassCard {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px;
+                Text { text: "These are your AI helpers and human teammates. You can adjust how many agents are working for you here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; font-family: "Inter"; }
+            }
+        }
         
         VerticalBox {
             spacing: 10px;

@@ -23,17 +23,17 @@ test.describe('Dashboard Core', () => {
 
   test('should display new orders stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=New Orders')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
   });
 
-  test('should display active AI helpers stat card', async ({ page }) => {
+  test('should display active helpers stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Active AI Helpers')).toBeVisible();
+    await expect(page.locator('text=Active Helpers')).toBeVisible();
   });
 
-  test('should display tasks in progress stat card', async ({ page }) => {
+  test('should display current tasks stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Tasks in Progress')).toBeVisible();
+    await expect(page.locator('text=Current Tasks')).toBeVisible();
   });
 
   test('should show quick actions section', async ({ page }) => {
@@ -46,9 +46,9 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Add Product')).toBeVisible();
   });
 
-  test('should display view orders quick action', async ({ page }) => {
+  test('should display orders quick action', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=View Orders')).toBeVisible();
+    await expect(page.locator('text=Orders')).toBeVisible();
   });
 
   test('should display messages quick action', async ({ page }) => {
@@ -143,7 +143,7 @@ test.describe('Dashboard Mobile', () => {
   test('should verify plain language labels on mobile', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
-    await expect(page.locator('text=New Orders')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 

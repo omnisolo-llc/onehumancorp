@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 match client.register_agent(request).await {
                     Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
+                    Err(e) => eprintln!("System error during registration: {}. This might be a temporary connection issue.", e),
                 }
             }
             Err(e) => {
@@ -308,10 +308,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // Pass x-spiffe-id as system
                         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Err(e) = client.handle_config_wizard(req).await {
-                            eprintln!("Failed to handle config wizard: {}", e);
+                            eprintln!("User-facing error (AgentConfig): {}", e);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_err.upgrade() {
                                     ui.set_show_toast(false);
+                                    // In a real app we'd set an error_message property here
                                 }
                             }).unwrap();
                         }
@@ -1015,20 +1016,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
-                ("business_type".to_string(), business_type.to_string()),
-                ("company_name".to_string(), company_name.to_string()),
-                ("company_description".to_string(), company_description.to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
                 ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
                 ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), payment_pref.to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), admin_email.to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
                 ("website_template".to_string(), website_template.to_string()),
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
@@ -1041,11 +1042,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let handle_clone = ui_handle.clone();
 
-            let req_business_type = business_type.to_string();
-            let req_company_name = company_name.to_string();
-            let req_company_description = company_description.to_string();
-            let req_payment_pref = payment_pref.to_string();
-            let req_admin_email = admin_email.to_string();
+            let req_business_type = ui.get_business_type().to_string();
+            let req_company_name = ui.get_company_name().to_string();
+            let req_company_description = ui.get_company_description().to_string();
+            let req_payment_pref = ui.get_payment_pref().to_string();
+            let req_admin_email = ui.get_admin_email().to_string();
             let req_admin_name = ui.get_admin_name().to_string();
             let req_admin_password = ui.get_admin_password().to_string();
 
@@ -1075,28 +1076,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
 
                         match client.start_onboarding(onboarding_request).await {
-                            Ok(resp) => {
-                                let r = resp.into_inner();
-                                let msg = r.message.clone();
+                            Ok(_resp) => {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_success(true);
-                                        ui.set_launch_status("Onboarding Complete!".into());
-                                        ui.set_launch_details(msg.into());
-                                        // Delay going to step 10 to show confetti?
-                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
-                                        // If we transition to step 10, the confetti disappears.
-                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
-                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
+                                        ui.set_launch_status("Hooray! Your business is live! 🎉".into());
+                                        ui.set_launch_details("We've set up your website and started your AI helpers. You're ready to go!".into());
                                     }
                                 }).unwrap();
                             }
                             Err(e) => {
-                                let err_msg = e.to_string();
+                                eprintln!("Onboarding error: {}", e);
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
-                                        ui.set_launch_status("Onboarding Failed".into());
-                                        ui.set_launch_details(err_msg.into());
+                                        ui.set_launch_status("We hit a small snag".into());
+                                        ui.set_launch_details("We couldn't finish setting everything up. Please check your internet and try clicking Launch again.".into());
                                     }
                                 }).unwrap();
                             }
@@ -3293,7 +3287,7 @@ mod e2e_hybrid_blob_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
             assert_eq!(website_template, "Modern Glass");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
