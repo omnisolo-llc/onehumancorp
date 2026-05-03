@@ -12,10 +12,7 @@ struct BashExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for BashExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let command = args["command"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
@@ -29,9 +26,15 @@ impl ToolExecutor for BashExecutor {
             cmd.current_dir(wd);
         }
         let output = tokio::time::timeout(timeout, cmd.output())
-        .await
-        .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
-        .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .await
+            .map_err(|_| {
+                ToolError::LlmRecoverable(format!(
+                    "bash: command timed out after {}s",
+                    timeout_secs
+                ))
+            })?
+            .map_err(|e| format!("bash: failed to execute: {}", e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -66,6 +69,7 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             Commands run in the repository root."
             .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

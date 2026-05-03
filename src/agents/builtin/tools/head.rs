@@ -1,8 +1,8 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 use super::{Tool, ToolExecutor};
 
@@ -12,23 +12,31 @@ struct HeadExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for HeadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("head: path is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let path = args["path"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("head: path is required".to_string()))?;
 
         // Basic path sanitization: disallow relative path traversal
         if path.contains("..") {
-            return Err(ToolError::LlmRecoverable("head: path traversal via '..' is not allowed".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "head: path traversal via '..' is not allowed".to_string(),
+            ));
         }
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(path)
+            .strip_prefix("/")
+            .unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir {
+            wd.join(safe_path)
+        } else {
+            std::path::PathBuf::from(path)
+        };
 
         let file = File::open(&actual_path)
             .await
-            .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("head: {}: {}", path, e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
 
@@ -38,7 +46,9 @@ impl ToolExecutor for HeadExecutor {
 
         for _ in 0..lines_to_read {
             buffer.clear();
-            let bytes_read = reader.read_line(&mut buffer).await
+            let bytes_read = reader
+                .read_line(&mut buffer)
+                .await
                 .map_err(|e| ToolError::LlmRecoverable(format!("head: read error: {}", e)))?;
             if bytes_read == 0 {
                 break;
@@ -55,6 +65,7 @@ pub fn head_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Head".to_string(),
         description: "Read the first N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -83,9 +94,13 @@ mod tests {
     async fn test_head_basic() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
-        fs::write(&file_path, "line1\nline2\nline3\nline4\n").await.unwrap();
+        fs::write(&file_path, "line1\nline2\nline3\nline4\n")
+            .await
+            .unwrap();
 
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let executor = HeadExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+        };
 
         let args = json!({ "path": "test.txt", "lines": 2 });
         let result = executor.execute(args).await.unwrap();
@@ -96,10 +111,15 @@ mod tests {
     async fn test_head_default_lines() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
-        let content = (1..=15).map(|i| format!("line{}", i)).collect::<Vec<_>>().join("\n");
+        let content = (1..=15)
+            .map(|i| format!("line{}", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         fs::write(&file_path, content).await.unwrap();
 
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let executor = HeadExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+        };
 
         let args = json!({ "path": "test.txt" });
         let result = executor.execute(args).await.unwrap();

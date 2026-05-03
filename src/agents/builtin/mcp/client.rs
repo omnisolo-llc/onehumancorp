@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
+use super::proxy::authorizer::CapabilityAuthorizer;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::process::Stdio;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use serde::{Serialize, Deserialize};
-use serde_json::{json, Value};
-use std::sync::Arc;
 use tokio::sync::Mutex;
-use super::proxy::authorizer::CapabilityAuthorizer;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
@@ -25,8 +25,6 @@ pub struct JsonRpcResponse {
     pub id: Value,
 }
 
-
-
 pub struct HybridContextTool {
     pool: sqlx::PgPool,
 }
@@ -37,9 +35,18 @@ impl HybridContextTool {
     }
 
     pub async fn execute(&self, arguments: Value) -> Result<Value, String> {
-        let metric_name = arguments.get("metric_name").and_then(|v| v.as_str()).unwrap_or("hybrid_action");
-        let metric_type = arguments.get("metric_type").and_then(|v| v.as_str()).unwrap_or("event");
-        let value = arguments.get("value").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
+        let metric_name = arguments
+            .get("metric_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("hybrid_action");
+        let metric_type = arguments
+            .get("metric_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("event");
+        let value = arguments
+            .get("value")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0) as f32;
         let labels = arguments.get("labels").cloned().unwrap_or(json!({}));
 
         crate::telemetry::buffer_metric(&self.pool, metric_name, metric_type, value, labels)
@@ -87,7 +94,8 @@ impl MCPClient {
 
     pub async fn call_tool(&self, tool_name: &str, arguments: Value) -> Result<Value, String> {
         // Enforce policy via authorizer
-        self.authorizer.authorize(&self.session_id, "call_tool", tool_name)?;
+        self.authorizer
+            .authorize(&self.session_id, "call_tool", tool_name)?;
 
         if tool_name == "RecordHybridContext" {
             if let Some(tool) = &self.hybrid_tool {
@@ -112,7 +120,10 @@ impl MCPClient {
 
         {
             let stdin = child.stdin.as_mut().ok_or("failed to open stdin")?;
-            stdin.write_all(req_text.as_bytes()).await.map_err(|e| e.to_string())?;
+            stdin
+                .write_all(req_text.as_bytes())
+                .await
+                .map_err(|e| e.to_string())?;
             stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
             stdin.flush().await.map_err(|e| e.to_string())?;
         }
@@ -121,7 +132,10 @@ impl MCPClient {
         {
             let stdout = child.stdout.as_mut().ok_or("failed to open stdout")?;
             let mut reader = BufReader::new(stdout);
-            reader.read_line(&mut line).await.map_err(|e| e.to_string())?;
+            reader
+                .read_line(&mut line)
+                .await
+                .map_err(|e| e.to_string())?;
         }
 
         let response: JsonRpcResponse = serde_json::from_str(&line).map_err(|e| e.to_string())?;
@@ -130,7 +144,9 @@ impl MCPClient {
             return Err(format!("MCP error: {}", error));
         }
 
-        response.result.ok_or_else(|| "missing result in MCP response".to_string())
+        response
+            .result
+            .ok_or_else(|| "missing result in MCP response".to_string())
     }
 
     pub async fn list_tools(&self) -> Result<Value, String> {
@@ -146,7 +162,10 @@ impl MCPClient {
 
         {
             let stdin = child.stdin.as_mut().ok_or("failed to open stdin")?;
-            stdin.write_all(req_text.as_bytes()).await.map_err(|e| e.to_string())?;
+            stdin
+                .write_all(req_text.as_bytes())
+                .await
+                .map_err(|e| e.to_string())?;
             stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
             stdin.flush().await.map_err(|e| e.to_string())?;
         }
@@ -155,7 +174,10 @@ impl MCPClient {
         {
             let stdout = child.stdout.as_mut().ok_or("failed to open stdout")?;
             let mut reader = BufReader::new(stdout);
-            reader.read_line(&mut line).await.map_err(|e| e.to_string())?;
+            reader
+                .read_line(&mut line)
+                .await
+                .map_err(|e| e.to_string())?;
         }
 
         let response: JsonRpcResponse = serde_json::from_str(&line).map_err(|e| e.to_string())?;
@@ -164,7 +186,9 @@ impl MCPClient {
             return Err(format!("MCP error: {}", error));
         }
 
-        response.result.ok_or_else(|| "missing result in MCP response".to_string())
+        response
+            .result
+            .ok_or_else(|| "missing result in MCP response".to_string())
     }
 }
 
@@ -174,7 +198,8 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_context_tool_success() {
         // This tests the success path if a database is actually available.
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
             let tool = HybridContextTool::new(pool);
             let args = json!({
@@ -190,13 +215,13 @@ mod tests {
         }
     }
 
-
     #[tokio::test]
     async fn test_hybrid_context_tool() {
         // We test with a dummy pool URL, expecting execution to attempt buffering
         // and return an error because the pool is disconnected/invalid.
         // This gives us 100% execution coverage on the tool's mapping logic.
-        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let pool =
+            sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
         let tool = HybridContextTool::new(pool);
 
         let args = json!({
@@ -212,11 +237,18 @@ mod tests {
         // Since the DB is invalid, we expect an error related to connection/execution.
         assert!(res.is_err());
         let err_msg = res.unwrap_err();
-        assert!(err_msg.contains("pool") || err_msg.contains("connect") || err_msg.contains("error") || err_msg.contains("closed"), "Unexpected error: {}", err_msg);
+        assert!(
+            err_msg.contains("pool")
+                || err_msg.contains("connect")
+                || err_msg.contains("error")
+                || err_msg.contains("closed"),
+            "Unexpected error: {}",
+            err_msg
+        );
     }
 
-    use super::*;
     use super::super::proxy::authorizer::CapabilityProfile;
+    use super::*;
 
     #[tokio::test]
     async fn test_mcp_client_spawn_failure() {

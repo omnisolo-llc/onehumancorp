@@ -1,5 +1,5 @@
-use ohc_builtin_agent_core::types::ToolError;
 use async_recursion::async_recursion;
+use ohc_builtin_agent_core::types::ToolError;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -12,10 +12,7 @@ struct GrepExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for GrepExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let pattern = args["pattern"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
@@ -28,12 +25,21 @@ impl ToolExecutor for GrepExecutor {
         } else {
             Regex::new(pattern)
         }
-        .map_err(|e| format!("grep: invalid regex: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        .map_err(|e| format!("grep: invalid regex: {}", e))
+        .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut results = Vec::new();
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path).to_string_lossy().to_string() } else { path.to_string() };
-        search_directory(&actual_path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        let safe_path = std::path::Path::new(path)
+            .strip_prefix("/")
+            .unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir {
+            wd.join(safe_path).to_string_lossy().to_string()
+        } else {
+            path.to_string()
+        };
+        search_directory(&actual_path, &re, include_pattern.as_deref(), &mut results)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
             return Ok("No matches found.".to_string());
@@ -56,17 +62,24 @@ async fn search_directory(
     include: Option<&str>,
     results: &mut Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut entries = tokio::fs::read_dir(dir).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+    let mut entries = tokio::fs::read_dir(dir)
+        .await
+        .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
-        let meta = entry.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        let meta = entry
+            .metadata()
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         if meta.is_dir() {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             // Skip hidden and build directories
             if name.starts_with('.') || name == "target" || name == "node_modules" {
                 continue;
             }
-            search_directory(&path.to_string_lossy(), re, include, results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            search_directory(&path.to_string_lossy(), re, include, results)
+                .await
+                .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         } else if meta.is_file() {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if let Some(inc) = include {
@@ -112,6 +125,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Grep".to_string(),
         description: "Search for a regex pattern in files under a directory. Returns file:line:content matches.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

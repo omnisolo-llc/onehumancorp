@@ -4,7 +4,6 @@ use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-
 use super::{SharedMailbox, Tool, ToolExecutor};
 
 /// A message in the mailbox.
@@ -38,14 +37,13 @@ struct SendMessageExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for SendMessageExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let to = args["to"].as_str().unwrap_or("coordinator").to_string();
         let content = args["message"]
             .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("sendmessage: message is required".to_string()))?
+            .ok_or_else(|| {
+                ToolError::LlmRecoverable("sendmessage: message is required".to_string())
+            })?
             .to_string();
 
         let msg = MailboxMessage {
@@ -67,6 +65,7 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
             Used for reporting sub-task results or requesting assistance."
             .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

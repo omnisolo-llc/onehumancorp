@@ -1,9 +1,9 @@
+use super::{Tool, ToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
-use std::path::Path;
-use super::{Tool, ToolExecutor};
 
 struct LocalFSSyncExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -11,16 +11,19 @@ struct LocalFSSyncExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for LocalFSSyncExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string()))?;
-        let path = args["Path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let action = args["Action"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string())
+        })?;
+        let path = args["Path"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string())
+        })?;
 
         let mut clean_path = Path::new(path).to_path_buf();
         if !clean_path.starts_with(".agent-task/") || path.contains("..") {
-            return Err(ToolError::LlmRecoverable("sandbox violation: path must start with .agent-task/".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "sandbox violation: path must start with .agent-task/".to_string(),
+            ));
         }
         if let Some(wd) = &self.working_dir {
             clean_path = wd.join(clean_path);
@@ -28,15 +31,23 @@ impl ToolExecutor for LocalFSSyncExecutor {
 
         match action {
             "read" => {
-                let content = fs::read_to_string(&clean_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let content = fs::read_to_string(&clean_path)
+                    .await
+                    .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(content)
             }
             "write" => {
-                let content = args["Content"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
+                let content = args["Content"].as_str().ok_or_else(|| {
+                    ToolError::LlmRecoverable(
+                        "local_fs_sync: Content is required for write".to_string(),
+                    )
+                })?;
                 if let Some(parent) = clean_path.parent() {
                     fs::create_dir_all(parent).await.ok();
                 }
-                fs::write(&clean_path, content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                fs::write(&clean_path, content)
+                    .await
+                    .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                 Ok(json!({"status":"written"}).to_string())
             }
             "sync" => {
@@ -54,8 +65,10 @@ impl ToolExecutor for LocalFSSyncExecutor {
 pub fn local_fs_sync_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "local_fs_sync".to_string(),
-        description: "Performs local file system operations restricted to .agent-task/ directory.".to_string(),
+        description: "Performs local file system operations restricted to .agent-task/ directory."
+            .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

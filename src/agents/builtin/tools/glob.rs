@@ -10,10 +10,7 @@ struct GlobExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for GlobExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let pattern = args["pattern"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
@@ -57,8 +54,10 @@ impl ToolExecutor for GlobExecutor {
 pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
-        description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
+        description: "Find files matching a glob pattern. Returns newline-separated paths."
+            .to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

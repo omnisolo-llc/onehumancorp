@@ -1,24 +1,45 @@
 use ohc_builtin_agent_core::types::ToolError;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailConfig;
+use ohc_builtin_agent_core::types::{
+    ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult,
+};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
-    RunStarted { iteration: i32 },
-    TextChunk { content: String },
-    ToolCall { name: String, args_json: String, result: String, iteration: i32 },
-    TaskComplete { content: String },
-    TaskError { error: String },
-    IterationStarted { iteration: i32, message_count: usize },
-    CheckpointSaved { iteration: i32, path: String },
+    RunStarted {
+        iteration: i32,
+    },
+    TextChunk {
+        content: String,
+    },
+    ToolCall {
+        name: String,
+        args_json: String,
+        result: String,
+        iteration: i32,
+    },
+    TaskComplete {
+        content: String,
+    },
+    TaskError {
+        error: String,
+    },
+    IterationStarted {
+        iteration: i32,
+        message_count: usize,
+    },
+    CheckpointSaved {
+        iteration: i32,
+        path: String,
+    },
 }
 
 /// Configuration for a single agent run.
@@ -114,7 +135,10 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
+pub(crate) fn build_hierarchical_system_prompt(
+    cfg: &AgentRunConfig,
+    tools: &[crate::tools::Tool],
+) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
         while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
@@ -186,12 +210,18 @@ impl Agent {
         }
     }
 
-    pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
+    pub fn with_memory_store(
+        mut self,
+        store: Arc<dyn crate::memory_store::LongTermMemory>,
+    ) -> Self {
         self.memory_store = Some(store);
         self
     }
 
-    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>) -> Self {
+    pub fn with_checkpointer(
+        mut self,
+        checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>,
+    ) -> Self {
         self.checkpointer = Some(checkpointer);
         self
     }
@@ -208,7 +238,8 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         let mut session_tools = self.tools.clone();
-        let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
+        let active_tools =
+            std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
         if cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
@@ -234,8 +265,12 @@ impl Agent {
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
             if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
-                let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
-                    .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
+                let cp = checkpointer
+                    .get_checkpoint(thread_id, resume_id)
+                    .await
+                    .map_err(|e| {
+                        format!("Failed to fetch requested checkpoint {}: {}", resume_id, e)
+                    })?
                     .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
 
                 messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
@@ -244,7 +279,9 @@ impl Agent {
             } else {
                 if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
                     if let Some(cp) = checkpoints.first() {
-                        if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                        if let Ok(saved_msgs) =
+                            serde_json::from_value::<Vec<Message>>(cp.data.clone())
+                        {
                             messages = saved_msgs;
                             last_checkpoint_id = Some(cp.checkpoint_id.clone());
                         }
@@ -254,7 +291,10 @@ impl Agent {
         }
 
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
-        let scratchpad_path = cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
+        let scratchpad_path = cfg
+            .state_scratchpad_path
+            .clone()
+            .unwrap_or(generated_uuid_path);
 
         if messages.is_empty() && cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
@@ -271,7 +311,11 @@ impl Agent {
         let mut global_turn_tokens = 0i32;
         let mut last_assistant_content = String::new();
 
-        let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
+        let max_iterations = if cfg.max_iterations <= 0 {
+            100
+        } else {
+            cfg.max_iterations
+        };
 
         let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
 
@@ -319,7 +363,10 @@ impl Agent {
                     for i in 0..threshold {
                         if final_messages[i].role == Role::Tool {
                             for tr in &mut final_messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
+                                if tr.error.is_empty()
+                                    && !tr.content.starts_with("[ACON:")
+                                    && !tr.content.is_empty()
+                                {
                                     tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
                                 }
                             }
@@ -333,7 +380,10 @@ impl Agent {
             if cfg.enable_lost_in_the_middle_prevention {
                 let mut reminder_text = String::new();
                 if !cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
+                    reminder_text.push_str(&format!(
+                        "[System Reminder: {}]\n\n",
+                        cfg.developer_instructions
+                    ));
                 }
                 if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
                     // Truncate user instructions if it's too long, just to remind the core objective
@@ -353,7 +403,10 @@ impl Agent {
                     final_messages.push(Message::user(reminder_text.trim()));
                 }
             } else if !cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
+                final_messages.push(Message::user(format!(
+                    "[System Reminder: {}]",
+                    cfg.developer_instructions
+                )));
             }
 
             let mut req_tools = Vec::new();
@@ -398,8 +451,22 @@ impl Agent {
             // Telemetry: Record token usage
             let model_label = KeyValue::new("model", cfg.model.clone());
             let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
-            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
-            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+            token_counter.add(
+                turn_input_tokens as u64,
+                &[
+                    model_label.clone(),
+                    agent_label.clone(),
+                    KeyValue::new("type", "input"),
+                ],
+            );
+            token_counter.add(
+                output_tokens as u64,
+                &[
+                    model_label.clone(),
+                    agent_label.clone(),
+                    KeyValue::new("type", "output"),
+                ],
+            );
 
             // Cost estimation logic based on model (roughly mapping common API pricing as USD per 1M tokens)
             let mut input_cost_per_m = 0.0;
@@ -430,8 +497,8 @@ impl Agent {
             }
 
             if input_cost_per_m > 0.0 || output_cost_per_m > 0.0 {
-                let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
-                                (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
+                let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0)
+                    + (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
                 cost_counter.add(turn_cost, &[model_label, agent_label]);
             }
 
@@ -470,10 +537,13 @@ impl Agent {
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
             for tc in &tool_calls {
-                tool_call_counter.add(1, &[
-                    KeyValue::new("agent_id", cfg.agent_id.clone()),
-                    KeyValue::new("tool_name", tc.name.clone())
-                ]);
+                tool_call_counter.add(
+                    1,
+                    &[
+                        KeyValue::new("agent_id", cfg.agent_id.clone()),
+                        KeyValue::new("tool_name", tc.name.clone()),
+                    ],
+                );
             }
 
             // Terminal condition: no tool calls.
@@ -494,7 +564,10 @@ impl Agent {
                         Ok(judge_resp) => {
                             let judge_text = judge_resp.message.content.trim();
                             if judge_text.starts_with("REJECT:") {
-                                let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
+                                let reason = judge_text
+                                    .strip_prefix("REJECT:")
+                                    .unwrap_or(judge_text)
+                                    .trim();
                                 let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
                                 messages.push(Message::user(err_msg));
                                 continue;
@@ -514,7 +587,9 @@ impl Agent {
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
+                    if let Err(e) =
+                        crate::guardrails::check_output(&last_assistant_content, guard_cfg)
+                    {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into());
                     }
@@ -532,7 +607,12 @@ impl Agent {
             let mut mutating_calls = Vec::new();
 
             for tc in &tool_calls {
-                let is_read_only = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                let is_read_only = self
+                    .tools
+                    .iter()
+                    .find(|t| t.name == tc.name)
+                    .map(|t| t.is_read_only)
+                    .unwrap_or(false);
                 if is_read_only {
                     read_only_calls.push(tc.clone());
                 } else {
@@ -542,7 +622,14 @@ impl Agent {
 
             // We need a helper to execute a single tool call with retries and guardrails.
             // We use a macro or inline logic to avoid borrowing issues with `on_event`.
-            let mut tool_results: Vec<ToolResult> = vec![ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; tool_calls.len()];
+            let mut tool_results: Vec<ToolResult> = vec![
+                ToolResult {
+                    tool_call_id: String::new(),
+                    content: String::new(),
+                    error: String::new()
+                };
+                tool_calls.len()
+            ];
 
             // Note: Since `on_event` is `&mut F`, we can't easily share it across concurrent tasks.
             // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
@@ -567,14 +654,18 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
+                        match self
+                            .execute_tool(&tc_clone, &session_tools_clone, cfg)
+                            .await
+                        {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
                                 if retry_count < max_retries {
                                     retry_count += 1;
-                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                    let backoff =
+                                        std::time::Duration::from_millis(500 * (1 << retry_count));
                                     tokio::time::sleep(backoff).await;
                                     continue;
                                 } else {
@@ -687,7 +778,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools).await {
+                    match self.execute_tool(&tc, &session_tools, cfg).await {
                         Ok(r) => {
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
@@ -702,7 +793,8 @@ impl Agent {
                         Err(ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
                                 retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                let backoff =
+                                    std::time::Duration::from_millis(500 * (1 << retry_count));
                                 tokio::time::sleep(backoff).await;
                                 continue;
                             } else {
@@ -756,7 +848,11 @@ impl Agent {
                 for m in &mut messages {
                     if m.role == Role::Tool {
                         for tr in &mut m.tool_results {
-                            if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked to save context.") {
+                            if tr.error.is_empty()
+                                && !tr
+                                    .content
+                                    .starts_with("[Observation Masked to save context.")
+                            {
                                 let bytes = tr.content.len();
                                 if bytes > 150 {
                                     tr.content = format!(
@@ -819,8 +915,14 @@ impl Agent {
 
             // 3. Git State Checkpointing (Claude Code)
             if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
-                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                let thread = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+                let wd = cfg
+                    .workspace_path
+                    .clone()
+                    .unwrap_or_else(|| ".".to_string());
+                let thread = cfg
+                    .thread_id
+                    .clone()
+                    .unwrap_or_else(|| cfg.agent_id.clone());
 
                 // Only commit if .git exists to avoid turning random directories into repos
                 if std::path::Path::new(&wd).join(".git").exists() {
@@ -828,15 +930,23 @@ impl Agent {
                     add_cmd.current_dir(&wd).arg("add").arg("-A");
                     if add_cmd.output().await.is_ok() {
                         let mut diff_cmd = tokio::process::Command::new("git");
-                        diff_cmd.current_dir(&wd).arg("diff").arg("--cached").arg("--quiet");
+                        diff_cmd
+                            .current_dir(&wd)
+                            .arg("diff")
+                            .arg("--cached")
+                            .arg("--quiet");
                         // If it fails (exit code 1), it means there ARE changes staged
                         if let Ok(diff_out) = diff_cmd.output().await {
                             if !diff_out.status.success() {
                                 let mut commit_cmd = tokio::process::Command::new("git");
-                                commit_cmd.current_dir(&wd)
+                                commit_cmd
+                                    .current_dir(&wd)
                                     .arg("commit")
                                     .arg("-m")
-                                    .arg(format!("🤖 Agent checkpoint: Iteration {} (Thread: {})", iteration, thread));
+                                    .arg(format!(
+                                        "🤖 Agent checkpoint: Iteration {} (Thread: {})",
+                                        iteration, thread
+                                    ));
 
                                 if let Ok(commit_out) = commit_cmd.output().await {
                                     if commit_out.status.success() {
@@ -845,7 +955,10 @@ impl Agent {
                                             path: format!("git:{}", wd),
                                         });
                                     } else {
-                                        tracing::warn!("Failed to create git commit: {}", String::from_utf8_lossy(&commit_out.stderr));
+                                        tracing::warn!(
+                                            "Failed to create git commit: {}",
+                                            String::from_utf8_lossy(&commit_out.stderr)
+                                        );
                                     }
                                 }
                             }
@@ -854,10 +967,10 @@ impl Agent {
                 }
             }
 
-
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
-            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens
+            {
                 // We want to compact if we have enough messages to make it worthwhile
                 if messages.len() > 5 {
                     let mut compact_messages = Vec::new();
@@ -879,7 +992,11 @@ impl Agent {
                             if !m.tool_calls.is_empty() {
                                 middle_text.push_str("Tool Calls:\n");
                                 for tc in &m.tool_calls {
-                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
+                                    middle_text.push_str(&format!(
+                                        "  {} ({})\n",
+                                        tc.name,
+                                        tc.arguments.to_string()
+                                    ));
                                 }
                             }
                             if !m.tool_results.is_empty() {
@@ -890,7 +1007,10 @@ impl Agent {
                                         preview.truncate(200);
                                         preview.push_str("...");
                                     }
-                                    middle_text.push_str(&format!("  {} (error: {})\n", preview, tr.error));
+                                    middle_text.push_str(&format!(
+                                        "  {} (error: {})\n",
+                                        preview, tr.error
+                                    ));
                                 }
                             }
                             middle_text.push_str("---\n");
@@ -908,7 +1028,10 @@ impl Agent {
                         match self.llm.chat(summary_req).await {
                             Ok(summary_resp) => {
                                 let summary = summary_resp.message.content;
-                                compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
+                                compact_messages.push(Message::user(format!(
+                                    "[Context Compacted by Harness]:\n{}",
+                                    summary
+                                )));
                                 // Append the remaining recent messages
                                 compact_messages.extend_from_slice(&messages[middle_end..]);
                                 messages = compact_messages;
@@ -931,18 +1054,26 @@ impl Agent {
         Ok(last_assistant_content)
     }
 
-
     // Anthropic Mechanic: 3-Stage Tool Gating
-    fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+    fn check_tool_gating(
+        tc: &ToolCall,
+        is_read_only: bool,
+        cfg: &AgentRunConfig,
+    ) -> Result<(), ToolError> {
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
-            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
+            return Err(ToolError::Fatal(
+                "Project not trusted. Mutating tools are disabled.".to_string(),
+            ));
         }
 
         // Stage 2: Permission check before each tool call
         if let Some(allowed) = &cfg.allowed_tools {
             if !allowed.contains(&tc.name) {
-                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+                return Err(ToolError::Fatal(format!(
+                    "Tool '{}' is not in the allowed list.",
+                    tc.name
+                )));
             }
         }
 
@@ -958,13 +1089,43 @@ impl Agent {
         &self,
         tc: &ToolCall,
         session_tools: &[Tool],
+        cfg: &AgentRunConfig,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let result = tool.execute.execute(tc.arguments.clone()).await?;
+
+        if tool.is_subagent {
+            // Memory directive: Intercept outputs from subagent tools in `Agent::execute_tool`
+            // and condense them into a 1k-2k token summary via an LLM call (`self.llm.chat(...)`)
+            // to prevent prompt bloating.
+            let summary_req = ChatRequest {
+                model: cfg.model.clone(),
+                system: "You are a subagent summarizer. Your task is to condense the output of a subagent into a concise 1k-2k token summary. Preserve important outcomes, state changes, and key findings, but discard verbose logs.".to_string(),
+                messages: vec![Message::user(format!("Please summarize the following subagent output:
+{}", result))],
+                tools: vec![],
+                max_tokens: 2000,
+                temperature: 0.0,
+            };
+
+            match self.llm.chat(summary_req).await {
+                Ok(resp) => return Ok(resp.message.content),
+                Err(e) => {
+                    return Ok(format!(
+                        "Subagent completed, but summarization failed: {}
+
+Raw output: {}",
+                        e, result
+                    ))
+                }
+            }
+        }
+
+        Ok(result)
     }
 }
 
@@ -972,8 +1133,8 @@ impl Agent {
 mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
-    use tokio::sync::Mutex;
     use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     #[tokio::test]
     async fn test_acon_context_strategy() {
@@ -983,7 +1144,10 @@ mod tests {
 
         #[async_trait::async_trait]
         impl LlmClient for MockLlmClientAcon {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
 
@@ -1052,28 +1216,31 @@ mod tests {
             }
         }
 
-        let tools = vec![
-            Tool {
-                name: "read_tool".to_string(),
-                description: "read".to_string(),
-                is_read_only: true,
-                parameters: serde_json::Value::Null,
-                execute: Arc::new(MockToolExecutor),
-            },
-        ];
+        let tools = vec![Tool {
+            name: "read_tool".to_string(),
+            description: "read".to_string(),
+            is_read_only: true,
+            is_subagent: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
-        // Disable other mechanics to isolate the test
+                                                 // Disable other mechanics to isolate the test
         cfg.enable_observation_masking = false;
         cfg.enable_context_compaction = false;
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let client = Arc::new(MockLlmClientAcon { call_count: Mutex::new(0) });
+        let client = Arc::new(MockLlmClientAcon {
+            call_count: Mutex::new(0),
+        });
         let agent = Agent::new(client, tools);
 
         let mut events = vec![];
-        let res = agent.run(&cfg, "Start the task", &mut |e| events.push(e)).await;
+        let res = agent
+            .run(&cfg, "Start the task", &mut |e| events.push(e))
+            .await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Final answer");
@@ -1091,7 +1258,10 @@ mod tests {
 
         #[async_trait::async_trait]
         impl LlmClient for AssertingMockLlm {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
 
@@ -1140,7 +1310,6 @@ mod tests {
                     })
                 }
             }
-
         }
 
         struct DummyToolExecutor;
@@ -1151,24 +1320,30 @@ mod tests {
             }
         }
 
-        let client = Arc::new(AssertingMockLlm { call_count: Mutex::new(0) });
+        let client = Arc::new(AssertingMockLlm {
+            call_count: Mutex::new(0),
+        });
 
         // Include HeavyTool in the agent's definitions.
-        let agent = Agent::new(client, vec![
-            crate::tools::Tool {
+        let agent = Agent::new(
+            client,
+            vec![crate::tools::Tool {
                 name: "HeavyTool".to_string(),
                 description: "A heavy tool".to_string(),
                 parameters: serde_json::Value::Null,
                 is_read_only: false,
+                is_subagent: false,
                 execute: Arc::new(DummyToolExecutor),
-            }
-        ]);
+            }],
+        );
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_lazy_tool_loading = true; // THIS IS THE KEY MECHANIC
 
         let mut events = vec![];
-        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
+        let res = agent
+            .run(&cfg, "Do the task", &mut |e| events.push(e))
+            .await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Final Answer");
@@ -1183,9 +1358,21 @@ mod tests {
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
-                            ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
-                            ToolCall { id: "2".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
-                            ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall {
+                                id: "1".to_string(),
+                                name: "read_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            },
+                            ToolCall {
+                                id: "2".to_string(),
+                                name: "mutating_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            },
+                            ToolCall {
+                                id: "3".to_string(),
+                                name: "high_risk_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            },
                         ],
                         tool_results: vec![],
                     },
@@ -1205,6 +1392,7 @@ mod tests {
                 name: "read_tool".to_string(),
                 description: "read".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1212,6 +1400,7 @@ mod tests {
                 name: "mutating_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1219,6 +1408,7 @@ mod tests {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1231,39 +1421,46 @@ mod tests {
         cfg.project_trusted = false;
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Project not trusted. Mutating tools are disabled."));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Project not trusted. Mutating tools are disabled."));
 
         // Reset mock
         let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![
-                            ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
-                        ],
-                        tool_results: vec![],
-                    },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "1".to_string(),
+                        name: "unallowed_tool".to_string(),
+                        arguments: serde_json::Value::Null,
+                    }],
+                    tool_results: vec![],
                 },
-            ]),
+                usage: ohc_builtin_agent_core::types::Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
         });
 
-        let agent = Agent::new(client, vec![
-            Tool {
+        let agent = Agent::new(
+            client,
+            vec![Tool {
                 name: "unallowed_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
-            },
-        ]);
+            }],
+        );
 
         // Test 2: Permission check blocks unallowed tools
         let mut cfg = AgentRunConfig::default();
@@ -1271,40 +1468,46 @@ mod tests {
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("not in the allowed list."));
-
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("not in the allowed list."));
 
         // Test 3: High-risk operations require explicit confirmation
         let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![
-                            ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
-                        ],
-                        tool_results: vec![],
-                    },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "3".to_string(),
+                        name: "high_risk_tool".to_string(),
+                        arguments: serde_json::Value::Null,
+                    }],
+                    tool_results: vec![],
                 },
-            ]),
+                usage: ohc_builtin_agent_core::types::Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
         });
 
-        let agent = Agent::new(client, vec![
-            Tool {
+        let agent = Agent::new(
+            client,
+            vec![Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(MockToolExecutor),
-            },
-        ]);
+            }],
+        );
 
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
@@ -1312,18 +1515,18 @@ mod tests {
         // Not in approved_tool_calls
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         let err_str = result.unwrap_err().to_string();
         assert!(err_str.contains("User intervention required"));
         assert!(err_str.contains("requires explicit user confirmation"));
-
     }
 
-
-    use ohc_builtin_agent_core::types::{ChatRequest};
+    use ohc_builtin_agent_core::types::ChatRequest;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
 
@@ -1333,7 +1536,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Ok(ChatResponse {
@@ -1351,7 +1557,10 @@ mod tests {
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
         async fn execute(&self, _args: Value) -> Result<String, ToolError> {
-            Ok("A very long tool output that should be masked because it is long enough".to_string())
+            Ok(
+                "A very long tool output that should be masked because it is long enough"
+                    .to_string(),
+            )
         }
     }
 
@@ -1393,7 +1602,8 @@ mod tests {
         let tools = vec![Tool {
             name: "test_tool".to_string(),
             description: "test".to_string(),
-                is_read_only: false,
+            is_read_only: false,
+            is_subagent: false,
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
         }];
@@ -1404,7 +1614,9 @@ mod tests {
         cfg.enable_observation_masking = true;
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
@@ -1431,40 +1643,67 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 1".to_string(),
-                        tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 10,
+                    },
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 2".to_string(),
-                        tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "2".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 10,
+                    },
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 3".to_string(),
-                        tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "3".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 10,
+                    },
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 10,
+                    },
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
                     message: Message::assistant("final answer"),
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 10,
+                    },
                     stop_reason: "stop".to_string(),
                 },
             ]),
@@ -1478,15 +1717,14 @@ mod tests {
             }
         }
 
-        let tools: Vec<Tool> = vec![
-            Tool {
-                name: "test_tool".to_string(),
-                description: "test".to_string(),
-                is_read_only: false,
-                parameters: serde_json::Value::Null,
-                execute: Arc::new(MockToolExecutor),
-            }
-        ];
+        let tools: Vec<Tool> = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            is_read_only: false,
+            is_subagent: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_context_compaction = true;
@@ -1495,9 +1733,17 @@ mod tests {
         let agent = Agent::new(client, tools);
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
-        let result = agent.run(&cfg, "Hello, this is a very long conversation", &mut on_event).await;
+        let result = agent
+            .run(
+                &cfg,
+                "Hello, this is a very long conversation",
+                &mut on_event,
+            )
+            .await;
 
         assert!(result.is_ok());
 
@@ -1564,7 +1810,7 @@ mod tests {
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                }
+                },
             ]),
         });
 
@@ -1576,8 +1822,12 @@ mod tests {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 match self.name.as_str() {
                     "transient_tool" => Err(ToolError::Transient("network timeout".to_string())),
-                    "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
-                    "user_fixable_tool" => Err(ToolError::UserFixable("please login to external service".to_string())),
+                    "llm_recoverable_tool" => {
+                        Err(ToolError::LlmRecoverable("missing parameter X".to_string()))
+                    }
+                    "user_fixable_tool" => Err(ToolError::UserFixable(
+                        "please login to external service".to_string(),
+                    )),
                     "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
                     _ => Ok("success".to_string()),
                 }
@@ -1589,56 +1839,80 @@ mod tests {
                 name: "transient_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(FourTierErrorToolExecutor { name: "transient_tool".to_string() }),
+                execute: Arc::new(FourTierErrorToolExecutor {
+                    name: "transient_tool".to_string(),
+                }),
             },
             Tool {
                 name: "llm_recoverable_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(FourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string() }),
+                execute: Arc::new(FourTierErrorToolExecutor {
+                    name: "llm_recoverable_tool".to_string(),
+                }),
             },
             Tool {
                 name: "user_fixable_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(FourTierErrorToolExecutor { name: "user_fixable_tool".to_string() }),
+                execute: Arc::new(FourTierErrorToolExecutor {
+                    name: "user_fixable_tool".to_string(),
+                }),
             },
             Tool {
                 name: "fatal_tool".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
+                is_subagent: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(FourTierErrorToolExecutor { name: "fatal_tool".to_string() }),
-            }
+                execute: Arc::new(FourTierErrorToolExecutor {
+                    name: "fatal_tool".to_string(),
+                }),
+            },
         ];
 
         let cfg = AgentRunConfig::default();
 
         // 1. Transient Error (Retries with backoff but fails after max_retries)
         let client_transient = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
-                    content: "".to_string(),
-                    tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
-                    tool_results: vec![],
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "transient_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
                 },
-                usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
-            }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
-            }]),
+                ChatResponse {
+                    message: Message::assistant("stop"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
         });
         let agent1 = Agent::new(client_transient, tools.clone());
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
         let _ = agent1.run(&cfg, "Run transient", &mut on_event).await;
         let transient_handled = events.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "transient_tool" && result.contains("Transient error after retries: network timeout")
+                name == "transient_tool"
+                    && result.contains("Transient error after retries: network timeout")
             } else {
                 false
             }
@@ -1652,37 +1926,57 @@ mod tests {
         }
         #[async_trait::async_trait]
         impl LlmClient for LlmRecoverableMockClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let mut reqs = self.requests.lock().await;
                 reqs.push(req);
                 let mut resps = self.responses.lock().await;
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                    Ok(ChatResponse {
+                        message: Message::assistant("stop"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
                 }
             }
         }
 
         let client_llm = Arc::new(LlmRecoverableMockClient {
             requests: tokio::sync::Mutex::new(vec![]),
-            responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
-                    content: "".to_string(),
-                    tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
-                    tool_results: vec![],
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "2".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
                 },
-                usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
-            }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
-            }]),
+                ChatResponse {
+                    message: Message::assistant("stop"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
         });
         let agent2 = Agent::new(client_llm.clone(), tools.clone());
         let mut events2 = vec![];
-        let mut on_event2 = |e| { events2.push(e); };
-        let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
+        let mut on_event2 = |e| {
+            events2.push(e);
+        };
+        let _ = agent2
+            .run(&cfg, "Run llm recoverable", &mut on_event2)
+            .await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
                 name == "llm_recoverable_tool" && result == "missing parameter X"
@@ -1698,7 +1992,11 @@ mod tests {
         // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
-        let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
+        let tool_msg = reqs
+            .iter()
+            .flat_map(|r| &r.messages)
+            .find(|m| m.role == Role::Tool && !m.tool_results.is_empty())
+            .unwrap();
         assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
         assert_eq!(tool_msg.tool_results[0].content, "");
 
@@ -1708,7 +2006,11 @@ mod tests {
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
-                    tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_calls: vec![ToolCall {
+                        id: "3".to_string(),
+                        name: "user_fixable_tool".to_string(),
+                        arguments: serde_json::Value::Null,
+                    }],
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
@@ -1717,7 +2019,9 @@ mod tests {
         });
         let agent3 = Agent::new(client_user, tools.clone());
         let mut events3 = vec![];
-        let mut on_event3 = |e| { events3.push(e); };
+        let mut on_event3 = |e| {
+            events3.push(e);
+        };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
@@ -1735,7 +2039,11 @@ mod tests {
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
-                    tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_calls: vec![ToolCall {
+                        id: "4".to_string(),
+                        name: "fatal_tool".to_string(),
+                        arguments: serde_json::Value::Null,
+                    }],
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
@@ -1744,7 +2052,9 @@ mod tests {
         });
         let agent4 = Agent::new(client_fatal, tools.clone());
         let mut events4 = vec![];
-        let mut on_event4 = |e| { events4.push(e); };
+        let mut on_event4 = |e| {
+            events4.push(e);
+        };
         let res4 = agent4.run(&cfg, "Run fatal", &mut on_event4).await;
         assert!(res4.is_err());
         let fatal_handled = events4.iter().any(|e| {
@@ -1788,6 +2098,7 @@ mod tests {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1795,6 +2106,7 @@ mod tests {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
             },
@@ -1804,72 +2116,94 @@ mod tests {
 
         let mut cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
-            blocked_keywords: vec!["banned".to_string(), "password".to_string(), "secret".to_string()],
+            blocked_keywords: vec![
+                "banned".to_string(),
+                "password".to_string(),
+                "secret".to_string(),
+            ],
         });
 
         // Test Input Guardrail
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-        let result = agent.run(&cfg, "Hello, please give me the secret password.", &mut on_event).await;
+        let mut on_event = |e| {
+            events.push(e);
+        };
+        let result = agent
+            .run(
+                &cfg,
+                "Hello, please give me the secret password.",
+                &mut on_event,
+            )
+            .await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Input guardrail tripped"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Input guardrail tripped"));
 
         // Reset client for next tests
         let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_1".to_string(),
-                            name: "banned_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "call_1".to_string(),
+                        name: "banned_tool".to_string(),
+                        arguments: Value::Null,
+                    }],
+                    tool_results: vec![],
                 },
-            ]),
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
         });
-        let agent = Agent::new(client, vec![
-            Tool {
+        let agent = Agent::new(
+            client,
+            vec![Tool {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
+                is_subagent: false,
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
-            },
-        ]);
+            }],
+        );
 
         // Test Tool Guardrail
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Tool guardrail tripped"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Tool guardrail tripped"));
 
         // Reset client for Output test
         let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("Here is the secret data."),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                },
-            ]),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("Here is the secret data."),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+            }]),
         });
         let agent = Agent::new(client, vec![]);
 
         // Test Output Guardrail
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Output guardrail tripped"));
     }
-
 
     #[test]
     fn test_hierarchical_system_prompt_with_tools() {
@@ -1882,6 +2216,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "A test tool".to_string(),
             is_read_only: true,
+            is_subagent: false,
             parameters: serde_json::json!({"type": "object"}),
             execute: std::sync::Arc::new(MockToolExecutor),
         };
@@ -1936,7 +2271,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         // A single emoji is 4 bytes.
         let emoji = "🚀"; // 4 bytes
-        // 8192 emojis = 32768 bytes
+                          // 8192 emojis = 32768 bytes
         cfg.user_instructions = emoji.repeat(8192);
         // Add one more emoji to exceed the limit
         cfg.user_instructions.push_str(emoji); // 32772 bytes
@@ -1997,7 +2332,9 @@ mod tests {
         cfg.enable_llm_judge = true;
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
@@ -2010,13 +2347,14 @@ mod tests {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
         let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("Draft answer"),
-                    usage: Usage { input_tokens: 100, output_tokens: 50 },
-                    stop_reason: "stop".to_string(),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("Draft answer"),
+                usage: Usage {
+                    input_tokens: 100,
+                    output_tokens: 50,
                 },
-            ]),
+                stop_reason: "stop".to_string(),
+            }]),
         });
 
         let agent = Agent::new(client, vec![]);
@@ -2027,13 +2365,15 @@ mod tests {
         cfg.agent_id = "test-agent-telemetry".to_string();
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
     }
 
-    use crate::checkpointer::{CheckpointSaver, Checkpoint};
+    use crate::checkpointer::{Checkpoint, CheckpointSaver};
 
     struct MockCheckpointer {
         checkpoints: tokio::sync::Mutex<Vec<Checkpoint>>,
@@ -2041,9 +2381,16 @@ mod tests {
 
     #[async_trait::async_trait]
     impl CheckpointSaver for MockCheckpointer {
-        async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+        async fn get_checkpoint(
+            &self,
+            thread_id: &str,
+            checkpoint_id: &str,
+        ) -> Result<Option<Checkpoint>, String> {
             let cps = self.checkpoints.lock().await;
-            Ok(cps.iter().find(|c| c.thread_id == thread_id && c.checkpoint_id == checkpoint_id).cloned())
+            Ok(cps
+                .iter()
+                .find(|c| c.thread_id == thread_id && c.checkpoint_id == checkpoint_id)
+                .cloned())
         }
 
         async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
@@ -2054,7 +2401,11 @@ mod tests {
 
         async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
             let cps = self.checkpoints.lock().await;
-            let mut filtered: Vec<Checkpoint> = cps.iter().filter(|c| c.thread_id == thread_id).cloned().collect();
+            let mut filtered: Vec<Checkpoint> = cps
+                .iter()
+                .filter(|c| c.thread_id == thread_id)
+                .cloned()
+                .collect();
             // Reverse to simulate ORDER BY created_at DESC
             filtered.reverse();
             Ok(filtered)
@@ -2070,9 +2421,11 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![
-                            ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
-                        ],
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "read_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
@@ -2100,22 +2453,28 @@ mod tests {
         let mutating_tool = Tool {
             name: "read_tool".to_string(),
             description: "".to_string(),
-            is_read_only: false, // Mutating tool triggers Claude Code local checkpoints, but our new DB checkpointer triggers on every iteration.
+            is_read_only: false,
+            is_subagent: false, // Mutating tool triggers Claude Code local checkpoints, but our new DB checkpointer triggers on every iteration.
             parameters: serde_json::Value::Null,
-            execute: Arc::new(StateMockToolExecutor { result: "read_ok".to_string() }),
+            execute: Arc::new(StateMockToolExecutor {
+                result: "read_ok".to_string(),
+            }),
         };
 
         let checkpointer = Arc::new(MockCheckpointer {
             checkpoints: tokio::sync::Mutex::new(Vec::new()),
         });
 
-        let agent1 = Agent::new(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
+        let agent1 = Agent::new(client1, vec![mutating_tool.clone()])
+            .with_checkpointer(checkpointer.clone());
         let mut cfg = AgentRunConfig::default();
         cfg.model = "test-model".to_string();
         cfg.thread_id = Some("test_thread".to_string());
 
         let mut events1 = Vec::new();
-        let _ = agent1.run(&cfg, "Initial Task", &mut |e| events1.push(e)).await;
+        let _ = agent1
+            .run(&cfg, "Initial Task", &mut |e| events1.push(e))
+            .await;
 
         let cps = checkpointer.checkpoints.lock().await;
         assert_eq!(cps.len(), 1, "Should have saved 1 checkpoint");
@@ -2124,23 +2483,26 @@ mod tests {
 
         // Run 2: Resume from checkpoint
         let client2 = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("Resumed answer"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                },
-            ]),
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("Resumed answer"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+            }]),
         });
 
-        let agent2 = Agent::new(client2, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
+        let agent2 =
+            Agent::new(client2, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
         let mut cfg2 = AgentRunConfig::default();
         cfg2.model = "test-model".to_string();
         cfg2.thread_id = Some("test_thread".to_string());
         cfg2.resume_from_checkpoint_id = Some(saved_cp_id);
 
         let mut events2 = Vec::new();
-        let _ = agent2.run(&cfg2, "Ignored Task (will use loaded messages)", &mut |e| events2.push(e)).await;
+        let _ = agent2
+            .run(&cfg2, "Ignored Task (will use loaded messages)", &mut |e| {
+                events2.push(e)
+            })
+            .await;
 
         // Verify the second run resumed properly by checking if it loaded the messages.
         // It should have immediately hit the ChatResponse and finished.
@@ -2148,7 +2510,11 @@ mod tests {
         // returning early BEFORE saving another checkpoint!
         // A super-step checkpoint is only saved at the end of the iteration AFTER tools have run.
         let cps2 = checkpointer.checkpoints.lock().await;
-        assert_eq!(cps2.len(), 1, "Should NOT save another checkpoint because it terminates immediately");
+        assert_eq!(
+            cps2.len(),
+            1,
+            "Should NOT save another checkpoint because it terminates immediately"
+        );
 
         // Let's verify that the output of run 2 was indeed the "Resumed answer"
         let last_event = events2.last().unwrap();
@@ -2190,6 +2556,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: serde_json::Value::Null,
             is_read_only: false,
+            is_subagent: false,
             execute: Arc::new(MockToolExecutor),
         };
 
@@ -2199,9 +2566,25 @@ mod tests {
         let wd = dir.path().to_path_buf();
 
         // Setup git repo
-        std::process::Command::new("git").current_dir(&wd).arg("init").status().unwrap();
-        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.name").arg("Agent").status().unwrap();
-        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.email").arg("agent@example.com").status().unwrap();
+        std::process::Command::new("git")
+            .current_dir(&wd)
+            .arg("init")
+            .status()
+            .unwrap();
+        std::process::Command::new("git")
+            .current_dir(&wd)
+            .arg("config")
+            .arg("user.name")
+            .arg("Agent")
+            .status()
+            .unwrap();
+        std::process::Command::new("git")
+            .current_dir(&wd)
+            .arg("config")
+            .arg("user.email")
+            .arg("agent@example.com")
+            .status()
+            .unwrap();
 
         // Make a change
         std::fs::write(wd.join("test.txt"), "hello").unwrap();
@@ -2211,7 +2594,9 @@ mod tests {
         cfg.workspace_path = Some(wd.to_string_lossy().to_string());
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
@@ -2228,7 +2613,12 @@ mod tests {
         assert!(found_checkpoint_event);
 
         // Verify git log
-        let output = std::process::Command::new("git").current_dir(&wd).arg("log").arg("--oneline").output().unwrap();
+        let output = std::process::Command::new("git")
+            .current_dir(&wd)
+            .arg("log")
+            .arg("--oneline")
+            .output()
+            .unwrap();
         let log_str = String::from_utf8_lossy(&output.stdout);
         assert!(log_str.contains("Agent checkpoint: Iteration 0"));
     }
@@ -2264,6 +2654,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
             is_read_only: false,
+            is_subagent: false,
             execute: Arc::new(MockToolExecutor),
         };
 
@@ -2275,7 +2666,9 @@ mod tests {
         cfg.state_scratchpad_path = Some(scratchpad_path.clone());
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
@@ -2304,7 +2697,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for RecordingLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut lr = self.last_request.lock().await;
             *lr = Some(req);
             Ok(ChatResponse {
@@ -2328,7 +2724,8 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = true;
         cfg.enable_state_checkpointing = true;
         cfg.developer_instructions = "Developer instructions here.".to_string();
-        cfg.user_instructions = "Super long user instructions that span many many words.".to_string();
+        cfg.user_instructions =
+            "Super long user instructions that span many many words.".to_string();
 
         let scratchpad_path = format!(".test_checkpoint_litm_{}.json", uuid::Uuid::new_v4());
         cfg.state_scratchpad_path = Some(scratchpad_path.clone());
@@ -2340,10 +2737,17 @@ mod tests {
             Message::assistant("Still thinking..."),
             Message::user("Please continue"),
         ];
-        tokio::fs::write(&scratchpad_path, serde_json::to_string(&initial_msgs).unwrap()).await.unwrap();
+        tokio::fs::write(
+            &scratchpad_path,
+            serde_json::to_string(&initial_msgs).unwrap(),
+        )
+        .await
+        .unwrap();
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Continue working", &mut on_event).await;
         assert!(result.is_ok());
@@ -2353,9 +2757,72 @@ mod tests {
         let last_msg = req.messages.last().unwrap();
 
         assert_eq!(last_msg.role, Role::User);
-        assert!(last_msg.content.contains("[System Reminder: Developer instructions here.]"));
+        assert!(last_msg
+            .content
+            .contains("[System Reminder: Developer instructions here.]"));
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
+
+    #[tokio::test]
+    async fn test_subagent_summarization() {
+        struct SubagentLlmClient {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for SubagentLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req);
+                Ok(ChatResponse {
+                    message: Message::assistant("Summarized subagent response"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        struct MockSubagentTool;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockSubagentTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Verbose raw subagent log output".to_string())
+            }
+        }
+
+        let client = Arc::new(SubagentLlmClient {
+            requests: tokio::sync::Mutex::new(Vec::new()),
+        });
+
+        let subagent_tool = Tool {
+            name: "subagent_task".to_string(),
+            description: "A subagent tool".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            is_subagent: true,
+            execute: Arc::new(MockSubagentTool),
+        };
+
+        let agent = Agent::new(client.clone(), vec![subagent_tool.clone()]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.model = "test-model".to_string();
+
+        let tc = ToolCall {
+            id: "call_123".to_string(),
+            name: "subagent_task".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        let result = agent.execute_tool(&tc, &[subagent_tool], &cfg).await.unwrap();
+
+        assert_eq!(result, "Summarized subagent response");
+
+        let reqs = client.requests.lock().await;
+        assert_eq!(reqs.len(), 1);
+        let req = &reqs[0];
+        assert_eq!(req.model, "test-model");
+        assert!(req.messages[0].content.contains("Verbose raw subagent log output"));
+    }
+
 }

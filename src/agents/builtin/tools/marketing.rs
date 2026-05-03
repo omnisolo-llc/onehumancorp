@@ -1,32 +1,34 @@
+use super::{Tool, ToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
 
 pub struct QrGenerateExecutor;
 
 #[async_trait::async_trait]
 impl ToolExecutor for QrGenerateExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let content = args["content"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("qr_generate: content is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let content = args["content"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("qr_generate: content is required".to_string())
+        })?;
 
         let label = args["label"].as_str().unwrap_or("QR Code");
 
         // Functional QR generation using qrcode crate.
-        info!("Generating QR code for content: {} with label: {}", content, label);
+        info!(
+            "Generating QR code for content: {} with label: {}",
+            content, label
+        );
 
         use qrcode::QrCode;
 
         let code = QrCode::new(content.as_bytes())
-            .map_err(|e| format!("failed to generate QR code: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("failed to generate QR code: {}", e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Render the bits into a string.
-        let image_str = code.render::<char>()
+        let image_str = code
+            .render::<char>()
             .quiet_zone(false)
             .module_dimensions(1, 1)
             .build();
@@ -36,7 +38,8 @@ impl ToolExecutor for QrGenerateExecutor {
             "message": format!("QR code for '{}' has been generated.", content),
             "label": label,
             "ascii_art": image_str
-        }).to_string())
+        })
+        .to_string())
     }
 }
 
@@ -45,6 +48,7 @@ pub fn qr_generate_tool() -> Tool {
         name: "qr_generate".to_string(),
         description: "Generate a QR code for a given URL or text content.".to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

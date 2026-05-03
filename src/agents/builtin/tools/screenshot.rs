@@ -13,21 +13,18 @@ struct ScreenshotExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for ScreenshotExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let url = args["url"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("screenshot: url is required".to_string()))?;
 
-        let path = args["path"]
-            .as_str()
-            .unwrap_or("screenshot.png");
+        let path = args["path"].as_str().unwrap_or("screenshot.png");
 
         // Prevent directory traversal and absolute paths on Unix/Windows
         if path.contains("..") || path.starts_with('/') || path.contains(":\\") {
-            return Err(ToolError::LlmRecoverable("screenshot: path cannot contain '..' or be absolute".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "screenshot: path cannot contain '..' or be absolute".to_string(),
+            ));
         }
 
         #[cfg(not(test))]
@@ -58,8 +55,9 @@ impl ToolExecutor for ScreenshotExecutor {
             cmd.current_dir(wd);
         }
 
-        let output = cmd.output().await
-            .map_err(|e| ToolError::LlmRecoverable(format!("screenshot: failed to execute playwright: {}", e)))?;
+        let output = cmd.output().await.map_err(|e| {
+            ToolError::LlmRecoverable(format!("screenshot: failed to execute playwright: {}", e))
+        })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -73,7 +71,10 @@ impl ToolExecutor for ScreenshotExecutor {
             )));
         }
 
-        Ok(format!("Screenshot of {} successfully saved to {}", url, path))
+        Ok(format!(
+            "Screenshot of {} successfully saved to {}",
+            url, path
+        ))
     }
 }
 
@@ -82,7 +83,8 @@ pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Screenshot".to_string(),
         description: "Takes a screenshot of a web page at the specified URL using Playwright. Use this to visually verify web application functionality. \
             Returns the path to the saved screenshot.".to_string(),
-        is_read_only: true, // It writes a file locally but doesn't change the remote state, treating as read-only or safe to run concurrently
+        is_read_only: true,
+            is_subagent: false, // It writes a file locally but doesn't change the remote state, treating as read-only or safe to run concurrently
         parameters: json!({
             "type": "object",
             "properties": {
@@ -114,7 +116,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_missing_url() {
-        let executor = ScreenshotExecutor { working_dir: None, mock_command: None };
+        let executor = ScreenshotExecutor {
+            working_dir: None,
+            mock_command: None,
+        };
         let args = json!({ "path": "test.png" });
         let result = executor.execute(args).await;
         assert!(result.is_err());
@@ -127,7 +132,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_path_traversal() {
-        let executor = ScreenshotExecutor { working_dir: None, mock_command: None };
+        let executor = ScreenshotExecutor {
+            working_dir: None,
+            mock_command: None,
+        };
 
         let args1 = json!({ "url": "https://example.com", "path": "../test.png" });
         let result1 = executor.execute(args1).await;
@@ -155,19 +163,22 @@ mod tests {
     async fn test_screenshot_execute_success() {
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("echo".to_string())
+            mock_command: Some("echo".to_string()),
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Screenshot of https://example.com successfully saved to test.png");
+        assert_eq!(
+            result.unwrap(),
+            "Screenshot of https://example.com successfully saved to test.png"
+        );
     }
 
     #[tokio::test]
     async fn test_screenshot_execute_failure() {
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("false".to_string())
+            mock_command: Some("false".to_string()),
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
@@ -183,7 +194,7 @@ mod tests {
     async fn test_screenshot_execute_bad_command() {
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("this_command_does_not_exist_12345".to_string())
+            mock_command: Some("this_command_does_not_exist_12345".to_string()),
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;

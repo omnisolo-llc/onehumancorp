@@ -8,10 +8,7 @@ struct ToolSearchExecutor;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ToolSearchExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let query = args["query"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("toolsearch: query is required".to_string()))?
@@ -61,6 +58,7 @@ pub fn toolsearch_tool() -> Tool {
         name: "ToolSearch".to_string(),
         description: "Search available tools by name or description.".to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

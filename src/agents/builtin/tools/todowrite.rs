@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-
 use super::{SharedTodos, Tool, ToolExecutor};
 
 /// A single todo item.
@@ -24,13 +23,10 @@ struct TodoWriteExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TodoWriteExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let todos_arr = args["todos"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("todowrite: todos must be an array".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let todos_arr = args["todos"].as_array().ok_or_else(|| {
+            ToolError::LlmRecoverable("todowrite: todos must be an array".to_string())
+        })?;
 
         let items: Vec<TodoItem> = todos_arr
             .iter()
@@ -40,18 +36,9 @@ impl ToolExecutor for TodoWriteExecutor {
                     .as_str()
                     .map(str::to_string)
                     .unwrap_or_else(|| format!("todo-{}", i + 1)),
-                content: t["content"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
-                status: t["status"]
-                    .as_str()
-                    .unwrap_or("pending")
-                    .to_string(),
-                priority: t["priority"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
+                content: t["content"].as_str().unwrap_or("").to_string(),
+                status: t["status"].as_str().unwrap_or("pending").to_string(),
+                priority: t["priority"].as_str().unwrap_or("").to_string(),
             })
             .collect();
 
@@ -69,16 +56,12 @@ struct TodoReadExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TodoReadExecutor {
-    async fn execute(
-        &self,
-        _args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, _args: Value) -> Result<String, ToolError> {
         let todos = self.todos.read().await;
         if todos.is_empty() {
             return Ok("Todo list is empty.".to_string());
         }
-        let s = serde_json::to_string_pretty(&*todos)
-            .unwrap_or_else(|_| "[]".to_string());
+        let s = serde_json::to_string_pretty(&*todos).unwrap_or_else(|_| "[]".to_string());
         Ok(s)
     }
 }
@@ -90,6 +73,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
             Use to track progress on multi-step tasks."
             .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -125,6 +109,7 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
         name: "TodoRead".to_string(),
         description: "Read the current todo list.".to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {}

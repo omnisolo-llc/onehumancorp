@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
-
 #[async_trait::async_trait]
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
@@ -18,9 +17,9 @@ struct TopicRetrieveExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for TopicRetrieveExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let topic_name = args["topic_name"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("topic_retrieve: topic_name is required".to_string()))?;
+        let topic_name = args["topic_name"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("topic_retrieve: topic_name is required".to_string())
+        })?;
 
         self.accessor
             .retrieve_topic(topic_name)
@@ -32,8 +31,11 @@ impl ToolExecutor for TopicRetrieveExecutor {
 pub fn topic_retrieve_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
     Tool {
         name: "TopicRetrieve".to_string(),
-        description: "Pull a detailed memory topic file on demand based on hints from the lightweight index.".to_string(),
+        description:
+            "Pull a detailed memory topic file on demand based on hints from the lightweight index."
+                .to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -55,13 +57,14 @@ struct TranscriptSearchExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for TranscriptSearchExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let query = args["query"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("transcript_search: query is required".to_string()))?;
+        let query = args["query"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("transcript_search: query is required".to_string())
+        })?;
 
         let limit = args["limit"].as_u64().unwrap_or(5) as usize;
 
-        let results = self.accessor
+        let results = self
+            .accessor
             .search_transcripts(query, limit)
             .await
             .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
@@ -77,8 +80,10 @@ impl ToolExecutor for TranscriptSearchExecutor {
 pub fn transcript_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
     Tool {
         name: "TranscriptSearch".to_string(),
-        description: "Search raw historical conversation transcripts across all past sessions.".to_string(),
+        description: "Search raw historical conversation transcripts across all past sessions."
+            .to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

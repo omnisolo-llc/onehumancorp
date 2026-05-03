@@ -3,37 +3,38 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+pub mod agent_tool;
+pub mod anthropic_memory;
 pub mod bash;
-pub mod read;
-pub mod write;
 pub mod edit;
+pub mod finance;
 pub mod glob;
 pub mod grep;
-pub mod webfetch;
-pub mod websearch;
+pub mod head;
+pub mod hybrid_blob;
+pub mod lazy_load;
+pub mod local_fs_sync;
+pub mod marketing;
+pub mod ollama;
+pub mod read;
+pub mod screenshot;
 pub mod sendmessage;
+pub mod sleep;
+pub mod subagent;
+pub mod tail;
+pub mod task;
 pub mod todowrite;
 pub mod toolsearch;
-pub mod task;
-pub mod agent_tool;
-pub mod sleep;
-pub mod marketing;
-pub mod finance;
-pub mod local_fs_sync;
-pub mod ollama;
-pub mod subagent;
-pub mod head;
-pub mod tail;
-pub mod hybrid_blob;
-pub mod anthropic_memory;
-pub mod lazy_load;
-pub mod screenshot;
+pub mod webfetch;
+pub mod websearch;
+pub mod write;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
     pub name: String,
     pub description: String,
     pub is_read_only: bool,
+    pub is_subagent: bool,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
 }
@@ -50,6 +51,7 @@ impl Clone for Tool {
             name: self.name.clone(),
             description: self.description.clone(),
             is_read_only: self.is_read_only,
+            is_subagent: self.is_subagent,
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
         }
@@ -58,10 +60,7 @@ impl Clone for Tool {
 
 #[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError>;
+    async fn execute(&self, args: Value) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.

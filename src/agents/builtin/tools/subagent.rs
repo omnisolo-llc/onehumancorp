@@ -3,7 +3,9 @@ use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use agent_service_proto::ohc::agent::service::{agent_service_client::AgentServiceClient, SubAgentRequest};
+use agent_service_proto::ohc::agent::service::{
+    agent_service_client::AgentServiceClient, SubAgentRequest,
+};
 
 pub struct SubagentExecutor;
 
@@ -12,9 +14,11 @@ impl ToolExecutor for SubagentExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
         let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
-        
+
         if task.is_empty() {
-            return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "Task cannot be empty".to_string(),
+            ));
         }
 
         tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, task);
@@ -36,14 +40,18 @@ impl ToolExecutor for SubagentExecutor {
                 .await;
 
             if let Err(e) = wt_output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Failed to spawn worktree: {}",
+                    e
+                )));
             }
 
             let mut req = SubAgentRequest::default();
             req.task = task.to_string();
             req.working_dir = worktree_path.clone();
 
-            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+            let addr = std::env::var("OHC_AGENT_ADDRESS")
+                .unwrap_or_else(|_| "127.0.0.1:50051".to_string());
             let res = async {
                 let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
                     .map_err(|e| format!("invalid sub-agent address: {}", e))?
@@ -51,8 +59,12 @@ impl ToolExecutor for SubagentExecutor {
                     .await
                     .map_err(|e| format!("connect to sub-agent: {}", e))?;
                 let mut client = AgentServiceClient::new(channel);
-                client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
-            }.await;
+                client
+                    .dispatch_to_sub_agent(req)
+                    .await
+                    .map_err(|e| e.to_string())
+            }
+            .await;
 
             // Cleanup
             let _ = tokio::process::Command::new("git")
@@ -92,7 +104,8 @@ pub fn subagent_tool() -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
         description: "Spawn a subagent to work on a task in an isolated context (fork, teammate, or worktree) and return a condensed summary.".to_string(),
-        is_read_only: false, // It might mutate the world depending on the mode
+        is_read_only: false,
+            is_subagent: true, // It might mutate the world depending on the mode
         parameters: json!({
             "type": "object",
             "properties": {

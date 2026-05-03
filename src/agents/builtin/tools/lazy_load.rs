@@ -13,9 +13,11 @@ struct LazyLoadToolsExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for LazyLoadToolsExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let tool_names = args["tool_names"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("lazy_load_tools: 'tool_names' must be an array of strings".to_string()))?;
+        let tool_names = args["tool_names"].as_array().ok_or_else(|| {
+            ToolError::LlmRecoverable(
+                "lazy_load_tools: 'tool_names' must be an array of strings".to_string(),
+            )
+        })?;
 
         let mut active = self.active_tools.write().await;
         let mut loaded = Vec::new();
@@ -42,7 +44,8 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
     Tool {
         name: "LazyLoadTools".to_string(),
         description: "Loads additional tools into your context window. Use this when you discover tools via ToolSearch that you need to use.".to_string(),
-        is_read_only: false, // State mutation for the agent context
+        is_read_only: false,
+            is_subagent: false, // State mutation for the agent context
         parameters: json!({
             "type": "object",
             "properties": {
