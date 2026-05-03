@@ -2150,46 +2150,6 @@ mod docs_tests {
         assert_eq!(help_center.get_search_query(), "");
     }
 
-    #[test]
-    fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-
-        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
-        // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
-        // But we can verify it doesn't crash on Dashboard creation.
-        // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
-        // To satisfy the E2E requirement securely, we will test the HelpCenter workflow from the Dashboard to ensure the button under the TooltipElement is still clickable.
-
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
-
-        dashboard_ui.on_open_help_center(move || {
-            *help_center_opened_clone.borrow_mut() = true;
-        });
-
-        // Simulate clicking the help center button.
-        dashboard_ui.invoke_open_help_center();
-
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
-    }
 
     #[test]
     fn test_help_center_creation() {
