@@ -28,8 +28,8 @@ impl MyAgentManagerService {
             tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
             tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
         );
-        let agents = agents.unwrap_or_else(|_| vec![]);
-        let meetings = meetings.unwrap_or_else(|_| vec![]);
+        let agents = agents.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let meetings = meetings.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
 
         let cost_auditor = self.hub.get_cost_auditor();
         let costs = Summary {
@@ -38,15 +38,15 @@ impl MyAgentManagerService {
         };
 
         let mut status_map = std::collections::HashMap::new();
-        for a in &agents {
+        for a in agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         DashboardSnapshot {
-            meetings,
+            meetings: meetings.to_vec(),
             costs: Some(costs),
-            agents,
+            agents: agents.to_vec(),
             statuses,
             task_queue: vec![],
             queue_length: 0,
@@ -141,7 +141,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<IdentitiesResponse>, Status> {
         let agents = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         let now = Utc::now();
-        let identities = agents.into_iter().map(|a| AgentIdentity {
+        let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
             agent_id: a.id.clone(),
             svid: format!("spiffe://onehumancorp.io/system/{}", a.id),
             trust_domain: "onehumancorp.io".to_string(),
@@ -211,7 +211,7 @@ impl AgentManagerService for MyAgentManagerService {
         let meetings = meetings_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let mut msg_count = 0;
-        for m in &meetings {
+        for m in meetings.iter() {
             msg_count += m.transcript.len() as i32;
         }
 
