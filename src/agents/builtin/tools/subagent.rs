@@ -75,11 +75,36 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "teammate" {
+            let task_clone = task.to_string();
+            tokio::spawn(async move {
+                let mut req = SubAgentRequest::default();
+                req.task = task_clone.clone();
+                req.working_dir = std::env::current_dir()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| ".".to_string());
+
+                let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+                let res = async {
+                    let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                        .map_err(|e| format!("invalid sub-agent address: {}", e))?
+                        .connect()
+                        .await
+                        .map_err(|e| format!("connect to sub-agent: {}", e))?;
+                    let mut client = AgentServiceClient::new(channel);
+                    client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
+                }.await;
+
+                if let Err(e) = res {
+                    tracing::error!("Subagent (Teammate) failed: {}", e);
+                }
+            });
+
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok(format!("[Subagent (Teammate)] Spawned task: {}. It is running in parallel and will communicate via mailbox.", task))
         } else {
-            // For fork/teammate, we return the demonstration message for now as they aren't fully implemented in Rust yet.
             let summary = match mode {
                 "fork" => format!("[Subagent (Fork)] Completed task: {}. Summary: I have verified the conditions locally within a cloned context.", task),
-                "teammate" => format!("[Subagent (Teammate)] Completed task: {}. Summary: I successfully worked in parallel and updated the required systems.", task),
                 _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
             };
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -165,5 +190,20 @@ mod tests {
         let res_str = result.unwrap();
         assert!(res_str.contains("[Subagent (Fork)]"));
         assert!(res_str.contains("do something"));
+    }
+
+    #[tokio::test]
+    async fn test_subagent_teammate_mode() {
+        let executor = SubagentExecutor;
+        let args = json!({
+            "task": "do parallel work",
+            "mode": "teammate"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+        assert!(res_str.contains("[Subagent (Teammate)] Spawned task:"));
+        assert!(res_str.contains("do parallel work"));
     }
 }

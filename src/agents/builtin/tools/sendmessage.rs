@@ -55,6 +55,37 @@ impl ToolExecutor for SendMessageExecutor {
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
+        // Sanitize the `to` parameter to prevent path traversal
+        let safe_to: String = to.chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+            .collect();
+
+        if safe_to.is_empty() {
+            return Err(ToolError::LlmRecoverable("sendmessage: invalid recipient ID".to_string()));
+        }
+
+        let dir_path = ".agent_mailboxes";
+        if let Err(e) = tokio::fs::create_dir_all(dir_path).await {
+            return Err(ToolError::LlmRecoverable(format!("Failed to create mailbox directory: {}", e)));
+        }
+
+        let file_path = format!("{}/{}.log", dir_path, safe_to);
+        let serialized = serde_json::to_string(&msg).unwrap_or_default();
+        let serialized_with_newline = format!("{}\n", serialized);
+
+        // Append to file
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&file_path)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to open mailbox file: {}", e)))?;
+
+        use tokio::io::AsyncWriteExt;
+        file.write_all(serialized_with_newline.as_bytes())
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to write to mailbox file: {}", e)))?;
+
         self.mailbox.write().await.send(msg);
         Ok(format!("Message sent to {}.", to))
     }
