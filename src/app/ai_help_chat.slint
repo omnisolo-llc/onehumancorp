@@ -7,6 +7,7 @@ export component AiHelpChat inherits Window {
     background: white;
 
     in-out property <string> user_input: "";
+    in property <[string]> chat_history: [];
     callback send_message();
 
     VerticalBox {
@@ -27,7 +28,17 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 8px;
+                for msg in chat_history : Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: msg; color: #0f172a; wrap: word-wrap; }
+                    }
+                }
+            }
         }
 
         HorizontalBox {

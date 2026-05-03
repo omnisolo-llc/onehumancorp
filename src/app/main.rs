@@ -79,6 +79,21 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub fn setup_ai_chat_handler(ui: &app::AiHelpChat) {
+    let weak = ui.as_weak();
+    ui.on_send_message(move || {
+        if let Some(ui) = weak.upgrade() {
+            let input = ui.get_user_input();
+            if input.trim().is_empty() { return; }
+            let mut messages: Vec<slint::SharedString> = slint::Model::iter(&ui.get_chat_history()).collect();
+            messages.push(input.clone());
+            messages.push(format!("Here is the documentation about '{}': Read the full article →", input).into());
+            ui.set_chat_history(slint::ModelRc::new(slint::VecModel::from(messages)));
+            ui.set_user_input("".into());
+        }
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -1060,17 +1075,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let release_notes_handle = release_notes_ui.as_weak();
                 Box::leak(Box::new(release_notes_ui));
 
-                ai_chat_ui.on_send_message({
-                    let chat_handle = ai_chat_handle.clone();
-                    move || {
-                        if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
-                            ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
-                        }
-                    }
-                });
+                setup_ai_chat_handler(&ai_chat_ui);
                 Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {
@@ -2637,12 +2642,39 @@ mod docs_tests {
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
 
         let ai_chat = app::AiHelpChat::new().unwrap();
-        ai_chat.set_user_input("How do I sell a product?".into());
-        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let send_called_clone = send_called.clone();
-        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+
+        crate::setup_ai_chat_handler(&ai_chat);
+
+        // 1. Initial State
+        let history1: Vec<slint::SharedString> = slint::Model::iter(&ai_chat.get_chat_history()).collect();
+        assert_eq!(history1.len(), 0);
+
+        // 2. Empty Submission Check
+        ai_chat.set_user_input("   ".into());
         ai_chat.invoke_send_message();
-        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+        let history_empty: Vec<slint::SharedString> = slint::Model::iter(&ai_chat.get_chat_history()).collect();
+        assert_eq!(history_empty.len(), 0);
+
+        // 3. First Valid Query
+        ai_chat.set_user_input("How do I sell a product?".into());
+        ai_chat.invoke_send_message();
+
+        let history2: Vec<slint::SharedString> = slint::Model::iter(&ai_chat.get_chat_history()).collect();
+        assert_eq!(history2.len(), 2);
+        assert_eq!(history2[0], "How do I sell a product?");
+        assert_eq!(history2[1], "Here is the documentation about 'How do I sell a product?': Read the full article →");
+
+        // 4. Second Valid Query
+        ai_chat.set_user_input("Set up Stripe".into());
+        ai_chat.invoke_send_message();
+
+        let history3: Vec<slint::SharedString> = slint::Model::iter(&ai_chat.get_chat_history()).collect();
+        assert_eq!(history3.len(), 4);
+        assert_eq!(history3[2], "Set up Stripe");
+        assert_eq!(history3[3], "Here is the documentation about 'Set up Stripe': Read the full article →");
+
+        // 5. Final State Verification
+        assert_eq!(ai_chat.get_user_input(), "");
     }
 
     #[test]
