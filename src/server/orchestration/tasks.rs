@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
 use chrono::Utc;
+use crate::autodream::AutoDreamWorker;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -602,7 +603,14 @@ impl TaskDecompositionService {
                 .await
                 .map_err(|e| e.to_string())?;
 
+
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "COMPLETED" {
+                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
+                    let _ = autodream.consolidate_epoch().await;
+                }
+
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
@@ -647,7 +655,14 @@ impl TaskDecompositionService {
                 .await
                 .map_err(|e| e.to_string())?;
 
+
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "COMPLETED" {
+                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
+                    let _ = autodream.consolidate_epoch().await;
+                }
+
             }
         }
         Ok(())
