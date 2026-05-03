@@ -18,6 +18,7 @@ impl LocalRepository for PgLocalRepository {
             "SELECT id, organization_id, status, payload, created_at, synced_to_cloud, cloud_mission_id, sync_error, last_synced_at
              FROM agent_missions
              WHERE organization_id = $1 AND synced_to_cloud = FALSE AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')
+             ORDER BY updated_at ASC
              LIMIT $2"
         )
         .bind(organization_id)
@@ -88,7 +89,8 @@ impl LocalRepository for PgLocalRepository {
         let rows = sqlx::query(
             "SELECT id, organization_id, status, payload, created_at, synced_to_cloud, cloud_mission_id, sync_error, last_synced_at
              FROM agent_missions
-             WHERE organization_id = $1 AND synced_to_cloud = TRUE AND cloud_mission_id IS NOT NULL AND status NOT IN ('COMPLETED', 'FAILED')"
+             WHERE organization_id = $1 AND synced_to_cloud = TRUE AND cloud_mission_id IS NOT NULL AND status NOT IN ('COMPLETED', 'FAILED')
+             ORDER BY updated_at ASC"
         )
         .bind(organization_id)
         .fetch_all(&self.pool)
