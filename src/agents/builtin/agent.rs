@@ -586,17 +586,17 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
-                        let err = format!("LLM Recoverable error: {}", msg);
+                        // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
-                            content: String::new(),
-                            error: err,
+                            content: msg,
+                            error: String::new(), // Note: treating the error as the actual content!
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -680,14 +680,14 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
-                            let err = format!("LLM Recoverable error: {}", msg);
+                            // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
+                                result: msg.clone(),
                                 iteration,
                             });
-                            error = err;
+                            content = msg;
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
@@ -1523,7 +1523,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result.contains("LLM Recoverable error: missing parameter X")
+                name == "llm_recoverable_tool" && result == "missing parameter X"
             } else {
                 false
             }
