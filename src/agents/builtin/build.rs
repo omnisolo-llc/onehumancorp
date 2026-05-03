@@ -19,7 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_server(true)
         .build_client(true)
         .compile_protos(
-            &["../../proto/agent_service.proto"],
+            &[
+                "../../proto/agent_service.proto",
+                "../../proto/hub.proto",
+                "../../proto/common.proto",
+            ],
             &["../../proto"],
         )?;
     Ok(())

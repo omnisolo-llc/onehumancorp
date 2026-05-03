@@ -6,3 +6,9 @@ pub mod agent_service {
     tonic::include_proto!("ohc.agent.service");
 }
 pub use agent_service::*;
+
+pub mod orchestration {
+    #![allow(clippy::all)]
+    tonic::include_proto!("ohc.orchestration");
+}
+pub use orchestration::*;

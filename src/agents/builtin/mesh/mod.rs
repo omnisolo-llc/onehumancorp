@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
 use tracing::{info, warn};
+use prost::Message as ProstMessage;
+use crate::proto::orchestration::TeammateMeshEvent;
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
@@ -26,25 +28,61 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
+        let event = TeammateMeshEvent {
+            agent_id: "builtin".to_string(),
+            action: "task".to_string(),
+            status: "ok".to_string(),
+            payload,
+        };
+        let mut buf = Vec::new();
+        let _ = event.encode(&mut buf);
+
         self.transport.publish("mesh:tasks", Message {
             topic: "mesh:tasks".to_string(),
-            payload,
+            payload: buf,
         }).await
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        let event = TeammateMeshEvent {
+            agent_id: "builtin".to_string(),
+            action: "coordination".to_string(),
+            status: "ok".to_string(),
+            payload,
+        };
+        let mut buf = Vec::new();
+        let _ = event.encode(&mut buf);
+
         self.transport.publish("mesh:coordination", Message {
             topic: "mesh:coordination".to_string(),
-            payload,
+            payload: buf,
         }).await
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:tasks", handler).await
+        let wrapped_handler = Box::new(move |msg: Message| {
+            if let Ok(event) = TeammateMeshEvent::decode(&msg.payload[..]) {
+                let mut new_msg = msg.clone();
+                new_msg.payload = event.payload;
+                handler(new_msg);
+            } else {
+                handler(msg);
+            }
+        });
+        self.transport.subscribe("mesh:tasks", wrapped_handler).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:coordination", handler).await
+        let wrapped_handler = Box::new(move |msg: Message| {
+            if let Ok(event) = TeammateMeshEvent::decode(&msg.payload[..]) {
+                let mut new_msg = msg.clone();
+                new_msg.payload = event.payload;
+                handler(new_msg);
+            } else {
+                handler(msg);
+            }
+        });
+        self.transport.subscribe("mesh:coordination", wrapped_handler).await
     }
 }
 
@@ -122,5 +160,53 @@ mod tests {
         sleep(Duration::from_millis(50)).await;
 
         assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
+    }
+
+    #[tokio::test]
+    async fn test_teammate_mesh_event_encoding() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+
+        let raw_received = Arc::new(AtomicBool::new(false));
+        let raw_received_clone = raw_received.clone();
+
+        // Subscribe directly to the transport to see the raw message before the wrapper intercepts
+        let _cancel = transport.subscribe("mesh:tasks", Box::new(move |msg| {
+            let event = TeammateMeshEvent::decode(&msg.payload[..]).expect("Must be a valid TeammateMeshEvent");
+            assert_eq!(event.action, "task");
+            assert_eq!(event.agent_id, "builtin");
+            assert_eq!(event.payload, b"raw_test_data");
+            raw_received_clone.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        mesh.publish_task(b"raw_test_data".to_vec()).await.unwrap();
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(raw_received.load(Ordering::SeqCst), "Transport must receive a valid TeammateMeshEvent");
+    }
+
+    #[tokio::test]
+    async fn test_teammate_mesh_event_fallback() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        // Subscribe using the wrapper
+        let _cancel = mesh.subscribe_tasks(Box::new(move |msg| {
+            assert_eq!(msg.payload, b"invalid_protobuf_data");
+            received_clone.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        // Publish raw invalid bytes directly to transport
+        transport.publish("mesh:tasks", Message {
+            topic: "mesh:tasks".to_string(),
+            payload: b"invalid_protobuf_data".to_vec(),
+        }).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst), "Fallback must process invalid protobuf as raw bytes");
     }
 }

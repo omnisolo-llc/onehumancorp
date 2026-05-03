@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "domain",
+    srcs = [
+        "mesh.go",
+        "tasks.go",
+    ],
+    importpath = "onehumancorp/srcs/server/domain",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:hub_go_proto",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "domain_test",
+    srcs = [
+        "mesh_test.go",
+        "tasks_test.go",
+    ],
+    embed = [":domain"],
+)

@@ -1,5 +1,5 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-
+load("@rules_go//proto:def.bzl", "go_proto_library")
 
 exports_files([
     "agent.proto",
@@ -18,6 +18,13 @@ exports_files([
 proto_library(
     name = "hub_proto",
     srcs = ["hub.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "hub_go_proto",
+    importpath = "onehumancorp/src/proto",
+    proto = ":hub_proto",
     visibility = ["//visibility:public"],
 )
 
