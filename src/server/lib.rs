@@ -168,6 +168,68 @@ impl HubService for MyHubService {
         }
     }
 
+    async fn approve_storefront_draft(
+        &self,
+        request: Request<crate::ohc::orchestration::ApproveStorefrontDraftRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::ApproveStorefrontDraftResponse>, Status> {
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => "onboarding_temp_org".to_string()
+        };
+        let tenant_id = org_id.clone();
+
+        let req = request.into_inner();
+        sqlx::query(
+            "UPDATE storefront_drafts SET approved = TRUE WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(&req.draft_id)
+        .bind(&tenant_id)
+        .execute(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(Response::new(crate::ohc::orchestration::ApproveStorefrontDraftResponse {
+            success: true,
+        }))
+    }
+
+    async fn create_storefront_draft(
+        &self,
+        request: Request<crate::ohc::orchestration::CreateStorefrontDraftRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::CreateStorefrontDraftResponse>, Status> {
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => {
+                // Since this is called during onboarding before login, use a default namespace if missing
+                // Or require it to be passed via metadata. In this specific onboarding flow context,
+                // the user hasn't created an organization yet. Let's use a temporary onboarding org.
+                "onboarding_temp_org".to_string()
+            }
+        };
+
+        let req = request.into_inner();
+        let tenant_id = org_id.clone();
+        let draft_id = format!("draft-{}", uuid::Uuid::new_v4());
+
+        sqlx::query(
+            "INSERT INTO storefront_drafts (id, tenant_id, business_type, instagram_handle, company_name, company_description) \
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&draft_id)
+        .bind(&tenant_id)
+        .bind(&req.business_type)
+        .bind(&req.instagram_handle)
+        .bind(&req.company_name)
+        .bind(&req.company_description)
+        .execute(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(Response::new(crate::ohc::orchestration::CreateStorefrontDraftResponse {
+            draft_id,
+        }))
+    }
+
     async fn handle_config_wizard(
         &self,
         _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,

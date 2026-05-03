@@ -1183,6 +1183,102 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_generate_storefront_from_instagram({
+        let ui_weak = setup_wizard_handle.clone();
+        move || {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let business_type = ui.get_business_type().to_string();
+                let instagram_handle = ui.get_instagram_handle().to_string();
+
+                tokio::spawn(async move {
+                    let mut generated_name = format!("{}'s {}", instagram_handle, business_type);
+                    let mut generated_desc = format!("The best {} in town.", business_type);
+
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        // 1. AI Content Generation via Reason RPC
+                        let prompt = format!(
+                            "Generate a business name and a catchy 1-sentence description for a '{}' business based on their Instagram handle '{}'. Return JSON with keys: company_name, company_description.",
+                            business_type, instagram_handle
+                        );
+                        let reason_req = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "setup_wizard_promoter".into(),
+                        });
+
+                        if let Ok(resp) = client.reason(reason_req).await {
+                            let content = resp.into_inner().content;
+                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+                                if let Some(n) = v.get("company_name").and_then(|n| n.as_str()) { generated_name = n.to_string(); }
+                                if let Some(d) = v.get("company_description").and_then(|d| d.as_str()) { generated_desc = d.to_string(); }
+                            }
+                        }
+
+                        // 2. Persist the Draft using CreateStorefrontDraft
+                        let mut returned_draft_id = "".to_string();
+                        let create_draft_req = tonic::Request::new(ohc::orchestration::CreateStorefrontDraftRequest {
+                            business_type: business_type.clone(),
+                            instagram_handle: instagram_handle.clone(),
+                            company_name: generated_name.clone(),
+                            company_description: generated_desc.clone(),
+                        });
+                        if let Ok(resp) = client.create_storefront_draft(create_draft_req).await {
+                            returned_draft_id = resp.into_inner().draft_id;
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_draft_storefront_name(generated_name.into());
+                                ui.set_draft_storefront_desc(generated_desc.into());
+                                ui.set_draft_id(returned_draft_id.into());
+                                ui.set_is_generating_draft(false);
+                                ui.set_step(13); // Move to Review Storefront Draft
+                            }
+                        }).unwrap();
+                    } else {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_draft_storefront_name(generated_name.into());
+                                ui.set_draft_storefront_desc(generated_desc.into());
+                                ui.set_is_generating_draft(false);
+                                ui.set_step(13); // Move to Review Storefront Draft
+                            }
+                        }).unwrap();
+                    }
+                });
+            }
+        }
+    });
+
+    setup_wizard_ui.on_approve_storefront_draft({
+        let ui_weak = setup_wizard_handle.clone();
+        move || {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let draft_id = ui.get_draft_id().to_string();
+                let company_name = ui.get_draft_storefront_name().to_string();
+                let company_desc = ui.get_draft_storefront_desc().to_string();
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let approve_req = tonic::Request::new(ohc::orchestration::ApproveStorefrontDraftRequest {
+                            draft_id,
+                        });
+                        let _ = client.approve_storefront_draft(approve_req).await;
+                    }
+
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_handle.upgrade() {
+                            ui.set_company_name(company_name.into());
+                            ui.set_company_description(company_desc.into());
+                            ui.set_step(4); // Proceed to Payments step
+                        }
+                    }).unwrap();
+                });
+            }
+        }
+    });
+
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
@@ -1920,6 +2016,51 @@ mod e2e_tests {
 
         ui.invoke_go_to_share_link();
         assert!(*share_link_clicked.borrow(), "Share link callback should be triggered on SetupWizard");
+    }
+
+    #[test]
+    fn test_deferred_onboarding_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(12);
+        ui.set_business_type("Baker".into());
+        ui.set_instagram_handle("mayas_cakes".into());
+
+        let generate_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let generate_clone = generate_called.clone();
+        let ui_weak_gen = ui.as_weak();
+        ui.on_generate_storefront_from_instagram(move || {
+            *generate_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak_gen.upgrade() {
+                u.set_draft_storefront_name("Maya's Beautiful Cakes".into());
+                u.set_draft_storefront_desc("The best baked goods in town.".into());
+                u.set_step(13);
+            }
+        });
+
+        ui.invoke_generate_storefront_from_instagram();
+        assert!(*generate_called.borrow(), "generate_storefront_from_instagram should be called");
+        assert_eq!(ui.get_step(), 13);
+        assert_eq!(ui.get_draft_storefront_name(), "Maya's Beautiful Cakes");
+        assert_eq!(ui.get_draft_storefront_desc(), "The best baked goods in town.");
+
+        let approve_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let approve_clone = approve_called.clone();
+        let ui_weak_app = ui.as_weak();
+        ui.on_approve_storefront_draft(move || {
+            *approve_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak_app.upgrade() {
+                u.set_company_name(u.get_draft_storefront_name());
+                u.set_company_description(u.get_draft_storefront_desc());
+                u.set_step(4);
+            }
+        });
+
+        ui.invoke_approve_storefront_draft();
+        assert!(*approve_called.borrow(), "approve_storefront_draft should be called");
+        assert_eq!(ui.get_step(), 4);
+        assert_eq!(ui.get_company_name(), "Maya's Beautiful Cakes");
+        assert_eq!(ui.get_company_description(), "The best baked goods in town.");
     }
 }
 
