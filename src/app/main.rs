@@ -1713,10 +1713,9 @@ mod e2e_tests {
 
     #[test]
     fn test_cuj_draft_for_review_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_cuj_draft_for_review_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1791,10 +1790,9 @@ mod e2e_tests {
 
     #[test]
     fn test_e2e_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1929,10 +1927,9 @@ mod tests {
 
     #[test]
     fn test_welcome_checklist_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_welcome_checklist_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::WelcomeChecklist::new().unwrap();
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1965,10 +1962,9 @@ mod tests {
 
     #[test]
     fn test_login_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_login_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
@@ -1976,10 +1972,9 @@ mod tests {
 
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_role(), "");
@@ -1988,10 +1983,9 @@ mod tests {
 
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
@@ -2000,10 +1994,9 @@ mod tests {
 
     #[test]
     fn test_landing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_landing_creation because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
         let ui = app::Landing::new().unwrap();
         assert_eq!(ui.get_is_variant_b(), false);
     }
@@ -3095,10 +3088,9 @@ mod dashboard_docs_tests {
 
     #[test]
     fn test_documentation_components_e2e_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
+
+
 
         // 1. Start from the home page after user login via the UI
         let login_ui = app::Login::new().unwrap();
