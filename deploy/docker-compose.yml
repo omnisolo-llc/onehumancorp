@@ -275,7 +275,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 64M
+          memory: 128M
 
 volumes:
   # Persists the bootstrap marker so the admin-init script runs only once.
