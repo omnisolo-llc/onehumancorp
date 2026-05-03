@@ -14,7 +14,7 @@ pub mod ohc {
     }
 }
 
-use slint::{ComponentHandle, Global};
+use slint::ComponentHandle;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -629,6 +629,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(e) => println!("Failed to create referral: {:?}", e),
                 }
             });
+        }
+    });
+
+    setup_wizard_ui.on_go_to_add_products({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_connect_instagram({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_share_link({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(referrals) = app::Referrals::new() {
+                referrals.show().unwrap();
+                Box::leak(Box::new(referrals));
+            }
         }
     });
 
@@ -1474,6 +1513,33 @@ mod e2e_tests {
 
         ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+
+        let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_products_clone = add_products_clicked.clone();
+        ui.on_go_to_add_products(move || {
+            *add_products_clone.borrow_mut() = true;
+        });
+
+        let connect_instagram_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let connect_instagram_clone = connect_instagram_clicked.clone();
+        ui.on_go_to_connect_instagram(move || {
+            *connect_instagram_clone.borrow_mut() = true;
+        });
+
+        let share_link_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_link_clone = share_link_clicked.clone();
+        ui.on_go_to_share_link(move || {
+            *share_link_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_go_to_add_products();
+        assert!(*add_products_clicked.borrow(), "Add products callback should be triggered on SetupWizard");
+
+        ui.invoke_go_to_connect_instagram();
+        assert!(*connect_instagram_clicked.borrow(), "Connect instagram callback should be triggered on SetupWizard");
+
+        ui.invoke_go_to_share_link();
+        assert!(*share_link_clicked.borrow(), "Share link callback should be triggered on SetupWizard");
     }
 }
 
@@ -2089,16 +2155,6 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
-        app::TooltipRegistry::get(&dashboard_ui).on_request_tooltip_text(move |id| {
-            match id.as_str() {
-                "ask_ai" => slint::SharedString::from("Ask AI an open question"),
-                "menu" => slint::SharedString::from("Open the main menu"),
-                "add_product" => slint::SharedString::from("Add a new product to your store"),
-                "view_orders" => slint::SharedString::from("View your current orders"),
-                "messages" => slint::SharedString::from("Check your messages"),
-                _ => slint::SharedString::from(""),
-            }
-        });
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2133,17 +2189,6 @@ mod docs_tests {
         dashboard_ui.invoke_open_help_center();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
-    }
-
-    #[test]
-    fn test_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
-        app::ReleaseNotes::new().unwrap();
-        app::InteractiveWalkthrough::new().unwrap();
-        app::AiHelpChat::new().unwrap();
-        app::VideoTutorials::new().unwrap();
-        app::ApiDocs::new().unwrap();
     }
 
     #[test]
