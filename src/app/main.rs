@@ -574,6 +574,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
 
+    referrals_ui.on_send_invite_message({
+        let ui_handle = referrals_handle.clone();
+        move |link| {
+            let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
+            CLIPBOARD.with(|cb| {
+                if let Some(ctx) = cb.borrow_mut().as_mut() {
+                    if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
+                        println!("Failed to copy to clipboard: {:?}", e);
+                    } else {
+                        println!("Invite message copied to clipboard: {}", pre_filled_msg);
+                        if let Some(ui) = ui_handle.upgrade() {
+                            ui.set_invite_copy_status("Invite message copied!".into());
+
+                            let weak_ui = ui.as_weak();
+                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
+                                if let Some(ui) = weak_ui.upgrade() {
+                                    ui.set_invite_copy_status("".into());
+                                }
+                            });
+                        }
+                    }
+                } else {
+                    println!("Clipboard not initialized, failed to copy invite message");
+                }
+            });
+        }
+    });
+
     referrals_ui.on_refresh({
         let ui_handle = referrals_handle.clone();
         move || {

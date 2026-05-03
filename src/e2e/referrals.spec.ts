@@ -47,6 +47,26 @@ test.describe('Referral Program', () => {
     }
   });
 
+  test('should copy pre-filled invite message', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-write', 'clipboard-read']);
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    // Must navigate naturally as a real user would from the dashboard
+    await page.locator('button:has-text("Referrals")').first().click();
+
+    await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
+
+    const inviteBtn = page.locator('button:has-text("Copy Invite Message")').first();
+    await expect(inviteBtn).toBeVisible();
+    await inviteBtn.click();
+
+    // Firm assertion on the success message property set by Rust
+    await expect(page.locator('text=Invite message copied!')).toBeVisible({ timeout: 3000 });
+  });
+
   test('should share to social media', async ({ page }) => {
     await page.goto('/referrals');
     await page.locator('button:has-text("New Link")').click();

@@ -26,6 +26,7 @@ export component Referrals inherits Window {
     in property <float> viral_coefficient: 0.0;
     in property <int> download_count: 0;
     in property <int> waitlist_position: 0;
+    in-out property <string> invite_copy_status: "";
 
     callback refresh();
     callback share_link(string);
@@ -33,6 +34,7 @@ export component Referrals inherits Window {
     callback copy_link();
     callback export_data();
     callback view_history();
+    callback send_invite_message(string);
 
     VerticalBox {
         spacing: 20px;
@@ -68,6 +70,16 @@ export component Referrals inherits Window {
                         text: "New Link";
                         clicked => { generate_new_link(); }
                     }
+                    Button {
+                        text: "Copy Invite Message";
+                        primary: true;
+                        clicked => { send_invite_message(my_referral_link); }
+                    }
+                }
+                if (invite_copy_status != "") : Text {
+                    text: invite_copy_status;
+                    color: #10b981;
+                    font-size: 14px;
                 }
             }
         }
