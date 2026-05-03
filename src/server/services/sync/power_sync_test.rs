@@ -4,10 +4,10 @@ mod tests {
     use crate::db::{DB, DbStore};
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
-    use crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator;
+    use crate::orchestration::power_sync::PowerSyncOrchestrator;
 
     #[tokio::test]
-    async fn test_power_sync_orchestrator_push() {
+    async fn test_power_sync_orchestrator_push_pull() {
         // Setup an in-memory SQLite DB
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .unwrap()
@@ -56,17 +56,20 @@ mod tests {
             store: DbStore::Sqlite(pool.clone()),
         });
 
-        // Normally, the orchestrator connects to a real gRPC endpoint.
+        // Normally, the orchestrator connects to a real REST endpoint.
         // In this test, we can just instantiate it to ensure it correctly resolves
         // pending items without panicking, up to the point of network failure since
-        // the endpoint is localhost:0 which is not a real gRPC server.
+        // the endpoint is localhost:0 which is not a real server.
         let orchestrator = PowerSyncOrchestrator::new(db, "http://127.0.0.1:0".to_string());
 
         let res = orchestrator.push_sync().await;
 
-        // We expect it to fail gracefully because 127.0.0.1:0 is not running our gRPC server
+        // We expect it to fail gracefully because 127.0.0.1:0 is not running our REST server
         assert!(res.is_err(), "Expected push_sync to return a network error but it succeeded");
         let err_msg = res.unwrap_err();
-        assert!(err_msg.contains("Connection refused") || err_msg.contains("transport error"), "Unexpected error: {}", err_msg);
+        assert!(err_msg.contains("Connection refused") || err_msg.contains("error sending request"), "Unexpected error: {}", err_msg);
+
+        let res_pull = orchestrator.pull_sync().await;
+        assert!(res_pull.is_err(), "Expected pull_sync to return a network error but it succeeded");
     }
 }

@@ -76,29 +76,6 @@ impl SyncService for MySyncService {
         }))
     }
 
-    async fn power_sync_push(
-        &self,
-        request: Request<PowerSyncPushRequest>,
-    ) -> Result<Response<PowerSyncPushResponse>, Status> {
-        let _md = request.metadata().clone();
-        let _req = request.into_inner();
-        println!("PowerSync received push request.");
-
-        Ok(Response::new(PowerSyncPushResponse {
-            status: "ok".to_string(),
-        }))
-    }
-
-    async fn power_sync_pull(
-        &self,
-        _request: Request<PowerSyncPullRequest>,
-    ) -> Result<Response<PowerSyncPullResponse>, Status> {
-        println!("PowerSync received pull request");
-        Ok(Response::new(PowerSyncPullResponse {
-            payload: "[]".to_string(),
-        }))
-    }
-
     async fn sync_mcp_deltas(
         &self,
         request: Request<SyncMcpDeltasRequest>,
@@ -244,25 +221,6 @@ mod tests {
         assert_eq!(resp.get_ref().synced_count, 0);
     }
 
-    #[tokio::test]
-    async fn test_power_sync_push() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPushRequest { payload: "test payload".to_string() });
-        let resp = service.power_sync_push(req).await.unwrap();
-        assert_eq!(resp.get_ref().status, "ok");
-    }
-
-    #[tokio::test]
-    async fn test_power_sync_pull() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPullRequest {});
-        let resp = service.power_sync_pull(req).await.unwrap();
-        assert_eq!(resp.get_ref().payload, "[]");
-    }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new()

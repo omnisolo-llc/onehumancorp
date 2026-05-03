@@ -1028,6 +1028,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/sync", api::sync::router(db.clone()))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
@@ -1057,6 +1058,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
+
+        let power_sync = std::sync::Arc::new(crate::orchestration::power_sync::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
+        let power_sync_clone = power_sync.clone();
+        tokio::spawn(async move {
+            power_sync_clone.start().await;
+        });
 
         let repo = Arc::new(crate::services::sync::local_repository_impl::PgLocalRepository::new(db.pool.clone()));
         let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url.clone(), db.pool.clone()));

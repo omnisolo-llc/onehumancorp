@@ -530,20 +530,6 @@ message VectorSyncResponse {
   string message = 2;
 }
 
-message PowerSyncPushRequest {
-  string payload = 1;
-}
-
-message PowerSyncPushResponse {
-  string status = 1;
-}
-
-message PowerSyncPullRequest {}
-
-message PowerSyncPullResponse {
-  string payload = 1;
-}
-
 message DeltaItem {
   string id = 1;
   string entity_id = 2;
@@ -580,8 +566,6 @@ message SyncEscalationResponse {
 service SyncService {
   rpc HybridSyncMissions(HybridSyncMissionsRequest) returns (HybridSyncMissionsResponse);
   rpc VectorSync(VectorSyncRequest) returns (VectorSyncResponse);
-  rpc PowerSyncPush(PowerSyncPushRequest) returns (PowerSyncPushResponse);
-  rpc PowerSyncPull(PowerSyncPullRequest) returns (PowerSyncPullResponse);
   rpc SyncMCPDeltas(SyncMCPDeltasRequest) returns (SyncMCPDeltasResponse);
   rpc SyncEscalation(SyncEscalationRequest) returns (SyncEscalationResponse);
 }
