@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export struct UiPromptExample {
@@ -29,7 +29,7 @@ export component PromptTuning inherits Window {
 
     next_step => { step = step + 1; }
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     HorizontalBox {
         spacing: 20px;
@@ -41,85 +41,124 @@ export component PromptTuning inherits Window {
             spacing: 20px;
             
             HorizontalBox {
-                Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: #1e293b; }
+                Text { text: "Prompt Tuning"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
                 Rectangle {}
-                CheckBox {
-                    text: "Advanced mode";
-                    checked: is_advanced;
-                    toggled => { is_advanced = !is_advanced; save_state(); }
+                HorizontalBox {
+                    spacing: 8px;
+                    alignment: end;
+                    Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    TouchArea {
+                        width: 20px;
+                        height: 20px;
+                        clicked => { is_advanced = !is_advanced; save_state(); }
+                        Rectangle {
+                            width: 100%;
+                            height: 100%;
+                            border-radius: 4px;
+                            border-color: #a855f7;
+                            border-width: 1px;
+                            background: is_advanced ? #a855f7 : transparent;
+                            Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                        }
+                    }
                 }
             }
 
             // Step 0: Tone
             if (step == 0) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Personality & tone"; color: #1e293b; }
+                spacing: 16px;
+                Text { text: "Personality & tone"; color: white; font-family: "Inter"; }
 
                 HorizontalBox {
                     spacing: 10px;
                     GlassCard {
-                        height: 50px;
+                        width: 100px;
+                        height: 60px;
                         background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "👔\nFormal"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Formal"; } }
                     }
                     GlassCard {
-                        height: 50px;
+                        width: 100px;
+                        height: 60px;
                         background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "😊\nFriendly"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Friendly"; } }
                     }
                     GlassCard {
-                        height: 50px;
+                        width: 100px;
+                        height: 60px;
                         background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Concise"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "⚡\nConcise"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Concise"; } }
                     }
                 }
-                Text { text: "Selected: " + tone; color: #a855f7; }
+                Text { text: "Selected: " + tone; color: #a855f7; font-family: "Inter"; font-weight: 700; }
             }
 
             // Step 1: Focus
             if (step == 1) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Domain focus"; color: #1e293b; }
+                spacing: 12px;
+                Text { text: "Domain focus"; color: white; font-family: "Inter"; }
 
                 GlassCard {
-                    height: 40px;
+                    height: 44px;
                     background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🎯 Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_only_business = !focus_only_business; } }
                 }
                 GlassCard {
-                    height: 40px;
+                    height: 44px;
                     background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🛡️ Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
                 }
                 GlassCard {
-                    height: 40px;
+                    height: 44px;
                     background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🌐 Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
                 }
             }
 
             // Step 2: Examples
             if (step == 2) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Example interactions"; color: #1e293b; }
+                spacing: 16px;
+                Text { text: "Example interactions"; color: white; font-family: "Inter"; }
                 Button { 
-                    text: "Add Example"; 
+                    text: "✨ Add Example Interaction";
                     clicked => { add_example(); }
                 }
-                for ex in examples : Text { text: "Q: " + ex.q + "\nA: " + ex.a; color: #64748b; }
+                ScrollView {
+                    height: 200px;
+                    VerticalBox {
+                        spacing: 8px;
+                        for ex in examples : GlassCard {
+                            VerticalBox {
+                                padding: 8px;
+                                Text { text: "Q: " + ex.q; color: white; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "A: " + ex.a; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                            }
+                        }
+                    }
+                }
             }
 
             // Step 3: Review
             if (step == 3) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Review & Save"; color: #1e293b; }
-                Text { text: "Ready to update the agent?"; color: #64748b; }
+                spacing: 16px;
+                Text { text: "Review & Save"; color: white; font-family: "Inter"; }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "Tone: " + tone; color: white; font-family: "Inter"; }
+                        Text { text: "Focus Business: " + (focus_only_business ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                        Text { text: "Avoid Competitors: " + (focus_avoid_competitors ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                        Text { text: "Spanish Only: " + (focus_reply_spanish ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                    }
+                }
+                Text { text: "Ready to update the helper?"; color: #94a3b8; font-family: "Inter"; horizontal-alignment: center; }
             }
 
             Rectangle {} // Spacer
@@ -148,49 +187,46 @@ export component PromptTuning inherits Window {
         // Right Column: Preview
         VerticalBox {
             width: 320px;
-            spacing: 10px;
+            spacing: 16px;
             
             HorizontalBox {
-                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                Text { text: "Live Preview"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
                 Rectangle {}
             }
             
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
+            GlassCard {
                 VerticalBox {
                     padding: 16px;
                     if (is_advanced) : VerticalBox {
-                        Text { text: "Advanced Instruction Format"; color: #1e293b; font-weight: 700; }
+                        spacing: 8px;
+                        Text { text: "System Instructions"; color: white; font-family: "Inter"; font-weight: 700; }
                         LineEdit {
-                            text: "{\n  \"tone\": \"" + tone + "\",\n  \"focus_business\": " + (focus_only_business ? "true" : "false") + "\n}";
-                            height: 100px;
+                            text: "{\n  \"tone\": \"" + tone + "\",\n  \"focus_business\": " + (focus_only_business ? "true" : "false") + "\n  \"avoid_competitors\": " + (focus_avoid_competitors ? "true" : "false") + "\n}";
+                            height: 150px;
                         }
                     }
                     if (!is_advanced) : VerticalBox {
-                        spacing: 10px;
+                        spacing: 12px;
                         Rectangle {
-                            background: #e2e8f0;
+                            background: rgba(255, 255, 255, 0.1);
                             border-radius: 8px;
                             HorizontalBox {
                                 padding: 8px;
-                                Text { text: "User: Hello!"; color: #1e293b; }
+                                Text { text: "User: Hello!"; color: white; font-family: "Inter"; }
                             }
                         }
                         Rectangle {
-                            background: #a855f7;
+                            background: rgba(168, 85, 247, 0.8);
                             border-radius: 8px;
                             HorizontalBox {
                                 padding: 8px;
-                                Text { text: "Helper: Hi there! How can I help you today?"; color: white; }
+                                Text { text: "Helper: " + (tone == "Friendly" ? "Hi there! 😊 How can I help you today?" : (tone == "Formal" ? "Greetings. How may I assist you?" : "Hi. What do you need?")); color: white; font-family: "Inter"; }
                             }
                         }
+                        Rectangle { height: 100px; } // Spacer
                         HorizontalBox {
-                            spacing: 5px;
-                            LineEdit { placeholder-text: "Type a message..."; width: parent.width - 60px; }
+                            spacing: 8px;
+                            LineEdit { placeholder-text: "Test your helper..."; font-family: "Inter"; }
                             Button { text: "Send"; }
                         }
                     }
