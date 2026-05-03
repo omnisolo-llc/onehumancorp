@@ -24,10 +24,5 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     ).into_integration_provider();
     catalog.push(nats_provider);
 
-    let obsidian_provider = crate::integrations::obsidian::provider::ObsidianProvider::new(
-        "obsidian_vault_placeholder"
-    ).into_integration_provider();
-    catalog.push(obsidian_provider);
-
     catalog
 }
