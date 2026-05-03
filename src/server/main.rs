@@ -962,6 +962,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let consolidation_worker = ohc_builtin_agent::memory_store::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
+    let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+    // Keep a reference to shutdown_tx to prevent broadcast channel from closing immediately
+    let _shutdown_tx_guard = shutdown_tx.clone();
+
+    if let crate::db::DbStore::Sqlite(pool) = &db.store {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://cloud.onehumancorp.com".to_string());
+        let sync_ticker = std::sync::Arc::new(crate::orchestration::sync_ticker::PowerSyncTicker::new(pool.clone(), cloud_url));
+        sync_ticker.start(shutdown_rx, std::time::Duration::from_secs(60));
+    }
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
@@ -1035,6 +1045,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
 
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/sync", api::sync::router(db.clone()))
 
         .with_state(mesh_transport);
 
