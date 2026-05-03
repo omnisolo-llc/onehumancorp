@@ -1320,8 +1320,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     setup_wizard_ui.on_copy_link(|link| {
-        // Send to system clipboard if possible. Using terminal fallback for test
-        println!("Copied to clipboard: {}", link);
+        CLIPBOARD.with(|cb| {
+            if let Some(ctx) = cb.borrow_mut().as_mut() {
+                if let Err(e) = ctx.set_contents(link.to_string()) {
+                    println!("Failed to copy to clipboard: {:?}", e);
+                } else {
+                    println!("Copied to clipboard: {}", link);
+                }
+            } else {
+                println!("Clipboard context not available, fallback to console: {}", link);
+            }
+        });
     });
 
     setup_wizard_ui.on_launch({
