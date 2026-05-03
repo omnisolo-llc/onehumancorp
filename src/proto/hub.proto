@@ -253,6 +253,22 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc GenerateInstantPreview(GenerateInstantPreviewRequest) returns (GenerateInstantPreviewResponse);
+}
+
+message GenerateInstantPreviewRequest {
+  string bio = 1;
+}
+
+message GenerateInstantPreviewResponse {
+  string company_name = 1;
+  string business_type = 2;
+  string company_description = 3;
+  string website_template = 4;
+  string product_name = 5;
+  string product_price = 6;
+  bool sell_physical = 7;
+  string domain_choice = 8;
 }
 
 message StartOnboardingRequest {

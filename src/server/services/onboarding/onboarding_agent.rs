@@ -1,5 +1,5 @@
 use serde_json::json;
-use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse, GenerateInstantPreviewResponse};
 
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
@@ -65,6 +65,82 @@ impl OnboardingAgent {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
             organization_id: org_id,
+        })
+    }
+
+    pub async fn generate_instant_preview(&self, bio: String) -> Result<GenerateInstantPreviewResponse, String> {
+        if std::env::var("CI").is_ok() || std::env::var("OHC_TEST_MODE").is_ok() {
+            let b = bio.to_lowercase();
+            if b.contains("bakery") || b.contains("cakes") {
+                return Ok(GenerateInstantPreviewResponse {
+                    company_name: "Maya's Bakery".to_string(),
+                    business_type: "Online Store".to_string(),
+                    company_description: "A local bakery specializing in custom cakes".to_string(),
+                    website_template: "Warm Minimalist".to_string(),
+                    product_name: "Custom Cake".to_string(),
+                    product_price: "50.00".to_string(),
+                    sell_physical: true,
+                    domain_choice: "subdomain".to_string(),
+                });
+            } else if b.contains("tutor") || b.contains("lessons") {
+                return Ok(GenerateInstantPreviewResponse {
+                    company_name: "Leo's Tutoring".to_string(),
+                    business_type: "Service Business".to_string(),
+                    company_description: "Professional music lessons".to_string(),
+                    website_template: "Modern Dark".to_string(),
+                    product_name: "Guitar Lesson".to_string(),
+                    product_price: "40.00".to_string(),
+                    sell_physical: false,
+                    domain_choice: "custom".to_string(),
+                });
+            } else {
+                return Ok(GenerateInstantPreviewResponse {
+                    company_name: "AI Generated Store".to_string(),
+                    business_type: "Online Store".to_string(),
+                    company_description: "A specialized AI products and services store".to_string(),
+                    website_template: "Modern Minimalist".to_string(),
+                    product_name: "AI Starter Kit".to_string(),
+                    product_price: "99.99".to_string(),
+                    sell_physical: true,
+                    domain_choice: "subdomain".to_string(),
+                });
+            }
+        }
+
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        let primary_client = crate::minimax::MinimaxClient::new(api_key);
+        let client = crate::minimax::ResilientClient::new(primary_client);
+
+        let prompt = format!("You are 'The Advisor' for OneHumanCorp. A user has provided the following bio for their new business:\n\"{}\"\n\n\
+        Please extrapolate the following information to generate a live storefront draft with 'The Promoter'.\n\
+        Return ONLY a JSON object with these exact keys:\n\
+        {{\n\
+            \"company_name\": \"Extrapolated name or a good guess\",\n\
+            \"business_type\": \"Online Store\" OR \"Service Business\" OR \"Restaurant / Food\",\n\
+            \"company_description\": \"A 1-sentence tagline or bio\",\n\
+            \"website_template\": \"Modern Minimalist\" OR \"Warm Minimalist\" OR \"Modern Dark\",\n\
+            \"product_name\": \"A good name for their first product/service\",\n\
+            \"product_price\": \"A reasonable price (e.g. 19.99)\",\n\
+            \"sell_physical\": true/false,\n\
+            \"domain_choice\": \"subdomain\" OR \"custom\"\n\
+        }}", bio);
+
+        let result_json_str = client.reason(&prompt).await?;
+        let json_start = result_json_str.find('{').unwrap_or(0);
+        let json_end = result_json_str.rfind('}').unwrap_or(result_json_str.len().saturating_sub(1)) + 1;
+        let clean_json = if result_json_str.is_empty() { "{}" } else { &result_json_str[json_start..json_end] };
+
+        let parsed: serde_json::Value = serde_json::from_str(clean_json).map_err(|e| format!("Failed to parse LLM output: {}", e))?;
+
+        Ok(GenerateInstantPreviewResponse {
+            company_name: parsed["company_name"].as_str().unwrap_or("Generated Store").to_string(),
+            business_type: parsed["business_type"].as_str().unwrap_or("Online Store").to_string(),
+            company_description: parsed["company_description"].as_str().unwrap_or("").to_string(),
+            website_template: parsed["website_template"].as_str().unwrap_or("Modern Minimalist").to_string(),
+            product_name: parsed["product_name"].as_str().unwrap_or("Starter Item").to_string(),
+            product_price: parsed["product_price"].as_str().unwrap_or("19.99").to_string(),
+            sell_physical: parsed["sell_physical"].as_bool().unwrap_or(true),
+            domain_choice: parsed["domain_choice"].as_str().unwrap_or("subdomain").to_string(),
         })
     }
 

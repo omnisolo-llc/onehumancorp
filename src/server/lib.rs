@@ -927,6 +927,17 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+
+    async fn generate_instant_preview(
+        &self,
+        request: Request<GenerateInstantPreviewRequest>,
+    ) -> Result<Response<GenerateInstantPreviewResponse>, Status> {
+        let req = request.into_inner();
+        match self.onboarding_agent.generate_instant_preview(req.bio).await {
+            Ok(resp) => Ok(Response::new(resp)),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
