@@ -21,33 +21,87 @@
 
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
+load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
+load("@rules_pkg//pkg:rpm.bzl", "pkg_rpm")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
-# ── Convenience alias ─────────────────────────────────────────────────────────
-# Build all platform archives in one shot.
+# ── Universal App Files ───────────────────────────────────────────────────────
+
+pkg_files(
+    name = "app_files",
+    srcs = ["//src/app:app"],
+    renames = {"//src/app:app": "ohc-app"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+# ── Linux Packages ────────────────────────────────────────────────────────────
+
+pkg_tar(
+    name = "app_tar",
+    srcs = [":app_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+pkg_deb(
+    name = "app_deb",
+    architecture = "amd64",
+    maintainer = "One Human Corp <support@onehumancorp.com>",
+    package = "ohc-app",
+    version = "0.3.2",
+    description = "One Human Corp Desktop Application",
+    section = "utils",
+    priority = "optional",
+    data = ":app_tar",
+)
+
+pkg_rpm(
+    name = "app_rpm",
+    package_name = "ohc-app",
+    version = "0.3.2",
+    license = "Apache-2.0",
+    summary = "One Human Corp Desktop Application",
+    description = "One Human Corp Desktop Application",
+    srcs = [":app_files"],
+)
+
+# ── Windows Packages ──────────────────────────────────────────────────────────
+
+pkg_zip(
+    name = "app_windows_zip",
+    srcs = [":app_files"],
+    package_file_name = "ohc-app-windows.zip",
+    visibility = ["//visibility:public"],
+)
+
+# ── OCI Docker Image ──────────────────────────────────────────────────────────
+
+oci_image(
+    name = "app_image",
+    base = "@distroless_cc",
+    entrypoint = ["/ohc-app"],
+    tars = [":app_tar"],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "app_image_tarball",
+    image = ":app_image",
+    repo_tags = ["ohc-app:latest"],
+    visibility = ["//visibility:public"],
+)
+
+# ── Convenience Groups ───────────────────────────────────────────────────────
 
 filegroup(
-    name = "all_ohc_archives",
+    name = "all_release_artifacts",
     srcs = [
-        ":ohc-x86_64-unknown-linux-gnu",
+        ":app_tar",
+        ":app_deb",
+        ":app_windows_zip",
+        ":app_image_tarball",
     ],
     visibility = ["//visibility:public"],
 )
-
-pkg_files(
-    name = "ohc_linux_amd64_files",
-    srcs = ["//src/server:server"],
-    renames = {"//src/server:server": "ohc"},
-    strip_prefix = strip_prefix.from_pkg(),
-    tags = ["manual"],
-)
-
-pkg_tar(
-    name = "ohc-x86_64-unknown-linux-gnu",
-    srcs = [":ohc_linux_amd64_files"],
-    extension = "tar.gz",
-    tags = ["manual"],
-    visibility = ["//visibility:public"],
-)
-
-# Flutter app release targets removed as requested.
