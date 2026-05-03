@@ -412,6 +412,9 @@ impl Store {
 
             match token_data {
                 Ok(data) => {
+                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                        return Err("Invalid token: empty claims".to_string());
+                    }
                     if self.is_revoked(&data.claims.jti) {
                         return Err("token revoked".to_string());
                     }
