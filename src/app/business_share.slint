@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export component BusinessShare inherits Window {
     width: 375px;
@@ -55,10 +56,13 @@ export component BusinessShare inherits Window {
         VerticalBox {
             spacing: 12px;
 
-            Button {
-                text: "📋 Copy Shareable Link";
-                height: 48px;
-                clicked => { copy_link(); }
+            TooltipElement {
+                tooltip_id: "share_link_copy";
+                Button {
+                    text: "📋 Copy Shareable Link";
+                    height: 48px;
+                    clicked => { copy_link(); }
+                }
             }
 
             Button {

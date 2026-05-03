@@ -2705,14 +2705,6 @@ mod docs_tests {
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
 
-        tr.invoke_show_tooltip("search_help".into(), 10.0, 10.0);
-        assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Search for articles to help you run your store.");
-
-        tr.invoke_show_tooltip("share_link_copy".into(), 10.0, 10.0);
-        assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Copy a link you can paste anywhere to share your store.");
-
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
 
