@@ -68,6 +68,7 @@ rust_library(
         ":core",
         "//src/proto:agent_service_tonic",
         "//src/proto:common_prost",
+        "//src/proto:hub_prost",
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
     ] + [
