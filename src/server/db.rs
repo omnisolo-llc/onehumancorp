@@ -36,6 +36,39 @@ impl DB {
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
+            // Ensure secure directory creation for SQLite database in Standalone mode
+            let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
+                Some(p)
+            } else if let Some(p) = database_url.strip_prefix("sqlite:") {
+                Some(p)
+            } else {
+                None
+            };
+            if let Some(path_str) = path_str_opt {
+                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                if let Some(parent) = db_path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::DirBuilderExt;
+                            let mut builder = std::fs::DirBuilder::new();
+                            builder.recursive(true).mode(0o700);
+                            if let Err(e) = builder.create(parent) {
+                                eprintln!("Failed to securely create DB directory: {}", e);
+                                return Err(e.into());
+                            }
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            if let Err(e) = std::fs::create_dir_all(parent) {
+                                eprintln!("Failed to create DB directory: {}", e);
+                                return Err(e.into());
+                            }
+                        }
+                    }
+                }
+            }
+
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
