@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 use slint::Model;
 use std::rc::Rc;
 
