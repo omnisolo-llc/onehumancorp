@@ -565,6 +565,21 @@ impl TaskQueueService {
         Ok(())
     }
 
+
+
+    pub async fn fail_task(&self, task_id: &str, reason: &str) -> Result<(), sqlx::Error> {
+        let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+        // We could merge this better using jsonb operators or just save status
+        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(task_id)
+            .bind(payload_update)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
         let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
@@ -871,6 +886,62 @@ mod tests {
             // Complete
             let comp_res = service.complete_task(&task_id).await;
             assert!(comp_res.is_ok());
+        }
+    }
+
+
+    #[tokio::test]
+    async fn test_task_queue_service_fail_task() {
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        Ok(true)
+                    })
+                })
+                .connect_lazy(&db_url)
+                .unwrap();
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+            let service = TaskQueueService::new(pool.clone());
+
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let task = SharedTaskModel {
+                id: task_id.clone(),
+                organization_id: "org1".to_string(),
+                parent_id: None,
+                epic_id: None,
+                title: "Test Task to Fail".to_string(),
+                status: "PENDING".to_string(),
+                assigned_agent: None,
+                payload: serde_json::json!({"action": "test_fail"}),
+                dependencies: serde_json::json!([]),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+
+            service.push_task(task).await.unwrap();
+
+            // Claim it
+            let claimed = service.claim_task("agent_1").await.unwrap().unwrap();
+            assert_eq!(claimed.id, task_id);
+
+            // Fail it
+            service.fail_task(&task_id, "Some failure occurred").await.unwrap();
+
+            // Fetch manually to check
+            let row = sqlx::query("SELECT status, payload FROM shared_tasks WHERE id = $1")
+                .bind(&task_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = sqlx::Row::get(&row, "status");
+            let payload: serde_json::Value = sqlx::Row::get(&row, "payload");
+
+            assert_eq!(status, "FAILED");
+            assert_eq!(payload["error"], "Some failure occurred");
         }
     }
 
