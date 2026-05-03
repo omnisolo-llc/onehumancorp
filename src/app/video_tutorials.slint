@@ -1,58 +1,81 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component VideoTutorials inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "Video Tutorials";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
 
     VerticalBox {
-        padding: 16px;
+        padding: 24px;
         spacing: 20px;
 
         Text {
             text: "Watch & Learn";
-            font-size: 24px;
+            font-size: 28px;
+            font-family: "Outfit";
             font-weight: 700;
-            color: #0f172a;
+            color: white;
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 24px;
 
-                Rectangle {
-                    background: white; border-radius: 12px;
+                // Tutorial 1
+                GlassCard {
                     VerticalBox {
                         padding: 16px; spacing: 12px;
                         Rectangle {
                             height: 200px;
-                            background: #e2e8f0;
+                            background: #1e293b;
                             border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
                         }
-                        Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
+                        Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                        Text { text: "A quick 60-second guide to listing items in your store."; color: #94a3b8; wrap: word-wrap; font-family: "Inter"; }
                     }
                 }
 
-                Rectangle {
-                    background: white; border-radius: 12px;
+                // Tutorial 2
+                GlassCard {
                     VerticalBox {
                         padding: 16px; spacing: 12px;
                         Rectangle {
                             height: 200px;
-                            background: #e2e8f0;
+                            background: #1e293b;
                             border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
                         }
-                        Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                        Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                        Text { text: "Learn how to let AI handle your customer emails and social media."; color: #94a3b8; wrap: word-wrap; font-family: "Inter"; }
+                    }
+                }
+
+                // Tutorial 3
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px; spacing: 12px;
+                        Rectangle {
+                            height: 200px;
+                            background: #1e293b;
+                            border-radius: 8px;
+                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
+                        }
+                        Text { text: "Accepting your first payment"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                        Text { text: "Connect Stripe to start getting paid by customers immediately."; color: #94a3b8; wrap: word-wrap; font-family: "Inter"; }
                     }
                 }
             }
+        }
+
+        Button {
+            text: "Close";
+            height: 44px;
+            clicked => { root.visible = false; }
         }
     }
 }

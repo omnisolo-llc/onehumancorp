@@ -15,6 +15,7 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+use slint::Model;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -125,6 +126,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    setup_wizard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "advanced_mode" => "Unlock technical settings for experts. Most users don't need this!".into(),
+            "instant_build" => "Let AI build your entire store from a single paragraph description.".into(),
+            "auto_suggest" => "AI will write a catchy tagline based on your business name.".into(),
+            "product_sku" => "Stock Keeping Unit. A unique code for tracking this product.".into(),
+            "inventory_count" => "How many items you have in stock. Leave empty for unlimited.".into(),
+            "custom_dns" => "Advanced: The technical address where your custom domain points.".into(),
+            _ => "".into(),
+        }
+    });
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -174,6 +186,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "add_product" => "Add".into(),
                                 "view_orders" => "Orders".into(),
                                 "messages" => "Chat".into(),
+                                "advanced_mode" => "Unlock technical settings for experts. Most users don't need this!".into(),
+                                "instant_build" => "Let AI build your entire store from a single paragraph description.".into(),
+                                "auto_suggest" => "AI will write a catchy tagline based on your business name.".into(),
+                                "product_sku" => "Stock Keeping Unit. A unique code for tracking this product.".into(),
+                                "inventory_count" => "How many items you have in stock. Leave empty for unlimited.".into(),
+                                "custom_dns" => "Advanced: The technical address where your custom domain points.".into(),
                                 _ => "".into(),
                             }
                         });
@@ -219,6 +237,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "add_product" => "Add".into(),
                                 "view_orders" => "Orders".into(),
                                 "messages" => "Chat".into(),
+                                "advanced_mode" => "Unlock technical settings for experts. Most users don't need this!".into(),
+                                "instant_build" => "Let AI build your entire store from a single paragraph description.".into(),
+                                "auto_suggest" => "AI will write a catchy tagline based on your business name.".into(),
+                                "product_sku" => "Stock Keeping Unit. A unique code for tracking this product.".into(),
+                                "inventory_count" => "How many items you have in stock. Leave empty for unlimited.".into(),
+                                "custom_dns" => "Advanced: The technical address where your custom domain points.".into(),
                                 _ => "".into(),
                             }
                         });
@@ -643,7 +667,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let response: Result<tonic::Response<ohc::orchestration::ReferralsResponse>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
                             let handle_clone = handle.clone();
@@ -663,7 +687,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let stats_response: Result<tonic::Response<ohc::orchestration::ReferralStatsResponse>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(stats_resp) = stats_response {
                             let stats = stats_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -681,7 +705,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let vc_response: Result<tonic::Response<ohc::orchestration::ViralCoefficientResponse>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(vc_resp) = vc_response {
                             let vc = vc_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -758,7 +782,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             user_id: "current_user".to_string(), // In production, use actual user_id
                             referral_code: "".to_string(),
                         };
-                        let response = client.create_referral(tonic::Request::new(req)).await;
+                        let response: Result<tonic::Response<ohc::orchestration::Referral>, tonic::Status> = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
                             let link = format!("ohc://join?ref={}", referral.referral_code);
@@ -1011,10 +1035,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let all_articles = vec![
                     app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
                     app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
+                    app::HelpArticle { category: "Payments".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                    app::HelpArticle { category: "AI Agents".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
                     app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
                     app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
+                    app::HelpArticle { category: "AI Agents".into(), title: "Hiring your first Helper".into(), description: "Go to the Team section to hire an AI helper to manage your store.".into() },
+                    app::HelpArticle { category: "Getting Started".into(), title: "Instant Build Guide".into(), description: "Use our AI generator to build your entire storefront from a single paragraph.".into() },
                 ];
                 let all_articles_rc = std::rc::Rc::new(all_articles.clone());
 
@@ -1062,12 +1088,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 ai_chat_ui.on_send_message({
                     let chat_handle = ai_chat_handle.clone();
+                    let all_articles_context = all_articles_rc.clone();
                     move || {
                         if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
+                            let input = ui.get_user_input().to_string();
+                            if input.is_empty() { return; }
+
+                            let mut msgs: Vec<app::HelpMessage> = slint::Model::iter(&ui.get_messages()).collect();
+                            msgs.push(app::HelpMessage { text: input.clone().into(), is_user: true });
+                            ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
                             ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
+                            ui.set_is_loading(true);
+
+                            let chat_handle_inner = chat_handle.clone();
+                            let context_str = all_articles_context.iter()
+                                .map(|a| format!("Category: {}, Title: {}, Description: {}", a.category, a.title, a.description))
+                                .collect::<Vec<_>>()
+                                .join("\n");
+
+                            tokio::spawn(async move {
+                                let mut ai_response = "I'm sorry, I'm having trouble connecting to the help service. Please try again later.".to_string();
+
+                                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                    let system_prompt = format!(
+                                        "You are the OHC Help Assistant. Use the following help center articles to answer the user's question. \
+                                        Keep your answer simple and action-oriented (max 3 sentences). \
+                                        If the answer isn't in the articles, tell them to check the full Help Center or contact support.\n\n\
+                                        HELP ARTICLES:\n{}", context_str
+                                    );
+                                    let prompt = format!("USER QUESTION: {}\n\n{}", input, system_prompt);
+
+                                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                        prompt,
+                                        from_agent_id: "help_assistant".into(),
+                                    });
+
+                                    let response = client.reason(request).await;
+                                    if let Ok(resp) = response {
+                                        ai_response = resp.into_inner().content;
+                                    }
+                                }
+
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = chat_handle_inner.upgrade() {
+                                        let mut msgs: Vec<app::HelpMessage> = slint::Model::iter(&ui.get_messages()).collect();
+                                        msgs.push(app::HelpMessage { text: ai_response.into(), is_user: false });
+                                        ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                                        ui.set_is_loading(false);
+                                    }
+                                }).unwrap();
+                            });
                         }
                     }
                 });
@@ -1390,7 +1460,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_choice: req_domain_choice,
                         });
 
-                        match client.start_onboarding(onboarding_request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::StartOnboardingResponse>, tonic::Status> = client.start_onboarding(onboarding_request).await;
+                        match response {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
@@ -1470,6 +1541,17 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    setup_wizard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "advanced_mode" => "Unlock technical settings for experts. Most users don't need this!".into(),
+            "instant_build" => "Let AI build your entire store from a single paragraph description.".into(),
+            "auto_suggest" => "AI will write a catchy tagline based on your business name.".into(),
+            "product_sku" => "Stock Keeping Unit. A unique code for tracking this product.".into(),
+            "inventory_count" => "How many items you have in stock. Leave empty for unlimited.".into(),
+            "custom_dns" => "Advanced: The technical address where your custom domain points.".into(),
+            _ => "".into(),
+        }
+    });
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -2760,6 +2842,12 @@ mod docs_tests {
                 "add_product" => "Add".into(),
                 "view_orders" => "Orders".into(),
                 "messages" => "Chat".into(),
+                "advanced_mode" => "Unlock technical settings for experts. Most users don't need this!".into(),
+                "instant_build" => "Let AI build your entire store from a single paragraph description.".into(),
+                "auto_suggest" => "AI will write a catchy tagline based on your business name.".into(),
+                "product_sku" => "Stock Keeping Unit. A unique code for tracking this product.".into(),
+                "inventory_count" => "How many items you have in stock. Leave empty for unlimited.".into(),
+                "custom_dns" => "Advanced: The technical address where your custom domain points.".into(),
                 _ => "".into(),
             }
         });

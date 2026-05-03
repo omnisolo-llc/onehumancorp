@@ -1,45 +1,95 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct HelpMessage {
+    text: string,
+    is_user: bool,
+}
 
 export component AiHelpChat inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "AI Help Assistant";
-    background: white;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in-out property <string> user_input: "";
+    in-out property <[HelpMessage]> messages: [
+        { text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?", is_user: false }
+    ];
+    in-out property <bool> is_loading: false;
+
     callback send_message();
 
     VerticalBox {
-        padding: 16px;
+        padding: 24px;
         spacing: 16px;
 
-        Rectangle {
-            background: #f1f5f9;
-            border-radius: 8px;
+        Text {
+            text: "AI Help Assistant";
+            font-size: 24px;
+            font-family: "Outfit";
+            font-weight: 700;
+            color: white;
+        }
+
+        ScrollView {
             VerticalBox {
-                padding: 16px;
-                Text {
-                    text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                    color: #0f172a;
-                    wrap: word-wrap;
+                spacing: 16px;
+                padding-bottom: 20px;
+
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_user ? end : start;
+                    GlassCard {
+                        width: 280px;
+                        background: msg.is_user ? rgba(168, 85, 247, 0.2) : rgba(255, 255, 255, 0.05);
+                        VerticalBox {
+                            padding: 12px;
+                            Text {
+                                text: msg.text;
+                                color: white;
+                                wrap: word-wrap;
+                                font-family: "Inter";
+                                font-size: 14px;
+                            }
+                        }
+                    }
+                }
+
+                if (is_loading) : HorizontalBox {
+                    alignment: start;
+                    GlassCard {
+                        width: 60px;
+                        VerticalBox {
+                            padding: 12px;
+                            Text { text: "..."; color: white; horizontal-alignment: center; }
+                        }
+                    }
                 }
             }
         }
 
-        ScrollView {
-            // Chat history would go here
-        }
-
         HorizontalBox {
             spacing: 8px;
+            alignment: center;
             LineEdit {
                 placeholder-text: "Type your question here...";
                 text <=> user_input;
+                height: 44px;
+                enabled: !is_loading;
             }
             Button {
                 text: "Send";
+                height: 44px;
+                primary: true;
+                enabled: user_input != "" && !is_loading;
                 clicked => { send_message(); }
             }
+        }
+
+        Button {
+            text: "Close Chat";
+            height: 44px;
+            clicked => { root.visible = false; }
         }
     }
 }

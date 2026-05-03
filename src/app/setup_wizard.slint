@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
@@ -121,18 +122,21 @@ export component SetupWizard inherits Window {
                 spacing: 8px;
                 alignment: end;
                 Text { text: "Advanced mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 44px;
-                    height: 44px;
-                    clicked => { toggle_advanced(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                TooltipElement {
+                    tooltip_id: "advanced_mode";
+                    TouchArea {
+                        width: 44px;
+                        height: 44px;
+                        clicked => { toggle_advanced(); }
+                        Rectangle {
+                            width: 100%;
+                            height: 100%;
+                            border-radius: 4px;
+                            border-color: #a855f7;
+                            border-width: 1px;
+                            background: is_advanced ? #a855f7 : transparent;
+                            Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                        }
                     }
                 }
             }
@@ -164,11 +168,14 @@ export component SetupWizard inherits Window {
                     VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                     TouchArea { clicked => { next_step(); } }
                 }
-                GlassCard {
-                    height: 54px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                TooltipElement {
+                    tooltip_id: "instant_build";
+                    GlassCard {
+                        height: 54px;
+                        background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                    }
                 }
             }
 
@@ -268,13 +275,16 @@ export component SetupWizard inherits Window {
                     height: 100px;
                     enabled: !is_generating_company_description;
                 }
-                Button {
-                    text: is_generating_company_description ? "Generating..." : "✨ Auto-suggest Description";
-                    height: 44px;
-                    enabled: !is_generating_company_description && company_name != "";
-                    clicked => {
-                        is_generating_company_description = true;
-                        generate_company_description(company_name, business_type);
+                TooltipElement {
+                    tooltip_id: "auto_suggest";
+                    Button {
+                        text: is_generating_company_description ? "Generating..." : "✨ Auto-suggest Description";
+                        height: 44px;
+                        enabled: !is_generating_company_description && company_name != "";
+                        clicked => {
+                            is_generating_company_description = true;
+                            generate_company_description(company_name, business_type);
+                        }
                     }
                 }
             }
@@ -483,9 +493,15 @@ export component SetupWizard inherits Window {
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
+                    TooltipElement {
+                        tooltip_id: "product_sku";
+                        LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
+                    }
                     Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
+                    TooltipElement {
+                        tooltip_id: "inventory_count";
+                        LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
+                    }
                 }
 
                 GlassCard {
@@ -507,7 +523,10 @@ export component SetupWizard inherits Window {
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
+                    TooltipElement {
+                        tooltip_id: "custom_dns";
+                        LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
+                    }
                 }
 
                 GlassCard {

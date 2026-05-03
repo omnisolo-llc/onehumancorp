@@ -39,6 +39,7 @@ pub mod logs;
 pub mod prompt_tuning;
 pub mod secure_agent_config;
 pub mod agent_config;
+pub mod scribe_tests;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]

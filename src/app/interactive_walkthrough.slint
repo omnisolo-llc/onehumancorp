@@ -2,73 +2,111 @@ import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component InteractiveWalkthrough inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     background: transparent;
     always-on-top: true;
 
     in-out property <int> current_step: 0;
+    in-out property <string> flow_type: "onboarding"; // onboarding, payments, agents
 
-    VerticalBox {
-        alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
-        padding-top: current_step == 0 ? 100px : 0;
-        padding-bottom: current_step == 2 || current_step == 3 ? 100px : 0;
+    // Positioning properties for the speech bubble
+    property <length> bubble_x: 20px;
+    property <length> bubble_y: 100px;
 
-        HorizontalBox {
-            alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
-            padding-left: current_step == 0 ? 20px : 0;
-            padding-right: current_step == 2 || current_step == 3 ? 20px : 0;
+    states [
+        onboarding-step0 when flow_type == "onboarding" && current_step == 0 : {
+            bubble_x: 20px; bubble_y: 100px;
+        }
+        onboarding-step1 when flow_type == "onboarding" && current_step == 1 : {
+            bubble_x: 20px; bubble_y: 300px;
+        }
+        payments-step0 when flow_type == "payments" && current_step == 0 : {
+            bubble_x: 20px; bubble_y: 200px;
+        }
+    ]
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+
+        TouchArea {
+            // Block clicks to the background
+        }
+
+        // The "Speech Bubble" using GlassCard
+        Rectangle {
+            x: bubble_x;
+            y: bubble_y;
+            width: 335px;
 
             GlassCard {
-                width: 335px;
-
                 VerticalBox {
-            padding: 20px;
-            spacing: 16px;
+                    padding: 24px;
+                    spacing: 16px;
 
-            Text {
-                text: current_step == 0 ? "Welcome to your store!" :
-                      current_step == 1 ? "Add your first product" :
-                      current_step == 2 ? "Set up payments" :
-                      "You're all set!";
-                font-size: 20px;
-                font-family: "Outfit";
-                font-weight: 700;
-                color: white;
-            }
+                    Text {
+                        text: flow_type == "onboarding" ? (
+                                current_step == 0 ? "Welcome to your store!" :
+                                current_step == 1 ? "Add your first product" :
+                                "You're all set!"
+                            ) : flow_type == "payments" ? (
+                                current_step == 0 ? "Connect your bank" :
+                                "Ready to get paid!"
+                            ) : flow_type == "agents" ? (
+                                current_step == 0 ? "Hire your first helper" :
+                                "Helper activated!"
+                            ) : "Help is here";
+                        font-size: 20px;
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        color: white;
+                    }
 
-            Text {
-                text: current_step == 0 ? "Let's take a quick tour to get you set up." :
-                      current_step == 1 ? "Click here to add photos and prices for what you sell." :
-                      current_step == 2 ? "Connect your bank so you can get paid by customers." :
-                      "Your store is ready. You can always find more help in the Help Center.";
-                color: #94a3b8;
-                font-family: "Inter";
-                wrap: word-wrap;
-            }
+                    Text {
+                        text: flow_type == "onboarding" ? (
+                                current_step == 0 ? "Let's take a quick tour to get you set up." :
+                                current_step == 1 ? "This is where you'll add photos and prices for your items." :
+                                "Your store is ready for customers!"
+                            ) : flow_type == "payments" ? (
+                                current_step == 0 ? "Setting up payments lets you accept credit cards and Apple Pay." :
+                                "You can now accept payments globally."
+                            ) : flow_type == "agents" ? (
+                                current_step == 0 ? "Helpers can handle your messages and marketing while you sleep." :
+                                "Your helper is now working for you!"
+                            ) : "Follow these steps to succeed.";
+                        color: #94a3b8;
+                        font-family: "Inter";
+                        wrap: word-wrap;
+                        font-size: 14px;
+                    }
 
-            HorizontalBox {
-                alignment: end;
-                spacing: 12px;
+                    HorizontalBox {
+                        alignment: end;
+                        spacing: 12px;
 
-                Button {
-                    text: "Skip tour";
-                    clicked => { root.visible = false; }
-                }
+                        Button {
+                            text: "Skip";
+                            height: 44px;
+                            clicked => { root.visible = false; }
+                        }
 
-                Button {
-                    text: current_step < 3 ? "Next" : "Done";
-                    clicked => {
-                        if (current_step < 3) {
-                            current_step += 1;
-                        } else {
-                            root.visible = false;
+                        Button {
+                            text: current_step < 2 ? "Next" : "Finish";
+                            height: 44px;
+                            primary: true;
+                            clicked => {
+                                if (current_step < 2) {
+                                    current_step += 1;
+                                } else {
+                                    root.visible = false;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        }
-    }
     }
 }

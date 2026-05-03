@@ -1,80 +1,63 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component ReleaseNotes inherits Window {
-    width: 600px;
+    width: 375px;
     height: 800px;
     title: "What's New";
-    background: #f8fafc;
-    in-out property <string> current_version: "v0.3.4";
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    in-out property <string> current_version: "v0.3.5";
     in-out property <bool> show_latest_only: false;
 
     VerticalBox {
-        padding: 16px;
+        padding: 24px;
         spacing: 20px;
 
         Text {
             text: "What's New in OHC";
-            font-size: 24px;
+            font-size: 28px;
+            font-family: "Outfit";
             font-weight: 700;
-            color: #0f172a;
+            color: white;
         }
 
         ScrollView {
             VerticalBox {
                 spacing: 24px;
 
+                // Version 0.3.5
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
+                    Text { text: "Version 0.3.5 (Latest)"; font-weight: 700; font-size: 14px; color: #a855f7; font-family: "Inter"; }
+                    GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "🎉 Better Team Collaboration & Offline Reliability"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Your agents can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection."; color: #475569; wrap: word-wrap; }
+                            Text { text: "✍️ Integrated Help & Guides"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                            Text { text: "We've added a beautiful new Help Center, interactive tours, and an AI Help Assistant to guide you every step of the way."; color: #94a3b8; wrap: word-wrap; font-family: "Inter"; }
                         }
                     }
                 }
 
+                // Version 0.3.4
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Version 0.3.2 (Cloud) / v0.3.2+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
+                    Text { text: "Version 0.3.4"; font-weight: 700; font-size: 14px; color: #64748b; font-family: "Inter"; }
+                    GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "🚀 Enhanced Privacy & New Walkthrough"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "We have strengthened the way we store your business data to keep it completely private. We also added your task list directly to the main dashboard and included a new guide to help you sync your website with AutoDream."; color: #475569; wrap: word-wrap; }
-                        }
-                    }
-                }
-
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.1 (Cloud) / v0.3.1+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🔍 Smarter Knowledge Retrieval"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Your AI agents can now search and read your business documents much faster to answer questions. This even works if you are running the app fully offline on your own device."; color: #475569; wrap: word-wrap; }
-                        }
-                    }
-                }
-
-                VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Version 0.3.0 (Cloud) / v0.3.0+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Text { text: "🔗 Faster Team Communication"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "We upgraded the behind-the-scenes system that lets your AI agents talk to each other in real-time. If you use the standalone app, they can now chat together seamlessly without needing an external internet server."; color: #475569; wrap: word-wrap; }
+                            Text { text: "🎉 Better Team Collaboration"; font-weight: 700; font-size: 18px; color: white; font-family: "Outfit"; }
+                            Text { text: "Your agents can now work together much faster to manage your store and marketing."; color: #94a3b8; wrap: word-wrap; font-family: "Inter"; }
                         }
                     }
                 }
             }
+        }
+
+        Button {
+            text: "Got it!";
+            height: 44px;
+            primary: true;
+            clicked => { root.visible = false; }
         }
     }
 }
