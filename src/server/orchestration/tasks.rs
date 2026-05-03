@@ -346,6 +346,109 @@ impl TaskDecompositionService {
         })
     }
 
+
+    pub async fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let old_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let old_status = match old_status {
+                    Some(s) => s,
+                    None => return Err("Task not found".to_string())
+                };
+
+                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
+                )
+                .bind(payload_update)
+                .bind(now)
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(task_id)
+                .bind(old_status)
+                .bind("FAILED")
+                .bind(agent_id)
+                .bind(now)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            },
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+                let old_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let old_status = match old_status {
+                    Some(s) => s,
+                    None => return Err("Task not found".to_string())
+                };
+
+                // SQLite json patching
+                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"
+                )
+                .bind(payload_update)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(task_id)
+                .bind(old_status)
+                .bind("FAILED")
+                .bind(agent_id)
+                .bind(now.to_rfc3339())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }
+        }
+    }
+
     pub async fn update_status(&self, id: &str, new_status: &str, agent_id: &str) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {
