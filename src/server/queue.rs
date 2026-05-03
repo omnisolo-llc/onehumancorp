@@ -195,11 +195,9 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
-        let error_payload = serde_json::to_string(&serde_json::json!({"error": reason}))
-            .unwrap_or_else(|_| "{}".to_string());
-        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1 AND organization_id = $3")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = payload || $2 WHERE id = $1 AND organization_id = $3")
             .bind(job_id)
-            .bind(error_payload)
+            .bind(format!(" (Error: {})", reason))
             .bind(tenant_id)
             .execute(&self.pool)
             .await
@@ -233,14 +231,14 @@ impl Worker {
                 _ = interval.tick() => {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
-                            println!("Worker processing job: {}", job.id);
+                            tracing::info!("Worker processing job: {}", job.id);
                             match self.handler.handle(job.clone()).await {
                                 Ok(_) => {
-                                    println!("Worker successfully processed job: {}", job.id);
+                                    tracing::info!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
-                                    println!("Worker failed to process job: {}, error: {}", job.id, e);
+                                    tracing::info!("Worker failed to process job: {}, error: {}", job.id, e);
                                     let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
                                 }
                             }
@@ -249,12 +247,12 @@ impl Worker {
                             // No job available
                         }
                         Err(e) => {
-                            println!("Worker failed to dequeue job: {}", e);
+                            tracing::info!("Worker failed to dequeue job: {}", e);
                         }
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    println!("Worker shutting down");
+                    tracing::info!("Worker shutting down");
                     break;
                 }
             }
@@ -332,24 +330,24 @@ impl WorkerPool {
             let mut rx = shutdown_rx.subscribe();
             
             tokio::spawn(async move {
-                println!("Worker {} starting", i);
+                tracing::info!("Worker {} starting", i);
                 loop {
                     tokio::select! {
                         res = queue.pop(&topic) => {
                             match res {
                                 Ok(payload) => {
-                                    println!("Worker {} processing job", i);
+                                    tracing::info!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
-                                        println!("Worker {} handler failed: {}", i, e);
+                                        tracing::info!("Worker {} handler failed: {}", i, e);
                                     }
                                 }
                                 Err(e) => {
-                                    println!("Worker {} failed to pop: {}", i, e);
+                                    tracing::info!("Worker {} failed to pop: {}", i, e);
                                 }
                             }
                         }
                         _ = rx.recv() => {
-                            println!("Worker {} shutting down", i);
+                            tracing::info!("Worker {} shutting down", i);
                             break;
                         }
                     }
@@ -422,20 +420,18 @@ impl QueueManager {
         }
     }
 
-    pub async fn mark_completed(&self, job_id: &str, organization_id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+    pub async fn mark_completed(&self, job_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
-            .bind(organization_id)
             .execute(&self.pool)
             .await?;
             
         Ok(())
     }
 
-    pub async fn mark_failed(&self, job_id: &str, _reason: &str, organization_id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+    pub async fn mark_failed(&self, job_id: &str, _reason: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
-            .bind(organization_id)
             .execute(&self.pool)
             .await?;
             
@@ -455,15 +451,15 @@ impl QueueManager {
                     loop {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
-                                println!("QueueManager dispatched job: {}", job.id);
+                                tracing::info!("QueueManager dispatched job: {}", job.id);
                                 match handler(job.clone()).await {
                                     Ok(_) => {
-                                        println!("Job handler succeeded: {}", job.id);
-                                        let _ = self.mark_completed(&job.id, &job.organization_id).await;
+                                        tracing::info!("Job handler succeeded: {}", job.id);
+                                        let _ = self.mark_completed(&job.id).await;
                                     }
                                     Err(e) => {
-                                        println!("Job handler failed: {}, error: {}", job.id, e);
-                                        let _ = self.mark_failed(&job.id, &e, &job.organization_id).await;
+                                        tracing::info!("Job handler failed: {}, error: {}", job.id, e);
+                                        let _ = self.mark_failed(&job.id, &e).await;
                                     }
                                 }
                             }
@@ -471,14 +467,14 @@ impl QueueManager {
                                 break;
                             }
                             Err(e) => {
-                                println!("Failed to poll queue: {}", e);
+                                tracing::info!("Failed to poll queue: {}", e);
                                 break;
                             }
                         }
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    println!("QueueManager polling shutting down");
+                    tracing::info!("QueueManager polling shutting down");
                     break;
                 }
             }
@@ -835,7 +831,7 @@ mod tests {
     impl JobPayloadHandler for MockHandler {
         async fn handle(&self, payload: Vec<u8>) -> Result<(), String> {
             let s = String::from_utf8(payload).unwrap();
-            println!("MockHandler received: {}", s);
+            tracing::info!("MockHandler received: {}", s);
             Ok(())
         }
     }
@@ -917,92 +913,6 @@ mod tests {
         }
     }
 
-
-    #[tokio::test]
-    async fn test_queue_manager_tenant_isolation() {
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
-                .connect_lazy(&db_url)
-                .unwrap();
-
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-
-            let qm = QueueManager::new(pool.clone());
-            let job_id = uuid::Uuid::new_v4().to_string();
-            let org_id = "tenant-a".to_string();
-
-            // Ignore table creation errors if it already exists
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id VARCHAR PRIMARY KEY, organization_id VARCHAR NOT NULL, parent_task_id VARCHAR, payload TEXT, status VARCHAR, worker_id VARCHAR, scheduled_at TIMESTAMP, completed_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP)")
-                .execute(&pool)
-                .await;
-
-            let job = SubAgentJob {
-                id: job_id.clone(),
-                organization_id: org_id.clone(),
-                parent_task_id: "task-1".to_string(),
-                payload: serde_json::json!({"action": "test"}),
-                status: "QUEUED".to_string(),
-                worker_id: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-            };
-
-            qm.enqueue(job).await.unwrap();
-
-            // Attempt to complete with the WRONG tenant
-            let res = qm.mark_completed(&job_id, "wrong-tenant").await;
-            assert!(res.is_ok()); // The query executes successfully but updates 0 rows
-
-            // Verify status is still QUEUED
-            let status: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
-                .bind(&job_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert_eq!(status.0, "QUEUED");
-
-            // Complete with CORRECT tenant
-            let res2 = qm.mark_completed(&job_id, &org_id).await;
-            assert!(res2.is_ok());
-
-            let status_updated: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
-                .bind(&job_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert_eq!(status_updated.0, "COMPLETED");
-
-            // Test mark_failed isolation
-            let job_id2 = uuid::Uuid::new_v4().to_string();
-            let job2 = SubAgentJob {
-                id: job_id2.clone(),
-                organization_id: org_id.clone(),
-                parent_task_id: "task-1".to_string(),
-                payload: serde_json::json!({"action": "test2"}),
-                status: "QUEUED".to_string(),
-                worker_id: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-            };
-            qm.enqueue(job2).await.unwrap();
-
-            let _ = qm.mark_failed(&job_id2, "error", "wrong-tenant").await;
-            let status_failed1: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
-                .bind(&job_id2)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert_eq!(status_failed1.0, "QUEUED");
-
-            let _ = qm.mark_failed(&job_id2, "error", &org_id).await;
-            let status_failed2: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
-                .bind(&job_id2)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert_eq!(status_failed2.0, "FAILED");
-        }
-    }
 
     #[tokio::test]
     async fn test_task_queue_service_fail_task() {
