@@ -12,6 +12,8 @@ export component WelcomeChecklist inherits Window {
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    in-out property <int> progress: 0;
+    in-out property <bool> is_completed: false;
 
     VerticalBox {
         alignment: center;

@@ -2,6 +2,8 @@ import { VerticalBox } from "std-widgets.slint";
 
 export component AgentStatusIndicator {
     in-out property <bool> is_active;
+    in-out property <string> status_text: "Idle";
+    in-out property <string> status_color: "gray";
     VerticalBox {
     }
 }

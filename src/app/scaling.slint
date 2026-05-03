@@ -5,8 +5,8 @@ export component Scaling inherits Window {
     height: 600px;
     title: "Dynamic Scaling";
 
-    property <string> selected_role: "SOFTWARE_ENGINEER";
-    property <int> target_count: 1;
+    in-out property <string> selected_role: "SOFTWARE_ENGINEER";
+    in-out property <int> target_count: 1;
 
     callback scale_agents(string, int);
 

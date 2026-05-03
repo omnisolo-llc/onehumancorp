@@ -5,8 +5,8 @@ export component FixAgent inherits Window {
     height: 400px;
     title: "Agent Diagnostics";
 
-    property <int> step: 0;
-    property <bool> is_applying: false;
+    in-out property <int> step: 0;
+    in-out property <bool> is_applying: false;
 
     background: #f8fafc;
 
@@ -51,9 +51,9 @@ export component Upgrade inherits Window {
     height: 400px;
     title: "Platform Upgrade";
 
-    property <int> progress: 0;
-    property <bool> is_upgrading: false;
-    property <bool> done: false;
+    in-out property <int> progress: 0;
+    in-out property <bool> is_upgrading: false;
+    in-out property <bool> done: false;
 
     background: #f8fafc;
 
