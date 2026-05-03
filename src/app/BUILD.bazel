@@ -1,66 +1,11 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test", "rust_shared_library")
+load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 cargo_build_script(
     name = "build_script",
     srcs = ["build.rs"],
-    data = [
-        "agent_config.slint",
-        "walkthrough.slint",
-        "experiments.slint",
-        "wizard.slint",
-        "service_manager.slint",
-        "agent_hire.slint",
-        "agent_status_indicator.slint",
-        "agents.slint",
-        "ai_config.slint",
-        "ai_help_chat.slint",
-        "api_docs.slint",
-        "app.slint",
-        "autodream_walkthrough.slint",
-        "business_share.slint",
-        "channels.slint",
-        "chat.slint",
-        "cost_dashboard.slint",
-        "dashboard.slint",
-        "diagnostics.slint",
-        "glass_card.slint",
-        "grow_business.slint",
-        "handoffs.slint",
-        "help_center.slint",
-        "integrations.slint",
-        "interactive_walkthrough.slint",
-        "landing.slint",
-        "landing_page_experiments.slint",
-        "login.slint",
-        "logs.slint",
-        "meetings.slint",
-        "mesh_message.slint",
-        "my_plan.slint",
-        "ongoing_management.slint",
-        "password_input.slint",
-        "pipelines.slint",
-        "pricing.slint",
-        "prompt_tuning.slint",
-        "referrals.slint",
-        "release_notes.slint",
-        "scaling.slint",
-        "secure_agent_config.slint",
-        "security.slint",
-        "settings.slint",
-        "setup_wizard.slint",
-        "skills.slint",
-        "swarm_memory.slint",
-        "swarm_observability.slint",
-        "swarm_velocity.slint",
-        "task_list.slint",
-        "tooltip_registry.slint",
-        "tooltip_element.slint",
-        "user_management.slint",
-        "vector_memory_visualizer.slint",
-        "video_tutorials.slint",
-        "website_builder.slint",
-        "welcome_checklist.slint",
+    data = glob(["*.slint"]) + [
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -68,6 +13,17 @@ cargo_build_script(
     deps = [
         "@crates//:slint-build",
         "@crates//:tonic-build",
+    ],
+)
+
+# WASM-specific build script (runs on host, generates slint code only - no proto)
+cargo_build_script(
+    name = "build_script_wasm",
+    srcs = ["build_wasm.rs"],
+    data = glob(["*.slint"]),
+    edition = "2024",
+    deps = [
+        "@crates//:slint-build",
     ],
 )
 
@@ -136,6 +92,7 @@ rust_binary(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/proto:hub_tonic",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -161,6 +118,7 @@ rust_test(
     size = "small",
     srcs = [
         "main.rs",
+        "ui_tests.rs",
     ],
     crate_root = "main.rs",
     data = [
@@ -222,6 +180,7 @@ rust_test(
     ],
     edition = "2024",
     deps = [
+        "//src/proto:hub_tonic",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -237,3 +196,44 @@ rust_test(
         "@crates//:tonic",
     ],
 )
+
+# WASM build using Bazel rules (replaces wasm-pack genrule)
+# Note: Build with: bazel build //src/app:app_web --platforms=@rules_rust//rust/platform:wasm32
+# Note: Build bindings with: bazel build //src/app:app_web_bindgen
+rust_shared_library(
+    name = "app_web",
+    srcs = ["main.rs"],
+    data = glob(["*.slint"]),
+    edition = "2024",
+    target_compatible_with = ["@platforms//cpu:wasm32"],
+    deps = [
+        ":build_script_wasm",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:prost",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:serde_yaml",
+        "@crates//:slint",
+        "@crates//:wasm-bindgen",
+        "@crates//:console_error_panic_hook",
+        "@crates//:wasm-bindgen-futures",
+        "@crates//:getrandom",
+    ],
+)
+
+# Generate JS/TS bindings using rust_wasm_bindgen rule
+# The toolchain uses wasm-bindgen-cli 0.2.105 which matches the wasm-bindgen crate (via version annotation)
+rust_wasm_bindgen(
+    name = "app_web_bindgen",
+    wasm_file = ":app_web",
+    target = "web",
+    target_compatible_with = ["@platforms//cpu:wasm32"],
+    visibility = ["//visibility:public"],
+)
+
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+    "index.html",
+])

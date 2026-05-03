@@ -301,6 +301,7 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
+            enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
@@ -311,6 +312,10 @@ impl AgentServiceImpl {
             enable_llm_judge: false,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
+            enable_git_state_checkpointing: false,
+            workspace_path: None,
+            thread_id: None,
+            resume_from_checkpoint_id: None,
         }
     }
 
@@ -324,7 +329,7 @@ impl AgentServiceImpl {
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
         tools.push(agent_tool());
         let agent = Arc::new(Agent::new(llm, tools));
         
@@ -365,7 +370,12 @@ impl AgentService for AgentServiceImpl {
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None);
+        // Inject memory accessor if using Anthropic3TierMemoryStore
+        let accessor = if let Some(_mem) = &memory {
+            None
+        } else { None };
+
+        let mut all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor);
         all_tools.push(agent_tool());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
@@ -491,6 +501,7 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
+                enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
@@ -501,6 +512,10 @@ impl AgentService for AgentServiceImpl {
                 enable_llm_judge: false,
                 enable_state_checkpointing: false,
                 state_scratchpad_path: None,
+                enable_git_state_checkpointing: false,
+                workspace_path: None,
+                thread_id: None,
+                resume_from_checkpoint_id: None,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
@@ -508,7 +523,7 @@ impl AgentService for AgentServiceImpl {
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir);
+            let mut tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None);
             tools.push(agent_tool());
             let agent = Agent::new(llm, tools);
 

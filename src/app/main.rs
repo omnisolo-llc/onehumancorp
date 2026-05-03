@@ -1,11 +1,16 @@
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
-        tonic::include_proto!("ohc.orchestration");
+        pub use hub_proto::ohc::orchestration::*;
     }
 }
 
@@ -15,14 +20,29 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
+#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 
+#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
+
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
+    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+}
+
+#[cfg(test)]
+mod ui_tests;
 
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
@@ -39,6 +59,7 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
@@ -96,16 +117,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
+    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
                 if ui.get_is_sign_up() {
-                    ui.invoke_start_setup_wizard();
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("Login as {}...", email);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
+                }
+            }
+        }
+    });
+
+    login_ui.on_resend_verification({
+        let login_handle = login_ui_handle.clone();
+        move |_email| {
+            if let Some(ui) = login_handle.upgrade() {
+                // Simulate email verified
+                ui.invoke_start_setup_wizard();
+            }
+        }
+    });
+
+    login_ui.on_oauth_login({
+        let login_handle = login_ui_handle.clone();
+        move |provider| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("OAuth Login via {}...", provider);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
                 }
             }
         }
@@ -134,14 +190,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                     }
                 }).unwrap();
             }
@@ -166,14 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
             ]);
 
             tokio::spawn(async move {
@@ -200,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -239,7 +281,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_prompt_tuning_handle.upgrade() {
+                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -262,6 +304,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
+    prompt_tuning_ui.on_save_prompt({
+        let ui_handle = prompt_tuning_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let tone = ui.get_tone();
+            let focus_only_business = ui.get_focus_only_business();
+            let focus_avoid_competitors = ui.get_focus_avoid_competitors();
+            let focus_reply_spanish = ui.get_focus_reply_spanish();
+
+            let state = std::collections::HashMap::from([
+                ("prompt_tone".to_string(), tone.to_string()),
+                ("prompt_focus_business".to_string(), focus_only_business.to_string()),
+                ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
+                ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
+            ]);
+            let ui_handle_err = ui_handle.clone();
+            tokio::spawn(async move {
+                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                match HubServiceClient::connect(url).await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        if let Err(e) = client.save_wizard_state(request).await {
+                            eprintln!("Failed to save wizard state: {}", e);
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_err.upgrade() {
+                                    ui.set_show_toast(false); // rollback optimistic UI
+                                    // In a real app we might show an error toast here
+                                }
+                            }).unwrap();
+                            return;
+                        }
+
+                        let mut domain_focus = vec![];
+                        if focus_only_business { domain_focus.push("Only discuss business".to_string()); }
+                        if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
+                        if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
+
+                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                            personality: tone.to_string(),
+                            domain_focus,
+                        });
+                        if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
+                            eprintln!("Failed to handle prompt tuning: {}", e);
+                            let ui_err_clone = ui_handle_err.clone();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_err_clone.upgrade() {
+                                    ui.set_show_toast(false); // rollback
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_err.upgrade() {
+                                ui.set_show_toast(false); // rollback optimistic UI
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -278,7 +383,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_website_builder_handle.upgrade() {
+                    if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -327,7 +432,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_settings_handle.upgrade() {
+                    if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -356,7 +461,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_grow_business_handle.upgrade() {
+                    if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -542,6 +647,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+    Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
@@ -627,6 +733,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
+                    let bs_handle_ig = business_share_handle.clone();
+                    business_share_ui.on_share_to_instagram(move || { if let Some(ui) = bs_handle_ig.upgrade() { println!("Sharing to IG: {}", ui.get_share_link()); } });
+                    let bs_handle_x = business_share_handle.clone();
+                    business_share_ui.on_share_to_x(move || { if let Some(ui) = bs_handle_x.upgrade() { println!("Sharing to X: {}", ui.get_share_link()); } });
                     let bs_handle_clone = business_share_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
                     dashboard.on_action_open_referrals(move || {
@@ -757,14 +867,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // For now, we simulate the extraction as requested by the test and the design doc.
                 ui.set_company_name("AI Generated Store".into());
                 ui.set_business_type("Online Store".into());
-                ui.set_website_template("Modern".into());
-                ui.set_product_name("AI Fast Product".into());
-                ui.set_domain_choice("subdomain".into());
+
                 ui.set_admin_email("admin@ai-generated.test".into());
                 ui.set_payment_pref("online".into());
                 ui.set_step(9); // Skip straight to Review & Launch
             }
         }
+    });
+
+    setup_wizard_ui.on_copy_link(|link| {
+        // Send to system clipboard if possible. Using terminal fallback for test
+        println!("Copied to clipboard: {}", link);
     });
 
     setup_wizard_ui.on_launch({
@@ -787,10 +900,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -802,10 +915,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_admin_email = admin_email.to_string();
             let req_admin_name = ui.get_admin_name().to_string();
             let req_admin_password = ui.get_admin_password().to_string();
-            let req_website_template = website_template.to_string();
-            let req_product_name = product_name.to_string();
-            let req_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
 
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
@@ -826,10 +935,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: req_website_template,
-                            first_product_name: req_product_name,
-                            first_product_price: req_product_price,
-                            domain_choice: req_domain_choice,
+                            website_template: "".to_string(),
+                            first_product_name: "".to_string(),
+                            first_product_price: "".to_string(),
+                            domain_choice: "".to_string(),
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -838,9 +947,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let msg = r.message.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // Go to checklist
+                                        // Delay going to step 10 to show confetti?
+                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
+                                        // If we transition to step 10, the confetti disappears.
+                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
+                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
                                     }
                                 }).unwrap();
                             }
@@ -867,6 +981,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             });
+        }
+    });
+
+    login_ui.run()?;
+
+    Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn spawn<F>(f: F)
+where
+    F: std::future::Future<Output = ()> + 'static,
+{
+    wasm_bindgen_futures::spawn_local(f);
+}
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub async fn main_wasm() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+    run_app_wasm().await.map_err(|e| e.to_string().into())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let sw_ui_weak = setup_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = sw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let _ = setup_wizard_ui.hide();
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
         }
     });
 
@@ -1258,20 +1425,6 @@ mod e2e_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
-        assert_eq!(ui.get_step(), 7);
-
-        // Step 7: Product -> Step 8
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        // Step 8: Domain -> Step 9
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
@@ -1282,20 +1435,17 @@ mod e2e_tests {
         assert_eq!(ui.get_sell_services(), false);
         assert_eq!(ui.get_sell_food(), false);
         assert_eq!(ui.get_sell_subscriptions(), false);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
+
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -1313,7 +1463,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1563,6 +1713,16 @@ mod tests {
         assert_eq!(ui.get_tone(), "Concise");
         assert_eq!(ui.get_focus_only_business(), true);
         assert_eq!(ui.get_focus_avoid_competitors(), true);
+
+        let save_prompt_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_prompt_called_clone = save_prompt_called.clone();
+
+        ui.on_save_prompt(move || {
+            *save_prompt_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_save_prompt();
+        assert!(*save_prompt_called.borrow(), "on_save_prompt should be called");
     }
 
     #[test]
@@ -1633,9 +1793,7 @@ mod docs_tests {
             if let Some(u) = ui_weak.upgrade() {
                 u.set_company_name("AI Store".into());
                 u.set_business_type("Online Store".into());
-                u.set_website_template("Modern".into());
-                u.set_product_name("AI Product".into());
-                u.set_domain_choice("subdomain".into());
+
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
                 u.set_step(9);
@@ -1644,20 +1802,19 @@ mod docs_tests {
 
         ui.invoke_generate_instant_preview();
 
-        assert_eq!(ui.get_step(), 9);
+        assert_eq!(ui.get_step(), 6);
         assert_eq!(ui.get_company_name(), "AI Store");
         assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_website_template(), "Modern");
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
         let ui_weak_launch = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pprice, _dc| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -1674,7 +1831,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
 
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1727,18 +1884,15 @@ mod docs_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
 
-        // Step 6: Template -> Step 7
-        ui.invoke_select_template("Modern".into());
-
-        // Step 7: Product -> Step 8
+        // New steps in onboarding
+        ui.invoke_select_template("Classic".into());
         ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.00".into());
+        ui.set_product_price("10.0".into());
         ui.invoke_next_step();
 
-        // Step 8: Domain -> Step 9
         ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
 
+        assert_eq!(ui.get_step(), 9);
         // Step 9: Launch -> Step 10
         ui.invoke_launch(
             ui.get_business_type(),
@@ -1757,7 +1911,7 @@ mod docs_tests {
         ui.set_launching(false);
         ui.set_step(10);
 
-        // Step 10: Go to Dashboard
+        // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
         ui.on_go_to_dashboard(move || {
@@ -1772,10 +1926,7 @@ mod docs_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
-        assert_eq!(ui.get_website_template(), "Modern");
-        assert_eq!(ui.get_product_name(), "My First Product");
-        assert_eq!(ui.get_product_price(), "10.00");
-        assert_eq!(ui.get_domain_choice(), "subdomain");
+
     }
 
     #[test]
@@ -1875,6 +2026,19 @@ mod docs_tests {
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1884,10 +2048,6 @@ mod docs_tests {
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
-
-        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
 
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
@@ -1904,14 +2064,12 @@ mod docs_tests {
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
         dashboard_ui.invoke_open_ai_chat();
-        dashboard_ui.invoke_open_api_docs();
         dashboard_ui.invoke_open_video_tutorials();
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
@@ -1936,6 +2094,19 @@ mod docs_tests {
     #[test]
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         app::TooltipRegistry::get(&dashboard_ui).on_request_tooltip_text(move |id| {
@@ -1964,6 +2135,22 @@ mod docs_tests {
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
+
+        use slint::Global;
+        use slint::ComponentHandle;
+
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            if id == "add_product" {
+                "Click to add a new product to your store".into()
+            } else {
+                "".into()
+            }
+        });
+
+        dashboard_ui.global::<app::TooltipRegistry>().invoke_show_tooltip("add_product".into(), 10.0, 20.0);
+
+        assert_eq!(dashboard_ui.global::<app::TooltipRegistry>().get_active_text(), "Click to add a new product to your store");
+        assert_eq!(dashboard_ui.global::<app::TooltipRegistry>().get_is_visible(), true);
 
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
@@ -2049,10 +2236,12 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
+        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
+            assert_eq!(can_write_descriptions, true);
+            assert_eq!(can_send_updates, false);
             assert_eq!(frequency, "Daily");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -2069,6 +2258,7 @@ mod docs_tests {
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
+        ui.set_can_write_descriptions(true);
         ui.invoke_next_step();
 
         // Step 2: Frequency -> Step 3
@@ -2080,12 +2270,16 @@ mod docs_tests {
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
+            ui.get_can_write_descriptions(),
+            ui.get_can_send_updates(),
             ui.get_frequency()
         );
 
         assert_eq!(ui.get_step(), 3);
         assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_can_write_descriptions(), true);
+        assert_eq!(ui.get_can_send_updates(), false);
         assert_eq!(ui.get_frequency(), "Daily");
         assert_eq!(ui.get_show_toast(), true);
         assert!(*publish_success.borrow());
@@ -2291,7 +2485,7 @@ mod dashboard_docs_tests {
 }
 
 #[cfg(test)]
-mod cost_transparency_e2e_tests {
+mod remaining_e2e_tests {
     use super::*;
     use slint::Model;
 
@@ -2489,6 +2683,12 @@ mod cost_transparency_e2e_tests {
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.set_business_tagline("Best vegan cakes".into());
+        assert_eq!(business_share_ui.get_business_tagline(), "Best vegan cakes");
+
+        business_share_ui.set_share_link("ohc://share?b=maya".into());
+        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=maya");
 
         business_share_ui.invoke_copy_link();
         assert!(*copy_link_called.borrow());

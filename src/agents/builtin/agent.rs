@@ -35,16 +35,21 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
+    pub enable_git_state_checkpointing: bool,
+    pub workspace_path: Option<String>,
     pub project_trusted: bool,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
+    pub thread_id: Option<String>,
+    pub resume_from_checkpoint_id: Option<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -61,16 +66,21 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
+            enable_git_state_checkpointing: false,
+            workspace_path: None,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            thread_id: None,
+            resume_from_checkpoint_id: None,
         }
     }
 }
@@ -138,20 +148,30 @@ pub struct Agent {
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
 }
 
 impl Agent {
+    pub fn add_tool(&mut self, tool: Tool) {
+        self.tools.push(tool);
+    }
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
         Self {
             llm,
             tools,
             progress: Arc::new(AgentProgress::default()),
             memory_store: None,
+            checkpointer: None,
         }
     }
 
     pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
         self.memory_store = Some(store);
+        self
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>) -> Self {
+        self.checkpointer = Some(checkpointer);
         self
     }
 
@@ -191,11 +211,33 @@ impl Agent {
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut messages: Vec<Message> = Vec::new();
+        let mut last_checkpoint_id: Option<String> = None;
+
+        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
+            if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
+                let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
+                    .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
+                    .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
+
+                messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
+                    .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
+                last_checkpoint_id = Some(cp.checkpoint_id.clone());
+            } else {
+                if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
+                    if let Some(cp) = checkpoints.first() {
+                        if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                            messages = saved_msgs;
+                            last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                        }
+                    }
+                }
+            }
+        }
 
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
         let scratchpad_path = cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
 
-        if cfg.enable_state_checkpointing {
+        if messages.is_empty() && cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
                 if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
                     messages = saved_msgs;
@@ -229,6 +271,15 @@ impl Agent {
                     tracing::warn!("Failed to retrieve long term memory: {}", e);
                 }
             }
+
+            // 3-Tier Memory Mechanic: Lightweight Index
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    combined_system.push_str("\n\n[Lightweight Memory Index]\n");
+                    combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    combined_system.push_str(&index_content);
+                }
+            }
         }
 
         for iteration in 0..max_iterations {
@@ -238,7 +289,32 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
-            if !cfg.developer_instructions.is_empty() {
+
+            // Prompt Construction Mechanic: "Lost in the Middle" Prevention
+            // High-signal context at the very beginning and very end.
+            if cfg.enable_lost_in_the_middle_prevention {
+                let mut reminder_text = String::new();
+                if !cfg.developer_instructions.is_empty() {
+                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
+                }
+                if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                    // Truncate user instructions if it's too long, just to remind the core objective
+                    let mut end_idx = 1000;
+                    if cfg.user_instructions.len() > 1000 {
+                        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+                            end_idx -= 1;
+                        }
+                    } else {
+                        end_idx = cfg.user_instructions.len();
+                    }
+                    let summary = &cfg.user_instructions[..end_idx];
+                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
+                }
+
+                if !reminder_text.is_empty() {
+                    final_messages.push(Message::user(reminder_text.trim()));
+                }
+            } else if !cfg.developer_instructions.is_empty() {
                 final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
             }
 
@@ -647,16 +723,37 @@ impl Agent {
                 tool_results,
             });
 
-            // State Management Checkpointing Mechanic (Claude Code)
+            // State Management Checkpointing Mechanic
+            // 1. Database Checkpointer (LangGraph / OpenAI-like)
+            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
+                let checkpoint_id = uuid::Uuid::new_v4().to_string();
+                let cp = crate::checkpointer::Checkpoint {
+                    thread_id: thread_id.clone(),
+                    checkpoint_id: checkpoint_id.clone(),
+                    parent_id: last_checkpoint_id.clone(),
+                    data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
+                    metadata: serde_json::json!({
+                        "iteration": iteration,
+                        "turn_input_tokens": turn_input_tokens,
+                        "turn_output_tokens": output_tokens,
+                    }),
+                    created_at: chrono::Utc::now(),
+                };
+                if let Err(e) = checkpointer.put_checkpoint(cp).await {
+                    tracing::warn!("Failed to save checkpoint to database: {}", e);
+                } else {
+                    last_checkpoint_id = Some(checkpoint_id.clone());
+                    on_event(AgentEvent::CheckpointSaved {
+                        iteration,
+                        path: format!("db:{}", checkpoint_id),
+                    });
+                }
+            }
+
+            // 2. Local File Scratchpad (Claude Code)
             if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        // In a backend microservice context, executing global git commands is unsafe.
-                        // We skip executing global `git add/commit` here and only write to the
-                        // local scratchpad path. A proper implementation would either create an isolated
-                        // workspace/worktree, or rely on a Checkpointer database structure.
-                        // The Claude Code scratchpad concept is satisfied by storing the progress JSON.
-
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
@@ -664,6 +761,44 @@ impl Agent {
                     }
                 }
             }
+
+            // 3. Git State Checkpointing (Claude Code)
+            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
+                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let thread = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+
+                // Only commit if .git exists to avoid turning random directories into repos
+                if std::path::Path::new(&wd).join(".git").exists() {
+                    let mut add_cmd = tokio::process::Command::new("git");
+                    add_cmd.current_dir(&wd).arg("add").arg("-A");
+                    if add_cmd.output().await.is_ok() {
+                        let mut diff_cmd = tokio::process::Command::new("git");
+                        diff_cmd.current_dir(&wd).arg("diff").arg("--cached").arg("--quiet");
+                        // If it fails (exit code 1), it means there ARE changes staged
+                        if let Ok(diff_out) = diff_cmd.output().await {
+                            if !diff_out.status.success() {
+                                let mut commit_cmd = tokio::process::Command::new("git");
+                                commit_cmd.current_dir(&wd)
+                                    .arg("commit")
+                                    .arg("-m")
+                                    .arg(format!("🤖 Agent checkpoint: Iteration {} (Thread: {})", iteration, thread));
+
+                                if let Ok(commit_out) = commit_cmd.output().await {
+                                    if commit_out.status.success() {
+                                        on_event(AgentEvent::CheckpointSaved {
+                                            iteration,
+                                            path: format!("git:{}", wd),
+                                        });
+                                    } else {
+                                        tracing::warn!("Failed to create git commit: {}", String::from_utf8_lossy(&commit_out.stderr));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -1115,7 +1250,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
-        let client = Arc::new(MockLlmClient {
+        let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -1589,6 +1724,206 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    use crate::checkpointer::{CheckpointSaver, Checkpoint};
+
+    struct MockCheckpointer {
+        checkpoints: tokio::sync::Mutex<Vec<Checkpoint>>,
+    }
+
+    #[async_trait::async_trait]
+    impl CheckpointSaver for MockCheckpointer {
+        async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+            let cps = self.checkpoints.lock().await;
+            Ok(cps.iter().find(|c| c.thread_id == thread_id && c.checkpoint_id == checkpoint_id).cloned())
+        }
+
+        async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
+            let mut cps = self.checkpoints.lock().await;
+            cps.push(checkpoint);
+            Ok(())
+        }
+
+        async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
+            let cps = self.checkpoints.lock().await;
+            let mut filtered: Vec<Checkpoint> = cps.iter().filter(|c| c.thread_id == thread_id).cloned().collect();
+            // Reverse to simulate ORDER BY created_at DESC
+            filtered.reverse();
+            Ok(filtered)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_state_checkpointing_mechanic() {
+        // Run 1: Agent saves a checkpoint
+        let client1 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        struct StateMockToolExecutor {
+            result: String,
+        }
+
+        #[async_trait::async_trait]
+        impl ToolExecutor for StateMockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok(self.result.clone())
+            }
+        }
+
+        let mutating_tool = Tool {
+            name: "read_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: false, // Mutating tool triggers Claude Code local checkpoints, but our new DB checkpointer triggers on every iteration.
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(StateMockToolExecutor { result: "read_ok".to_string() }),
+        };
+
+        let checkpointer = Arc::new(MockCheckpointer {
+            checkpoints: tokio::sync::Mutex::new(Vec::new()),
+        });
+
+        let agent1 = Agent::new(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
+        let mut cfg = AgentRunConfig::default();
+        cfg.model = "test-model".to_string();
+        cfg.thread_id = Some("test_thread".to_string());
+
+        let mut events1 = Vec::new();
+        let _ = agent1.run(&cfg, "Initial Task", &mut |e| events1.push(e)).await;
+
+        let cps = checkpointer.checkpoints.lock().await;
+        assert_eq!(cps.len(), 1, "Should have saved 1 checkpoint");
+        let saved_cp_id = cps[0].checkpoint_id.clone();
+        drop(cps);
+
+        // Run 2: Resume from checkpoint
+        let client2 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Resumed answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent2 = Agent::new(client2, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.model = "test-model".to_string();
+        cfg2.thread_id = Some("test_thread".to_string());
+        cfg2.resume_from_checkpoint_id = Some(saved_cp_id);
+
+        let mut events2 = Vec::new();
+        let _ = agent2.run(&cfg2, "Ignored Task (will use loaded messages)", &mut |e| events2.push(e)).await;
+
+        // Verify the second run resumed properly by checking if it loaded the messages.
+        // It should have immediately hit the ChatResponse and finished.
+        // However, because there are NO tool calls in the ChatResponse, the loop hits the "Terminal condition",
+        // returning early BEFORE saving another checkpoint!
+        // A super-step checkpoint is only saved at the end of the iteration AFTER tools have run.
+        let cps2 = checkpointer.checkpoints.lock().await;
+        assert_eq!(cps2.len(), 1, "Should NOT save another checkpoint because it terminates immediately");
+
+        // Let's verify that the output of run 2 was indeed the "Resumed answer"
+        let last_event = events2.last().unwrap();
+        if let AgentEvent::TaskComplete { content } = last_event {
+            assert_eq!(content, "Resumed answer");
+        } else {
+            panic!("Expected TaskComplete");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_git_state_checkpointing() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_mutating".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let dir = tempfile::tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+
+        // Setup git repo
+        std::process::Command::new("git").current_dir(&wd).arg("init").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.name").arg("Agent").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.email").arg("agent@example.com").status().unwrap();
+
+        // Make a change
+        std::fs::write(wd.join("test.txt"), "hello").unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_git_state_checkpointing = true;
+        cfg.workspace_path = Some(wd.to_string_lossy().to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify event was emitted
+        let mut found_checkpoint_event = false;
+        for e in events {
+            if let AgentEvent::CheckpointSaved { path, .. } = e {
+                if path.starts_with("git:") {
+                    found_checkpoint_event = true;
+                }
+            }
+        }
+        assert!(found_checkpoint_event);
+
+        // Verify git log
+        let output = std::process::Command::new("git").current_dir(&wd).arg("log").arg("--oneline").output().unwrap();
+        let log_str = String::from_utf8_lossy(&output.stdout);
+        assert!(log_str.contains("Agent checkpoint: Iteration 0"));
+    }
+
     #[tokio::test]
     async fn test_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
@@ -1615,7 +1950,7 @@ mod tests {
             ]),
         });
 
-        let mut mutating_tool = Tool {
+        let mutating_tool = Tool {
             name: "mutating_tool".to_string(),
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
@@ -1651,5 +1986,67 @@ mod tests {
             }
         }
         assert!(found_checkpoint_event);
+    }
+
+    // We will replace MockLlmClient locally for the test
+    struct RecordingLlmClient {
+        last_request: tokio::sync::Mutex<Option<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for RecordingLlmClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut lr = self.last_request.lock().await;
+            *lr = Some(req);
+            Ok(ChatResponse {
+                message: Message::assistant("Final answer"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prompt_construction_lost_in_the_middle_prevention() {
+        let client = Arc::new(RecordingLlmClient {
+            last_request: tokio::sync::Mutex::new(None),
+        });
+
+        // Create an agent and we will inject some state so messages.len() > 3
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lost_in_the_middle_prevention = true;
+        cfg.enable_state_checkpointing = true;
+        cfg.developer_instructions = "Developer instructions here.".to_string();
+        cfg.user_instructions = "Super long user instructions that span many many words.".to_string();
+
+        let scratchpad_path = format!(".test_checkpoint_litm_{}.json", uuid::Uuid::new_v4());
+        cfg.state_scratchpad_path = Some(scratchpad_path.clone());
+
+        // Pre-fill some messages to make len > 3
+        let initial_msgs = vec![
+            Message::user("Task: Do something"),
+            Message::assistant("Thinking..."),
+            Message::assistant("Still thinking..."),
+            Message::user("Please continue"),
+        ];
+        tokio::fs::write(&scratchpad_path, serde_json::to_string(&initial_msgs).unwrap()).await.unwrap();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Continue working", &mut on_event).await;
+        assert!(result.is_ok());
+
+        let lr = client.last_request.lock().await;
+        let req = lr.as_ref().unwrap();
+        let last_msg = req.messages.last().unwrap();
+
+        assert_eq!(last_msg.role, Role::User);
+        assert!(last_msg.content.contains("[System Reminder: Developer instructions here.]"));
+        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
+
+        let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
 }

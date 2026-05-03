@@ -1,21 +1,7 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
-cargo_build_script(
-    name = "build_script",
-    srcs = ["build.rs"],
-    data = [
-        "//src/proto:agent_service.proto",
-        "//src/proto:common.proto",
-        "//src/proto:hub.proto",
-        "//src/proto:organization.proto",
-        "@protobuf//:protoc",
-    ],
-    edition = "2024",
-    deps = [
-        "@crates//:tonic-build",
-    ],
-)
+# build_script removed as protos are now built with Bazel rules
 
 rust_binary(
     name = "server",
@@ -30,7 +16,10 @@ rust_binary(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":build_script",
+        "//src/proto:hub_tonic",
+        "//src/proto:agent_service_tonic",
+        "//src/proto:organization_prost",
+        "//src/proto:common_prost",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:axum",
@@ -86,7 +75,10 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
-        ":build_script",
+        "//src/proto:hub_tonic",
+        "//src/proto:agent_service_tonic",
+        "//src/proto:organization_prost",
+        "//src/proto:common_prost",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:base64",
@@ -122,6 +114,7 @@ rust_test(
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",
+        "@crates//:tempfile",
     ],
 )
 
