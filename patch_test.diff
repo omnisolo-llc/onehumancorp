@@ -1,0 +1,20 @@
+<<<<<<< SEARCH
+        business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
+
+        assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
+        business_share_ui.set_business_name("Maya's Cakes".into());
+        assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.invoke_copy_link();
+=======
+        business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
+
+        assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
+        business_share_ui.set_business_name("Maya's Cakes".into());
+        assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.set_share_link("ohc://share?b=123".into());
+        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=123");
+
+        business_share_ui.invoke_copy_link();
+>>>>>>> REPLACE
