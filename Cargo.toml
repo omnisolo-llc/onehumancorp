@@ -8,11 +8,11 @@ build = "src/server/build.rs"
 name = "server"
 path = "src/server/main.rs"
 
-[[bin]]
-name = "ohc-builtin-agent"
-path = "src/agents/builtin/main.rs"
-
 [dependencies]
+ohc-builtin-agent = { path = "src/agents/builtin" }
+ohc-builtin-agent-core = { path = "src/agents/builtin/core" }
+ohc-builtin-agent-llm = { path = "src/agents/builtin/llm" }
+ohc-builtin-agent-tools = { path = "src/agents/builtin/tools" }
 tokio = { workspace = true }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
@@ -65,7 +65,13 @@ tempfile = "3.27.0"
 tonic-build = "0.12"
 
 [workspace]
-members = ["src/app"]
+members = [
+    "src/app",
+    "src/agents/builtin/core",
+    "src/agents/builtin/llm",
+    "src/agents/builtin/tools",
+    "src/agents/builtin",
+]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
