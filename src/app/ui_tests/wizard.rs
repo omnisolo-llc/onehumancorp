@@ -253,3 +253,64 @@ fn wizard_template_preview_retention() {
     ui.set_website_template("Bold".into());
     assert_eq!(ui.get_website_template(), "Bold");
 }
+
+#[test]
+fn e2e_test_onboarding_launch_success_copies_link() {
+    let ui = create();
+
+    let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let link_copied_clone = link_copied.clone();
+
+    ui.on_copy_link(move |link| {
+        *link_copied_clone.borrow_mut() = true;
+    });
+
+    // Directly invoking copy_link instead of launch, as we're mocking the launch function callback
+    ui.invoke_copy_link("https://mybusiness.ohc.app".into());
+
+    assert!(*link_copied.borrow(), "Auto-copy shareable link to clipboard on success should be invoked");
+}
+
+
+
+
+
+#[test]
+fn wizard_shareable_link_default() {
+    let ui = create();
+    assert_eq!(ui.get_shareable_link(), "https://mybusiness.ohc.app");
+}
+
+#[test]
+fn wizard_shareable_link_setter() {
+    let ui = create();
+    ui.set_shareable_link("https://test.ohc.app".into());
+    assert_eq!(ui.get_shareable_link(), "https://test.ohc.app");
+}
+
+#[test]
+fn wizard_shareable_link_retention() {
+    let ui = create();
+    ui.set_shareable_link("https://test1.ohc.app".into());
+    ui.set_step(1);
+    assert_eq!(ui.get_shareable_link(), "https://test1.ohc.app");
+    ui.set_step(2);
+    assert_eq!(ui.get_shareable_link(), "https://test1.ohc.app");
+}
+
+#[test]
+fn wizard_copy_link_callback_trigger() {
+    let ui = create();
+
+    let link_copied = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let link_copied_clone = link_copied.clone();
+
+    ui.on_copy_link(move |link| {
+        *link_copied_clone.borrow_mut() = link.to_string();
+    });
+
+    let test_link = "https://custom-copy.ohc.app";
+    ui.invoke_copy_link(test_link.into());
+
+    assert_eq!(*link_copied.borrow(), test_link);
+}

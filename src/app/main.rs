@@ -1320,8 +1320,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     setup_wizard_ui.on_copy_link(|link| {
-        // Send to system clipboard if possible. Using terminal fallback for test
-        println!("Copied to clipboard: {}", link);
+        CLIPBOARD.with(|cb| {
+            if let Some(ctx) = cb.borrow_mut().as_mut() {
+                if let Err(e) = ctx.set_contents(link.to_string()) {
+                    println!("Failed to copy to clipboard: {:?}", e);
+                } else {
+                    println!("Copied to clipboard: {}", link);
+                }
+            } else {
+                println!("Clipboard not initialized");
+            }
+        });
     });
 
     setup_wizard_ui.on_launch({
@@ -1399,6 +1408,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
+                                        ui.invoke_copy_link(ui.get_shareable_link());
                                         // Delay going to step 10 to show confetti?
                                         // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
                                         // If we transition to step 10, the confetti disappears.
