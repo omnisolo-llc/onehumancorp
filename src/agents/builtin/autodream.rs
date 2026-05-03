@@ -71,12 +71,47 @@ impl AutoDreamWorker {
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
         
+        let client = crate::minimax::LocalLLMClient::new();
+
         for (id, data) in stale_sessions {
              println!("AutoDream: pruned stale session");
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
-             db.inject_truth(&format!("session-summary-{}", id), &summary, &format!("[{}]", vec!["0.0"; 1536].join(", "))).await?;
+
+             let embedding = match client.generate_embedding(&summary).await {
+                Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
+                Err(e) => {
+                    println!("AutoDream: failed to generate embedding: {}", e);
+                    format!("[{}]", vec!["0.0"; 1536].join(", "))
+                }
+             };
+
+             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
+
+             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
+
+             if db.is_sqlite() {
+                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                     .bind(&format!("session-summary-{}", id))
+                     .bind("system")
+                     .bind("system_agent")
+                     .bind(&summary)
+                     .bind(&embedding)
+                     .bind("SESSION_SUMMARY")
+                     .execute(&db.pool)
+                     .await?;
+             } else {
+                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                     .bind(&format!("session-summary-{}", id))
+                     .bind("system")
+                     .bind("system_agent")
+                     .bind(&summary)
+                     .bind(&embedding)
+                     .bind("SESSION_SUMMARY")
+                     .execute(&db.pool)
+                     .await?;
+             }
         }
         
         Ok(())
@@ -212,11 +247,33 @@ impl AutoDreamWorker {
 
             match client.generate_embedding(&context_data).await {
                 Ok(embedding) => {
-                    let emb_str = serde_json::to_string(&embedding).unwrap();
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = uuid::Uuid::new_v4().to_string();
                     
-                    db.insert_agent_memory(&mem_id, "system", &format!("session-{}", session_id), &context_data, &emb_str).await?;
+                    db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
                     
+                    if db.is_sqlite() {
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                            .bind(&mem_id)
+                            .bind("system")
+                            .bind("system_agent")
+                            .bind(&context_data)
+                            .bind(&emb_str)
+                            .bind("SESSION_DATA")
+                            .execute(&db.pool)
+                            .await?;
+                    } else {
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                            .bind(&mem_id)
+                            .bind("system")
+                            .bind("system_agent")
+                            .bind(&context_data)
+                            .bind(&emb_str)
+                            .bind("SESSION_DATA")
+                            .execute(&db.pool)
+                            .await?;
+                    }
+
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
                         .execute(&db.pool)
@@ -249,11 +306,33 @@ impl AutoDreamWorker {
                 
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
-                        let emb_str = serde_json::to_string(&embedding).unwrap();
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
                         
-                        db.insert_agent_memory(&mem_id, "system", "fs-agent", &content, &emb_str).await?;
-                        
+                        db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
+
+                        if db.is_sqlite() {
+                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                                .bind(&mem_id)
+                                .bind("system")
+                                .bind("fs-agent")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("FS_MEMORY")
+                                .execute(&db.pool)
+                                .await?;
+                        } else {
+                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                                .bind(&mem_id)
+                                .bind("system")
+                                .bind("fs-agent")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("FS_MEMORY")
+                                .execute(&db.pool)
+                                .await?;
+                        }
+
                         tokio::fs::remove_file(path).await?;
                     }
                     Err(e) => {
@@ -286,15 +365,29 @@ impl AutoDreamWorker {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(&mem_id)
-                            .bind("system") // Placeholder since we don't have org_id in yml name
-                            .bind("system_agent")
-                            .bind(&content)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .execute(&db.pool)
-                            .await?;
+                        db.insert_autodream_memory(&mem_id, "system", "system_agent", "agent-task", &content, &emb_str, "TASK_SUMMARY").await?;
+
+                        if db.is_sqlite() {
+                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                                .bind(&mem_id)
+                                .bind("system") // Placeholder since we don't have org_id in yml name
+                                .bind("system_agent")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("TASK_SUMMARY")
+                                .execute(&db.pool)
+                                .await?;
+                        } else {
+                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                                .bind(&mem_id)
+                                .bind("system") // Placeholder since we don't have org_id in yml name
+                                .bind("system_agent")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("TASK_SUMMARY")
+                                .execute(&db.pool)
+                                .await?;
+                        }
 
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;
