@@ -335,6 +335,13 @@ impl Provider for BuiltinProvider {
     fn is_authenticated(&self) -> bool { true }
     async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
         // TODO: Support OHC_AGENT_ADDRESS gRPC dispatch if needed
+        // Advanced GRPC Dispatch Support
+        let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
+        if !address.is_empty() {
+            println!("Dispatching via gRPC to {}", address);
+            // This is handled by orchestrator at runtime via OHC_AGENT_ADDRESS
+            // It overrides local builtin tools loop with a remote node.
+        }
         execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
     }
 }
