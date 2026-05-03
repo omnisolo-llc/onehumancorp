@@ -21,6 +21,7 @@ export component Login inherits Window {
     callback open_settings();
     callback resend_verification(string);
     callback start_setup_wizard();
+    callback back_to_login();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -58,14 +59,47 @@ export component Login inherits Window {
                     font-family: "Inter";
                 }
 
-                LineEdit {
-                    placeholder-text: "Email or Username";
-                    text <=> username;
-                }
+                if (!show_verification) : VerticalBox {
+                    spacing: 16px;
 
-                PasswordInput {
-                    placeholder-text: "Password";
-                    text <=> password;
+                    LineEdit {
+                        placeholder-text: "Email or Username";
+                        text <=> username;
+                    }
+
+                    PasswordInput {
+                        placeholder-text: "Password";
+                        text <=> password;
+                    }
+
+                    if (error_message != "") : Text {
+                        text: error_message;
+                        color: #ef4444;
+                        horizontal-alignment: center;
+                        font-family: "Inter";
+                    }
+
+                    Button {
+                        text: is_sign_up ? "Sign Up" : "Sign In";
+                        clicked => { login(username, password); }
+                    }
+
+                    Button {
+                        text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                        clicked => {
+                            is_sign_up = !is_sign_up;
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: center;
+                        Text { text: "OR"; color: #9ca3af; font-weight: 700; }
+                    }
+
+                    Button {
+                        text: "Continue with Google/Apple";
+                        clicked => { oauth_login("SSO"); }
+                    }
                 }
 
                 if (show_verification) : VerticalBox {
@@ -76,38 +110,17 @@ export component Login inherits Window {
                         text: "Resend Verification Email";
                         clicked => { resend_verification(username); }
                     }
-                }
-
-                if (error_message != "") : Text {
-                    text: error_message;
-                    color: #ef4444;
-                    horizontal-alignment: center;
-                    font-family: "Inter";
-                }
-
-                Button {
-                    text: is_sign_up ? "Sign Up" : "Sign In";
-                    clicked => { login(username, password); }
-                }
-
-                Button {
-                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
-                    clicked => {
-                        is_sign_up = !is_sign_up;
+                    Button {
+                        text: "Back to Login";
+                        clicked => {
+                            show_verification = false;
+                            is_sign_up = false;
+                            back_to_login();
+                        }
                     }
                 }
 
-                HorizontalBox {
-                    alignment: center;
-                    Text { text: "OR"; color: #9ca3af; font-weight: 700; }
-                }
-
-                Button {
-                    text: "Continue with Google/Apple";
-                    clicked => { oauth_login("SSO"); }
-                }
-                
-                Button {
+                if (!show_verification) : Button {
                     text: "⚙ App Settings";
                     clicked => { open_settings(); }
                 }
