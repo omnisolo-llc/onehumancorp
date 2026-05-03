@@ -2500,7 +2500,44 @@ mod dashboard_docs_tests {
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
-        let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        });
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+
+        // 6. Test Video Tutorials
+        let video_tutorials_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let video_tutorials_opened_clone = video_tutorials_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || {
+            *video_tutorials_opened_clone.borrow_mut() = true;
+            let _video_tutorials = app::VideoTutorials::new().unwrap();
+        });
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+
+        // 7. Test Release Notes
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+            let _release_notes = app::ReleaseNotes::new().unwrap();
+        });
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+
+        // 8. Test API Docs
+        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let api_docs_opened_clone = api_docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || {
+            *api_docs_opened_clone.borrow_mut() = true;
+            let _api_docs = app::ApiDocs::new().unwrap();
+        });
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
     }
 }
 
