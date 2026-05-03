@@ -105,7 +105,6 @@ pub struct ToolDefinition {
     pub parameters: serde_json::Value,
 }
 
-
 /// 4-tier Error enum for Tool Execution (LangGraph mechanics).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ToolError {
@@ -118,6 +117,8 @@ pub enum ToolError {
     UserFixable(String),
     /// Fatal errors. Bubbles up to debug/halt immediately.
     Fatal(String),
+    /// Unexpected errors. Bubbles up to debug/halt immediately.
+    Unexpected(String),
 }
 
 impl std::fmt::Display for ToolError {
@@ -127,6 +128,7 @@ impl std::fmt::Display for ToolError {
             Self::LlmRecoverable(msg) => write!(f, "Recoverable error: {}", msg),
             Self::UserFixable(msg) => write!(f, "User intervention required: {}", msg),
             Self::Fatal(msg) => write!(f, "Fatal error: {}", msg),
+            Self::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
         }
     }
 }

@@ -647,6 +647,11 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::Unexpected(msg)) => {
+                        let err = format!("Unexpected tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
                 }
             }
 
@@ -670,6 +675,11 @@ impl Agent {
                         }
                         ToolError::Fatal(msg) => {
                             let err = format!("Fatal tool error: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        ToolError::Unexpected(msg) => {
+                            let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
@@ -736,6 +746,11 @@ impl Agent {
                         }
                         Err(ToolError::Fatal(msg)) => {
                             let err = format!("Fatal tool error: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        Err(ToolError::Unexpected(msg)) => {
+                            let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
@@ -1579,6 +1594,7 @@ mod tests {
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to external service".to_string())),
                     "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "unexpected_tool" => Err(ToolError::Unexpected("random crash".to_string())),
                     _ => Ok("success".to_string()),
                 }
             }
@@ -1612,6 +1628,13 @@ mod tests {
                 is_read_only: true,
                 parameters: serde_json::json!({}),
                 execute: Arc::new(FourTierErrorToolExecutor { name: "fatal_tool".to_string() }),
+            },
+            Tool {
+                name: "unexpected_tool".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FourTierErrorToolExecutor { name: "unexpected_tool".to_string() }),
             }
         ];
 
@@ -1755,6 +1778,33 @@ mod tests {
             }
         });
         assert!(fatal_handled);
+
+        // 5. Unexpected Error
+        let client_unexpected = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
+        });
+        let agent5 = Agent::new(client_unexpected, tools.clone());
+        let mut events5 = vec![];
+        let mut on_event5 = |e| { events5.push(e); };
+        let res5 = agent5.run(&cfg, "Run unexpected", &mut on_event5).await;
+        assert!(res5.is_err());
+        let unexpected_handled = events5.iter().any(|e| {
+            if let AgentEvent::TaskError { error } = e {
+                error.contains("Unexpected tool error: random crash")
+            } else {
+                false
+            }
+        });
+        assert!(unexpected_handled);
     }
 
     #[tokio::test]
