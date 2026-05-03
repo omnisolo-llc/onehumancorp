@@ -324,3 +324,83 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 }).catch(() => {});
   });
 });
+
+test.describe('Business Setup Wizard Flows', () => {
+  test.beforeEach(async ({ page }) => {
+    const uniqueEmail = `test-${Date.now()}@example.com`;
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', uniqueEmail);
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+  });
+
+  test('should skip payment successfully', async ({ page }) => {
+    await page.click('text=Guided Setup →');
+    await page.click('text=🛒 Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Skip Payment Store');
+    await page.click('text=Next →');
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+    await page.click('text=⏭️ Skip for now');
+    await page.click('text=Next →');
+    await expect(page.locator('text=/admin|account|Create your account/i')).toBeVisible();
+  });
+
+  test('should allow back navigation and retain state', async ({ page }) => {
+    await page.click('text=Guided Setup →');
+    await page.click('text=🛒 Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Back Nav Store');
+    await page.click('text=Next →');
+    await page.click('text=📦 Physical products');
+    await expect(page.locator('text=Physical products')).toBeVisible();
+    await page.click('text=Back');
+    // Verify we are back at the previous step
+    await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]')).toHaveValue('Back Nav Store');
+  });
+
+  test('should allow custom domain completion', async ({ page }) => {
+    await page.click('text=Guided Setup →');
+    await page.click('text=🛒 Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
+    await page.click('text=Next →');
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
+    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('text=Next →');
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
+    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
+    await page.click('text=Next →');
+    await page.click('text=🔗 Use my own domain');
+    await page.fill('input[placeholder="e.g. mybusiness.com"]', 'testdomain.com');
+    await page.click('text=Next →');
+    await expect(page.locator('text=/testdomain.com/i')).toBeVisible();
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
+  });
+
+  test('should handle instant build flow', async ({ page }) => {
+    await page.click('text=Instant AI Build →');
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run an AI consulting firm.');
+    await page.click('text=Generate Storefront →');
+    // AI is brainstorming... wait for it to finish and go to Review
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('should handle subscription payments setup', async ({ page }) => {
+    await page.click('text=Guided Setup →');
+    await page.click('text=🛒 Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Subscription Store');
+    await page.click('text=Next →');
+    await page.click('text=🔁 Subscriptions');
+    await page.click('text=Next →');
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+    await expect(page.locator('text=/admin|account|Create your account/i')).toBeVisible();
+  });
+});
