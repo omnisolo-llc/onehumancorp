@@ -18,17 +18,19 @@ impl LocalFSProvider {
     }
 
     fn resolve_path(&self, path: &str) -> io::Result<PathBuf> {
-        let full_path = self.workspace_dir.join(path);
-        // Ensure path stays within workspace
-        let _canonical_workspace = self.workspace_dir.canonicalize().unwrap_or_else(|_| self.workspace_dir.clone());
+        let input_path = std::path::Path::new(path);
 
-        // This is a simplistic check, full canonicalization might fail if the file doesn't exist yet
-        let is_safe = true; // In a real scenario we'd do a better check
-
-        if !is_safe {
-            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path out of bounds"));
+        // Reject absolute paths and any path that attempts to traverse up
+        for component in input_path.components() {
+            match component {
+                std::path::Component::ParentDir | std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+                    return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path traversal is not allowed"));
+                }
+                _ => {}
+            }
         }
 
+        let full_path = self.workspace_dir.join(input_path);
         Ok(full_path)
     }
 }
@@ -74,7 +76,19 @@ impl CloudFSProvider {
     }
 
     fn resolve_path(&self, path: &str) -> io::Result<PathBuf> {
-        let full_path = self.mount_point.join(&self.tenant_id).join(path);
+        let input_path = std::path::Path::new(path);
+
+        // Reject absolute paths and any path that attempts to traverse up
+        for component in input_path.components() {
+            match component {
+                std::path::Component::ParentDir | std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+                    return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path traversal is not allowed"));
+                }
+                _ => {}
+            }
+        }
+
+        let full_path = self.mount_point.join(&self.tenant_id).join(input_path);
         Ok(full_path)
     }
 }
