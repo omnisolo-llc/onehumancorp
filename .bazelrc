@@ -118,8 +118,13 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
-build:linux --platforms=@platforms//os:linux
-build:android --platforms=@platforms//os:android
-build:ios --platforms=@platforms//os:ios
-build:macos --platforms=@platforms//os:macos
-build:windows --platforms=@platforms//os:windows
+build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
+build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
+build:android --platforms=//bazel/platforms:android_aarch64
+build:ios --platforms=//bazel/platforms:ios_aarch64
+build:macos --platforms=//bazel/platforms:macos_aarch64
+build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
+build:windows_i686 --platforms=//bazel/platforms:windows_i686
+build:wasm32 --platforms=//bazel/platforms:wasm32
+build:windows --config=windows_x86_64
+build:linux --config=linux_x86_64

@@ -65,6 +65,38 @@ jobs:
             --test_summary=terse \
             --test_timeout=300,600,900,1800
 
+  bazel-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+          bazelrc: |
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            # build --config=buildbuddy-official
+            # test --config=buildbuddy-official
+            build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
+            build --show_timestamps
+
+      - name: Build all artifacts
+        run: |
+          for p in //platforms:linux //platforms:windows //platforms:macos; do \
+            bazel build //... --platforms=$p; \
+          done
+
   playwright-e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 60
