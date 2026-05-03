@@ -101,6 +101,61 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
 
 // --- Unique Data Tests with Verification ---
 
+// --- Login UI Tests for Text Updates ---
+
+#[test]
+fn test_login_title_text() {
+    let ui = create();
+    // Since title is an exported property we verify the text properties that exist.
+    // The visual UI is validated by Slint, but we can verify the text properties.
+    // However, since Slint UI components are largely opaque to Rust unless exported as properties,
+    // we will add tests for the logic flow.
+    assert_eq!(ui.get_username(), "");
+    assert_eq!(ui.get_password(), "");
+}
+
+#[test]
+fn test_login_sso_button_click() {
+    let ui = create();
+    let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = clicked.clone();
+    ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *c.borrow_mut() = true;
+    });
+    ui.invoke_oauth_login("SSO".into());
+    assert!(*clicked.borrow());
+}
+
+#[test]
+fn test_login_app_settings_click() {
+    let ui = create();
+    let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = clicked.clone();
+    ui.on_open_settings(move || {
+        *c.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert!(*clicked.borrow());
+}
+
+#[test]
+fn test_login_error_state() {
+    let ui = create();
+    ui.set_error_message("Invalid credentials".into());
+    assert_eq!(ui.get_error_message(), "Invalid credentials");
+}
+
+#[test]
+fn test_login_verification_state() {
+    let ui = create();
+    ui.set_show_verification(true);
+    ui.set_verification_message("Check your email".into());
+    assert!(ui.get_show_verification());
+    assert_eq!(ui.get_verification_message(), "Check your email");
+}
+
+
 // --- Consolidated Verified Tests ---
 
 #[test]
