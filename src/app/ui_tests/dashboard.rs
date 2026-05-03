@@ -1,5 +1,5 @@
 use crate::app;
-use slint::ComponentHandle;
+
 
 fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().unwrap() }
 

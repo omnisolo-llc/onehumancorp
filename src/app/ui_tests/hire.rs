@@ -1,7 +1,7 @@
 use crate::app;
-use slint::ComponentHandle;
-use slint::Model;
-use std::rc::Rc;
+
+
+
 
 fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().unwrap() }
 
