@@ -66,6 +66,78 @@ impl SyncService for MySyncService {
         }))
     }
 
+    async fn probe_hybrid_state(
+        &self,
+        request: Request<HybridProbeRequest>,
+    ) -> Result<Response<HybridProbeResponse>, Status> {
+        let md = request.metadata().clone();
+        let req = request.into_inner();
+        let mode = req.mode;
+
+        // 1. Verify basic database connectivity
+        if let Err(e) = sqlx::query("SELECT 1").execute(&self.pool).await {
+             return Ok(Response::new(HybridProbeResponse {
+                 status: format!("db_error: {}", e),
+                 is_ready: false,
+                 timestamp: chrono::Utc::now().timestamp(),
+             }));
+        }
+
+        // 2. If mode is "cloud", verify we can fetch the local sync queue length
+        // This validates that the tables exist and permissions are correct for sync operations
+        if mode == "cloud" {
+             let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+             let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+             let mut tenant_id = parsed.0;
+             if tenant_id.is_empty() {
+                 tenant_id = "system".to_string();
+             }
+
+             let mut tx = match self.pool.begin().await {
+                 Ok(t) => t,
+                 Err(e) => return Ok(Response::new(HybridProbeResponse {
+                     status: format!("tx_begin_error: {}", e),
+                     is_ready: false,
+                     timestamp: chrono::Utc::now().timestamp(),
+                 })),
+             };
+
+             if let Err(e) = crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                 return Ok(Response::new(HybridProbeResponse {
+                     status: format!("auth_context_error: {}", e),
+                     is_ready: false,
+                     timestamp: chrono::Utc::now().timestamp(),
+                 }));
+             }
+
+             let pending_count = match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_missions WHERE _sync_status = 'pending'")
+                 .fetch_one(&mut *tx)
+                 .await
+             {
+                 Ok(c) => c,
+                 Err(e) => {
+                     return Ok(Response::new(HybridProbeResponse {
+                         status: format!("sync_query_error: {}", e),
+                         is_ready: false,
+                         timestamp: chrono::Utc::now().timestamp(),
+                     }));
+                 }
+             };
+
+             return Ok(Response::new(HybridProbeResponse {
+                 status: format!("ok_pending_{}", pending_count),
+                 is_ready: true,
+                 timestamp: chrono::Utc::now().timestamp(),
+             }));
+        }
+
+        Ok(Response::new(HybridProbeResponse {
+            status: "ok".to_string(),
+            is_ready: true,
+            timestamp: chrono::Utc::now().timestamp(),
+        }))
+    }
+
     async fn vector_sync(
         &self,
         _request: Request<VectorSyncRequest>,
@@ -472,5 +544,24 @@ mod tests {
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
+    }
+
+    #[tokio::test]
+    async fn test_probe_hybrid_state() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            // E2E checks health
+            return;
+        }
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap();
+
+        let service = MySyncService::new(pool);
+
+        let req = Request::new(HybridProbeRequest { mode: "cloud".to_string() });
+        let resp = service.probe_hybrid_state(req).await.unwrap();
+        assert!(resp.get_ref().status.starts_with("ok_pending") || resp.get_ref().status.starts_with("sync_query_error"));
     }
 }

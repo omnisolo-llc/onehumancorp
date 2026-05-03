@@ -363,9 +363,17 @@ impl OpsService for MyOpsService {
 
     async fn prune_missions(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), "system".to_string());
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let mut tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            tenant_id = "system".to_string();
+        }
+
+        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
 
         match sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
             Ok(_) => Ok(Response::new(PruneMissionsResponse {

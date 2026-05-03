@@ -584,6 +584,7 @@ service SyncService {
   rpc PowerSyncPull(PowerSyncPullRequest) returns (PowerSyncPullResponse);
   rpc SyncMCPDeltas(SyncMCPDeltasRequest) returns (SyncMCPDeltasResponse);
   rpc SyncEscalation(SyncEscalationRequest) returns (SyncEscalationResponse);
+  rpc ProbeHybridState(HybridProbeRequest) returns (HybridProbeResponse);
 }
 
 message InviteRequest {
@@ -1562,4 +1563,14 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+message HybridProbeRequest {
+  string mode = 1;
+}
+
+message HybridProbeResponse {
+  string status = 1;
+  bool is_ready = 2;
+  int64 timestamp = 3;
 }
