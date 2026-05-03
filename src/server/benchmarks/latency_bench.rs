@@ -96,8 +96,14 @@ pub async fn bench_dashboard_snapshot() {
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings())
         );
-        let _ = agents_res.unwrap();
-        let _ = meetings_res.unwrap();
+        let _ = agents_res.unwrap_or_else(|e| {
+            println!("agents spawn_blocking failed: {:?}", e);
+            std::sync::Arc::new(vec![])
+        });
+        let _ = meetings_res.unwrap_or_else(|e| {
+            println!("meetings spawn_blocking failed: {:?}", e);
+            std::sync::Arc::new(vec![])
+        });
 
         fetch_times.push(start.elapsed().as_micros());
     }
