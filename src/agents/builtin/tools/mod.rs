@@ -26,7 +26,6 @@ pub mod head;
 pub mod tail;
 pub mod hybrid_blob;
 pub mod anthropic_memory;
-pub mod lazy_load;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
