@@ -174,7 +174,11 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     }
     
     Ok(Claims {
-        sub: raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+        sub: {
+            let sub = raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+            if sub.is_empty() { return Err("missing sub in OIDC token".to_string()); }
+            sub
+        },
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
@@ -182,7 +186,11 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
-        jti: raw.get("jti").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+        jti: {
+            let jti = raw.get("jti").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+            if jti.is_empty() { return Err("missing jti in OIDC token".to_string()); }
+            jti
+        },
     })
 }
 
