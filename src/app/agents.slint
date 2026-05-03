@@ -8,6 +8,7 @@ export struct UiAgent {
     status: string,
     is_running: bool,
     svid_verified: bool,
+    is_new: bool,
 }
 
 export component Agents inherits Window {
@@ -49,6 +50,20 @@ export component Agents inherits Window {
                 border-width: 1px;
                 border-radius: 8px;
                 
+                if (agent.is_new) : Rectangle {
+                    background: transparent;
+                    border-radius: 8px;
+                    border-width: 2px;
+                    border-color: #10b981;
+                    property <bool> is_bright: true;
+                    opacity: is_bright ? 1.0 : 0.2;
+                    animate opacity { duration: 1000ms; easing: ease-in-out; }
+                    Timer {
+                        interval: 1000ms;
+                        running: true;
+                        triggered => { is_bright = !is_bright; }
+                    }
+                }
                 HorizontalBox {
                     padding: 16px;
                     Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
