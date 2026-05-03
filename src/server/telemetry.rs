@@ -35,6 +35,15 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
+
+pub async fn record_sqlite_lock_contention(pool: &PgPool, count: f32, endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", count, serde_json::json!({ "endpoint": endpoint })).await
+}
+
+pub async fn record_task_failed(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_task_failed_total", "counter", count, serde_json::json!({})).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

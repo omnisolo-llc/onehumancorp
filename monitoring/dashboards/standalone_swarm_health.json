@@ -1,0 +1,149 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Standalone Swarm Health Overview",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "title": "SQLite Lock Contention Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "rate(ohc_sqlite_lock_contention_total[5m])",
+          "legendFormat": "{{endpoint}} Contention",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "title": "Task Queue Length",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "ohc_sub_agent_queue_length",
+          "legendFormat": "Queue Length",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Task Failure Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "rate(ohc_task_failed_total[5m])",
+          "legendFormat": "Failed Tasks",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Retry Exhausted",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "rate(sqliteRetryExhaustedCounter[5m])",
+          "legendFormat": "Retry Exhausted",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Throttled Requests",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "rate(sqliteThrottledRequestCounter[5m])",
+          "legendFormat": "Throttled",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["ohc", "standalone", "sqlite"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Standalone Swarm Health",
+  "uid": "standalone-swarm-health",
+  "version": 1
+}

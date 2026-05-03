@@ -1,16 +1,19 @@
 use sqlx::Row;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
+use crate::telemetry::{record_sqlite_lock_contention, record_task_failed};
 use chrono::Utc;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
+    sqlite_lock: Mutex<()>,
 }
 
 impl TaskDecompositionService {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self { db, sqlite_lock: Mutex::new(()) }
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
@@ -82,6 +85,161 @@ impl TaskDecompositionService {
         }
 
         Ok(task)
+    }
+
+
+    pub async fn poll_tasks(&self, agent_id: &str, limit: usize) -> Result<Vec<SharedTask>, String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let rows = sqlx::query(
+                    r#"
+                    SELECT st.id FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT $1
+                    "#
+                )
+                .bind(limit as i64)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let mut tasks = Vec::new();
+                for row in rows {
+                    let id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks_decomposition
+                        SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
+                        WHERE id = $3
+                        "#
+                    )
+                    .bind(agent_id)
+                    .bind(now)
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let task = self.get_task_pg(&mut tx, &id).await?;
+                    tasks.push(task);
+                }
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(tasks)
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                // Application-level fallback locking to prevent SQLITE_BUSY
+                let _guard = match self.sqlite_lock.try_lock() {
+                    Ok(g) => g,
+                    Err(_) => {
+                        let _ = record_sqlite_lock_contention(&self.db.pool, 1.0, "poll_tasks").await;
+                        self.sqlite_lock.lock().await
+                    }
+                };
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let rows = sqlx::query(
+                    r#"
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
+                    )
+                    LIMIT ?
+                    "#
+                )
+                .bind(limit as i64)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let mut tasks = Vec::new();
+                for row in rows {
+                    let id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks_decomposition
+                        SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                        WHERE id = ?
+                        "#
+                    )
+                    .bind(agent_id)
+                    .bind(now)
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    tasks.push(id);
+                }
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                let mut final_tasks = Vec::new();
+                for id in tasks {
+                    let row = sqlx::query(
+                        "SELECT * FROM shared_tasks_decomposition WHERE id = ?"
+                    )
+                    .bind(&id)
+                    .fetch_one(sqlite_pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let created_str: String = row.get("created_at");
+                    let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                        .unwrap_or_else(|_| Utc::now());
+
+                    let updated_str: String = row.get("updated_at");
+                    let dt_updated = chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&chrono::Utc)))
+                        .unwrap_or_else(|_| Utc::now());
+
+                    final_tasks.push(SharedTask {
+                        id: row.get("id"),
+                        organization_id: row.get("organization_id"),
+                        mission_id: row.get("mission_id"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: {
+                            let val: String = row.get("dependencies");
+                            serde_json::from_str(&val).unwrap_or_default()
+                        },
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        assigned_agent_id: row.get("assigned_agent_id"),
+                        status: row.get("status"),
+                        priority: row.get("priority"),
+                        payload: row.get("payload"),
+                        locked_until: {
+                            let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                            locked
+                        },
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log: row.get("deliberation_log"),
+                        depth: row.get("depth"),
+                        created_at: dt_created,
+                        updated_at: dt_updated,
+                        action_risk: row.get("action_risk"),
+                        approval_status: row.get("approval_status"),
+                        proposed_content: row.get("proposed_content"),
+                    });
+                }
+
+                Ok(final_tasks)
+            }
+        }
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
@@ -175,6 +333,14 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
+                // Application-level fallback locking to prevent SQLITE_BUSY
+                let _guard = match self.sqlite_lock.try_lock() {
+                    Ok(g) => g,
+                    Err(_) => {
+                        let _ = record_sqlite_lock_contention(&self.db.pool, 1.0, "claim_task").await;
+                        self.sqlite_lock.lock().await
+                    }
+                };
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
@@ -456,6 +622,7 @@ impl TaskDecompositionService {
 
     pub async fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
         let now = Utc::now();
+        let _ = record_task_failed(&self.db.pool, 1.0).await;
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -506,6 +673,14 @@ impl TaskDecompositionService {
                 Ok(())
             },
             DbStore::Sqlite(pool) => {
+                // Application-level fallback locking to prevent SQLITE_BUSY
+                let _guard = match self.sqlite_lock.try_lock() {
+                    Ok(g) => g,
+                    Err(_) => {
+                        let _ = record_sqlite_lock_contention(&self.db.pool, 1.0, "fail_task").await;
+                        self.sqlite_lock.lock().await
+                    }
+                };
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
@@ -605,6 +780,14 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
+                // Application-level fallback locking to prevent SQLITE_BUSY
+                let _guard = match self.sqlite_lock.try_lock() {
+                    Ok(g) => g,
+                    Err(_) => {
+                        let _ = record_sqlite_lock_contention(&self.db.pool, 1.0, "update_task_status").await;
+                        self.sqlite_lock.lock().await
+                    }
+                };
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
