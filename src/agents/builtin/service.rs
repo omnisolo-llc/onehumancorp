@@ -8,7 +8,8 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
+use crate::memory::inject_memories_into_prompt;
+use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -42,7 +43,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<PgVectorMemoryStore>>,
+    memory: Option<Arc<VectorRepository>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
 }
@@ -131,12 +132,11 @@ impl AgentServiceImpl {
 
     pub async fn init_memory(&mut self) {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
 
         if !db_url.is_empty() {
-            match PgVectorMemoryStore::new(&db_url, org_id).await {
-                Ok(store) => {
-                    self.memory = Some(Arc::new(store));
+            match sqlx::PgPool::connect(&db_url).await {
+                Ok(pool) => {
+                    self.memory = Some(Arc::new(VectorRepository::new(pool)));
                 }
                 Err(e) => {
                     tracing::error!("Failed to connect to database for memory store: {}", e);
@@ -242,7 +242,17 @@ impl AgentServiceImpl {
         };
 
         let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
+            let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+            store.semantic_search(&org_id, &[], 5).await.map(|records| {
+                records.into_iter().map(|r| crate::memory::MemoryEntry {
+                    memory_id: r.id,
+                    context: r.content,
+                    embedding: None,
+                    source_plugin: Some(r.source_type),
+                    created_at: r.created_at,
+                    organization_id: r.tenant_id,
+                }).collect::<Vec<_>>()
+            }).unwrap_or_default()
         } else {
             vec![]
         };
@@ -469,7 +479,22 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let _ = store.write(content, vec![]).await;
+                let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+                let record = EmbeddingRecord {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: org_id,
+                    agent_id: "agent".to_string(),
+                    content: content.clone(),
+                    embedding: vec![],
+                    source_type: "TASK_SUMMARY".to_string(),
+                    created_at: chrono::Utc::now(),
+                    last_referenced_at: chrono::Utc::now(),
+                    reference_count: 0,
+                    reliability_score: 50,
+                    owner_override: false,
+                    metadata: None,
+                };
+                let _ = store.upsert(&record).await;
             }
         });
 
