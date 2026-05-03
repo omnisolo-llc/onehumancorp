@@ -167,7 +167,13 @@ impl IpcTransport {
         Ok(IpcTransport { pool, subs })
     }
 
+    // Added purely for tests to avoid reflection problems
+    pub fn get_pool(&self) -> sqlx::sqlite::SqlitePool {
+        self.pool.clone()
+    }
+
     pub async fn start_worker(&self) {
+        use prost::Message as ProstMessage;
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
@@ -185,7 +191,9 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        if let Ok(msg) = Message::decode(&payload[..]) {
+                            let _ = tx.send(msg);
+                        }
                     }
                 }
             }
@@ -203,9 +211,13 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
+
         sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
-            .bind(&message.payload)
+            .bind(&buf)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -518,6 +530,15 @@ mod tests {
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
+
+        // Also verify the serialization format directly in DB
+        let db_pool = transport.get_pool();
+        let rows: Result<Vec<(Vec<u8>,)>, _> = sqlx::query_as("SELECT payload FROM mesh_messages WHERE topic = ?")
+            .bind("ipc_test_topic")
+            .fetch_all(&db_pool)
+            .await;
+        let rows = rows.unwrap();
+        assert_eq!(rows.len(), 1);
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
