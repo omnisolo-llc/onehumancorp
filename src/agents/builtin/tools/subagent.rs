@@ -5,7 +5,9 @@ use std::sync::Arc;
 
 use agent_service_proto::ohc::agent::service::{agent_service_client::AgentServiceClient, SubAgentRequest};
 
-pub struct SubagentExecutor;
+pub struct SubagentExecutor {
+    thread_id: Option<String>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for SubagentExecutor {
@@ -75,20 +77,65 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "fork" || mode == "teammate" {
+            let mut req = SubAgentRequest::default();
+            req.task = task.to_string();
+            if mode == "fork" {
+                if let Some(tid) = &self.thread_id {
+                    req.source_thread_id = tid.clone();
+                } else {
+                    return Err(ToolError::LlmRecoverable("Fork mode requires a parent thread_id which is missing".to_string()));
+                }
+            }
+
+            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+
+            if mode == "teammate" {
+                // Teammate mode runs completely in parallel via background spawn
+                tokio::spawn(async move {
+                    let channel = match tonic::transport::Channel::from_shared(format!("http://{}", addr)) {
+                        Ok(c) => c,
+                        Err(e) => { tracing::error!("teammate mode invalid address: {}", e); return; }
+                    };
+                    let channel = match channel.connect().await {
+                        Ok(c) => c,
+                        Err(e) => { tracing::error!("teammate mode connect error: {}", e); return; }
+                    };
+                    let mut client = AgentServiceClient::new(channel);
+                    let _ = client.dispatch_to_sub_agent(req).await;
+                });
+                return Ok(format!("[Subagent (Teammate)] Spawned teammate successfully for task: {}. It will run in parallel and communicate via mailbox.", task));
+            } else {
+                // Fork mode awaits the result
+                let res = async {
+                    let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                        .map_err(|e| format!("invalid sub-agent address: {}", e))?
+                        .connect()
+                        .await
+                        .map_err(|e| format!("connect to sub-agent: {}", e))?;
+                    let mut client = AgentServiceClient::new(channel);
+                    client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
+                }.await;
+
+                match res {
+                    Ok(r) => {
+                        let inner = r.into_inner();
+                        if !inner.error.is_empty() {
+                            Err(ToolError::LlmRecoverable(inner.error))
+                        } else {
+                            Ok(format!("[Subagent (Fork)] Result: {}", inner.result))
+                        }
+                    }
+                    Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                }
+            }
         } else {
-            // For fork/teammate, we return the demonstration message for now as they aren't fully implemented in Rust yet.
-            let summary = match mode {
-                "fork" => format!("[Subagent (Fork)] Completed task: {}. Summary: I have verified the conditions locally within a cloned context.", task),
-                "teammate" => format!("[Subagent (Teammate)] Completed task: {}. Summary: I successfully worked in parallel and updated the required systems.", task),
-                _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
-            };
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            Ok(summary)
+            return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
     }
 }
 
-pub fn subagent_tool() -> Tool {
+pub fn subagent_tool(thread_id: Option<String>) -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
         description: "Spawn a subagent to work on a task in an isolated context (fork, teammate, or worktree) and return a condensed summary.".to_string(),
@@ -108,7 +155,7 @@ pub fn subagent_tool() -> Tool {
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor),
+        execute: Arc::new(SubagentExecutor { thread_id }),
     }
 }
 
@@ -118,7 +165,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_empty_task() {
-        let executor = SubagentExecutor;
+        let executor = SubagentExecutor { thread_id: Some("test_thread".to_string()) };
         let args = json!({
             "task": "",
             "mode": "fork"
@@ -136,7 +183,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_invalid_mode() {
-        let executor = SubagentExecutor;
+        let executor = SubagentExecutor { thread_id: Some("test_thread".to_string()) };
         let args = json!({
             "task": "do something",
             "mode": "invalid"
@@ -154,16 +201,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_fork_mode() {
-        let executor = SubagentExecutor;
+        // Since fork mode attempts a real gRPC connection to `OHC_AGENT_ADDRESS` which is not running in test,
+        // it will return an error (connect error). We assert that the error is correct.
+        let executor = SubagentExecutor { thread_id: Some("test_thread".to_string()) };
         let args = json!({
             "task": "do something",
             "mode": "fork"
         });
 
         let result = executor.execute(args).await;
-        assert!(result.is_ok());
-        let res_str = result.unwrap();
-        assert!(res_str.contains("[Subagent (Fork)]"));
-        assert!(res_str.contains("do something"));
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("connect to sub-agent") || err_str.contains("invalid sub-agent address"));
     }
 }

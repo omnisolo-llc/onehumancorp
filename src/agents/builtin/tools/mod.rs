@@ -80,6 +80,7 @@ pub fn all_tools(
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
+    thread_id: Option<String>,
 ) -> Vec<Tool> {
     let mut tools = vec![
         bash::bash_tool(working_dir.clone()),
@@ -92,7 +93,7 @@ pub fn all_tools(
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
-        sendmessage::sendmessage_tool(mailbox.clone()),
+        sendmessage::sendmessage_tool(mailbox.clone(), working_dir.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),
         toolsearch::toolsearch_tool(),
@@ -107,7 +108,7 @@ pub fn all_tools(
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
-        subagent::subagent_tool(),
+        subagent::subagent_tool(thread_id),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone()),
     ];

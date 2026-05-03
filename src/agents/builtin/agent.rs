@@ -50,6 +50,7 @@ pub struct AgentRunConfig {
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
+    pub source_thread_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
 }
 
@@ -82,6 +83,7 @@ impl Default for AgentRunConfig {
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
+            source_thread_id: None,
             enable_lazy_tool_loading: false,
         }
     }
@@ -228,6 +230,21 @@ impl Agent {
                         if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
                             messages = saved_msgs;
                             last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Subagent Orchestration: Fork Mode Context Cloning
+        if messages.is_empty() {
+            if let (Some(checkpointer), Some(source_thread)) = (&self.checkpointer, &cfg.source_thread_id) {
+                if let Ok(checkpoints) = checkpointer.list_checkpoints(source_thread).await {
+                    if let Some(cp) = checkpoints.first() {
+                        if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                            messages = saved_msgs;
+                            // Deliberately DO NOT set last_checkpoint_id here.
+                            // We want this thread to save its own divergent checkpoints starting now.
                         }
                     }
                 }

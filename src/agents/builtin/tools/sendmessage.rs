@@ -34,6 +34,7 @@ impl Mailbox {
 
 struct SendMessageExecutor {
     mailbox: SharedMailbox,
+    working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
@@ -55,12 +56,30 @@ impl ToolExecutor for SendMessageExecutor {
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
-        self.mailbox.write().await.send(msg);
+        self.mailbox.write().await.send(msg.clone());
+
+        // Teammate mode: File-based Mailboxes
+        let wd = self.working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")));
+        let mailboxes_dir = wd.join(".agent_mailboxes");
+        if !mailboxes_dir.exists() {
+            let _ = std::fs::create_dir_all(&mailboxes_dir);
+        }
+        let mailbox_file = mailboxes_dir.join(format!("{}.log", to));
+        if let Ok(json_line) = serde_json::to_string(&msg) {
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&mailbox_file)
+                .map_err(|e| ToolError::LlmRecoverable(format!("Failed to open mailbox file: {}", e)))?;
+            use std::io::Write;
+            let _ = writeln!(file, "{}", json_line);
+        }
+
         Ok(format!("Message sent to {}.", to))
     }
 }
 
-pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
+pub fn sendmessage_tool(mailbox: SharedMailbox, working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "SendMessage".to_string(),
         description: "Send a message to the parent agent or coordinator. \
@@ -81,6 +100,6 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
             },
             "required": ["message"]
         }),
-        execute: Arc::new(SendMessageExecutor { mailbox }),
+        execute: Arc::new(SendMessageExecutor { mailbox, working_dir }),
     }
 }
