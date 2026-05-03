@@ -337,6 +337,134 @@ impl TaskDecompositionService {
         })
     }
 
+
+    pub async fn approve_task(&self, id: &str, is_approved: bool) -> Result<(), String> {
+        let now = chrono::Utc::now();
+        let new_status = if is_approved { "APPROVED" } else { "REJECTED" };
+        let new_approval_status = if is_approved { "APPROVED" } else { "REJECTED" };
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = $1, approval_status = $2, updated_at = $3 WHERE id = $4"
+                )
+                .bind(new_status)
+                .bind(new_approval_status)
+                .bind(now)
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = ?, approval_status = ?, updated_at = ? WHERE id = ?"
+                )
+                .bind(new_status)
+                .bind(new_approval_status)
+                .bind(now)
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_pending_approvals(&self, org_id: &str) -> Result<Vec<SharedTask>, String> {
+        let mut tasks = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE organization_id = $1 AND approval_status = $2"
+                )
+                .bind(org_id)
+                .bind("PENDING")
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                for row in rows {
+                    let deps_val: serde_json::Value = row.get("dependencies");
+                    let deps: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
+                    let payload_val: serde_json::Value = row.get("payload");
+                    let payload = payload_val.to_string();
+                    let delib_val: serde_json::Value = row.get("deliberation_log");
+                    let deliberation_log = Some(delib_val.to_string());
+                    tasks.push(SharedTask {
+                        id: row.get("id"),
+                        organization_id: row.get("organization_id"),
+                        mission_id: row.get("mission_id"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: deps,
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        assigned_agent_id: row.get("assigned_agent_id"),
+                        status: row.get("status"),
+                        priority: row.get("priority"),
+                        payload,
+                        locked_until: row.get("locked_until"),
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log,
+                        depth: row.get("depth"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                        action_risk: row.get("action_risk"),
+                        approval_status: row.get("approval_status"),
+                        proposed_content: row.get("proposed_content"),
+                    });
+                }
+            }
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE organization_id = ? AND approval_status = ?"
+                )
+                .bind(org_id)
+                .bind("PENDING")
+                .fetch_all(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                for row in rows {
+                    let deps_str: String = row.get("dependencies");
+                    let deps: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
+                    let payload: String = row.get("payload");
+                    let deliberation_log: Option<String> = row.get("deliberation_log");
+                    let created_at: String = row.get("created_at");
+                    let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&chrono::Utc);
+                    let updated_at: String = row.get("updated_at");
+                    let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&chrono::Utc);
+                    tasks.push(SharedTask {
+                        id: row.get("id"),
+                        organization_id: row.get("organization_id"),
+                        mission_id: row.get("mission_id"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: deps,
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        assigned_agent_id: row.get("assigned_agent_id"),
+                        status: row.get("status"),
+                        priority: row.get("priority"),
+                        payload,
+                        locked_until: None,
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log,
+                        depth: row.get("depth"),
+                        created_at: dt_created,
+                        updated_at: dt_updated,
+                        action_risk: row.get("action_risk"),
+                        approval_status: row.get("approval_status"),
+                        proposed_content: row.get("proposed_content"),
+                    });
+                }
+            }
+        }
+        Ok(tasks)
+    }
+
     pub async fn update_status(&self, id: &str, new_status: &str, agent_id: &str) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {

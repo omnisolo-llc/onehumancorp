@@ -121,3 +121,19 @@ fn create_verify_tasks_in_progress_count() {
     ui.set_tasks_in_progress_count(33);
     assert_eq!(ui.get_tasks_in_progress_count(), 33);
 }
+
+#[test]
+fn dashboard_approve_task_callback() {
+    let ui = create();
+    let was_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let was_approved_clone = was_approved.clone();
+
+    ui.on_approve_task(move |task_id| {
+        if task_id == "test-task-123" {
+            *was_approved_clone.borrow_mut() = true;
+        }
+    });
+
+    ui.invoke_approve_task("test-task-123".into());
+    assert_eq!(*was_approved.borrow(), true);
+}

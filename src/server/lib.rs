@@ -136,6 +136,7 @@ use ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ohc::orchestration::*;
 
 pub struct MyHubService {
+    db: std::sync::Arc<crate::db::DB>,
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
@@ -147,8 +148,8 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone());
+        MyHubService { db, hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }
 
@@ -612,11 +613,56 @@ impl HubService for MyHubService {
     }
 
 
+
+    type GetPendingApprovalsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<crate::ohc::orchestration::SharedTask, Status>> + Send>>;
+
+    async fn get_pending_approvals(
+        &self,
+        request: Request<GetPendingApprovalsRequest>,
+    ) -> Result<Response<Self::GetPendingApprovalsStream>, Status> {
+        let req = request.into_inner();
+        let org_id = req.organization_id;
+        let task_service = crate::orchestration::tasks::TaskDecompositionService::new(self.db.clone());
+        let tasks = task_service.get_pending_approvals(&org_id).await.unwrap_or_default();
+
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        tokio::spawn(async move {
+            for task in tasks {
+                let proto_task = crate::ohc::orchestration::SharedTask {
+                    id: task.id,
+                    organization_id: task.organization_id,
+                    parent_plan_id: task.parent_plan_id,
+                    dependencies: task.dependencies,
+                    title: task.title,
+                    description: task.description.unwrap_or_default(),
+                    status: task.status,
+                    assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                    priority: task.priority,
+                    payload: task.payload,
+                    locked_until_unix: task.locked_until.map(|dt| dt.timestamp()).unwrap_or(0),
+                    created_at_unix: task.created_at.timestamp(),
+                    updated_at_unix: task.updated_at.timestamp(),
+                    action_risk: task.action_risk.unwrap_or_default(),
+                    approval_status: task.approval_status.unwrap_or_default(),
+                    proposed_content: task.proposed_content.unwrap_or_default(),
+                };
+                if tx.send(Ok(proto_task)).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        use tokio_stream::wrappers::ReceiverStream;
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
+    }
+
     async fn approve_task(
         &self,
         request: Request<ApproveTaskRequest>,
     ) -> Result<Response<ApproveTaskResponse>, Status> {
         let req = request.into_inner();
+        let task_service = crate::orchestration::tasks::TaskDecompositionService::new(self.db.clone());
+        task_service.approve_task(&req.task_id, req.is_approved).await.map_err(|e| Status::internal(e))?;
         self.hub.task_manager().approve_task(&req.task_id, req.is_approved)
             .map_err(|e| Status::internal(e))?;
 

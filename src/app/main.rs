@@ -881,6 +881,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
 
+
+                dashboard.on_approve_task(move |task_id| {
+                    tokio::spawn(async move {
+                        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                                task_id: task_id.to_string(),
+                                is_approved: true,
+                            });
+                            let _: Result<tonic::Response<ohc::orchestration::ApproveTaskResponse>, tonic::Status> = client.approve_task(req).await;
+                        }
+                    });
+                });
+
                 let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
                     if let Some(ui) = dashboard_milestone_handle.upgrade() {
@@ -888,6 +901,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+
+
+                let dashboard_fetch_handle = dashboard_handle.clone();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        loop {
+                            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                            let req = tonic::Request::new(ohc::orchestration::GetPendingApprovalsRequest {
+                                organization_id: "org-test".to_string(), // Simplified for now
+                            });
+                            if let Ok(response) = client.get_pending_approvals(req).await {
+                                let mut stream = response.into_inner();
+                                let mut pending = Vec::new();
+                                while let Ok(Some(task)) = stream.message().await {
+                                    pending.push(app::UiPendingApproval {
+                                        task_id: task.id.into(),
+                                        title: task.title.into(),
+                                        proposed_content: task.proposed_content.into(),
+                                    });
+                                }
+                                let handle = dashboard_fetch_handle.clone();
+                                let _ = slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(pending)));
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
 
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
