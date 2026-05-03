@@ -761,6 +761,7 @@ impl TaskQueue for RedisTaskQueue {
         if let Some((_, payload_json)) = result {
             if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
                 if roles.contains(&job.agent_role) {
+                    let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_json).query_async(&mut conn).await.map_err(|e| e.to_string())?;
                     return Ok(Some(job));
                 } else {
                     // Not intended for this worker role, push it back.
@@ -771,14 +772,36 @@ impl TaskQueue for RedisTaskQueue {
         Ok(None)
     }
 
-    async fn complete(&self, _job_id: &str, _tenant_id: &str) -> Result<(), String> {
-        // In this simple Redis list implementation, dequeue removes the item
-        Ok(())
+    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let processing_key = format!("{}_processing", self.queue_name);
+        let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        if let Some(payload_json) = result {
+            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+                if job.tenant_id != tenant_id {
+                    return Err("tenant mismatch".to_string());
+                }
+                let _: () = redis::cmd("HDEL").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+                return Ok(());
+            }
+        }
+        Err("job not found".to_string())
     }
 
-    async fn fail(&self, _job_id: &str, _tenant_id: &str, _reason: &str) -> Result<(), String> {
-        // In a real implementation we would move it to a failure queue
-        Ok(())
+    async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let processing_key = format!("{}_processing", self.queue_name);
+        let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        if let Some(payload_json) = result {
+            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+                if job.tenant_id != tenant_id {
+                    return Err("tenant mismatch".to_string());
+                }
+                let _: () = redis::cmd("HDEL").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+                return Ok(());
+            }
+        }
+        Err("job not found".to_string())
     }
 }
 
