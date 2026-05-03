@@ -176,13 +176,13 @@ export component Dashboard inherits Window {
                 alignment: start;
                 spacing: 8px;
                 Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-                Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
+                TooltipElement { tooltip_id: "quick_actions_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
             }
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } }
-                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
+                TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
+                TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
             }
         }
         if (pending_approvals.length > 0) : VerticalBox {
@@ -276,11 +276,11 @@ export component Dashboard inherits Window {
             }
             VerticalBox {
                 alignment: center;
-                Button { text: "Stats"; width: 64px; height: 44px; clicked => { action_see_analytics(); } }
+                TooltipElement { tooltip_id: "stats"; Button { text: "Stats"; width: 64px; height: 44px; clicked => { action_see_analytics(); } } }
             }
             VerticalBox {
                 alignment: center;
-                Button { text: "Share"; width: 64px; height: 44px; clicked => { action_share_store(); } }
+                TooltipElement { tooltip_id: "share"; Button { text: "Share"; width: 64px; height: 44px; clicked => { action_share_store(); } } }
             }
         }
     }
