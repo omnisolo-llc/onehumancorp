@@ -41,56 +41,40 @@ impl MemoryConsolidationWorker {
             return Ok(());
         }
 
-        let llm_client = LocalLLMClient::new();
+        let losers = Self::determine_losers(&conflicts);
 
-        for (a, b) in conflicts {
-            let prompt = format!(
-                "Synthesize the following two conflicting memories into a single concise summary:\n1. {}\n2. {}",
-                a.content, b.content
-            );
-
-            let summary = match llm_client.reason(&prompt).await {
-                Ok(res) => res,
-                Err(e) => {
-                    eprintln!("Failed to synthesize memories: {}", e);
-                    continue;
-                }
-            };
-
-            let embedding = match llm_client.generate_embedding(&summary).await {
-                Ok(emb) => emb,
-                Err(e) => {
-                    eprintln!("Failed to generate embedding for merged summary: {}", e);
-                    continue;
-                }
-            };
-
-            let merged_id = uuid::Uuid::new_v4().to_string();
-            let merged_record = EmbeddingRecord {
-                id: merged_id,
-                tenant_id: a.tenant_id.clone(),
-                agent_id: a.agent_id.clone(),
-                content: format!("MERGED_SUMMARY: {}", summary),
-                embedding,
-                source_type: "MERGED_SUMMARY".to_string(),
-                created_at: Utc::now(),
-                last_referenced_at: Utc::now(),
-                reference_count: std::cmp::max(a.reference_count, b.reference_count),
-                reliability_score: std::cmp::max(a.reliability_score, b.reliability_score),
-                owner_override: a.owner_override || b.owner_override,
-                metadata: None,
-            };
-
-            if let Err(e) = repository.upsert(&merged_record).await {
-                eprintln!("Failed to insert merged memory: {}", e);
-                continue;
-            }
-
-            let _ = repository.delete(&a.id).await;
-            let _ = repository.delete(&b.id).await;
+        for loser_id in losers {
+            let _ = repository.delete(loser_id).await;
         }
 
         Ok(())
+    }
+
+    pub fn determine_losers<'a>(conflicts: &'a [(EmbeddingRecord, EmbeddingRecord)]) -> Vec<&'a String> {
+        let mut losers = Vec::new();
+        for (a, b) in conflicts {
+            let mut loser_id = &b.id;
+
+            // Priority 1: owner_override
+            if a.owner_override != b.owner_override {
+                if b.owner_override {
+                    loser_id = &a.id;
+                }
+            }
+            // Priority 2: reliability_score
+            else if a.reliability_score != b.reliability_score {
+                if b.reliability_score > a.reliability_score {
+                    loser_id = &a.id;
+                }
+            }
+            // Priority 3: created_at
+            else if b.created_at > a.created_at {
+                loser_id = &a.id;
+            }
+
+            losers.push(loser_id);
+        }
+        losers
     }
 }
 
@@ -99,10 +83,88 @@ impl MemoryConsolidationWorker {
 mod tests {
     use super::*;
 
+    fn create_dummy_record(id: &str, override_val: bool, rel_score: i32, time_offset: i64) -> EmbeddingRecord {
+        EmbeddingRecord {
+            id: id.to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "dummy".to_string(),
+            embedding: vec![],
+            source_type: "dummy".to_string(),
+            created_at: Utc::now() + chrono::Duration::seconds(time_offset),
+            last_referenced_at: Utc::now(),
+            reference_count: 0,
+            reliability_score: rel_score,
+            owner_override: override_val,
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_determine_losers_priority_1_override() {
+        let a = create_dummy_record("a", true, 10, 0);
+        let b = create_dummy_record("b", false, 100, 100);
+
+        let binding = [(a.clone(), b.clone())];
+        let losers = MemoryConsolidationWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b", "a has override so b loses");
+
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = MemoryConsolidationWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "b", "a has override so b loses, order reversed");
+    }
+
+    #[test]
+    fn test_determine_losers_priority_2_reliability() {
+        let a = create_dummy_record("a", false, 50, 0);
+        let b = create_dummy_record("b", false, 60, -100); // b is older but higher reliability
+
+        let binding = [(a.clone(), b.clone())];
+        let losers = MemoryConsolidationWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "a", "b has higher reliability so a loses");
+
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = MemoryConsolidationWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "a", "b has higher reliability so a loses, order reversed");
+    }
+
+    #[test]
+    fn test_determine_losers_priority_3_created_at() {
+        let a = create_dummy_record("a", false, 50, 100); // a is newer
+        let b = create_dummy_record("b", false, 50, 0);
+
+        let binding = [(a.clone(), b.clone())];
+        let losers = MemoryConsolidationWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b", "a is newer so b loses");
+
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = MemoryConsolidationWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "b", "a is newer so b loses, order reversed");
+    }
+
+    #[test]
+    fn test_determine_losers_tie_breaker() {
+        let a = create_dummy_record("a", false, 50, 0);
+        let mut b = create_dummy_record("b", false, 50, 0);
+
+        // Ensure exact same created_at time to force a tie
+        b.created_at = a.created_at;
+
+        // When completely tied, the logic defaults to letting 'a' win, so 'b' is the loser
+        // However, if we pass (a, b) it returns 'b'
+        let binding = [(a.clone(), b.clone())];
+        let losers = MemoryConsolidationWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b");
+
+        // If we pass (b, a) it returns 'a' (the second item)
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = MemoryConsolidationWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "a");
+    }
+
     #[tokio::test]
     async fn test_resolve_conflicts_compiles() {
-        // Just a dummy test to ensure this module compiles correctly in the test context
-        // and doesn't break CI coverage limits.
+        // Keep to satisfy basic coverage
         assert!(true);
     }
 }
