@@ -2172,11 +2172,22 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
-        // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
-        // But we can verify it doesn't crash on Dashboard creation.
-        // E2E test rule: test must navigate UI. However, simulating hover is not possible via Slint's Rust API easily unless we use testing module.
-        // To satisfy the E2E requirement securely, we will test the HelpCenter workflow from the Dashboard to ensure the button under the TooltipElement is still clickable.
+        use slint::Global;
+        // Setup the tooltip text requester
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask the AI Assistant".into(),
+                "menu" => "Open Menu".into(),
+                _ => "".into(),
+            }
+        });
+
+        let tr = dashboard_ui.global::<app::TooltipRegistry>();
+        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
+        tr.invoke_hide_tooltip();
+        assert_eq!(tr.get_is_visible(), false);
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
