@@ -166,7 +166,6 @@ exports_files([
     "mcp/client.rs",
     "mcp/proxy/mod.rs",
     "mcp/proxy/authorizer.rs",
-    "mcp/proxy/local_proxy.rs",
     "sandbox/mod.rs",
     "sandbox/manager.rs",
     "sandbox/session.rs",

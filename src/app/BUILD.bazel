@@ -55,7 +55,6 @@ rust_binary(
         "help_center.slint",
         "integrations.slint",
         "interactive_walkthrough.slint",
-        "kairos_orchestration_walkthrough.slint",
         "landing.slint",
         "landing_page_experiments.slint",
         "login.slint",
@@ -143,7 +142,6 @@ rust_test(
         "help_center.slint",
         "integrations.slint",
         "interactive_walkthrough.slint",
-        "kairos_orchestration_walkthrough.slint",
         "landing.slint",
         "landing_page_experiments.slint",
         "login.slint",
@@ -221,7 +219,6 @@ rust_shared_library(
         "@crates//:console_error_panic_hook",
         "@crates//:wasm-bindgen-futures",
         "@crates//:getrandom",
-        "@crates//:web-sys",
     ],
 )
 
