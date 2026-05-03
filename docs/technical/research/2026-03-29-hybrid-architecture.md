@@ -11,14 +11,14 @@ The **One Human Corp (OHC) Hybrid Agentic OS** requires a fluid and consistent a
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
-- Define the Standalone Desktop Wrapper lifecycle, bridging local Go server execution with the Flutter application shell.
+- Define the Standalone Desktop Wrapper lifecycle, bridging local Rust server execution with the Slint application shell.
 - Specify the API contract for the Thin Client Mode, guaranteeing API stability and offline-resilience strategies.
 - Enforce OHC-SIP v2 (Swarm-as-Code) consistency across PostgreSQL (Cloud) and SQLite (Local).
 - Mandate the Visual Excellence (Aesthetic) Standard across all Hybrid clients.
 
 ### 2.2 Non-Goals
-- We are not writing a custom ORM to abstract PostgreSQL vs SQLite. We will use robust standard Go abstractions (e.g., standard `database/sql` driver mapping and abstraction layers).
-- We are not deploying a full Kubernetes cluster within the Standalone wrapper; local resources are managed via Go goroutines and local process execution.
+- We are not writing a custom ORM to abstract PostgreSQL vs SQLite. We will use robust standard Rust abstractions (e.g., `sqlx` for async database operations with connection pooling).
+- We are not deploying a full Kubernetes cluster within the Standalone wrapper; local resources are managed via Rust async tasks and local process execution.
 
 ## 3. Hybrid Deployment Architecture
 
@@ -35,33 +35,32 @@ graph TD
 
     subgraph "Standalone Mode (Local)"
         DesktopFat[Desktop Wrapper UI]
-        LocalGo[Embedded Go Server]
+        LocalRust[Embedded Rust Server]
         LocalDB[(SQLite SIPDB)]
     end
 
     %% Cloud Tier
     subgraph "Cloud-Native Mode (Multi-Tenant)"
-        K8sAPI[K8s Go API Server]
+        K8sAPI[K8s Rust API Server]
         Postgres[(PostgreSQL)]
         Redis[(Redis)]
         Hub[Orchestration Hub]
     end
 
     %% Connections
-    MobileThin -->|HTTP/OAuth| K8sAPI
     DesktopThin -->|HTTP/OAuth| K8sAPI
     WebThin -->|HTTP/OAuth| K8sAPI
 
-    DesktopFat -->|Local gRPC/HTTP| LocalGo
-    LocalGo -->|File I/O| LocalDB
-    LocalGo -->|Sync| K8sAPI
+    DesktopFat -->|Local gRPC/HTTP| LocalRust
+    LocalRust -->|File I/O| LocalDB
+    LocalRust -->|Sync| K8sAPI
 
     K8sAPI --> Postgres
     K8sAPI --> Redis
     K8sAPI --> Hub
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Hub,DesktopFat,LocalGo,MobileThin,LocalDB,Postgres,WebThin,DesktopThin,K8sAPI,Redis premium;
+    class Hub,DesktopFat,LocalRust,LocalDB,Postgres,WebThin,DesktopThin,K8sAPI,Redis premium;
 ```
 
 ### 3.2 OHC-HA Degradation Model
@@ -72,13 +71,13 @@ graph TD
 ## 4. Standalone Wrapper Spec
 
 ### 4.1 Lifecycle Management
-The Flutter desktop shell acts as the supervisor for the embedded Go backend.
+The Slint desktop shell acts as the supervisor for the embedded Rust backend.
 1.  **Boot**: App starts -> Checks for `OHC_STANDALONE=true` -> Spawns `ohc-server` child process -> Waits for `/healthz`.
 2.  **State**: App points internal HTTP clients to `http://localhost:<dynamic_port>`.
-3.  **Teardown**: App closed -> Sends graceful shutdown signal (SIGTERM) to Go process.
+3.  **Teardown**: App closed -> Sends graceful shutdown signal (SIGTERM) to Rust process.
 
 ### 4.2 SQLite/PostgreSQL Parity
-To guarantee parity, the Go backend uses a unified `DataStore` interface.
+To guarantee parity, the Rust backend uses a unified `DataStore` trait.
 - Local: SQLite `file:///.ohc/runtime/swarm.db`.
 - Cloud: PostgreSQL DSN.
 The underlying schema must remain 100% compatible. Complex JSONB queries in Postgres are translated to SQLite JSON functions.
@@ -113,6 +112,6 @@ All UIs, regardless of Standalone or Thin Client mode, strictly adhere to the OH
 ## 7. Next Steps & Agentic Delegation
 
 - Hand off database abstraction and SQLite schema generation to the Forge (`backend_dev`) agent.
-- Ensure the Flutter UI perfectly maps these capabilities across target platforms.
+- Ensure the Slint UI perfectly maps these capabilities across target platforms.
 
 </div>

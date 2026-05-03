@@ -20,7 +20,7 @@ A high-level view of how the human CEO interacts with the Automated SDLC feature
 
 ## 3. Implementation Details
 - **Architecture**: The `Hub` manages task breakdown recursively, tracking the lifecycle via append-only Postgres event logs.
-- **Stack**: Go 1.26 orchestrator, Bazel test pipelines.
+- **Stack**: Rust orchestrator, Bazel test pipelines.
 - **Role Integration**: Seamlessly maps standard "SWE", "PM", "DevOps" roles to LangGraph nodes.
 - **Data Mocks**: All previews use real database fixtures according to the "Real Data Law".
 

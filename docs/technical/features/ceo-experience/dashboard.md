@@ -54,7 +54,7 @@ The frontend is a React-based SPA that leverages:
 The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuring the CEO can manage the company via screen readers if necessary.
 
 ## 5. Alternatives Considered
-- **Server-Side Rendering (Next.js)**: Rejected because the dashboard is a high-interactivity real-time tool; a pure SPA with a Go backend is more responsive for WebSocket-heavy workloads.
+- **Server-Side Rendering (Next.js)**: Rejected because the dashboard is a high-interactivity real-time tool; a pure SPA with a Rust backend is more responsive for WebSocket-heavy workloads.
 - **TUI (Terminal User Interface)**: Rejected as a primary interface but considered as a "DevOps Fallback" for low-bandwidth situations.
 
 ## 6. Implementation Stages
@@ -63,7 +63,7 @@ The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuri
 - **Phase 3**: Advanced D3-based financial forecasting and hierarchy editing (BACKLOG).
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.

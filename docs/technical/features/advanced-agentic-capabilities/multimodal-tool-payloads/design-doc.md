@@ -7,7 +7,7 @@
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
 
 ## 2. Architecture & Components
-Extends the MCP JSON-RPC protocol to support base64 encoded binary blobs within standard tool parameters. The Go backend optimizes the decoding of these massive payloads by streaming them directly to persistent storage rather than buffering them entirely in RAM.
+Extends the MCP JSON-RPC protocol to support base64 encoded binary blobs within standard tool parameters. The Rust backend optimizes the decoding of these massive payloads by streaming them directly to persistent storage rather than buffering them entirely in RAM.
 
 ## 3. Data Flow
 1. **Trigger:** The feature is invoked via Agent intent or a K8s event.

@@ -19,7 +19,7 @@ The CEO utilizes the "Snapshot Fabric" to capture the current state of the organ
 | 4 | Restoration completes | Postgres re-loads dump | Org reverts to Step 1 state | Dashboard shows 5 agents back |
 
 ## 3. Implementation Details
-- **Architecture**: A Go 1.26 sidecar service manages the storage interface.
+- **Architecture**: A Rust sidecar service manages the storage interface.
 - **Stack**: Postgres, K8s CSI plugins.
 - **Rollback Speed**: Targets sub-5 second organizational state recovery.
 
