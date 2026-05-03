@@ -2,6 +2,14 @@ use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
 use chrono::Utc;
 
+pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_records_synced_total", "counter", count, serde_json::json!({})).await
+}
+
+pub async fn record_autodream_sync_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

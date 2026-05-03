@@ -11,6 +11,7 @@ mod hub;
 mod minimax;
 mod billing;
 mod ultraplan;
+pub mod autodream_sync;
 #[path = "../agents/builtin/autodream.rs"]
 pub mod autodream;
 mod tasks;
