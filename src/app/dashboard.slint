@@ -1,4 +1,3 @@
-import { TooltipElement } from "tooltip_element.slint";
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
@@ -65,8 +64,8 @@ export component Dashboard inherits Window {
             spacing: 16px;
             Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {} // Spacer
-            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } } }
-            TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
+            Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } }
+            Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } }
         }
 
         if (show_menu) : Rectangle {
@@ -287,9 +286,9 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
-                TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
-                TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
+                Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } }
+                Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
+                Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } }
             }
             HorizontalBox {
                 spacing: 8px;
