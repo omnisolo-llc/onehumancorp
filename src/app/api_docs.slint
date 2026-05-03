@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slin
 export component ApiDocs inherits Window {
     width: 800px;
     height: 600px;
-    title: "API Reference (Advanced)";
+    title: "Connect Custom Software";
     background: #f8fafc;
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
@@ -13,7 +13,7 @@ export component ApiDocs inherits Window {
         spacing: 20px;
 
         Text {
-            text: "Developer API";
+            text: "Custom Integration";
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
@@ -31,12 +31,12 @@ export component ApiDocs inherits Window {
 
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: #334155; }
                     Rectangle {
                         background: #1e293b; border-radius: 8px; // dark theme for code
                         VerticalBox {
                             padding: 16px; spacing: 8px;
-                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
+                            Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
                             Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
                         }
                     }
