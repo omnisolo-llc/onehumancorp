@@ -14,7 +14,7 @@ pub mod ohc {
     }
 }
 
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Global};
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -2109,6 +2109,16 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        app::TooltipRegistry::get(&dashboard_ui).on_request_tooltip_text(move |id| {
+            match id.as_str() {
+                "ask_ai" => slint::SharedString::from("Ask AI an open question"),
+                "menu" => slint::SharedString::from("Open the main menu"),
+                "add_product" => slint::SharedString::from("Add a new product to your store"),
+                "view_orders" => slint::SharedString::from("View your current orders"),
+                "messages" => slint::SharedString::from("Check your messages"),
+                _ => slint::SharedString::from(""),
+            }
+        });
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2159,6 +2169,17 @@ mod docs_tests {
         dashboard_ui.invoke_open_help_center();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+    }
+
+    #[test]
+    fn test_docs_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpCenter::new().unwrap();
+        app::ReleaseNotes::new().unwrap();
+        app::InteractiveWalkthrough::new().unwrap();
+        app::AiHelpChat::new().unwrap();
+        app::VideoTutorials::new().unwrap();
+        app::ApiDocs::new().unwrap();
     }
 
     #[test]
