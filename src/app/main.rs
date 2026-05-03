@@ -3852,4 +3852,63 @@ mod e2e_hybrid_blob_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+
+    #[test]
+    fn test_login_settings_button_invocation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = clicked.clone();
+        ui.on_open_settings(move || { *clicked_clone.borrow_mut() = true; });
+        ui.invoke_open_settings();
+        assert!(*clicked.borrow(), "Settings should be invoked");
     }
+
+    #[test]
+    fn test_login_is_sign_up_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        assert_eq!(ui.get_is_sign_up(), false);
+        ui.set_is_sign_up(true);
+        assert_eq!(ui.get_is_sign_up(), true);
+    }
+
+    #[test]
+    fn test_login_error_message_property() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        assert_eq!(ui.get_error_message(), "");
+        ui.set_error_message("Invalid login".into());
+        assert_eq!(ui.get_error_message(), "Invalid login");
+    }
+
+    #[test]
+    fn test_login_username_password_properties() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        ui.set_username("testuser".into());
+        ui.set_password("pass123".into());
+        assert_eq!(ui.get_username(), "testuser");
+        assert_eq!(ui.get_password(), "pass123");
+    }
+
+    #[test]
+    fn test_login_oauth_invocation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = clicked.clone();
+        ui.on_oauth_login(move |provider| {
+            assert_eq!(provider, "SSO");
+            *clicked_clone.borrow_mut() = true;
+        });
+        ui.invoke_oauth_login("SSO".into());
+        assert!(*clicked.borrow(), "OAuth should be invoked");
+    }
+
+}
