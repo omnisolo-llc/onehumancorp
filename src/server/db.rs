@@ -55,12 +55,37 @@ impl DB {
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
 
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-            .execute(&self.pool)
-            .await?;
+        match &self.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&self.pool).await;
+            }
+            DbStore::Sqlite(_) => {}
+        }
 
-        let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-        migrator.run(&self.pool).await?;
+        match &self.store {
+            DbStore::Postgres => {
+                let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
+                migrator.run(&self.pool).await?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                // SQLite will not run the Postgres pgvector migration scripts directly because they contain incompatible syntax like RLS policies, vector(1536), etc.
+                // Instead, for local development testing, we provide a bare-minimum table structure required by the system.
+                // A complete SQLite translation would require maintaining two distinct migration sets which introduces high cognitive load.
+                let _ = sqlx::query("
+                    CREATE TABLE IF NOT EXISTS autodream_memories (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL DEFAULT 'system',
+                        agent_id TEXT,
+                        task_id TEXT,
+                        topic TEXT NOT NULL DEFAULT '',
+                        content TEXT NOT NULL,
+                        embedding TEXT,
+                        source_type TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                ").execute(sqlite_pool).await;
+            }
+        }
 
         Ok(())
     }
@@ -180,6 +205,19 @@ pub async fn insert_autodream_memory(
         Ok(())
     }
 
+
+
+
+    pub async fn record_autodream_telemetry(&self, count: usize) -> Result<(), Box<dyn std::error::Error>> {
+        crate::telemetry::buffer_metric(
+            &self.pool,
+            "telemetry.AutoDreamConsolidationTotal",
+            "counter",
+            count as f32,
+            serde_json::json!({})
+        ).await?;
+        Ok(())
+    }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         let query = if table == "swarm_tasks" {
