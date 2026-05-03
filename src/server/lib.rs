@@ -37,6 +37,7 @@ pub mod services {
     pub mod wizard;
     pub mod billing {
         pub mod auditor;
+        pub mod service;
     }
     pub mod growth;
     pub mod onboarding;
@@ -123,6 +124,9 @@ pub mod ohc {
         pub mod service {
             pub use agent_service_proto::ohc::agent::service::*;
         }
+    }
+    pub mod billing {
+        pub use billing_proto::ohc::billing::*;
     }
     pub mod organization {
         pub use organization_proto::ohc::organization::*;
@@ -1056,6 +1060,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
+    let cost_auditor = std::sync::Arc::new(crate::services::billing::auditor::CostAuditor::new(crate::pricing::calculator::CostConfig::default()));
+    let billing_service = crate::services::billing::service::MyBillingService::new(cost_auditor.clone());
+
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
@@ -1129,6 +1136,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(crate::ohc::billing::billing_service_server::BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

@@ -4,6 +4,7 @@ use crate::pricing::calculator::{self, CostConfig};
 
 pub struct AuditEvent {
     pub agent_id: String,
+    pub organization_id: Option<String>,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
@@ -12,6 +13,7 @@ pub struct AuditEvent {
 
 pub struct ComputeEvent {
     pub agent_id: String,
+    pub organization_id: Option<String>,
     pub compute_hours: f64,
     pub network_egress_bytes: i64,
 }
@@ -27,6 +29,10 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    tenant_costs: Mutex<HashMap<String, f64>>,
+    tenant_tokens: Mutex<HashMap<String, i64>>,
+    tenant_agent_costs: Mutex<HashMap<String, HashMap<String, f64>>>,
+    tenant_agent_tokens: Mutex<HashMap<String, HashMap<String, i64>>>,
 }
 
 impl CostAuditor {
@@ -42,6 +48,10 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            tenant_costs: Mutex::new(HashMap::new()),
+            tenant_tokens: Mutex::new(HashMap::new()),
+            tenant_agent_costs: Mutex::new(HashMap::new()),
+            tenant_agent_tokens: Mutex::new(HashMap::new()),
         }
     }
 
@@ -65,7 +75,57 @@ impl CostAuditor {
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
 
+        let total_tokens = event.input_tokens + event.output_tokens + event.cached_input_tokens + event.local_embedding_tokens;
+
+        if let Some(org_id) = event.organization_id {
+            let mut tenant_costs = self.tenant_costs.lock().unwrap();
+            let tenant_cost = tenant_costs.entry(org_id.clone()).or_insert(0.0);
+            *tenant_cost += cost;
+
+            let mut tenant_tokens = self.tenant_tokens.lock().unwrap();
+            let tenant_token = tenant_tokens.entry(org_id.clone()).or_insert(0);
+            *tenant_token += total_tokens;
+
+            let mut tenant_agent_costs = self.tenant_agent_costs.lock().unwrap();
+            let agents = tenant_agent_costs.entry(org_id.clone()).or_insert_with(HashMap::new);
+            let agent_cost = agents.entry(event.agent_id.clone()).or_insert(0.0);
+            *agent_cost += cost;
+
+            let mut tenant_agent_tokens = self.tenant_agent_tokens.lock().unwrap();
+            let agent_tokens_map = tenant_agent_tokens.entry(org_id.clone()).or_insert_with(HashMap::new);
+            let agent_token = agent_tokens_map.entry(event.agent_id.clone()).or_insert(0);
+            *agent_token += total_tokens;
+        }
+
         cost
+    }
+
+    pub fn get_tenant_cost(&self, org_id: &str) -> f64 {
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        *tenant_costs.get(org_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_tokens(&self, org_id: &str) -> i64 {
+        let tenant_tokens = self.tenant_tokens.lock().unwrap();
+        *tenant_tokens.get(org_id).unwrap_or(&0)
+    }
+
+    pub fn get_tenant_agent_summary(&self, org_id: &str) -> Vec<(String, f64, i64)> {
+        let tenant_agent_costs = self.tenant_agent_costs.lock().unwrap();
+        let tenant_agent_tokens = self.tenant_agent_tokens.lock().unwrap();
+
+        let mut result = Vec::new();
+        if let Some(costs) = tenant_agent_costs.get(org_id) {
+            for (agent_id, cost) in costs {
+                let tokens = tenant_agent_tokens
+                    .get(org_id)
+                    .and_then(|m| m.get(agent_id))
+                    .copied()
+                    .unwrap_or(0);
+                result.push((agent_id.clone(), *cost, tokens));
+            }
+        }
+        result
     }
 
     pub fn record_cache_hit(&self, event: AuditEvent) -> f64 {
@@ -236,6 +296,7 @@ mod tests {
         
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
+            organization_id: None,
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
@@ -269,6 +330,7 @@ mod tests {
 
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
+            organization_id: None,
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,
