@@ -476,9 +476,10 @@ impl Hub {
 
     pub fn sanitize_hub_event(&self, raw: serde_json::Value) -> HubEvent {
         let event_type = raw["type"].as_str().unwrap_or("unknown").to_string();
+        let redacted_raw = crate::telemetry::redact_interface_pii(raw);
         HubEvent {
             r#type: event_type,
-            payload: raw.to_string(),
+            payload: redacted_raw.to_string(),
             occurred_at: Utc::now(),
         }
     }
@@ -684,6 +685,37 @@ mod tests {
     use super::*;
     use tokio::sync::mpsc;
 
+
+    #[tokio::test]
+    async fn test_sanitize_hub_event_redaction() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let raw = serde_json::json!({
+            "type": "TestEvent",
+            "password": "secret-password",
+            "email": "test@example.com",
+            "nested": {
+                "auth_token": "token123"
+            }
+        });
+
+        let sanitized = hub.sanitize_hub_event(raw);
+        let payload: serde_json::Value = serde_json::from_str(&sanitized.payload).unwrap();
+
+        assert_eq!(payload["password"], "[REDACTED]");
+        assert_eq!(payload["email"], "[EMAIL_REDACTED]");
+        assert_eq!(payload["nested"]["auth_token"], "[REDACTED]");
+    }
 
     #[tokio::test]
     async fn test_cache_invalidation() {

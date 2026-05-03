@@ -30,6 +30,11 @@ pub async fn record_sync_daemon_error_total(pool: &PgPool, count: f32, mode: &st
     buffer_metric(pool, "sync_daemon_error_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
 }
 
+pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dyn std::error::Error>> {
+    let payload = serde_json::json!({ "delta": delta });
+    buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
