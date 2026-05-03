@@ -7,12 +7,38 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    let db_builder = DB::new().await;
-    if db_builder.is_err() {
-        println!("Skipping task decomposition service DB test");
-        return;
-    }
-    let db = db_builder.unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1) // SQLite in-memory without shared cache needs single connection.
+        .connect_with(
+            <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+                .unwrap()
+                .create_if_missing(true)
+        )
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        "#
+    ).execute(&sqlite_pool).await.unwrap();
+
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+
+    let db = crate::db::DB {
+        pool: dummy_pool,
+        store: crate::db::DbStore::Sqlite(sqlite_pool),
+    };
+
 
     match &db.store {
         DbStore::Postgres => {
@@ -157,12 +183,38 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    let db_builder = DB::new().await;
-    if db_builder.is_err() {
-        println!("Skipping task decomposition dag DB test");
-        return;
-    }
-    let db = db_builder.unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1) // SQLite in-memory without shared cache needs single connection.
+        .connect_with(
+            <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+                .unwrap()
+                .create_if_missing(true)
+        )
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        "#
+    ).execute(&sqlite_pool).await.unwrap();
+
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+
+    let db = crate::db::DB {
+        pool: dummy_pool,
+        store: crate::db::DbStore::Sqlite(sqlite_pool),
+    };
+
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(
