@@ -186,7 +186,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
-                        raw_content BLOB NOT NULL,
+                        raw_content TEXT NOT NULL,
                         summary_embedding BLOB,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',

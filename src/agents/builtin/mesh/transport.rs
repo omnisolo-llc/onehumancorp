@@ -663,7 +663,7 @@ mod tests {
         // Needs running Redis instance
         let transport = RedisTransport::new("redis://localhost:6379").await;
         if transport.is_err() {
-
+            println!("Skipping redis transport test due to missing redis connection");
             return;
         }
         let transport = transport.unwrap();

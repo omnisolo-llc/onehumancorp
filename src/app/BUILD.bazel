@@ -219,7 +219,6 @@ rust_shared_library(
         "@crates//:console_error_panic_hook",
         "@crates//:wasm-bindgen-futures",
         "@crates//:getrandom",
-        "@crates//:web-sys",
     ],
 )
 

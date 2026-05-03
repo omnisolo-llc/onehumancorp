@@ -28,10 +28,10 @@ pub async fn bench_queue_latency() {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
             bench_queue("Postgres", pg_queue).await;
         } else {
-
+             println!("Skipping Postgres bench due to connection failure");
         }
     } else {
-
+         println!("Skipping Postgres bench due to missing DATABASE_URL");
     }
 
     // 2. Standalone Mode - Memory
@@ -47,7 +47,7 @@ pub async fn bench_dashboard_snapshot() {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url == "postgres://localhost/dummy" {
-
+        println!("Skipping bench_dashboard_snapshot due to missing db connection (dummy url)");
         return;
     }
 
@@ -65,7 +65,7 @@ pub async fn bench_dashboard_snapshot() {
     let pg_pool = match pool_res {
         Ok(p) => p,
         Err(e) => {
-
+            println!("Skipping bench_dashboard_snapshot due to missing db connection: {}", e);
             return;
         }
     };
