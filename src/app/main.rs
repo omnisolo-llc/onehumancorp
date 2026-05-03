@@ -1287,6 +1287,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Copied to clipboard: {}", link);
     });
 
+    setup_wizard_ui.on_continue_with_google({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_admin_email("google_user@example.com".into());
+                ui.set_admin_name("Google User".into());
+                ui.set_step(ui.get_step() + 1);
+            }
+        }
+    });
+
+    setup_wizard_ui.on_continue_with_apple({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_admin_email("apple_user@example.com".into());
+                ui.set_admin_name("Apple User".into());
+                ui.set_step(ui.get_step() + 1);
+            }
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {

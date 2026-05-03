@@ -79,6 +79,8 @@ export component SetupWizard inherits Window {
     callback select_domain(string);
     callback save_state();
     callback toggle_advanced();
+    callback continue_with_google();
+    callback continue_with_apple();
 
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
@@ -373,13 +375,24 @@ export component SetupWizard inherits Window {
 
                 Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 PasswordInput { text <=> admin_password; }
-                Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
 
+                VerticalBox {
+                    spacing: 4px;
+                    HorizontalBox {
+                        spacing: 2px;
+                        Rectangle {
+                            height: 4px;
+                            background: admin_password != "" ? #10b981 : #334155;
+                            border-radius: 2px;
+                        }
+                    }
+                    Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
+                }
 
                 Text { text: "OR"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
 
-                Button { text: "Continue with Google"; height: 44px; }
-                Button { text: "Continue with Apple"; height: 44px; }
+                Button { text: "Continue with Google"; height: 44px; clicked => { continue_with_google(); } }
+                Button { text: "Continue with Apple"; height: 44px; clicked => { continue_with_apple(); } }
             }
 
             // Step 6: Choose a Template

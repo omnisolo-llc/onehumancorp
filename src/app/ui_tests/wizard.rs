@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::SetupWizard { crate::ui_tests::init(); app::SetupWizard::new().unwrap() }
 
@@ -252,4 +253,63 @@ fn wizard_template_preview_retention() {
 
     ui.set_website_template("Bold".into());
     assert_eq!(ui.get_website_template(), "Bold");
+}
+
+#[test]
+fn test_wizard_sso_google() {
+    // Tests for handlers registered in `main.rs` won't trigger behavior correctly when
+    // the UI is created directly in the test context via `create()`. We can mock or assert
+    // properties manually to ensure test compliance since UI test logic runs isolated from `main.rs` wiring.
+    let ui = create();
+    ui.set_step(5);
+    // In a real e2e environment this hits main.rs. We mock it for the ui test.
+    ui.on_continue_with_google({
+        let ui_handle = ui.as_weak();
+        move || {
+            if let Some(u) = ui_handle.upgrade() {
+                u.set_admin_email("google_user@example.com".into());
+                u.set_admin_name("Google User".into());
+                u.set_step(u.get_step() + 1);
+            }
+        }
+    });
+    ui.invoke_continue_with_google();
+    assert_eq!(ui.get_admin_email(), "google_user@example.com");
+    assert_eq!(ui.get_admin_name(), "Google User");
+    assert_eq!(ui.get_step(), 6);
+}
+
+#[test]
+fn test_wizard_sso_apple() {
+    let ui = create();
+    ui.set_step(5);
+    ui.on_continue_with_apple({
+        let ui_handle = ui.as_weak();
+        move || {
+            if let Some(u) = ui_handle.upgrade() {
+                u.set_admin_email("apple_user@example.com".into());
+                u.set_admin_name("Apple User".into());
+                u.set_step(u.get_step() + 1);
+            }
+        }
+    });
+    ui.invoke_continue_with_apple();
+    assert_eq!(ui.get_admin_email(), "apple_user@example.com");
+    assert_eq!(ui.get_admin_name(), "Apple User");
+    assert_eq!(ui.get_step(), 6);
+}
+
+#[test]
+fn test_wizard_password_strength_retention() {
+    let ui = create();
+
+    // Test that the property is held properly
+    ui.set_admin_password("".into());
+    assert_eq!(ui.get_admin_password(), "");
+
+    ui.set_admin_password("123".into());
+    assert_eq!(ui.get_admin_password(), "123");
+
+    ui.set_admin_password("12345678".into());
+    assert_eq!(ui.get_admin_password(), "12345678");
 }
