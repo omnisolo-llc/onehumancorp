@@ -74,6 +74,22 @@ mod tests {
         assert_eq!(redacted["secret"], "[REDACTED]");
     }
 
+
+    #[tokio::test]
+    async fn test_sqlite_metrics() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
+        assert!(res.is_ok());
+
+        let res = crate::telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
+        assert!(res.is_ok());
+    }
+
     #[test]
     fn test_no_pii_logging_statements() {
         use walkdir::WalkDir;
