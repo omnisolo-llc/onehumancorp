@@ -51,6 +51,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub enable_plan_and_execute: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -83,6 +84,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            enable_plan_and_execute: false,
         }
     }
 }
@@ -246,7 +248,22 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            let mut final_initial_message = initial_message.to_string();
+            if cfg.enable_plan_and_execute {
+                let plan_req = ohc_builtin_agent_core::types::ChatRequest {
+                    model: cfg.model.clone(),
+                    system: "You are an expert planner. Given the user task, output ONLY a step-by-step plan to solve it. Do not execute the task. Do not include markdown formatting.".to_string(),
+                    messages: vec![Message::user(initial_message)],
+                    tools: vec![],
+                    max_tokens: cfg.max_tokens,
+                    temperature: cfg.temperature,
+                };
+                if let Ok(plan_resp) = self.llm.chat(plan_req).await {
+                    final_initial_message = format!("[Execution Plan]\n{}\n\n[Original Task]\n{}", plan_resp.message.content, initial_message);
+                    on_event(AgentEvent::TextChunk { content: format!("Generated Plan:\n{}", plan_resp.message.content) });
+                }
+            }
+            messages.push(Message::user(final_initial_message));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -2162,5 +2179,48 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+
+    #[tokio::test]
+    async fn test_plan_and_execute_mechanic() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("1. Step A\n2. Step B"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_plan_and_execute = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // We expect the LLM to have been called twice (once for plan, once for execution).
+        // Since we provided two responses, the second one should be the final answer.
+        assert_eq!(result.unwrap(), "Final answer");
+
+        // We can also verify that a TextChunk with the plan was emitted
+        let mut found_plan = false;
+        for e in events {
+            if let AgentEvent::TextChunk { content } = e {
+                if content.contains("Generated Plan:\n1. Step A\n2. Step B") {
+                    found_plan = true;
+                }
+            }
+        }
+        assert!(found_plan);
     }
 }
