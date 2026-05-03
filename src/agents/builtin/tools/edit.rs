@@ -45,9 +45,36 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(path, &new_content)
+        fs::write(&actual_path, &new_content)
             .await
             .map_err(|e| format!("edit: write {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        // Verification Loops (Quality x3): Computational/Guides (feedforward: linters, type-checkers, unit tests)
+        if path.ends_with(".rs") {
+            let wd = if let Some(w) = &self.working_dir {
+                w.clone()
+            } else {
+                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            };
+
+            if wd.join("Cargo.toml").exists() {
+                let output = tokio::process::Command::new("cargo")
+                    .current_dir(&wd)
+                    .arg("check")
+                    .output()
+                    .await;
+
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "File edited, but syntax check failed. Please fix the following errors:\n{}",
+                            stderr
+                        )));
+                    }
+                }
+            }
+        }
 
         Ok(format!("File edited: {}", path))
     }
@@ -79,5 +106,36 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["path", "old_str", "new_str"]
         }),
         execute: Arc::new(EditExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_computational_guides_mechanic_in_edit() {
+        let dir = tempfile::tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+        let executor = EditExecutor { working_dir: Some(wd.clone()) };
+
+        // Dummy Cargo.toml
+        tokio::fs::write(wd.join("Cargo.toml"), "[package]\nname = \"test_guide\"\nversion = \"0.1.0\"\n[lib]\npath = \"test_guide.rs\"").await.unwrap();
+        tokio::fs::write(wd.join("test_guide.rs"), "fn main() {}").await.unwrap();
+
+        // Edit with bad code
+        let args = serde_json::json!({
+            "path": "test_guide.rs",
+            "old_str": "fn main() {}",
+            "new_str": "fn main() { broken code }"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("syntax check failed"));
+        } else {
+            panic!("Expected LlmRecoverable");
+        }
     }
 }

@@ -34,6 +34,34 @@ impl ToolExecutor for WriteExecutor {
             .await
             .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
+        // Verification Loops (Quality x3): Computational/Guides (feedforward: linters, type-checkers, unit tests)
+        if path.ends_with(".rs") {
+            let wd = if let Some(w) = &self.working_dir {
+                w.clone()
+            } else {
+                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            };
+
+            // Only run if cargo is available and Cargo.toml exists, or just run and handle missing gracefully
+            if wd.join("Cargo.toml").exists() {
+                let output = tokio::process::Command::new("cargo")
+                    .current_dir(&wd)
+                    .arg("check")
+                    .output()
+                    .await;
+
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "File written, but syntax check failed. Please fix the following errors:\n{}",
+                            stderr
+                        )));
+                    }
+                }
+            }
+        }
+
         Ok(format!("File written: {}", path))
     }
 }
@@ -58,5 +86,34 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["path", "content"]
         }),
         execute: Arc::new(WriteExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_computational_guides_mechanic_in_write() {
+        let dir = tempfile::tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+        let executor = WriteExecutor { working_dir: Some(wd.clone()) };
+
+        // Dummy Cargo.toml
+        tokio::fs::write(wd.join("Cargo.toml"), "[package]\nname = \"test_guide\"\nversion = \"0.1.0\"\n[lib]\npath = \"test_guide.rs\"").await.unwrap();
+
+        // Write bad code
+        let args = serde_json::json!({
+            "path": "test_guide.rs",
+            "content": "fn main() { broken code }"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("syntax check failed"));
+        } else {
+            panic!("Expected LlmRecoverable");
+        }
     }
 }
