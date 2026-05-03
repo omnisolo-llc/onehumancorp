@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::GrowBusiness { crate::ui_tests::init(); app::GrowBusiness::new().unwrap() }
 

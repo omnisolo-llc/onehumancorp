@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::SecureAgentConfig { crate::ui_tests::init(); app::SecureAgentConfig::new().unwrap() }
 
