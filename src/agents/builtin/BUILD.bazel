@@ -45,6 +45,8 @@ rust_library(
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
+        "harness/network/mod.rs",
+        "harness/network/proxy.rs",
         "legacy_mesh.rs",
         "lib.rs",
         "memory_store.rs",

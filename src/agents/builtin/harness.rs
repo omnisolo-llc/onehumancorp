@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub mod network;
+
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
@@ -187,7 +189,7 @@ impl LocalBackend {
             .unwrap_or(false)
     }
 
-    pub fn get_bwrap_args(&self, command: &str, policy: &Policy) -> Vec<String> {
+    pub fn get_bwrap_args(&self, command: &str, policy: &Policy, proxy_socket_path: Option<&str>) -> Vec<String> {
         let mut args = vec![
             "--unshare-pid".to_string(),
             "--unshare-uts".to_string(),
@@ -249,10 +251,27 @@ impl LocalBackend {
             args.push("/var/run/ohc_proxy.sock".to_string());
         }
 
+        if let Some(sock_path) = proxy_socket_path {
+            args.push("--bind".to_string());
+            args.push(sock_path.to_string());
+            args.push(sock_path.to_string());
+        }
+
+        let final_cmd = if let Some(sock_path) = proxy_socket_path {
+            format!(
+                "socat TCP-LISTEN:3128,fork UNIX-CLIENT:{} & \
+                while ! nc -z 127.0.0.1 3128 2>/dev/null; do sleep 0.1; done; \
+                export HTTP_PROXY=http://127.0.0.1:3128 HTTPS_PROXY=http://127.0.0.1:3128 ALL_PROXY=http://127.0.0.1:3128; {}",
+                sock_path, command
+            )
+        } else {
+            command.to_string()
+        };
+
         args.push("--".to_string());
         args.push("bash".to_string());
         args.push("-c".to_string());
-        args.push(command.to_string());
+        args.push(final_cmd);
 
         args
     }
@@ -265,7 +284,17 @@ impl HarnessBackend for LocalBackend {
         self.validator.validate(command)?;
 
         if self.is_bwrap_available() {
-            let args = self.get_bwrap_args(command, policy);
+            let mut _proxy_bridge = None;
+            let mut proxy_socket = None;
+
+            if !policy.allow_network && !policy.allowed_hosts.is_empty() {
+                if let Ok(proxy) = crate::harness::network::proxy::NetworkBridgeProxy::start(policy.allowed_hosts.clone()).await {
+                    proxy_socket = Some(proxy.socket_path.clone());
+                    _proxy_bridge = Some(proxy);
+                }
+            }
+
+            let args = self.get_bwrap_args(command, policy, proxy_socket.as_deref());
 
             let output = tokio::process::Command::new("bwrap")
                 .args(&args)
@@ -455,7 +484,7 @@ mod tests {
             deny_write: vec![],
         };
         
-        let args = runner.get_bwrap_args("ls", &policy);
+        let args = runner.get_bwrap_args("ls", &policy, None);
         
         assert!(args.contains(&"--unshare-net".to_string()));
         assert!(args.contains(&"/home/user".to_string()));
@@ -474,7 +503,7 @@ mod tests {
             ..Default::default()
         };
 
-        let args = runner.get_bwrap_args("ls", &policy);
+        let args = runner.get_bwrap_args("ls", &policy, None);
 
         // Note: allow_read uses --ro-bind if path exists.
         // In test environment /opt might not exist, so we just check it was handled.
