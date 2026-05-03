@@ -951,6 +951,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
+    // Start Competitor Audit Worker
+    let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
+    competitor_audit_worker.start();
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
