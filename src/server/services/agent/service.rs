@@ -20,15 +20,15 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(&self) -> DashboardSnapshot {
+    async fn get_snapshot(&self) -> Result<DashboardSnapshot, Status> {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let (agents_res, meetings_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings())
         );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let cost_auditor = self.hub.get_cost_auditor();
         let costs = Summary {
             total_cost_usd: cost_auditor.get_total_cost(),
@@ -41,7 +41,7 @@ impl MyAgentManagerService {
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
-        DashboardSnapshot {
+        Ok(DashboardSnapshot {
             meetings: meetings.to_vec(),
             costs: Some(costs),
             agents: agents.to_vec(),
@@ -49,7 +49,7 @@ impl MyAgentManagerService {
             task_queue: vec![],
             queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
-        }
+        })
     }
 }
 
@@ -76,7 +76,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.register_agent(agent);
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot().await?))
     }
 
     async fn fire_agent(
@@ -90,7 +90,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.fire_agent(&req.agent_id);
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot().await?))
     }
 
     async fn delegate_task(
@@ -107,7 +107,7 @@ impl AgentManagerService for MyAgentManagerService {
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot().await?))
     }
 
     async fn get_agent_providers(
@@ -204,8 +204,8 @@ impl AgentManagerService for MyAgentManagerService {
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings())
         );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut msg_count = 0;
         for m in meetings.iter() {
@@ -246,6 +246,6 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot().await?))
     }
 }
