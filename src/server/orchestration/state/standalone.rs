@@ -3,37 +3,36 @@ use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use sqlx::Row;
 use chrono::Utc;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 
 pub struct StandaloneStateManager {
     db: Arc<DB>,
-    lock: Mutex<()>,
+    transport: Arc<dyn MeshTransport>,
 }
 
 impl StandaloneStateManager {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
         Self {
             db,
-            lock: Mutex::new(()),
+            transport,
         }
     }
 }
 
-#[async_trait]
-impl StateManager for StandaloneStateManager {
-    async fn transition_state(
+
+
+impl StandaloneStateManager {
+    async fn transition_state_inner(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        _tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
     ) -> Result<(), String> {
-        let _guard = self.lock.lock().await;
-
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
@@ -123,9 +122,48 @@ impl StateManager for StandaloneStateManager {
         Ok(())
     }
 
-    async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
-        let _guard = self.lock.lock().await;
+}
 
+#[async_trait]
+impl StateManager for StandaloneStateManager {
+    async fn transition_state(
+        &self,
+        task_id: &str,
+        tenant_id: &str,
+        from_state: &str,
+        to_state: &str,
+        agent_id: Option<&str>,
+        reason: Option<&str>,
+    ) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let acquired = self.transport.acquire_lock(&lock_key, "standalone_state_manager", 30).await?;
+        if !acquired {
+            return Err(format!("Task {} is currently locked", lock_key));
+        }
+
+        let res = self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason).await;
+
+        let _ = self.transport.release_lock(&lock_key, "standalone_state_manager").await;
+
+        res
+    }
+
+    async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
+        let acquired = self.transport.acquire_lock("ohc:lock:system:pull_tasks", "standalone_state_manager", 30).await?;
+        if !acquired {
+            return Ok(Vec::new());
+        }
+
+        let res = self.pull_available_tasks_inner(limit).await;
+
+        let _ = self.transport.release_lock("ohc:lock:system:pull_tasks", "standalone_state_manager").await;
+
+        res
+    }
+}
+
+impl StandaloneStateManager {
+    async fn pull_available_tasks_inner(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
