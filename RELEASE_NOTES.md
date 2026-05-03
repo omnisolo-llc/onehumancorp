@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
+- Scaling (Cloud): 🤖 Implementer: Harness Upgrade - Git Commit Checkpointing (#9466)
+- Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - Git Commit Checkpointing (#9466)
+
 ## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
 - UI & UX (Cloud): Fix onboarding confetti state transition and wire checklist navigation (#9418)
 - UI & UX (Standalone): Fix onboarding confetti state transition and wire checklist navigation (#9418)
