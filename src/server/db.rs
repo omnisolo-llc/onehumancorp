@@ -20,6 +20,13 @@ pub struct DB {
 }
 
 impl DB {
+    pub fn is_sqlite(&self) -> bool {
+        match &self.store {
+            DbStore::Sqlite(_) => true,
+            DbStore::Postgres => false,
+        }
+    }
+
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
