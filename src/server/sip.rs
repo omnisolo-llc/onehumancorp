@@ -105,10 +105,35 @@ impl SipDB {
     }
 
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
-        self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
-        tx.commit().await?;
-        Ok(())
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            let res = async {
+                let mut tx = self.pool.begin().await?;
+                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }.await;
+
+            match res {
+                Ok(_) => return Ok(()),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
     }
 
     pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {

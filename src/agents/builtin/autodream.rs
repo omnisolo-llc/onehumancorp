@@ -38,6 +38,10 @@ impl AutoDreamWorker {
                 if let Err(e) = Self::ingest_completed_tasks(&db).await {
                     println!("AutoDream: tasks ingestion failed: {}", e);
                 }
+
+                if let Err(e) = Self::compress_session_contexts(&db).await {
+                    println!("AutoDream: compress_session_contexts failed: {}", e);
+                }
                 if let Err(e) = Self::process_db_memories(&db).await {
                     println!("AutoDream: DB memories processing failed: {}", e);
                 }
@@ -198,6 +202,34 @@ impl AutoDreamWorker {
         Ok(results)
     }
 
+
+    async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        // Fetch sessions that aren't compressed yet
+        let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
+            .fetch_all(&db.pool)
+            .await?;
+
+        for row in rows {
+            use sqlx::Row;
+            let session_id: String = row.get("session_id");
+            let mut context_data: String = row.get("context_data");
+            if context_data.starts_with("gz_b64:") {
+                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                    context_data = decompressed;
+                }
+            }
+
+            if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
+                sqlx::query("UPDATE agent_session_data SET context_data = $1 WHERE session_id = $2")
+                    .bind(compressed)
+                    .bind(&session_id)
+                    .execute(&db.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
     async fn process_db_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
@@ -208,7 +240,12 @@ impl AutoDreamWorker {
         for row in rows {
             let session_id: String = row.get("session_id");
             let _agent_id: String = row.get("agent_id");
-            let context_data: String = row.get("context_data");
+            let mut context_data: String = row.get("context_data");
+            if context_data.starts_with("gz_b64:") {
+                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                    context_data = decompressed;
+                }
+            }
 
             match client.generate_embedding(&context_data).await {
                 Ok(embedding) => {
