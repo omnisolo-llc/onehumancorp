@@ -1627,6 +1627,31 @@ mod growth_e2e_tests {
         assert_eq!(r.referral_code, "GROWTH2024");
         assert_eq!(r.clicks, 45);
         assert_eq!(r.conversions, 12);
+
+        let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let refresh_called_clone = refresh_called.clone();
+        ui.on_refresh(move || {
+            *refresh_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_refresh();
+        assert!(*refresh_called.borrow());
+
+        let generate_new_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let generate_new_link_called_clone = generate_new_link_called.clone();
+        ui.on_generate_new_link(move || {
+            *generate_new_link_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_generate_new_link();
+        assert!(*generate_new_link_called.borrow());
+
+        let send_invite_message_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_invite_message_called_clone = send_invite_message_called.clone();
+        ui.on_send_invite_message(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *send_invite_message_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_send_invite_message("ohc://join?ref=DEFAULT".into());
+        assert!(*send_invite_message_called.borrow());
     }
 
     #[test]
@@ -1712,6 +1737,58 @@ mod growth_e2e_tests {
 
         referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
         assert!(*link_shared.borrow(), "share_link should be invoked");
+
+        let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let copy_link_called_clone = copy_link_called.clone();
+        referrals_ui.on_copy_link(move || {
+            *copy_link_called_clone.borrow_mut() = true;
+        });
+        referrals_ui.invoke_copy_link();
+        assert!(*copy_link_called.borrow());
+
+        let export_data_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let export_data_called_clone = export_data_called.clone();
+        referrals_ui.on_export_data(move || {
+            *export_data_called_clone.borrow_mut() = true;
+        });
+        referrals_ui.invoke_export_data();
+        assert!(*export_data_called.borrow());
+
+        let view_history_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_history_called_clone = view_history_called.clone();
+        referrals_ui.on_view_history(move || {
+            *view_history_called_clone.borrow_mut() = true;
+        });
+        referrals_ui.invoke_view_history();
+        assert!(*view_history_called.borrow());
+
+        let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let refresh_called_clone = refresh_called.clone();
+        referrals_ui.on_refresh(move || {
+            *refresh_called_clone.borrow_mut() = true;
+        });
+        referrals_ui.invoke_refresh();
+        assert!(*refresh_called.borrow());
+
+        let invite_msg_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let invite_msg_copied_clone = invite_msg_copied.clone();
+        referrals_ui.on_send_invite_message(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *invite_msg_copied_clone.borrow_mut() = true;
+        });
+
+        referrals_ui.invoke_send_invite_message(referrals_ui.get_my_referral_link());
+        assert!(*invite_msg_copied.borrow(), "send_invite_message should be invoked");
+
+        referrals_ui.set_bonus_credit(25);
+        referrals_ui.set_viral_coefficient(1.5);
+        referrals_ui.set_download_count(500);
+        referrals_ui.set_waitlist_position(12);
+
+        assert_eq!(referrals_ui.get_bonus_credit(), 25);
+        assert_eq!(referrals_ui.get_viral_coefficient(), 1.5);
+        assert_eq!(referrals_ui.get_download_count(), 500);
+        assert_eq!(referrals_ui.get_waitlist_position(), 12);
     }
 
     #[test]
@@ -1740,6 +1817,38 @@ mod growth_e2e_tests {
         });
         ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
         assert!(*link_copied.borrow(), "Share link callback should be invoked");
+
+        let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let copy_link_called_clone = copy_link_called.clone();
+        ui.on_copy_link(move || {
+            *copy_link_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_copy_link();
+        assert!(*copy_link_called.borrow());
+
+        let export_data_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let export_data_called_clone = export_data_called.clone();
+        ui.on_export_data(move || {
+            *export_data_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_export_data();
+        assert!(*export_data_called.borrow());
+
+        let view_history_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_history_called_clone = view_history_called.clone();
+        ui.on_view_history(move || {
+            *view_history_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_view_history();
+        assert!(*view_history_called.borrow());
+
+        let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let refresh_called_clone = refresh_called.clone();
+        ui.on_refresh(move || {
+            *refresh_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_refresh();
+        assert!(*refresh_called.borrow());
     }
 }
 
