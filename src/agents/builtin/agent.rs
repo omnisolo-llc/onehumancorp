@@ -50,6 +50,7 @@ pub struct AgentRunConfig {
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
+    pub enable_lazy_tool_loading: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -81,6 +82,7 @@ impl Default for AgentRunConfig {
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
+            enable_lazy_tool_loading: false,
         }
     }
 }
@@ -186,6 +188,14 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send,
     {
+        let mut session_tools = self.tools.clone();
+        let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
+
+        if cfg.enable_lazy_tool_loading {
+            let active_tools_clone = active_tools.clone();
+            session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
+        }
+
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
@@ -195,16 +205,6 @@ impl Agent {
         }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        let tool_defs: Vec<ToolDefinition> = self
-            .tools
-            .iter()
-            .map(|t| ToolDefinition {
-                name: t.name.clone(),
-                description: t.description.clone(),
-                parameters: t.parameters.clone(),
-            })
-            .collect();
 
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
@@ -318,11 +318,26 @@ impl Agent {
                 final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
             }
 
+            let mut req_tools = Vec::new();
+            for t in &session_tools {
+                if !cfg.enable_lazy_tool_loading
+                    || t.name == "ToolSearch"
+                    || t.name == "LazyLoadTools"
+                    || active_tools.read().await.contains(&t.name)
+                {
+                    req_tools.push(ToolDefinition {
+                        name: t.name.clone(),
+                        description: t.description.clone(),
+                        parameters: t.parameters.clone(),
+                    });
+                }
+            }
+
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
-                tools: tool_defs.clone(),
+                tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
             };
@@ -506,6 +521,7 @@ impl Agent {
                 }
                 let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
+                let session_tools_clone = session_tools.clone();
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
@@ -513,7 +529,7 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -633,7 +649,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc).await {
+                    match self.execute_tool(&tc, &session_tools).await {
                         Ok(r) => {
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
@@ -902,9 +918,9 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
+        session_tools: &[Tool],
     ) -> Result<String, ToolError> {
-        let tool = self
-            .tools
+        let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
@@ -915,6 +931,106 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
+    use tokio::sync::Mutex;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_tool_scoping_lazy_loading() {
+        // We will mock an LLM that first receives a ChatRequest with ONLY "ToolSearch", "LazyLoadTools".
+        // It will call LazyLoadTools with "HeavyTool".
+        // Then the next ChatRequest should include "HeavyTool".
+
+        struct AssertingMockLlm {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for AssertingMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Assert that HeavyTool is NOT in the tools list
+                    assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
+                    // Return a call to LazyLoadTools
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Loading HeavyTool".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "load_1".to_string(),
+                                name: "LazyLoadTools".to_string(),
+                                arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 2 {
+                    // Assert that HeavyTool IS in the tools list
+                    assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
+                    // Call the HeavyTool
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Using HeavyTool".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "heavy_1".to_string(),
+                                name: "HeavyTool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else {
+                    // Done
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final Answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+
+        }
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let client = Arc::new(AssertingMockLlm { call_count: Mutex::new(0) });
+
+        // Include HeavyTool in the agent's definitions.
+        let agent = Agent::new(client, vec![
+            crate::tools::Tool {
+                name: "HeavyTool".to_string(),
+                description: "A heavy tool".to_string(),
+                parameters: serde_json::Value::Null,
+                is_read_only: false,
+                execute: Arc::new(DummyToolExecutor),
+            }
+        ]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lazy_tool_loading = true; // THIS IS THE KEY MECHANIC
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final Answer");
+    }
+
     #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
@@ -1064,9 +1180,7 @@ mod tests {
     }
 
 
-    use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
-    use std::sync::Arc;
+    use ohc_builtin_agent_core::types::{ChatRequest};
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
 
