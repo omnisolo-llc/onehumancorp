@@ -4,7 +4,7 @@ import { GlassCard } from "glass_card.slint";
 export component AgentConfig inherits Window {
     width: 600px;
     height: 500px;
-    title: "Configure AI Agent";
+    title: "Configure Helper";
 
     callback activate_agent(string, bool, bool, bool, bool, string);
     callback next_step();
@@ -30,7 +30,7 @@ export component AgentConfig inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Text { text: "Configure Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             CheckBox {
                 text: "Pro mode";
@@ -47,7 +47,7 @@ export component AgentConfig inherits Window {
                 LineEdit { placeholder-text: "sk-proj-..."; }
             }
             spacing: 10px;
-            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
+            Text { text: "Choose a helper to add to your team"; color: #1e293b; }
 
             ScrollView {
                 height: 200px;
@@ -106,7 +106,7 @@ export component AgentConfig inherits Window {
         // Step 1: Capabilities
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "What should this agent do?"; color: #1e293b; }
+            Text { text: "What should this helper do?"; color: #1e293b; }
             
             HorizontalBox {
                 Text { text: "Reply to customer messages"; color: #1e293b; }
@@ -129,7 +129,7 @@ export component AgentConfig inherits Window {
         // Step 2: Frequency
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "How often should this agent work?"; color: #1e293b; }
+            Text { text: "How often should this helper work?"; color: #1e293b; }
             
             HorizontalBox {
                 spacing: 10px;
@@ -155,7 +155,7 @@ export component AgentConfig inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
+                    Text { text: "Helper: " + selected_agent; color: #1e293b; }
                     Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
                     Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
                     Text { text: "Write Descriptions: " + (can_write_descriptions ? "Yes" : "No"); color: #1e293b; }
@@ -197,7 +197,7 @@ export component AgentConfig inherits Window {
         VerticalBox {
             alignment: center;
             Text {
-                text: "Agent Activated ✓";
+                text: "Helper Activated ✓";
                 font-family: "Outfit";
                 font-size: 16px;
                 font-weight: 700;
