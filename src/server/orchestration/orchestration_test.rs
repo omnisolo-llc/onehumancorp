@@ -1,8 +1,8 @@
-use crate::db::{DB, DbStore};
 use std::sync::Arc;
-use crate::orchestration::tasks::TaskDecompositionService;
-use crate::tasks::SharedTask;
+use crate::db::{DB, DbStore};
 use chrono::Utc;
+use crate::tasks::SharedTask;
+use crate::orchestration::tasks::TaskDecompositionService;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {
@@ -97,7 +97,7 @@ async fn test_task_decomposition_service() {
 
     let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
-    let now = Utc::now();
+
     let dep_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
@@ -114,8 +114,8 @@ async fn test_task_decomposition_service() {
         ultraplan_phase: None,
         deliberation_log: None,
         depth: Some(1),
-        created_at: now,
-        updated_at: now,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
         action_risk: None,
         approval_status: None,
         proposed_content: None,
@@ -137,8 +137,8 @@ async fn test_task_decomposition_service() {
         ultraplan_phase: None,
         deliberation_log: None,
         depth: Some(1),
-        created_at: now,
-        updated_at: now,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
         action_risk: None,
         approval_status: None,
         proposed_content: None,
@@ -152,6 +152,7 @@ async fn test_task_decomposition_service() {
 
     svc.update_status(&main_task.id, "REVIEW", "agent1").await.unwrap();
 }
+
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
@@ -220,7 +221,7 @@ async fn test_task_decomposition_dag_blocked() {
 
     let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
-    let now = Utc::now();
+
     let dep_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
@@ -237,8 +238,8 @@ async fn test_task_decomposition_dag_blocked() {
         ultraplan_phase: None,
         deliberation_log: None,
         depth: Some(1),
-        created_at: now,
-        updated_at: now,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
         action_risk: None,
         approval_status: None,
         proposed_content: None,
@@ -260,8 +261,8 @@ async fn test_task_decomposition_dag_blocked() {
         ultraplan_phase: None,
         deliberation_log: None,
         depth: Some(1),
-        created_at: now,
-        updated_at: now,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
         action_risk: None,
         approval_status: None,
         proposed_content: None,
@@ -277,6 +278,7 @@ async fn test_task_decomposition_dag_blocked() {
     let claimed2 = svc.claim_task("agent2").await.unwrap();
     assert!(claimed2.is_none());
 }
+
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
@@ -363,7 +365,7 @@ async fn test_task_decomposition_service_fail_task() {
 
     let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
-    let now = Utc::now();
+
     let main_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
@@ -380,8 +382,8 @@ async fn test_task_decomposition_service_fail_task() {
         ultraplan_phase: None,
         deliberation_log: None,
         depth: Some(1),
-        created_at: now,
-        updated_at: now,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
         action_risk: None,
         approval_status: None,
         proposed_content: None,
