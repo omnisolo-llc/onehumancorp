@@ -7,6 +7,8 @@ use super::{Tool, ToolExecutor};
 
 struct EditExecutor {
     working_dir: Option<std::path::PathBuf>,
+    #[cfg(test)]
+    mock_command: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -49,7 +51,92 @@ impl ToolExecutor for EditExecutor {
             .await
             .map_err(|e| format!("edit: write {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
+        // Verification Loop Mechanic: Computational/Guides
+        if actual_path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            #[cfg(not(test))]
+            let base_cmd = "cargo";
+
+            #[cfg(test)]
+            let base_cmd = self.mock_command.as_deref().unwrap_or("cargo");
+
+            let mut cmd = tokio::process::Command::new(base_cmd);
+            cmd.arg("check").arg("--color=never");
+
+            #[cfg(test)]
+            if base_cmd == "echo" {
+                // For testing success
+                cmd.arg("success");
+            } else if base_cmd == "false" {
+                // For testing failure exit code
+            }
+
+            if let Some(wd) = &self.working_dir {
+                cmd.current_dir(wd);
+            }
+
+            let output = cmd.output().await.map_err(|e| {
+                ToolError::LlmRecoverable(format!("edit verification failed: failed to execute cargo check: {}", e))
+            })?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Verification loop failed: cargo check returned errors after editing {}.\nStdout: {}\nStderr: {}",
+                    path, stdout, stderr
+                )));
+            }
+        }
+
         Ok(format!("File edited: {}", path))
+    }
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use ohc_builtin_agent_core::types::ToolError;
+
+    #[tokio::test]
+    async fn test_edit_execute_verification_success() {
+        let _ = tokio::fs::write("test_edit_verification.rs", "fn main() { println!(\"old\"); }").await;
+        let executor = EditExecutor {
+            working_dir: None,
+            mock_command: Some("echo".to_string()),
+        };
+        let args = json!({
+            "path": "test_edit_verification.rs",
+            "old_str": "println!(\"old\");",
+            "new_str": "println!(\"new\");"
+        });
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "File edited: test_edit_verification.rs");
+        let _ = tokio::fs::remove_file("test_edit_verification.rs").await;
+    }
+
+    #[tokio::test]
+    async fn test_edit_execute_verification_failure() {
+        let _ = tokio::fs::write("test_edit_verification_fail.rs", "fn main() { println!(\"old\"); }").await;
+        let executor = EditExecutor {
+            working_dir: None,
+            mock_command: Some("false".to_string()),
+        };
+        let args = json!({
+            "path": "test_edit_verification_fail.rs",
+            "old_str": "println!(\"old\");",
+            "new_str": "println!(\"new\");"
+        });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Verification loop failed: cargo check returned errors after editing"));
+        } else {
+            panic!("Expected LlmRecoverable error for verification failure");
+        }
+        let _ = tokio::fs::remove_file("test_edit_verification_fail.rs").await;
     }
 }
 
@@ -78,6 +165,10 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path", "old_str", "new_str"]
         }),
-        execute: Arc::new(EditExecutor { working_dir }),
+        execute: Arc::new(EditExecutor {
+            working_dir,
+            #[cfg(test)]
+            mock_command: None,
+        }),
     }
 }
