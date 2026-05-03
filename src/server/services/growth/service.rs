@@ -232,11 +232,12 @@ impl GrowthService for MyGrowthService {
         // Implement Credit Attribution: "both get 1 month free Pro"
         // In a real app we'd update a billing or organizations table.
         // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
+        sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
             .bind(&org_id)
             .bind(&req.id)
             .execute(&mut *tx)
-            .await;
+            .await
+            .map_err(|e| Status::internal(format!("failed to update organization: {}", e)))?;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -269,11 +270,12 @@ impl GrowthService for MyGrowthService {
         // Implement Credit Attribution: "both get 1 month free Pro"
         // In a real app we'd update a billing or organizations table.
         // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
+        sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
             .bind(&org_id)
             .bind(&req.id)
             .execute(&mut *tx)
-            .await;
+            .await
+            .map_err(|e| Status::internal(format!("failed to update organization: {}", e)))?;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 

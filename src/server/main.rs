@@ -966,7 +966,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
-            let _ = sqlx::query(
+            sqlx::query(
                 "CREATE TABLE IF NOT EXISTS consolidated_memory (
                     id TEXT PRIMARY KEY,
                     tenant_id TEXT NOT NULL,
@@ -978,9 +978,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );"
             )
             .execute(pool)
-            .await;
+            .await
+            .expect("failed to create consolidated_memory");
         }
-
         let db_path = "ohc-standalone.db";
         if std::path::Path::new(db_path).exists() {
             #[cfg(unix)]

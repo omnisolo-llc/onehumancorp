@@ -327,9 +327,10 @@ impl UserRepository for PgUserRepository {
         .map_err(|e| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
             .execute(&self.pool)
-            .await;
+            .await
+            .map_err(|e| e.to_string())?;
 
         Ok(())
     }
