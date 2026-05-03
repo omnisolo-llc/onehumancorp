@@ -595,8 +595,8 @@ impl Agent {
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
-                            content: msg,
-                            error: String::new(), // Note: treating the error as the actual content!
+                            content: String::new(),
+                            error: msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -687,7 +687,8 @@ impl Agent {
                                 result: msg.clone(),
                                 iteration,
                             });
-                            content = msg;
+                            error = msg;
+                            content = String::new();
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
@@ -1503,7 +1504,26 @@ mod tests {
         assert!(transient_handled);
 
         // 2. LLM Recoverable
-        let client_llm = Arc::new(MockLlmClient {
+        struct LlmRecoverableMockClient {
+            pub responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+            pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for LlmRecoverableMockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req);
+                let mut resps = self.responses.lock().await;
+                if !resps.is_empty() {
+                    Ok(resps.remove(0))
+                } else {
+                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                }
+            }
+        }
+
+        let client_llm = Arc::new(LlmRecoverableMockClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
                     role: Role::Assistant,
@@ -1517,7 +1537,7 @@ mod tests {
                 message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
             }]),
         });
-        let agent2 = Agent::new(client_llm, tools.clone());
+        let agent2 = Agent::new(client_llm.clone(), tools.clone());
         let mut events2 = vec![];
         let mut on_event2 = |e| { events2.push(e); };
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
@@ -1529,6 +1549,16 @@ mod tests {
             }
         });
         assert!(llm_recoverable_handled);
+
+        let reqs = client_llm.requests.lock().await;
+        let last_req = reqs.last().unwrap();
+        let last_msg = last_req.messages.last().unwrap();
+        // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
+        // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
+        // Let's actually check the `messages` array in the last request.
+        let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
+        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
         let client_user = Arc::new(MockLlmClient {
