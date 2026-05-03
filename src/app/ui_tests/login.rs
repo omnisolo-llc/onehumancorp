@@ -146,3 +146,59 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+// --- Added Regression Tests ---
+
+use slint::ComponentHandle;
+
+#[test]
+fn test_login_window_size() {
+    let ui = create();
+    let window = ui.window();
+    let size = window.size();
+    // we cannot test size explicitly easily as it relies on windowing system in test env
+    // but we can set and get size
+    window.set_size(slint::PhysicalSize::new(375, 600));
+    assert_eq!(window.size().width, 375);
+}
+
+#[test]
+fn test_login_loading_state() {
+    let ui = create();
+    assert_eq!(ui.get_loading(), false);
+    ui.set_loading(true);
+    assert_eq!(ui.get_loading(), true);
+}
+
+#[test]
+fn test_login_show_verification_state() {
+    let ui = create();
+    assert_eq!(ui.get_show_verification(), false);
+    ui.set_show_verification(true);
+    assert_eq!(ui.get_show_verification(), true);
+}
+
+#[test]
+fn test_login_oauth_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *c.borrow_mut() = true;
+    });
+    ui.invoke_oauth_login("SSO".into());
+    assert_eq!(*called.borrow(), true);
+}
+
+#[test]
+fn test_login_open_settings_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_open_settings(move || {
+        *c.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert_eq!(*called.borrow(), true);
+}
