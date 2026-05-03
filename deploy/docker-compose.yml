@@ -42,8 +42,8 @@ services:
           cpus: "0.5"
           memory: 128M
         reservations:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
     image: onehumancorp/server:latest
     environment:
       LOG_LEVEL: "info"
@@ -137,8 +137,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.3"
+          memory: 64M
 
   powersync:
     image: journeyapps/powersync-service:latest
@@ -156,8 +156,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.3"
+          memory: 64M
 
   chatwoot-migrate:
     image: chatwoot/chatwoot:latest
@@ -196,8 +196,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.3"
+          memory: 64M
 
   chatwoot-worker:
     image: chatwoot/chatwoot:latest

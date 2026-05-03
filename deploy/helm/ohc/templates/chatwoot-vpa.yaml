@@ -11,7 +11,7 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-chatwoot
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
