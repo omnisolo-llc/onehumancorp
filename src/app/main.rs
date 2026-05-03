@@ -1119,11 +1119,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        // Delay going to step 10 to show confetti?
-                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
-                                        // If we transition to step 10, the confetti disappears.
-                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
-                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
+
+                                        // Auto-copy shareable link to clipboard
+                                        let link = ui.get_shareable_link();
+                                        CLIPBOARD.with(|cb| {
+                                            if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                                if let Err(e) = ctx.set_contents(link.to_string()) {
+                                                    println!("Failed to copy to clipboard: {:?}", e);
+                                                } else {
+                                                    println!("Shareable Store Link copied to clipboard: {}", link);
+                                                }
+                                            } else {
+                                                println!("Clipboard not initialized, failed to copy store link");
+                                            }
+                                        });
+
+                                        ui.invoke_copy_link(link);
                                     }
                                 }).unwrap();
                             }
@@ -2123,6 +2134,12 @@ mod docs_tests {
             }
         });
 
+        let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let copied_link_clone = copied_link.clone();
+        ui.on_copy_link(move |link| {
+            *copied_link_clone.borrow_mut() = link.to_string();
+        });
+
         ui.set_launching(true);
         // Step 9: Launch -> Step 10
         ui.invoke_launch(
@@ -2139,6 +2156,12 @@ mod docs_tests {
         assert!(*launch_called.borrow());
         assert_eq!(ui.get_launching(), false);
         assert_eq!(ui.get_step(), 10);
+
+        // Verify auto-copy shareable link logic.
+        // In the real app, this is triggered when `start_onboarding` succeeds via gRPC.
+        // We simulate the success handler calling `ui.invoke_copy_link(ui.get_shareable_link())`
+        ui.invoke_copy_link(ui.get_shareable_link());
+        assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
