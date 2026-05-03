@@ -57,12 +57,95 @@ impl DB {
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
 
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-            .execute(&self.pool)
-            .await?;
+        match &self.store {
+            DbStore::Postgres => {
+                sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
+                    .execute(&self.pool)
+                    .await?;
 
-        let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-        migrator.run(&self.pool).await?;
+                let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
+                migrator.run(&self.pool).await?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let schema = "
+                    CREATE TABLE IF NOT EXISTS agent_session_data (
+                        session_id TEXT PRIMARY KEY,
+                        agent_id TEXT NOT NULL,
+                        context_data TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
+                        memory_id TEXT PRIMARY KEY,
+                        context TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS shared_tasks (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        agent_id TEXT,
+                        priority TEXT NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        parent_plan_id TEXT,
+                        dependencies TEXT NOT NULL DEFAULT '[]',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        auto_dreamed BOOLEAN DEFAULT 0,
+                        locked_until DATETIME,
+                        assigned_agent_id TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS swarm_tasks (
+                        id TEXT PRIMARY KEY,
+                        mission_id TEXT NOT NULL,
+                        parent_plan_id TEXT,
+                        dependencies TEXT NOT NULL DEFAULT '[]',
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        priority TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id TEXT,
+                        locked_until DATETIME,
+                        payload TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        auto_dreamed BOOLEAN DEFAULT 0
+                    );
+                    CREATE TABLE IF NOT EXISTS agent_memories (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        raw_content TEXT NOT NULL,
+                        summary_embedding BLOB
+                    );
+                    CREATE TABLE IF NOT EXISTS autodream_memories (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        agent_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        source_type TEXT NOT NULL
+                    );
+                    CREATE TABLE IF NOT EXISTS agent_missions (
+                        id TEXT PRIMARY KEY,
+                        status TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        organization_id TEXT NOT NULL DEFAULT 'system',
+                        cloud_mission_id TEXT,
+                        sync_error TEXT,
+                        last_synced_at DATETIME,
+                        synced_to_cloud BOOLEAN DEFAULT 0
+                    );
+                ";
+                sqlx::query(schema).execute(sqlite_pool).await?;
+            }
+        }
 
         Ok(())
     }
