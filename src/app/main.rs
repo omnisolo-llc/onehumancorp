@@ -2401,9 +2401,99 @@ mod docs_tests {
         assert_eq!(help_center.get_search_query(), "");
     }
 
+
+
     #[test]
+    fn test_e2e_ai_help_chat_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
+
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        ai_chat.set_user_input("How do I sell a product?".into());
+        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_called_clone = send_called.clone();
+        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+        ai_chat.invoke_send_message();
+        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+    }
+
+    #[test]
+    fn test_e2e_help_center_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_help_center();
+        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+
+        let help_center = app::HelpCenter::new().unwrap();
+        assert_eq!(help_center.get_search_query(), "");
+
+        help_center.set_search_query("how to add products".into());
+        assert_eq!(help_center.get_search_query(), "how to add products");
+    }
+
+#[test]
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
