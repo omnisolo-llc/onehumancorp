@@ -78,6 +78,104 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+pub static TOOLTIP_REGISTRY: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, String>>> = std::sync::OnceLock::new();
+
+fn get_tooltip_registry() -> &'static std::sync::Mutex<std::collections::HashMap<String, String>> {
+    TOOLTIP_REGISTRY.get_or_init(|| {
+        let mut m = std::collections::HashMap::new();
+        m.insert("ask_ai".to_string(), "Ask the AI Assistant".to_string());
+        m.insert("menu".to_string(), "Open Menu".to_string());
+        m.insert("help_center".to_string(), "Help Center".to_string());
+        m.insert("add_product".to_string(), "Add a new product".to_string());
+        m.insert("view_orders".to_string(), "View your orders".to_string());
+        m.insert("messages".to_string(), "View customer messages".to_string());
+        std::sync::Mutex::new(m)
+    })
+}
+
+fn setup_dashboard_documentation(dashboard: &app::Dashboard) {
+    dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        let registry = get_tooltip_registry().lock().unwrap();
+        if let Some(text) = registry.get(id.as_str()) {
+            text.clone().into()
+        } else {
+            "".into()
+        }
+    });
+
+    let help_center_ui = app::HelpCenter::new().unwrap();
+    let help_center_handle = help_center_ui.as_weak();
+    Box::leak(Box::new(help_center_ui));
+
+    let ai_chat_ui = app::AiHelpChat::new().unwrap();
+    let ai_chat_handle = ai_chat_ui.as_weak();
+
+    let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+    let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+    Box::leak(Box::new(interactive_walkthrough_ui));
+
+    let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+    let video_tutorials_handle = video_tutorials_ui.as_weak();
+    Box::leak(Box::new(video_tutorials_ui));
+
+    let api_docs_ui = app::ApiDocs::new().unwrap();
+    let api_docs_handle = api_docs_ui.as_weak();
+    Box::leak(Box::new(api_docs_ui));
+
+    let release_notes_ui = app::ReleaseNotes::new().unwrap();
+    let release_notes_handle = release_notes_ui.as_weak();
+    Box::leak(Box::new(release_notes_ui));
+
+    ai_chat_ui.on_send_message({
+        let chat_handle = ai_chat_handle.clone();
+        move || {
+            if let Some(ui) = chat_handle.upgrade() {
+                let input = ui.get_user_input();
+                println!("User asked AI Help: {}", input);
+                ui.set_user_input("".into());
+                // In a real implementation this would query the backend
+            }
+        }
+    });
+    Box::leak(Box::new(ai_chat_ui));
+
+    dashboard.on_open_help_center(move || {
+        if let Some(ui) = help_center_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    dashboard.on_open_ai_chat(move || {
+        if let Some(ui) = ai_chat_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    dashboard.on_open_interactive_walkthrough(move || {
+        if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    dashboard.on_open_video_tutorials(move || {
+        if let Some(ui) = video_tutorials_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    dashboard.on_open_api_docs(move || {
+        if let Some(ui) = api_docs_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    dashboard.on_open_release_notes(move || {
+        if let Some(ui) = release_notes_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -161,14 +259,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                _ => "".into(),
-                            }
-                        });
+                        setup_dashboard_documentation(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -198,14 +289,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                _ => "".into(),
-                            }
-                        });
+                        setup_dashboard_documentation(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -1005,78 +1089,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-
-                let help_center_ui = app::HelpCenter::new().unwrap();
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
-                let ai_chat_ui = app::AiHelpChat::new().unwrap();
-                let ai_chat_handle = ai_chat_ui.as_weak();
-
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
-
-                let video_tutorials_ui = app::VideoTutorials::new().unwrap();
-                let video_tutorials_handle = video_tutorials_ui.as_weak();
-                Box::leak(Box::new(video_tutorials_ui));
-
-                let api_docs_ui = app::ApiDocs::new().unwrap();
-                let api_docs_handle = api_docs_ui.as_weak();
-                Box::leak(Box::new(api_docs_ui));
-
-                let release_notes_ui = app::ReleaseNotes::new().unwrap();
-                let release_notes_handle = release_notes_ui.as_weak();
-                Box::leak(Box::new(release_notes_ui));
-
-                ai_chat_ui.on_send_message({
-                    let chat_handle = ai_chat_handle.clone();
-                    move || {
-                        if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
-                            ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
-                        }
-                    }
-                });
-                Box::leak(Box::new(ai_chat_ui));
-
-                dashboard.on_open_help_center(move || {
-                    if let Some(ui) = help_center_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_ai_chat(move || {
-                    if let Some(ui) = ai_chat_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_api_docs(move || {
-                    if let Some(ui) = api_docs_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_release_notes(move || {
-                    if let Some(ui) = release_notes_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
                 let gb_handle_for_dashboard = grow_business_handle.clone();
                 dashboard.on_action_grow_business(move || {
                     if let Some(ui) = gb_handle_for_dashboard.upgrade() {
@@ -2678,11 +2690,11 @@ mod docs_tests {
 
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                "help_center" => "Help Center".into(),
-                _ => "".into(),
+            let registry = get_tooltip_registry().lock().unwrap();
+            if let Some(text) = registry.get(id.as_str()) {
+                text.clone().into()
+            } else {
+                "".into()
             }
         });
 
