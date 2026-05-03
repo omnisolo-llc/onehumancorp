@@ -73,6 +73,29 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
+            // Explicitly secure the database file if we are creating it
+            if let Some(path_str) = path_str_opt {
+                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                if !db_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let _ = std::fs::OpenOptions::new()
+                            .create_new(true)
+                            .write(true)
+                            .mode(0o600)
+                            .open(db_path);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::OpenOptions::new()
+                            .create_new(true)
+                            .write(true)
+                            .open(db_path);
+                    }
+                }
+            }
+
             // SQLCipher support for standalone mode encryption
             if database_url.contains("cipher=sqlcipher") {
                 if let Some(key) = database_url.split("key=").nth(1) {
@@ -105,8 +128,7 @@ impl DB {
                         Ok(true)
                     })
                 })
-                .connect(&database_url)
-                .await?;
+                .connect_lazy(&database_url)?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
@@ -399,9 +421,13 @@ mod tests {
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
         // SAFETY: Test-only code setting environment variables
+        // With connect_lazy(), the failure happens upon the first query rather than on initialization.
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
         let db = DB::new().await;
-        assert!(db.is_err());
+        if let Ok(db) = db {
+            let res = db.get_completed_tasks().await;
+            assert!(res.is_err());
+        }
     }
 }
 
@@ -488,34 +514,19 @@ mod security_tests_final {
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
-        let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
-
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
-
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         let _ = DB::new().await;
-        let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
-        let _ = fs::File::create(&db_path);
-
-        // Override permissions because db_new() might have failed to do it properly in test sandbox
-        #[cfg(unix)]
-        {
-            let mut perms = fs::metadata(&db_path).unwrap().permissions();
-            perms.set_mode(0o600);
-            fs::set_permissions(&db_path, perms).unwrap();
-        }
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
 
         let parent_dir = db_path.parent().unwrap();
         assert!(parent_dir.exists(), "Secure directory should be created");
 
-        let meta = fs::metadata(&db_path).unwrap();
-        let mode = meta.permissions().mode();
-        assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let meta = fs::metadata(&db_path).unwrap();
+            let mode = meta.permissions().mode();
+            assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+        }
     }
 }
