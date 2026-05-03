@@ -150,9 +150,9 @@ mod tests {
     fn test_hello_world_agent_example() {
         let registry = Registry::default_registry();
         let provider = registry.get(ProviderType::Builtin).expect("Built-in provider not found");
-        println!("Successfully loaded provider: {}", provider.provider_type());
-        println!("Description: {}", provider.description());
-        println!("Is Authenticated: {}", provider.is_authenticated());
-        println!("Hello World! The agent provider is ready to use with zero configuration.");
+        tracing::info!("Successfully loaded provider: {}", provider.provider_type());
+        tracing::info!("Description: {}", provider.description());
+        tracing::info!("Is Authenticated: {}", provider.is_authenticated());
+        tracing::info!("Hello World! The agent provider is ready to use with zero configuration.");
     }
 }

@@ -23,7 +23,7 @@ impl PowerSyncOrchestrator {
             loop {
                 interval.tick().await;
                 if let Err(e) = self.push_sync().await {
-                    eprintln!("PowerSync push failed: {}", e);
+                    tracing::error!("PowerSync push failed: {}", e);
                 }
             }
         });

@@ -161,7 +161,7 @@ impl ASTValidator {
         // Advanced AST validation with tree-sitter
         let use_tree_sitter = std::env::var("OHC_USE_TREE_SITTER").unwrap_or_default() == "true";
         if use_tree_sitter {
-            println!("Using tree-sitter for AST validation...");
+            tracing::info!("Using tree-sitter for AST validation...");
             if command.contains("eval") {
                  return Err("eval is not allowed".to_string());
             }

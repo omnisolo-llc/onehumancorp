@@ -44,7 +44,7 @@ impl HandoffManager {
                                     .execute(&db_clone.pool)
                                     .await
                                 {
-                                    eprintln!("Failed to save state handoff to Postgres: error={}", e);
+                                    tracing::error!("Failed to save state handoff to Postgres: error={}", e);
                                 }
                             }
                             DbStore::Sqlite(sqlite_pool) => {
@@ -55,7 +55,7 @@ impl HandoffManager {
                                     .execute(sqlite_pool)
                                     .await
                                 {
-                                    eprintln!("Failed to save state handoff to Sqlite: error={}", e);
+                                    tracing::error!("Failed to save state handoff to Sqlite: error={}", e);
                                 }
                             }
                         }

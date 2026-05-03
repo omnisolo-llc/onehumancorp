@@ -437,7 +437,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
         if let Some(url) = redis_url {
             match RedisTransport::new(url).await {
                 Ok(t) => {
-                    println!("Initialized RedisTransport");
+                    tracing::info!("Initialized RedisTransport");
                     return Ok(Arc::new(t));
                 },
                 Err(e) => {
@@ -456,11 +456,11 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
                 Ok(t) => {
                     let t_clone = t.clone();
                     tokio::spawn(async move { t_clone.start_worker().await; });
-                    println!("Initialized IpcTransport (Standalone)");
+                    tracing::info!("Initialized IpcTransport (Standalone)");
                     return Ok(Arc::new(t));
                 },
                 Err(e) => {
-                    println!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                    tracing::info!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
                 }
             }
         }
@@ -469,16 +469,16 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     if let Some(url) = redis_url {
         match RedisTransport::new(url).await {
             Ok(t) => {
-                println!("Initialized RedisTransport (Standalone)");
+                tracing::info!("Initialized RedisTransport (Standalone)");
                 return Ok(Arc::new(t));
             },
             Err(e) => {
-                println!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                tracing::info!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
             }
         }
     }
 
-    println!("Initialized MemoryTransport");
+    tracing::info!("Initialized MemoryTransport");
     Ok(Arc::new(MemoryTransport::new()))
 }
 
@@ -663,7 +663,7 @@ mod tests {
         // Needs running Redis instance
         let transport = RedisTransport::new("redis://localhost:6379").await;
         if transport.is_err() {
-            println!("Skipping redis transport test due to missing redis connection");
+            tracing::info!("Skipping redis transport test due to missing redis connection");
             return;
         }
         let transport = transport.unwrap();

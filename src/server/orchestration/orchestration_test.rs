@@ -9,7 +9,7 @@ async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
     let db_builder = DB::new().await;
     if db_builder.is_err() {
-        println!("Skipping task decomposition service DB test");
+        tracing::info!("Skipping task decomposition service DB test");
         return;
     }
     let db = db_builder.unwrap();
@@ -160,7 +160,7 @@ async fn test_task_decomposition_service() {
 async fn test_task_decomposition_dag_blocked() {
     let db_builder = DB::new().await;
     if db_builder.is_err() {
-        println!("Skipping task decomposition dag DB test");
+        tracing::info!("Skipping task decomposition dag DB test");
         return;
     }
     let db = db_builder.unwrap();
@@ -288,7 +288,7 @@ async fn test_task_decomposition_dag_blocked() {
 async fn test_task_decomposition_service_fail_task() {
     let db_builder = DB::new().await;
     if db_builder.is_err() {
-        println!("Skipping task decomposition dag DB test");
+        tracing::info!("Skipping task decomposition dag DB test");
         return;
     }
     let db = db_builder.unwrap();

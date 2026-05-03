@@ -6,10 +6,10 @@ use uuid::Uuid;
 
 // Phase 1: Baseline / Phase 2: Parallel Fetching Optimization & Batching
 pub async fn bench_queue_latency() {
-    println!("Benchmarking Latency...");
+    tracing::info!("Benchmarking Latency...");
 
     // 1. Cloud Mode - Postgres
-    println!("--- Cloud Mode (Postgres) ---");
+    tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
@@ -28,26 +28,26 @@ pub async fn bench_queue_latency() {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
             bench_queue("Postgres", pg_queue).await;
         } else {
-             println!("Skipping Postgres bench due to connection failure");
+             tracing::info!("Skipping Postgres bench due to connection failure");
         }
     } else {
-         println!("Skipping Postgres bench due to missing DATABASE_URL");
+         tracing::info!("Skipping Postgres bench due to missing DATABASE_URL");
     }
 
     // 2. Standalone Mode - Memory
-    println!("--- Standalone Mode (Memory) ---");
+    tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("Memory", mem_queue).await;
 }
 
 pub async fn bench_dashboard_snapshot() {
-    println!("Benchmarking Dashboard Snapshot Fetching...");
+    tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url == "postgres://localhost/dummy" {
-        println!("Skipping bench_dashboard_snapshot due to missing db connection (dummy url)");
+        tracing::info!("Skipping bench_dashboard_snapshot due to missing db connection (dummy url)");
         return;
     }
 
@@ -65,7 +65,7 @@ pub async fn bench_dashboard_snapshot() {
     let pg_pool = match pool_res {
         Ok(p) => p,
         Err(e) => {
-            println!("Skipping bench_dashboard_snapshot due to missing db connection: {}", e);
+            tracing::info!("Skipping bench_dashboard_snapshot due to missing db connection: {}", e);
             return;
         }
     };
@@ -103,7 +103,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     fetch_times.sort();
-    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)
@@ -166,8 +166,8 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = dequeue_times[(iterations as f32 * 0.95) as usize];
     let deq_p99 = dequeue_times[(iterations as f32 * 0.99) as usize];
 
-    println!("{}: Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
-    println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    tracing::info!("{}: Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
 #[cfg(test)]

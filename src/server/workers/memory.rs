@@ -26,10 +26,10 @@ impl MemoryConsolidationWorker {
                 interval.tick().await;
                 let older_than = chrono::Utc::now() - chrono::Duration::days(180);
                 if let Err(e) = repository.prune_stale(older_than).await {
-                    eprintln!("Failed to prune stale context: {}", e);
+                    tracing::error!("Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = Self::resolve_conflicts(&repository).await {
-                    eprintln!("Failed to resolve memory conflicts: {}", e);
+                    tracing::error!("Failed to resolve memory conflicts: {}", e);
                 }
             }
         });
