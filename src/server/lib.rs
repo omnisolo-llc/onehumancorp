@@ -1029,10 +1029,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
-    let app = axum::Router::new()
+    let mesh_router = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .with_state(mesh_transport);
+        .with_state(mesh_transport.clone());
+
+    let hub_state = hub.clone();
+    let api_router = axum::Router::new()
+        .route("/api/costs", axum::routing::get(api::costs::get_costs))
+        .with_state(hub_state);
+
+    let app = axum::Router::new()
+        .merge(mesh_router)
+        .merge(api_router);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
