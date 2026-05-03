@@ -81,7 +81,7 @@ impl AutoDreamWorker {
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
-        
+
         for (id, org_id, payload, table) in tasks {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
