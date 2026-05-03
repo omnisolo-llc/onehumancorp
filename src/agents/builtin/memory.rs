@@ -19,7 +19,7 @@ pub struct PgVectorMemoryStore {
 
 impl PgVectorMemoryStore {
     pub async fn new(database_url: &str, organization_id: String) -> Result<Self, sqlx::Error> {
-        let pool = PgPool::connect(database_url).await?;
+        let pool = PgPool::connect_lazy(database_url)?;
         Ok(Self {
             pool,
             organization_id,
