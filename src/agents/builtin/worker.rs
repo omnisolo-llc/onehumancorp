@@ -46,7 +46,7 @@ impl TaskWorker {
                     };
                     
                     if let Some(issue) = issue {
-                        tracing::info!("Worker {}: processing issue {}", worker_id, issue.id);
+                        println!("Worker {}: processing issue {}", worker_id, issue.id);
                         Self::process_issue_internal(issue, plane_client.clone(), hub.clone()).await;
                     } else {
                         break; // Channel closed
@@ -70,7 +70,7 @@ impl TaskWorker {
                                 let dispatch_count = workers.min(issues.len());
                                 for issue in issues.into_iter().take(dispatch_count) {
                                     if let Err(_) = task_tx.send(issue).await {
-                                        tracing::info!("agent task worker: task channel full, dropping issue dispatch");
+                                        println!("agent task worker: task channel full, dropping issue dispatch");
                                         break;
                                     }
                                 }
@@ -86,15 +86,15 @@ impl TaskWorker {
     }
 
     async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
-        tracing::info!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
+        println!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
-            tracing::info!("failed to update plane issue status: {}", e);
+            println!("failed to update plane issue status: {}", e);
             return;
         }
         
         let mut agent_found = false;
-        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { tracing::info!("Failed to get agents: {}", e); Vec::new() });
+        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { eprintln!("Failed to get agents: {}", e); Vec::new() });
         
         for a in agents {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
@@ -116,10 +116,10 @@ impl TaskWorker {
                 
                 let _ = hub.publish(msg);
                 
-                tracing::info!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
+                println!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
                 
                 if a.provider_type == "builtin" || a.provider_type.is_empty() {
-                    tracing::info!("agent task worker: dispatching to builtin Rust agent via gRPC: {}", a.id);
+                    println!("agent task worker: dispatching to builtin Rust agent via gRPC: {}", a.id);
                     let payload_str = payload.to_string();
                     let role = a.role.clone();
                     let issue_id = issue.id.clone();
@@ -127,7 +127,7 @@ impl TaskWorker {
                     
                     tokio::spawn(async move {
                         if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
-                            tracing::info!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
+                            println!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
                         }
                     });
                 }
@@ -138,7 +138,7 @@ impl TaskWorker {
         }
         
         if !agent_found {
-            tracing::info!("agent task worker: issue marked in_progress but no available agents to delegate to");
+            println!("agent task worker: issue marked in_progress but no available agents to delegate to");
         }
     }
 
@@ -165,7 +165,7 @@ impl TaskWorker {
             }
         }
         
-        tracing::info!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
+        println!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
         Ok(())
     }
 }

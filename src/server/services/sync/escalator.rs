@@ -21,12 +21,12 @@ impl SyncEscalator {
             loop {
                 tokio::select! {
                     _ = shutdown_rx.recv() => {
-                        tracing::info!("SyncEscalator shutting down");
+                        println!("SyncEscalator shutting down");
                         break;
                     }
                     _ = ticker.tick() => {
                         if let Err(e) = self.process_escalations().await {
-                            tracing::info!("failed to process escalations: {}", e);
+                            eprintln!("failed to process escalations: {}", e);
                         }
                     }
                 }
@@ -65,11 +65,11 @@ impl SyncEscalator {
                             .await
                             .map_err(|e| e.to_string())?;
                     } else {
-                        tracing::info!("escalation failed with status: {}", resp.status());
+                        eprintln!("escalation failed with status: {}", resp.status());
                     }
                 }
                 Err(e) => {
-                    tracing::info!("failed to send escalation request: {}", e);
+                    eprintln!("failed to send escalation request: {}", e);
                 }
             }
         }
