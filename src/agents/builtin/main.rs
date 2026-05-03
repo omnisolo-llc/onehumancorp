@@ -67,6 +67,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &uuid::Uuid::new_v4().hyphenated().to_string(),
     );
 
+    let is_standalone = get_env("STANDALONE_MODE", "true") == "true";
+
     let cfg = AgentConfig {
         llm_provider: get_env("OHC_LLM_PROVIDER", ""),
         model: get_env("OHC_LLM_MODEL", ""),
@@ -79,6 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or(0.0),
         max_iterations: get_env_int("OHC_MAX_ITERATIONS", 100),
         max_context_messages: get_env_int("OHC_MAX_CONTEXT_MESSAGES", 80),
+        is_standalone,
     };
 
     let auth = auth_mode_from_env();
@@ -90,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 
-    let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
+    let is_cloud = !is_standalone;
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
     
     match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {

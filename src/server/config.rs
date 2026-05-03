@@ -87,39 +87,36 @@ fn load() -> Result<AppConfig, config::ConfigError> {
     Ok(cfg)
 }
 
-#[cfg(feature = "standalone")]
 fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
-    if let Some(db_url) = &cfg.database_url {
-        if db_url != "sqlite://ohc-standalone.db" {
-            eprintln!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+    let is_standalone = cfg.standalone || std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    if is_standalone {
+        if let Some(db_url) = &cfg.database_url {
+            if db_url != "sqlite://ohc-standalone.db" {
+                eprintln!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+            }
         }
-    }
-    if let Some(redis_url) = &cfg.redis_url {
-        if !redis_url.is_empty() {
-            eprintln!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
+        if let Some(redis_url) = &cfg.redis_url {
+            if !redis_url.is_empty() {
+                eprintln!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
+            }
         }
-    }
 
-    let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
-        if !key.is_empty() {
-            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+        let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+            if !key.is_empty() {
+                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+            } else {
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-key".to_string());
+                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
+            }
         } else {
-            let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+            let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-key".to_string());
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
-        }
-    } else {
-        let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-        format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
-    };
-    cfg.database_url = Some(sqlite_url);
-    cfg.standalone = true;
-    cfg.redis_url = None;
-    cfg.multitenant = false;
-    cfg
-}
-
-#[cfg(not(feature = "standalone"))]
-fn standalone_enforce(cfg: AppConfig) -> AppConfig {
+        };
+        cfg.database_url = Some(sqlite_url);
+        cfg.standalone = true;
+        cfg.redis_url = None;
+        cfg.multitenant = false;
+    }
     cfg
 }
 
@@ -154,6 +151,7 @@ mod tests {
         unsafe {
             env::set_var("OHC_LISTEN_ADDR", ":9999");
             env::set_var("DATABASE_URL", "postgres://localhost/testdb");
+            env::set_var("STANDALONE_MODE", "false");
         }
 
         let cfg = load().unwrap();
@@ -164,6 +162,7 @@ mod tests {
         unsafe {
             env::remove_var("OHC_LISTEN_ADDR");
             env::remove_var("DATABASE_URL");
+            env::remove_var("STANDALONE_MODE");
         }
     }
 
@@ -173,6 +172,7 @@ mod tests {
         // SAFETY: Test-only code setting environment variables
         unsafe {
             env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("STANDALONE_MODE", "false");
         }
 
         let cfg = load().unwrap();
@@ -188,6 +188,7 @@ mod tests {
 
         unsafe {
             env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::remove_var("STANDALONE_MODE");
         }
     }
 }

@@ -35,6 +35,7 @@ pub struct AgentConfig {
     pub temperature: f32,
     pub max_iterations: i32,
     pub max_context_messages: i32,
+    pub is_standalone: bool,
 }
 
 /// Implements the AgentService gRPC service.
