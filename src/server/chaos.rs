@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::time::Duration;
 
 pub struct ChaosEngine {}
