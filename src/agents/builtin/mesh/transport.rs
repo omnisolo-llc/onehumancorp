@@ -168,6 +168,7 @@ impl IpcTransport {
     }
 
     pub async fn start_worker(&self) {
+        use prost::Message as ProstMessage;
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
@@ -185,7 +186,9 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        if let Ok(message) = Message::decode(&payload[..]) {
+                            let _ = tx.send(message);
+                        }
                     }
                 }
             }
@@ -203,9 +206,13 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf).unwrap();
+
         sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
-            .bind(&message.payload)
+            .bind(buf)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
