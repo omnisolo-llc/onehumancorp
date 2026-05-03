@@ -8,6 +8,7 @@ export component InteractiveWalkthrough inherits Window {
     always-on-top: true;
 
     in-out property <int> current_step: 0;
+    callback walkthrough_completed();
 
     Rectangle {
         background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -52,7 +53,10 @@ export component InteractiveWalkthrough inherits Window {
 
                 Button {
                     text: "Skip tour";
-                    clicked => { root.visible = false; }
+                    clicked => {
+                        root.visible = false;
+                        walkthrough_completed();
+                    }
                 }
 
                 Button {
@@ -62,6 +66,7 @@ export component InteractiveWalkthrough inherits Window {
                             current_step += 1;
                         } else {
                             root.visible = false;
+                            walkthrough_completed();
                         }
                     }
                 }

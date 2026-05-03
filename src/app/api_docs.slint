@@ -6,6 +6,8 @@ export component ApiDocs inherits Window {
     title: "API Reference (Advanced)";
     background: #f8fafc;
 
+    callback copy_endpoint(string);
+
     VerticalBox {
         padding: 16px;
         spacing: 20px;
@@ -33,9 +35,16 @@ export component ApiDocs inherits Window {
                     Rectangle {
                         background: #1e293b; border-radius: 8px; // dark theme for code
                         VerticalBox {
-                            padding: 16px; spacing: 8px;
-                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
-                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            padding: 16px; spacing: 16px;
+                            VerticalBox {
+                                spacing: 8px;
+                                Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
+                                Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            }
+                            Button {
+                                text: "Copy Endpoint";
+                                clicked => { copy_endpoint("GET /v1/products"); }
+                            }
                         }
                     }
                 }
