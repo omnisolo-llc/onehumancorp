@@ -64,12 +64,21 @@ fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::n
 #[test]
 fn create_verify_tone() {
     let ui = create();
-    ui.set_tone("Aggressive".into());
-    assert_eq!(ui.get_tone(), "Aggressive");
-    ui.set_tone("t11".into());
-    assert_eq!(ui.get_tone(), "t11");
-    ui.set_tone("t12".into());
-    assert_eq!(ui.get_tone(), "t12");
+    ui.set_tone("Friendly & Warm".into());
+    assert_eq!(ui.get_tone(), "Friendly & Warm");
+    ui.set_tone("Professional".into());
+    assert_eq!(ui.get_tone(), "Professional");
+    ui.set_tone("Energetic".into());
+    assert_eq!(ui.get_tone(), "Energetic");
+}
+
+#[test]
+fn create_verify_new_ex_q_a() {
+    let ui = create();
+    ui.set_new_ex_q("test q".into());
+    assert_eq!(ui.get_new_ex_q(), "test q");
+    ui.set_new_ex_a("test a".into());
+    assert_eq!(ui.get_new_ex_a(), "test a");
 }
 
 #[test]
