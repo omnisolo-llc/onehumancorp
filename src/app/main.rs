@@ -884,24 +884,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
-                let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
 
-                let dashboard_handle_clone_add_product = dashboard_handle.clone();
-                let product_count_clone = product_count.clone();
                 dashboard.on_action_add_product(move || {
                     *add_product_called_clone.borrow_mut() = true;
-
-                    if let Some(ui) = dashboard_handle_clone_add_product.upgrade() {
-                        let count = *product_count_clone.borrow();
-                        if count >= 10 { // Free tier limit
-                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
-                            ui.set_show_upgrade_prompt(true);
-                        } else {
-                            *product_count_clone.borrow_mut() += 1;
-                        }
-                    }
                 });
 
                 let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1135,18 +1122,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
 
     let agents_ui_handle = agents_ui.as_weak();
-    let agent_count = std::rc::Rc::new(std::cell::RefCell::new(1)); // Free tier starts with 1 agent, limit is 1
     let agent_hire_handle = agent_hire_ui.as_weak();
     agents_ui.on_hire_agent(move || {
-        if let Some(ui) = agents_ui_handle.upgrade() {
-            let count = *agent_count.borrow();
-            if count >= 1 {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
-                ui.set_show_upgrade_prompt(true);
-            } else {
-                if let Some(hire_ui) = agent_hire_handle.upgrade() {
-                    let _ = hire_ui.show();
-                }
+        if let Some(_ui) = agents_ui_handle.upgrade() {
+            if let Some(hire_ui) = agent_hire_handle.upgrade() {
+                let _ = hire_ui.show();
             }
         }
     });
@@ -3058,44 +3038,29 @@ mod docs_tests {
 
         // Test dashboard product limit soft paywall
         let dashboard_ui = app::Dashboard::new().unwrap();
-        let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Free tier product limit mock
         let dashboard_handle_add_product = dashboard_ui.as_weak();
-        let product_count_clone = product_count.clone();
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                let count = *product_count_clone.borrow();
-                if count >= 10 { // Free tier limit
-                            ui.set_upgrade_prompt_message("You've added 10 products! Upgrade to our Pro plan to list even more items and grow your store.".into());
-                    ui.set_show_upgrade_prompt(true);
-                } else {
-                    *product_count_clone.borrow_mut() += 1;
-                }
+                ui.set_show_upgrade_prompt(false);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
-        assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
+        assert!(!dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should NOT show when adding product (mock limit removed)");
 
         // Test agents limit soft paywall
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
-        let agent_count = std::rc::Rc::new(std::cell::RefCell::new(1)); // Free tier limit mock
 
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                let count = *agent_count.borrow();
-                if count >= 1 {
-                ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
-                    ui.set_show_upgrade_prompt(true);
-                } else {
-                    *agent_count.borrow_mut() += 1;
-                }
+                ui.set_show_upgrade_prompt(false);
             }
         });
 
         agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        assert!(!agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should NOT show when hiring agent (mock limit removed)");
     }
 
     #[test]
