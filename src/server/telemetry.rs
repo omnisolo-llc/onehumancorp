@@ -44,6 +44,18 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
+pub async fn record_bubblewrap_spawn_total(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "BubblewrapSpawnTotal", "counter", count, serde_json::json!({})).await
+}
+
+pub async fn record_bubblewrap_execution_latency(pool: &PgPool, latency_ms: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "BubblewrapExecutionLatency", "histogram", latency_ms, serde_json::json!({})).await
+}
+
+pub async fn record_bubblewrap_violation(pool: &PgPool, count: f32, command: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "BubblewrapViolationTotal", "counter", count, serde_json::json!({ "command": command })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

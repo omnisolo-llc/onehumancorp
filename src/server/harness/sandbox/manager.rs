@@ -1,8 +1,7 @@
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
-use crate::telemetry::buffer_metric;
+use crate::telemetry::{record_bubblewrap_spawn_total, record_bubblewrap_violation};
 use sqlx::PgPool;
-use serde_json::json;
 
 pub struct SandboxManager {
     evaluator: PermissionEvaluator,
@@ -22,27 +21,13 @@ impl SandboxManager {
     pub async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
         // Record wrapping metrics if pool available
         if let Some(pool) = &self.pool {
-            let labels = json!({ "command": cmd });
-            let _ = buffer_metric(
-                pool,
-                "harness.sandbox.wrapped_executions",
-                "counter",
-                1.0,
-                labels,
-            ).await;
+            let _ = record_bubblewrap_spawn_total(pool, 1.0).await;
         }
 
         if !self.evaluator.evaluate(cmd) {
             // Record violation metrics
             if let Some(pool) = &self.pool {
-                let labels = json!({ "command": cmd });
-                let _ = buffer_metric(
-                    pool,
-                    "harness.sandbox.violations",
-                    "counter",
-                    1.0,
-                    labels,
-                ).await;
+                let _ = record_bubblewrap_violation(pool, 1.0, cmd).await;
             }
             return Err("Command execution denied by sandbox policy".to_string());
         }

@@ -90,6 +90,24 @@ mod tests {
         assert!(res.is_ok());
     }
 
+    #[tokio::test]
+    async fn test_bubblewrap_metrics() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_bubblewrap_spawn_total(&pool, 1.0).await;
+        assert!(res.is_ok());
+
+        let res = crate::telemetry::record_bubblewrap_execution_latency(&pool, 150.0).await;
+        assert!(res.is_ok());
+
+        let res = crate::telemetry::record_bubblewrap_violation(&pool, 1.0, "sudo rm -rf /").await;
+        assert!(res.is_ok());
+    }
+
     #[test]
     fn test_no_pii_logging_statements() {
         use walkdir::WalkDir;
