@@ -90,7 +90,9 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>, // key -> user_id
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
+    #[allow(dead_code)]
     secret: Vec<u8>,
+    #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
 }
 
