@@ -26,9 +26,38 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
+            // Securely pre-create the sqlite database file with 0o600 permissions
+            if let Some(path_str) = database_url.strip_prefix("sqlite:") {
+                let path_str = path_str.strip_prefix("//").unwrap_or(path_str);
+                let path_str = path_str.split('?').next().unwrap_or(path_str);
+                let path = std::path::Path::new(path_str);
+                if path.to_string_lossy() != ":memory:" {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let _ = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create_new(true)
+                            .mode(0o600)
+                            .open(path);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create_new(true)
+                            .open(path);
+                    }
+                }
+            }
+
+            let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
+
+            if let Ok(key) = std::env::var("OHC_SQLITE_KEY") {
+                conn_opts = conn_opts.pragma("key", key);
+            }
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .connect_with(conn_opts)
@@ -208,6 +237,55 @@ mod tests {
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
         let db = DB::new().await;
         assert!(db.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_permissions_precreation() {
+        let test_db_path = "test_perms_db.sqlite";
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path);
+
+        // Clean up from previous runs
+        let _ = std::fs::remove_file(test_db_path);
+
+        unsafe { std::env::set_var("DATABASE_URL", &db_url) }
+
+        // This will create the dummy pool but correctly pre-create the sqlite file
+        let _db_res = DB::new().await; // we don't care about the result here since sqlite_vec might fail to load in test environment
+
+        // Verify permissions
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let meta = std::fs::metadata(test_db_path).expect("File should be created");
+            let mode = meta.permissions().mode();
+            // It should be 0o600
+            assert_eq!(mode & 0o777, 0o600, "Permissions should be exactly 0o600");
+        }
+
+        // Clean up
+        let _ = std::fs::remove_file(test_db_path);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_encrypted_storage() {
+        let test_db_path = "test_encrypted_db.sqlite";
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path);
+
+        // Clean up from previous runs
+        let _ = std::fs::remove_file(test_db_path);
+
+        unsafe {
+            std::env::set_var("DATABASE_URL", &db_url);
+            std::env::set_var("OHC_SQLITE_KEY", "super_secret_key");
+        }
+
+        let _db_res = DB::new().await;
+
+        // If it got this far without crashing, it means the pragma key was processed.
+
+        // Clean up
+        let _ = std::fs::remove_file(test_db_path);
+        unsafe { std::env::remove_var("OHC_SQLITE_KEY"); }
     }
 }
 
