@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 #[cfg(test)]
 use crate::app;
 use slint::ComponentHandle;
