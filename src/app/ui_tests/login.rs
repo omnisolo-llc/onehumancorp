@@ -146,3 +146,60 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+// --- Callbacks and interaction ---
+
+#[test]
+fn login_flow_open_settings() {
+    let ui = create();
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let c = counter.clone();
+    ui.on_open_settings(move || { *c.borrow_mut() += 1; });
+
+    ui.invoke_open_settings();
+    assert_eq!(*counter.borrow(), 1);
+}
+
+#[test]
+fn login_flow_resend_verification() {
+    let ui = create();
+    let received = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let r = received.clone();
+    ui.on_resend_verification(move |u| { *r.borrow_mut() = u.to_string(); });
+
+    ui.invoke_resend_verification("test_user".into());
+    assert_eq!(*received.borrow(), "test_user");
+}
+
+#[test]
+fn login_flow_oauth_login() {
+    let ui = create();
+    let received = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let r = received.clone();
+    ui.on_oauth_login(move |p| { *r.borrow_mut() = p.to_string(); });
+
+    ui.invoke_oauth_login("Google".into());
+    assert_eq!(*received.borrow(), "Google");
+}
+
+#[test]
+fn login_flow_start_setup_wizard() {
+    let ui = create();
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let c = counter.clone();
+    ui.on_start_setup_wizard(move || { *c.borrow_mut() += 1; });
+
+    ui.invoke_start_setup_wizard();
+    assert_eq!(*counter.borrow(), 1);
+}
+
+#[test]
+fn login_flow_oauth_apple() {
+    let ui = create();
+    let received = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let r = received.clone();
+    ui.on_oauth_login(move |p| { *r.borrow_mut() = p.to_string(); });
+
+    ui.invoke_oauth_login("Apple".into());
+    assert_eq!(*received.borrow(), "Apple");
+}

@@ -3,7 +3,8 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
-    width: 400px;
+    min-width: 375px;
+    preferred-width: 400px;
     height: 600px;
     title: "One Human Corp - Login";
 
@@ -108,7 +109,7 @@ export component Login inherits Window {
                 }
                 
                 Button {
-                    text: "⚙ Fix Login Issues";
+                    text: "App Settings";
                     clicked => { open_settings(); }
                 }
             }
