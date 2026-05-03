@@ -168,6 +168,7 @@ impl IpcTransport {
     }
 
     pub async fn start_worker(&self) {
+        use prost::Message as ProstMessage;
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
@@ -185,7 +186,14 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        match Message::decode(&payload[..]) {
+                            Ok(message) => {
+                                let _ = tx.send(message);
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to decode IPC message payload for topic {}: {}", topic, e);
+                            }
+                        }
                     }
                 }
             }
@@ -203,9 +211,12 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let buf = message.encode_to_vec();
+
         sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
-            .bind(&message.payload)
+            .bind(&buf)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -329,8 +340,7 @@ impl MeshTransport for RedisTransport {
 
         let mut conn = self.publish_conn.lock().await;
 
-        let mut buf = Vec::new();
-        message.encode(&mut buf).unwrap();
+        let buf = message.encode_to_vec();
         let payload_b64 = STANDARD.encode(&buf);
 
         let _: () = conn.publish(topic, payload_b64).await.map_err(|e| e.to_string())?;
@@ -342,8 +352,7 @@ impl MeshTransport for RedisTransport {
         use futures_util::StreamExt;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
-        #[allow(deprecated)]
-        let mut pubsub = self.client.get_async_connection().await.map_err(|e| e.to_string())?.into_pubsub();
+        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
 
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
@@ -352,8 +361,9 @@ impl MeshTransport for RedisTransport {
             while let Some(msg) = stream.next().await {
                 if let Ok(payload_b64) = msg.get_payload::<String>() {
                     if let Ok(buf) = STANDARD.decode(&payload_b64) {
-                        if let Ok(message) = Message::decode(&buf[..]) {
-                            handler(message);
+                        match Message::decode(&buf[..]) {
+                            Ok(message) => handler(message),
+                            Err(e) => eprintln!("Failed to decode Redis message payload: {}", e),
                         }
                     }
                 }
@@ -520,6 +530,45 @@ mod tests {
         transport.publish("ipc_test_topic", msg).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transport_protobuf_encoding() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_proto_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.action == "ipc_proto_topic" && msg.payload == b"proto_payload" && msg.agent_id == "test_agent" && msg.status == "processing" {
+                received_clone.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = transport.subscribe("ipc_proto_topic", handler).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let msg = Message {
+            agent_id: "test_agent".to_string(),
+            action: "ipc_proto_topic".to_string(),
+            status: "processing".to_string(),
+            payload: b"proto_payload".to_vec(),
+        };
+
+        transport.publish("ipc_proto_topic", msg).await.unwrap();
+
+        // Wait to allow polling and decoding to happen
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
         assert!(received.load(Ordering::SeqCst));
         cancel();
