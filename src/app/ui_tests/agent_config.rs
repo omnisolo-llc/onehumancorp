@@ -32,10 +32,10 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
     let ui = create();
     let called_agent = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_agent.clone();
-    ui.on_activate_agent(move |name, _, _, _| { *c.borrow_mut() = name.to_string(); });
-    
+    ui.on_activate_agent(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
+
     ui.set_selected_agent("Robot".into());
-    ui.invoke_activate_agent("Robot".into(), true, false, "Daily".into());
+    ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into());
     assert_eq!(*called_agent.borrow(), "Robot");
 }
 
