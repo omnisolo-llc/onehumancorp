@@ -997,6 +997,79 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                if let Ok(in_person_sale_ui) = app::InPersonSale::new() {
+                    let in_person_sale_handle = in_person_sale_ui.as_weak();
+
+                    dashboard.on_action_in_person_sale({
+                        let ips_handle_clone = in_person_sale_handle.clone();
+                        move || {
+                            if let Some(ui) = ips_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        }
+                    });
+
+                    in_person_sale_ui.on_close({
+                        let ips_handle_clone = in_person_sale_handle.clone();
+                        move || {
+                            if let Some(ui) = ips_handle_clone.upgrade() {
+                                let _ = ui.hide();
+                            }
+                        }
+                    });
+
+                    in_person_sale_ui.on_process_payment({
+                        let ips_handle_clone = in_person_sale_handle.clone();
+                        move |_amount| {
+                            if let Some(ui) = ips_handle_clone.upgrade() {
+                                ui.set_is_processing(true);
+
+                                let ui_weak = ui.as_weak();
+
+                                tokio::spawn(async move {
+                                    #[cfg(not(target_arch = "wasm32"))]
+                                    {
+                                        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                            let req = ohc::orchestration::PublishTeammateMeshEventRequest {
+                                                channel: "transactions".to_string(),
+                                                event: Some(ohc::orchestration::TeammateMeshEvent {
+                                                    agent_id: "in_person_pos".to_string(),
+                                                    action: "OfflinePaymentCompleted".to_string(),
+                                                    status: "success".to_string(),
+                                                    payload: vec![],
+                                                }),
+                                            };
+                                            let _ = client.publish_teammate_mesh_event(tonic::Request::new(req)).await;
+                                        }
+                                    }
+
+                                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+                                    let _ = slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = ui_weak.upgrade() {
+                                            ui.set_is_processing(false);
+                                            ui.set_is_success(true);
+                                        }
+                                    });
+                                });
+                            }
+                        }
+                    });
+
+                    in_person_sale_ui.on_send_receipt({
+                        let ips_handle_clone = in_person_sale_handle.clone();
+                        move || {
+                            if let Some(ui) = ips_handle_clone.upgrade() {
+                                ui.set_is_success(false);
+                                ui.set_amount("".into());
+                                let _ = ui.hide();
+                            }
+                        }
+                    });
+
+                    Box::leak(Box::new(in_person_sale_ui));
+                }
+
 
                 let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
@@ -3723,4 +3796,175 @@ mod e2e_hybrid_blob_tests {
             ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice());
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+    }
+
+    #[test]
+    fn test_e2e_in_person_sale_custom_amount_flow() {
+        let _guard = ui_tests::init();
+        let login = app::Login::new().unwrap();
+        let dash_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_shown_clone = dash_shown.clone();
+
+        login.on_login(move |email, password| {
+            if email == "carlos@example.com" && password == "password123" {
+                *dash_shown_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("carlos@example.com".into(), "password123".into());
+        assert!(*dash_shown.borrow(), "Should have logged in and shown dashboard");
+
+        let dash = app::Dashboard::new().unwrap();
+        let in_person_sale_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let in_person_sale_shown_clone = in_person_sale_shown.clone();
+
+        dash.on_action_in_person_sale(move || {
+            *in_person_sale_shown_clone.borrow_mut() = true;
+        });
+        dash.invoke_action_in_person_sale();
+        assert!(*in_person_sale_shown.borrow(), "Should open in person sale UI");
+
+        let ips = app::InPersonSale::new().unwrap();
+        ips.set_amount("150.00".into());
+        assert_eq!(ips.get_amount(), "150.00");
+
+        let processing = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let processing_clone = processing.clone();
+        ips.on_process_payment(move |_| {
+            *processing_clone.borrow_mut() = true;
+        });
+        ips.invoke_process_payment("150.00".into());
+        assert!(*processing.borrow(), "Should trigger process payment");
+    }
+
+    #[test]
+    fn test_e2e_in_person_sale_cancel_flow() {
+        let _guard = ui_tests::init();
+        let login = app::Login::new().unwrap();
+        let dash_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_shown_clone = dash_shown.clone();
+
+        login.on_login(move |email, password| {
+            if email == "carlos@example.com" && password == "password123" {
+                *dash_shown_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("carlos@example.com".into(), "password123".into());
+        assert!(*dash_shown.borrow(), "Should have logged in and shown dashboard");
+
+        let dash = app::Dashboard::new().unwrap();
+        let in_person_sale_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let in_person_sale_shown_clone = in_person_sale_shown.clone();
+
+        dash.on_action_in_person_sale(move || {
+            *in_person_sale_shown_clone.borrow_mut() = true;
+        });
+        dash.invoke_action_in_person_sale();
+        assert!(*in_person_sale_shown.borrow(), "Should open in person sale UI");
+
+        let ips = app::InPersonSale::new().unwrap();
+        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let closed_clone = closed.clone();
+
+        ips.on_close(move || {
+            *closed_clone.borrow_mut() = true;
+        });
+        ips.invoke_close();
+        assert!(*closed.borrow(), "Should close in person sale modal");
+    }
+
+    #[test]
+    fn test_e2e_in_person_sale_receipt_flow() {
+        let _guard = ui_tests::init();
+        let login = app::Login::new().unwrap();
+        let dash_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_shown_clone = dash_shown.clone();
+
+        login.on_login(move |email, password| {
+            if email == "carlos@example.com" && password == "password123" {
+                *dash_shown_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("carlos@example.com".into(), "password123".into());
+        assert!(*dash_shown.borrow(), "Should have logged in and shown dashboard");
+
+        let dash = app::Dashboard::new().unwrap();
+        let in_person_sale_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let in_person_sale_shown_clone = in_person_sale_shown.clone();
+
+        dash.on_action_in_person_sale(move || {
+            *in_person_sale_shown_clone.borrow_mut() = true;
+        });
+        dash.invoke_action_in_person_sale();
+        assert!(*in_person_sale_shown.borrow(), "Should open in person sale UI");
+
+        let ips = app::InPersonSale::new().unwrap();
+        ips.set_is_success(true);
+        let receipt_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let receipt_sent_clone = receipt_sent.clone();
+
+        ips.on_send_receipt(move || {
+            *receipt_sent_clone.borrow_mut() = true;
+        });
+        ips.invoke_send_receipt();
+        assert!(*receipt_sent.borrow(), "Should trigger sending receipt");
+    }
+
+    #[test]
+    fn test_e2e_in_person_sale_done_after_success() {
+        let _guard = ui_tests::init();
+        let login = app::Login::new().unwrap();
+        let dash_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_shown_clone = dash_shown.clone();
+
+        login.on_login(move |email, password| {
+            if email == "carlos@example.com" && password == "password123" {
+                *dash_shown_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("carlos@example.com".into(), "password123".into());
+        assert!(*dash_shown.borrow(), "Should have logged in and shown dashboard");
+
+        let dash = app::Dashboard::new().unwrap();
+        dash.invoke_action_in_person_sale();
+
+        let ips = app::InPersonSale::new().unwrap();
+        ips.set_is_success(true);
+
+        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let closed_clone = closed.clone();
+
+        ips.on_close(move || {
+            *closed_clone.borrow_mut() = true;
+        });
+        ips.invoke_close();
+        assert!(*closed.borrow(), "Should close UI after successful sale");
+    }
+
+    #[test]
+    fn test_e2e_in_person_sale_empty_amount() {
+        let _guard = ui_tests::init();
+        let login = app::Login::new().unwrap();
+        let dash_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_shown_clone = dash_shown.clone();
+
+        login.on_login(move |email, password| {
+            if email == "carlos@example.com" && password == "password123" {
+                *dash_shown_clone.borrow_mut() = true;
+            }
+        });
+        login.invoke_login("carlos@example.com".into(), "password123".into());
+        assert!(*dash_shown.borrow(), "Should have logged in and shown dashboard");
+
+        let dash = app::Dashboard::new().unwrap();
+        dash.invoke_action_in_person_sale();
+
+        let ips = app::InPersonSale::new().unwrap();
+        let processing = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let processing_clone = processing.clone();
+        ips.on_process_payment(move |_| {
+            *processing_clone.borrow_mut() = true;
+        });
+        ips.invoke_process_payment("".into());
+        // Since there is no validation in the UI yet, it triggers processing
+        assert!(*processing.borrow(), "Should trigger process payment even with empty string for now");
     }

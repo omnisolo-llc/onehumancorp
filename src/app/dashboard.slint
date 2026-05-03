@@ -53,6 +53,7 @@ export component Dashboard inherits Window {
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
+    callback action_in_person_sale();
     callback action_open_referrals();
     callback action_grow_business();
 
@@ -279,6 +280,29 @@ export component Dashboard inherits Window {
             VerticalBox {
                 alignment: center;
                 Button { text: "Share"; width: 64px; height: 44px; clicked => { action_share_store(); } }
+            }
+        }
+    }
+
+    // Floating '+' Button for In-Person Sale
+    Rectangle {
+        x: parent.width / 2 - 30px;
+        y: parent.height - 160px;
+        width: 60px;
+        height: 60px;
+        border-radius: 30px;
+        background: #f59e0b; // Amber color for prominence
+
+        TouchArea {
+            clicked => { action_in_person_sale(); }
+
+            Text {
+                text: "+";
+                color: white;
+                font-size: 32px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
     }

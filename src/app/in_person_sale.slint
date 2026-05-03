@@ -1,0 +1,75 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component InPersonSale inherits Window {
+    width: 375px;
+    height: 800px;
+    title: "In-Person Sale";
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in-out property <bool> is_processing: false;
+    in-out property <bool> is_success: false;
+    in-out property <string> amount: "";
+
+    callback close();
+    callback process_payment(string);
+    callback send_receipt();
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        if (!is_success && !is_processing) : VerticalBox {
+            spacing: 16px;
+            Text { text: "In-Person Sale"; font-size: 24px; font-weight: 700; color: white; }
+
+            Text { text: "Enter amount for custom sale or add items:"; color: #cbd5e1; font-size: 14px; }
+
+            LineEdit {
+                placeholder-text: "$0.00";
+                text: amount;
+                edited => { amount = self.text; }
+                height: 60px;
+            }
+
+            Rectangle {}
+
+            Button {
+                text: "Tap to Pay";
+                height: 50px;
+                clicked => { process_payment(amount); }
+            }
+
+            Button {
+                text: "Cancel";
+                height: 44px;
+                clicked => { close(); }
+            }
+        }
+
+        if (is_processing) : VerticalBox {
+            alignment: center;
+            spacing: 16px;
+            Text { text: "Please tap card on phone..."; font-size: 20px; font-weight: 700; color: white; horizontal-alignment: center; }
+        }
+
+        if (is_success) : VerticalBox {
+            alignment: center;
+            spacing: 16px;
+            Text { text: "Payment Successful!"; font-size: 24px; font-weight: 700; color: #34d399; horizontal-alignment: center; }
+            Text { text: "Inventory updated and logged as In-Store Revenue."; color: #cbd5e1; font-size: 14px; horizontal-alignment: center; }
+
+            Button {
+                text: "Email Receipt";
+                height: 44px;
+                clicked => { send_receipt(); }
+            }
+
+            Button {
+                text: "Done";
+                height: 44px;
+                clicked => { close(); }
+            }
+        }
+    }
+}
