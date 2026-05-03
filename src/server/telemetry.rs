@@ -6,6 +6,19 @@ pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<
     buffer_metric(pool, "autodream_records_synced_total", "counter", count, serde_json::json!({})).await
 }
 
+
+pub async fn record_autodream_processed_total(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_processed_total", "counter", count, serde_json::json!({ "mode": mode })).await
+}
+
+pub async fn record_autodream_batch_duration(pool: &PgPool, duration_ms: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_batch_duration_ms", "histogram", duration_ms, serde_json::json!({ "mode": mode })).await
+}
+
+pub async fn record_autodream_consolidation_error(pool: &PgPool, count: f32, mode: &str, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "autodream_consolidation_errors_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
+}
+
 pub async fn record_autodream_sync_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
 }

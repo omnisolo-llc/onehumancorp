@@ -399,6 +399,90 @@
       "style": {
         "backdrop-filter": "blur(20px) saturate(200%)"
       }
+    },
+    {
+      "id": 8,
+      "title": "AutoDream Memories Processed",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(autodream_processed_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 9,
+      "title": "AutoDream Batch Processing Latency",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(autodream_batch_duration_ms_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}} P95",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 10,
+      "title": "AutoDream Consolidation Errors",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(autodream_consolidation_errors_total[5m])) by (mode, error)",
+          "legendFormat": "{{mode}} - {{error}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
     }
   ],
   "schemaVersion": 38,
