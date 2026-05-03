@@ -100,6 +100,7 @@ message SubAgentRequest {
   // When empty, the receiving agent executes the request in-process via goroutine.
   string sub_agent_address = 8;
   string working_dir = 11;
+  string source_thread_id = 12;
   // Preferred configuration surface for sub-agent execution.
   AgentRuntimeConfig runtime_config = 9;
   // Toolset configuration for the sub-agent.
