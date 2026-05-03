@@ -7,11 +7,13 @@ use sqlx::Row;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 
+#[derive(Clone)]
 pub enum DbStore {
     Postgres,
     Sqlite(SqlitePool),
 }
 
+#[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
     pub store: DbStore,
