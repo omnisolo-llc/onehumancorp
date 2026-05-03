@@ -20,7 +20,7 @@ The CEO and Operations team utilize the Autonomous SRE system to identify, track
 
 ## 3. Implementation Details
 - **Architecture**: Integrated with the OpenTelemetry stack and Kubernetes Operator. The SRE engine interprets logs and traces in real-time.
-- **Stack**: Go 1.26, Redis, Postgres.
+- **Stack**: Rust, Redis, Postgres.
 - **Authentication**: OIDC logic determines human authorization for break-glass actions.
 
 ## 4. Edge Cases

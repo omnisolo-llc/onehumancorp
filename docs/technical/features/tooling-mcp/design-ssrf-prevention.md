@@ -47,7 +47,7 @@ The `Connect()` method in `Registry` will be updated to call `validateURL()` on 
 
 ## 5. Implementation Details
 - **Location:** `src/integrations/registry.go` and `src/integrations/registry_test.go`.
-- **Language:** Go 1.25.
+- **Language:** Rust.
 - **Dependencies:** Standard library `net` and `net/url`.
 
 </div>

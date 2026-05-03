@@ -23,7 +23,7 @@ The One Human Corp (OHC) backend codebase heavily instruments database query lat
 
 ## Implementation Prompt
 Create a new Grafana dashboard JSON file at `monitoring/dashboards/database_metrics.json`.
-The dashboard must visualize the following Prometheus metrics exported by our Go backend:
+The dashboard must visualize the following Prometheus metrics exported by our Rust backend:
 - `db_client_operation_duration_seconds_bucket` / `db_client_operation_duration_seconds_count`
 - `db_client_operation_errors_total`
 - `sqlite_lock_contention_total`

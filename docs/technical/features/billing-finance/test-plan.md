@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Billing & Finance Engine fe
 - OHC Hub configured with local test database for the billing ledger.
 
 ## Implementation Details
-- **Architecture**: Tested via Go 1.26 table-driven tests that utilize gomock for the MCP Gateway middleware interceptor. The integration layer tests against an active, seeded PostgreSQL instance to verify token ledger persistence.
+- **Architecture**: Tested via Rust table-driven tests that utilize gomock for the MCP Gateway middleware interceptor. The integration layer tests against an active, seeded PostgreSQL instance to verify token ledger persistence.
 - **Execution**: Hermetically executed under Bazel 9.0.0 (`bazelisk test //...`). Tests avoid any live external API calls to OpenAI or Anthropic, instead mocking the token response payloads in the interceptor layer.
 - **Validation**: >95% test coverage is strictly enforced. The suite validates accurate float arithmetic for dynamic model-aware pricing.
 

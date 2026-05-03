@@ -47,7 +47,7 @@ A high-level summary of the testing strategy for the Autonomous SRE Engine featu
 - ArgoCD deployed in the test cluster.
 
 ## Implementation Details
-- **Architecture**: The SRE testing framework leverages Go 1.26 table-driven tests against PostgreSQL event seeders. The OpenTelemetry/Prometheus collector is verified via simulated span injections over local gRPC loops.
+- **Architecture**: The SRE testing framework leverages Rust table-driven tests against PostgreSQL event seeders. The OpenTelemetry/Prometheus collector is verified via simulated span injections over local gRPC loops.
 - **Execution**: Run via `bazelisk test //...` across the repository.
 - **Rules of Engagement**: >95% test coverage is strictly enforced. The suite uses Gomock for internal interfaces but connects to a real Kubernetes control plane (minikube/kind) during integration tests.
 

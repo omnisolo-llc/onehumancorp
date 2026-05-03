@@ -20,7 +20,7 @@ The CEO utilizes the Compute Optimization layer to ensure their highest-priority
 
 ## 3. Implementation Details
 - **Architecture**: The OHC Kubernetes Operator watches for `TeamMember` resource changes and applies `nodeSelector` and `tolerations` dynamically based on the project priority.
-- **Stack**: Go 1.26, OpenTelemetry for scraping VRAM usage.
+- **Stack**: Rust, OpenTelemetry for scraping VRAM usage.
 - **State Serialization**: Checkpointers allow seamless movement of agents between GPU and CPU nodes during throttling.
 
 ## 4. Edge Cases
