@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 fn create() -> app::AgentStatusIndicatorWindow { crate::ui_tests::init(); app::AgentStatusIndicatorWindow::new().unwrap() }
 
