@@ -34,6 +34,7 @@ export component SetupWizard inherits Window {
     // New Steps State
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
+    in-out property <string> product_description: "";
     in-out property <string> product_price: "";
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
@@ -46,8 +47,11 @@ export component SetupWizard inherits Window {
 
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
+    in-out property <bool> launch_success: false;
+    in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
     callback launch(string, string, string, string, string, string, string, string, string);
+    callback copy_link(string);
     callback generate_instant_preview();
 
     callback next_step();
@@ -361,6 +365,14 @@ export component SetupWizard inherits Window {
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
+                Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { text <=> product_description; height: 44px; }
+                Button {
+                    text: "✨ Auto-generate description";
+                    height: 44px;
+                    clicked => { product_description = "A premium " + product_name; }
+                }
+
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
 
@@ -433,12 +445,27 @@ export component SetupWizard inherits Window {
                     }
                 }
 
-                if (launching) : GlassCard {
+                if (launching && !launch_success) : GlassCard {
                     VerticalBox {
                         padding: 16px;
                         alignment: center;
                         Text { text: launch_status; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
                         Text { text: launch_details; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                }
+
+                if (launch_success) : GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        alignment: center;
+                        spacing: 16px;
+                        Text { text: "🎊 CONFETTI! SUCCESS 🎊"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Your business is live!"; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                        Button {
+                            text: "Copy Shareable Link";
+                            height: 44px;
+                            clicked => { copy_link(shareable_link); }
+                        }
                     }
                 }
             }

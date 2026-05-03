@@ -735,6 +735,43 @@ impl Agent {
                 }
             }
 
+            // 3. Git State Checkpointing (Claude Code)
+            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
+                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let thread = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+
+                // Only commit if .git exists to avoid turning random directories into repos
+                if std::path::Path::new(&wd).join(".git").exists() {
+                    let mut add_cmd = tokio::process::Command::new("git");
+                    add_cmd.current_dir(&wd).arg("add").arg("-A");
+                    if add_cmd.output().await.is_ok() {
+                        let mut diff_cmd = tokio::process::Command::new("git");
+                        diff_cmd.current_dir(&wd).arg("diff").arg("--cached").arg("--quiet");
+                        // If it fails (exit code 1), it means there ARE changes staged
+                        if let Ok(diff_out) = diff_cmd.output().await {
+                            if !diff_out.status.success() {
+                                let mut commit_cmd = tokio::process::Command::new("git");
+                                commit_cmd.current_dir(&wd)
+                                    .arg("commit")
+                                    .arg("-m")
+                                    .arg(format!("🤖 Agent checkpoint: Iteration {} (Thread: {})", iteration, thread));
+
+                                if let Ok(commit_out) = commit_cmd.output().await {
+                                    if commit_out.status.success() {
+                                        on_event(AgentEvent::CheckpointSaved {
+                                            iteration,
+                                            path: format!("git:{}", wd),
+                                        });
+                                    } else {
+                                        tracing::warn!("Failed to create git commit: {}", String::from_utf8_lossy(&commit_out.stderr));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -1784,6 +1821,80 @@ mod tests {
         } else {
             panic!("Expected TaskComplete");
         }
+    }
+
+    #[tokio::test]
+    async fn test_git_state_checkpointing() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_mutating".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let dir = tempfile::tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+
+        // Setup git repo
+        std::process::Command::new("git").current_dir(&wd).arg("init").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.name").arg("Agent").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.email").arg("agent@example.com").status().unwrap();
+
+        // Make a change
+        std::fs::write(wd.join("test.txt"), "hello").unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_git_state_checkpointing = true;
+        cfg.workspace_path = Some(wd.to_string_lossy().to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify event was emitted
+        let mut found_checkpoint_event = false;
+        for e in events {
+            if let AgentEvent::CheckpointSaved { path, .. } = e {
+                if path.starts_with("git:") {
+                    found_checkpoint_event = true;
+                }
+            }
+        }
+        assert!(found_checkpoint_event);
+
+        // Verify git log
+        let output = std::process::Command::new("git").current_dir(&wd).arg("log").arg("--oneline").output().unwrap();
+        let log_str = String::from_utf8_lossy(&output.stdout);
+        assert!(log_str.contains("Agent checkpoint: Iteration 0"));
     }
 
     #[tokio::test]

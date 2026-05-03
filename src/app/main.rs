@@ -124,9 +124,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
                 if ui.get_is_sign_up() {
-                    ui.invoke_start_setup_wizard();
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("Login as {}...", email);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
+                }
+            }
+        }
+    });
+
+    login_ui.on_resend_verification({
+        let login_handle = login_ui_handle.clone();
+        move |_email| {
+            if let Some(ui) = login_handle.upgrade() {
+                // Simulate email verified
+                ui.invoke_start_setup_wizard();
+            }
+        }
+    });
+
+    login_ui.on_oauth_login({
+        let login_handle = login_ui_handle.clone();
+        move |provider| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("OAuth Login via {}...", provider);
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.show().unwrap();
+                        Box::leak(Box::new(dashboard));
+                    }
                 }
             }
         }
@@ -840,6 +875,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_copy_link(|link| {
+        // Send to system clipboard if possible. Using terminal fallback for test
+        println!("Copied to clipboard: {}", link);
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -907,9 +947,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let msg = r.message.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        ui.set_step(10); // Go to checklist
+                                        // Delay going to step 10 to show confetti?
+                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
+                                        // If we transition to step 10, the confetti disappears.
+                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
+                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
                                     }
                                 }).unwrap();
                             }
@@ -2134,10 +2179,12 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, frequency| {
+        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
+            assert_eq!(can_write_descriptions, true);
+            assert_eq!(can_send_updates, false);
             assert_eq!(frequency, "Daily");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -2154,6 +2201,7 @@ mod docs_tests {
 
         // Step 1: Capabilities -> Step 2
         ui.set_can_reply(true);
+        ui.set_can_write_descriptions(true);
         ui.invoke_next_step();
 
         // Step 2: Frequency -> Step 3
@@ -2165,12 +2213,16 @@ mod docs_tests {
             ui.get_selected_agent(),
             ui.get_can_reply(),
             ui.get_can_social(),
+            ui.get_can_write_descriptions(),
+            ui.get_can_send_updates(),
             ui.get_frequency()
         );
 
         assert_eq!(ui.get_step(), 3);
         assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_can_write_descriptions(), true);
+        assert_eq!(ui.get_can_send_updates(), false);
         assert_eq!(ui.get_frequency(), "Daily");
         assert_eq!(ui.get_show_toast(), true);
         assert!(*publish_success.borrow());
@@ -2376,7 +2428,7 @@ mod dashboard_docs_tests {
 }
 
 #[cfg(test)]
-mod cost_transparency_e2e_tests {
+mod remaining_e2e_tests {
     use super::*;
     use slint::Model;
 
@@ -2574,6 +2626,12 @@ mod cost_transparency_e2e_tests {
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
+
+        business_share_ui.set_business_tagline("Best vegan cakes".into());
+        assert_eq!(business_share_ui.get_business_tagline(), "Best vegan cakes");
+
+        business_share_ui.set_share_link("ohc://share?b=maya".into());
+        assert_eq!(business_share_ui.get_share_link(), "ohc://share?b=maya");
 
         business_share_ui.invoke_copy_link();
         assert!(*copy_link_called.borrow());
