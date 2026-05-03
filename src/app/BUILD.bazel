@@ -205,7 +205,6 @@ rust_shared_library(
     srcs = ["main.rs"],
     data = glob(["*.slint"]),
     edition = "2024",
-    target_compatible_with = ["@platforms//cpu:wasm32"],
     deps = [
         ":build_script_wasm",
         "@crates//:chrono",
@@ -228,7 +227,6 @@ rust_wasm_bindgen(
     name = "app_web_bindgen",
     wasm_file = ":app_web",
     target = "web",
-    target_compatible_with = ["@platforms//cpu:wasm32"],
     visibility = ["//visibility:public"],
 )
 

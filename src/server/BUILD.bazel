@@ -114,7 +114,6 @@ rust_test(
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",
-        "@crates//:tempfile",
     ],
 )
 
