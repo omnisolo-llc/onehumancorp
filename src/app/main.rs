@@ -44,6 +44,7 @@ thread_local! {
 #[cfg(test)]
 mod ui_tests;
 
+#[allow(dead_code)]
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
     ADVANCED_LISTENERS.with(|listeners| {
@@ -1343,6 +1344,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 fn spawn<F>(f: F)
 where
     F: std::future::Future<Output = ()> + 'static,
