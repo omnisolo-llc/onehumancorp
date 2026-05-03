@@ -748,7 +748,31 @@ message WaitlistResponse {
   repeated WaitlistEntry entries = 1;
 }
 
+
+
+message EmailCampaign {
+  string id = 1;
+  string subject = 2;
+  string template_name = 3;
+  int32 target_count = 4;
+  string status = 5;
+  double open_rate = 6;
+  int64 created_at_unix = 7;
+}
+
+message EmailCampaignsResponse {
+  repeated EmailCampaign campaigns = 1;
+}
+
+message CreateEmailCampaignRequest {
+  string subject = 1;
+  string template_name = 2;
+  repeated string contact_ids = 3;
+}
 service GrowthService {
+  rpc GetEmailCampaigns(EmptyRequest) returns (EmailCampaignsResponse);
+  rpc CreateEmailCampaign(CreateEmailCampaignRequest) returns (EmailCampaign);
+
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   

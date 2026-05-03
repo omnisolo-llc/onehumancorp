@@ -10,6 +10,7 @@ export component GrowBusiness inherits Window {
     in-out property <bool> is_advanced: false;
     callback execute(string);
     callback save_state();
+    callback open_email_marketing();
 
     background: #f8fafc;
 
@@ -70,7 +71,11 @@ export component GrowBusiness inherits Window {
                     if (step < 1) {
                         step = step + 1;
                     } else {
+                        if (selected_strategy == "Run your first email campaign") {
+                        open_email_marketing();
+                    } else {
                         execute(selected_strategy);
+                    }
                     }
                 }
             }

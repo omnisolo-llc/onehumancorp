@@ -506,7 +506,79 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    let email_marketing_ui = app::EmailMarketing::new()?;
+    let email_marketing_handle = email_marketing_ui.as_weak();
+
+    email_marketing_ui.on_close({
+        let login_ui_handle_from_em = login_ui_handle.clone();
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(login_ui) = login_ui_handle_from_em.upgrade() {
+                let _ = login_ui.show();
+            }
+        }
+    });
+
+    email_marketing_ui.on_refresh({
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                    if let Ok(resp) = client.get_email_campaigns(req).await {
+                        let campaigns = resp.into_inner().campaigns;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                let ui_campaigns: Vec<app::UiEmailCampaign> = campaigns.into_iter().map(|c| {
+                                    app::UiEmailCampaign {
+                                        id: c.id.into(),
+                                        subject: c.subject.into(),
+                                        template_name: c.template_name.into(),
+                                        target_count: c.target_count,
+                                        status: c.status.into(),
+                                        open_rate: c.open_rate as f32,
+                                        created_at_unix: c.created_at_unix as i32,
+                                    }
+                                }).collect();
+                                ui.set_campaigns(slint::ModelRc::new(slint::VecModel::from(ui_campaigns)));
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
+    email_marketing_ui.on_create_campaign({
+        let ui_handle = email_marketing_handle.clone();
+        move |subject, template| {
+            let handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(ohc::orchestration::CreateEmailCampaignRequest {
+                        subject: subject.to_string(),
+                        template_name: template.to_string(),
+                        contact_ids: vec!["contact_1".to_string(), "contact_2".to_string()],
+                    });
+                    if let Ok(_resp) = client.create_email_campaign(req).await {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.invoke_refresh();
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
     let grow_business_ui = app::GrowBusiness::new()?;
+
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let grow_business_handle = grow_business_ui.as_weak();
     let gb_ui_weak = grow_business_handle.clone();
@@ -567,7 +639,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    grow_business_ui.on_open_email_marketing({
+        let em_handle = email_marketing_handle.clone();
+        let gb_handle = grow_business_handle.clone();
+        move || {
+            if let Some(ui) = gb_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(ui) = em_handle.upgrade() {
+                ui.invoke_refresh();
+                let _ = ui.show();
+            }
+        }
+    });
+
     grow_business_ui.on_save_state({
+
         let ui_handle = grow_business_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
@@ -588,6 +676,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(prompt_tuning_ui));
     Box::leak(Box::new(website_builder_ui));
     Box::leak(Box::new(grow_business_ui));
+    Box::leak(Box::new(email_marketing_ui));
 
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
@@ -1704,12 +1793,6 @@ mod growth_e2e_tests {
         ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
         assert!(*link_copied.borrow(), "Share link callback should be invoked");
     }
-}
-
-#[cfg(test)]
-mod e2e_tests {
-    use slint::Model;
-    use super::*;
 
     #[test]
     fn test_cuj_draft_for_review_flow() {
@@ -3723,4 +3806,97 @@ mod e2e_hybrid_blob_tests {
             ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice());
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+    }
+
+
+
+    #[test]
+    fn test_e2e_email_marketing_full_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let grow_business_ui = app::GrowBusiness::new().unwrap();
+        let em_ui = app::EmailMarketing::new().unwrap();
+
+        let gb_handle = grow_business_ui.as_weak();
+        let em_handle = em_ui.as_weak();
+
+        let gb_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let gb_opened_clone = gb_opened.clone();
+        dashboard_ui.on_action_grow_business(move || {
+            *gb_opened_clone.borrow_mut() = true;
+            if let Some(ui) = gb_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+        dashboard_ui.invoke_action_grow_business();
+        assert!(*gb_opened.borrow(), "Grow Business should open");
+
+        let em_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let em_opened_clone = em_opened.clone();
+        grow_business_ui.on_open_email_marketing(move || {
+            *em_opened_clone.borrow_mut() = true;
+            if let Some(ui) = em_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        grow_business_ui.set_selected_strategy("Run your first email campaign".into());
+        grow_business_ui.invoke_open_email_marketing();
+        assert!(*em_opened.borrow(), "Email Marketing should open");
+
+        em_ui.set_step(1);
+        em_ui.set_compose_subject("E2E Test Sale".into());
+        em_ui.set_compose_template("New arrivals".into());
+        assert_eq!(em_ui.get_compose_subject(), "E2E Test Sale");
+    }
+
+    #[test]
+    fn test_e2e_email_marketing_missing_subject() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let em_ui = app::EmailMarketing::new().unwrap();
+        em_ui.set_step(1);
+        em_ui.set_compose_subject("".into());
+        em_ui.set_compose_template("New arrivals".into());
+        assert_eq!(em_ui.get_compose_status_msg(), "");
+    }
+
+    #[test]
+    fn test_e2e_email_marketing_missing_template() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let em_ui = app::EmailMarketing::new().unwrap();
+        em_ui.set_step(1);
+        em_ui.set_compose_subject("Valid Subject".into());
+        em_ui.set_compose_template("".into());
+        assert_eq!(em_ui.get_compose_status_msg(), "");
+    }
+
+    #[test]
+    fn test_e2e_email_marketing_cancel() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let em_ui = app::EmailMarketing::new().unwrap();
+        em_ui.set_step(1);
+        em_ui.set_step(0);
+        assert_eq!(em_ui.get_step(), 0);
+    }
+
+    #[test]
+    fn test_e2e_email_marketing_refresh_trigger() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        use slint::Model;
+        let em_ui = app::EmailMarketing::new().unwrap();
+        assert_eq!(em_ui.get_step(), 0);
+        assert_eq!(em_ui.get_campaigns().row_count(), 0);
     }

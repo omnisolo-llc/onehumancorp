@@ -1,0 +1,140 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ComboBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiEmailCampaign {
+    id: string,
+    subject: string,
+    template_name: string,
+    target_count: int,
+    status: string,
+    open_rate: float,
+    created_at_unix: int,
+}
+
+export component EmailMarketing inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Email Marketing";
+
+    background: #f8fafc;
+
+    in property <[UiEmailCampaign]> campaigns;
+    in-out property <int> step: 0; // 0 = List, 1 = Compose
+    in-out property <string> compose_subject: "";
+    in-out property <string> compose_template: "New arrivals";
+    in-out property <string> compose_status_msg: "";
+
+    callback refresh();
+    callback create_campaign(string, string);
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Email Marketing"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            if (step == 0) : Button {
+                text: "Refresh";
+                clicked => { refresh(); }
+            }
+            if (step == 0) : Button {
+                text: "New Campaign";
+                primary: true;
+                clicked => {
+                    compose_subject = "";
+                    compose_status_msg = "";
+                    step = 1;
+                }
+            }
+            if (step == 1) : Button {
+                text: "Back to List";
+                clicked => { step = 0; }
+            }
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Past Campaigns"; font-size: 18px; font-weight: 700; color: #1e293b; }
+
+            if (campaigns.length == 0) : Text {
+                text: "No campaigns sent yet. Send your first one!";
+                color: #64748b;
+                horizontal-alignment: center;
+            }
+
+            for c in campaigns : GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: c.subject; font-weight: 700; font-size: 16px; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: c.status; color: #10b981; }
+                    }
+                    HorizontalBox {
+                        Text { text: "Template: " + c.template_name; color: #64748b; font-size: 14px; }
+                        Rectangle {}
+                        Text { text: "Sent to: " + c.target_count; color: #64748b; font-size: 14px; }
+                    }
+                    Text { text: "Open Rate: " + c.open_rate + "%"; color: #a855f7; font-weight: 700; }
+                }
+            }
+        }
+
+        if (step == 1) : VerticalBox {
+            spacing: 20px;
+            Text { text: "Compose New Campaign"; font-size: 18px; font-weight: 700; color: #1e293b; }
+
+            Text { text: "Subject Line"; font-weight: 700; color: #1e293b; }
+            LineEdit {
+                placeholder-text: "e.g. Huge Summer Sale!";
+                text <=> compose_subject;
+                height: 40px;
+            }
+
+            Text { text: "Select AI Template"; font-weight: 700; color: #1e293b; }
+            ComboBox {
+                model: ["New arrivals", "Flash sale", "Thank you"];
+                current-value <=> compose_template;
+            }
+
+            Text { text: "Select Contacts"; font-weight: 700; color: #1e293b; }
+            GlassCard {
+                background: rgba(168, 85, 247, 0.1);
+                VerticalBox {
+                    padding: 12px;
+                    Text { text: "All Subscribers (Simulated: 150 contacts)"; color: #a855f7; font-weight: 700; }
+                }
+            }
+
+            if (compose_status_msg != "") : Text {
+                text: compose_status_msg;
+                color: #ef4444; // Red for errors
+            }
+
+            Rectangle {} // Spacer
+
+            Button {
+                text: "Send Campaign";
+                primary: true;
+                height: 50px;
+                clicked => {
+                    if (compose_subject == "") {
+                        compose_status_msg = "Error: Subject line is required.";
+                    } else if (compose_template == "") {
+                        compose_status_msg = "Error: Please select a template.";
+                    } else {
+                        create_campaign(compose_subject, compose_template);
+                        compose_status_msg = "Campaign sent!";
+                        step = 0; // Go back to list immediately or let rust handle it
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Bottom Spacer
+    }
+}

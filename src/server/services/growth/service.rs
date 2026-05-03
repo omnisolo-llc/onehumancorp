@@ -1,3 +1,4 @@
+use crate::ohc::orchestration::{CreateEmailCampaignRequest, EmailCampaign, EmailCampaignsResponse};
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::growth_service_server::GrowthService;
@@ -11,6 +12,7 @@ use crate::utils::auth_utils::set_org_context;
 pub struct MyGrowthService {
     pool: PgPool,
     experiments: RwLock<Vec<LandingPageExperiment>>,
+    email_campaigns: RwLock<Vec<EmailCampaign>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
     waitlist: RwLock<Vec<WaitlistEntry>>,
@@ -22,6 +24,7 @@ impl MyGrowthService {
         MyGrowthService {
             pool,
             experiments: RwLock::new(Vec::new()),
+            email_campaigns: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
             waitlist: RwLock::new(Vec::new()),
@@ -44,6 +47,42 @@ impl MyGrowthService {
 
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
+
+    async fn get_email_campaigns(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmailCampaignsResponse>, Status> {
+        let campaigns = self.email_campaigns.read().unwrap();
+        Ok(Response::new(EmailCampaignsResponse {
+            campaigns: campaigns.clone(),
+        }))
+    }
+
+    async fn create_email_campaign(
+        &self,
+        request: Request<CreateEmailCampaignRequest>,
+    ) -> Result<Response<EmailCampaign>, Status> {
+        let req = request.into_inner();
+        if req.subject.is_empty() || req.template_name.is_empty() {
+            return Err(Status::invalid_argument("subject and template_name are required"));
+        }
+
+        let campaign = EmailCampaign {
+            id: format!("email-{}", Utc::now().timestamp()),
+            subject: req.subject,
+            template_name: req.template_name,
+            target_count: req.contact_ids.len() as i32,
+            status: "SENT".to_string(), // In a real app this would go to an outbox/queue
+            open_rate: 0.0, // Initial open rate
+            created_at_unix: Utc::now().timestamp(),
+        };
+
+        let mut campaigns = self.email_campaigns.write().unwrap();
+        campaigns.push(campaign.clone());
+
+        Ok(Response::new(campaign))
+    }
+
     async fn get_landing_page_experiments(
         &self,
         _request: Request<EmptyRequest>,
