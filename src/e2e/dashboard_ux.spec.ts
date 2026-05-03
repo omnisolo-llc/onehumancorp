@@ -76,3 +76,17 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
+
+test('should verify Glassmorphism visual regression for GlassCard', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  // Wait a moment for canvas to render the GlassCards
+  await page.waitForTimeout(1000);
+
+  // Capture screenshot to lock in the intended behavior and prevent visual drift
+  await expect(page).toHaveScreenshot('dashboard-glassmorphism.png');
+});
