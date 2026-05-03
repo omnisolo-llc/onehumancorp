@@ -32,7 +32,8 @@ export component CostDashboard inherits Window {
         }
 
         // Summary Cards
-        if (root.width <= 768px) : VerticalBox {
+        VerticalBox {
+            visible: root.width <= 768px;
             spacing: 16px;
 
             GlassCard {
@@ -59,7 +60,8 @@ export component CostDashboard inherits Window {
             }
         }
 
-        if (root.width > 768px) : HorizontalBox {
+        HorizontalBox {
+            visible: root.width > 768px;
             spacing: 16px;
 
             GlassCard {
