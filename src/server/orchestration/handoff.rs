@@ -129,7 +129,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at DATETIME)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();
