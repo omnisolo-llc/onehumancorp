@@ -41,9 +41,6 @@ thread_local! {
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
 
-#[cfg(test)]
-mod ui_tests;
-
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
     ADVANCED_LISTENERS.with(|listeners| {
