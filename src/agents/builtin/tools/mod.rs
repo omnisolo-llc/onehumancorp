@@ -34,6 +34,7 @@ pub struct Tool {
     pub name: String,
     pub description: String,
     pub is_read_only: bool,
+    pub is_subagent: bool,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
 }
@@ -50,6 +51,7 @@ impl Clone for Tool {
             name: self.name.clone(),
             description: self.description.clone(),
             is_read_only: self.is_read_only,
+        is_subagent: self.is_subagent,
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
         }

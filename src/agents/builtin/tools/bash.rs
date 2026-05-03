@@ -66,6 +66,7 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             Commands run in the repository root."
             .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

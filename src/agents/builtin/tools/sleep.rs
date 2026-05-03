@@ -30,6 +30,7 @@ pub fn sleep_tool() -> Tool {
             Use when waiting for async operations."
             .to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

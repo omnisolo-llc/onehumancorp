@@ -51,6 +51,7 @@ pub fn agent_stop_tool() -> Tool {
         name: "TaskStop".to_string(),
         description: "Stop a running sub-agent task by task ID.".to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -70,6 +71,7 @@ pub fn agent_status_tool() -> Tool {
         name: "TaskStatus".to_string(),
         description: "Get the status of a running sub-agent task by task ID.".to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
