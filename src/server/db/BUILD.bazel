@@ -1,0 +1,6 @@
+# Registered 059_mcp_async_tasks.sql
+filegroup(
+    name = "migrations",
+    srcs = ["//src/server:migrations/059_mcp_async_tasks.sql"],
+    visibility = ["//visibility:public"],
+)
