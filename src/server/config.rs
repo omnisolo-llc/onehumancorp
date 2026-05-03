@@ -115,6 +115,7 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
+    cfg.telemetry_enabled = false;
     cfg
 }
 
