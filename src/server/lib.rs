@@ -1059,7 +1059,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         telemetry_daemon.start();
 
         let repo = Arc::new(crate::services::sync::local_repository_impl::PgLocalRepository::new(db.pool.clone()));
-        let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url, db.pool.clone()));
+        let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url.clone(), db.pool.clone()));
 
         let cloud_sync_clone = cloud_sync.clone();
         tokio::spawn(async move {

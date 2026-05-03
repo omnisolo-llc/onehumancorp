@@ -75,13 +75,19 @@ impl DB {
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+                        last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
                         embedding BLOB,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
@@ -98,7 +104,9 @@ impl DB {
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         auto_dreamed BOOLEAN DEFAULT 0,
                         locked_until DATETIME,
-                        assigned_agent_id TEXT
+                        assigned_agent_id TEXT,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
                         id TEXT PRIMARY KEY,
@@ -114,14 +122,19 @@ impl DB {
                         payload TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        auto_dreamed BOOLEAN DEFAULT 0
+                        auto_dreamed BOOLEAN DEFAULT 0,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         raw_content TEXT NOT NULL,
-                        summary_embedding BLOB
+                        summary_embedding BLOB,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS autodream_memories (
                         id TEXT PRIMARY KEY,
@@ -130,7 +143,10 @@ impl DB {
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
                         embedding BLOB,
-                        source_type TEXT NOT NULL
+                        source_type TEXT NOT NULL,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
@@ -142,7 +158,9 @@ impl DB {
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at DATETIME,
-                        synced_to_cloud BOOLEAN DEFAULT 0
+                        synced_to_cloud BOOLEAN DEFAULT 0,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                 ";
                 sqlx::query(schema).execute(sqlite_pool).await?;
