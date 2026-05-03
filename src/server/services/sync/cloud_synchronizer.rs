@@ -1,11 +1,15 @@
 use std::sync::Arc;
 use crate::services::sync::local_repository::LocalRepository;
 use reqwest::Client;
+use sqlx::PgPool;
+use crate::telemetry::{record_sync_escalation, record_sync_daemon_batch_size, record_sync_latency, record_sync_payload_size, record_sync_daemon_error_total};
+use std::time::Instant;
 
 pub struct CloudSynchronizerImpl {
     repo: Arc<dyn LocalRepository>,
     client: Client,
     cloud_url: String,
+    pool: Option<PgPool>,
 }
 
 impl CloudSynchronizerImpl {
@@ -14,11 +18,28 @@ impl CloudSynchronizerImpl {
             repo,
             client: Client::new(),
             cloud_url,
+            pool: None,
+        }
+    }
+
+    pub fn with_pool(repo: Arc<dyn LocalRepository>, cloud_url: String, pool: PgPool) -> Self {
+        Self {
+            repo,
+            client: Client::new(),
+            cloud_url,
+            pool: Some(pool),
         }
     }
 
     pub async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String> {
         let pending = self.repo.get_pending_sync(organization_id, 50).await?;
+
+        let batch_size = pending.len() as f32;
+        let mode = if self.cloud_url.is_empty() { "Standalone" } else { "Cloud" };
+
+        if let Some(pool) = &self.pool {
+            let _ = record_sync_daemon_batch_size(pool, batch_size, mode).await;
+        }
 
         for mission in pending {
             let endpoint = format!("{}/api/v1/missions/escalate", self.cloud_url);
@@ -28,23 +49,50 @@ impl CloudSynchronizerImpl {
                 "payload": &mission.payload,
             });
 
+            let payload_string = serde_json::to_string(&payload).unwrap_or_default();
+            let payload_size = payload_string.len() as f32;
+
+            if let Some(pool) = &self.pool {
+                let _ = record_sync_payload_size(pool, payload_size, mode).await;
+                let _ = record_sync_escalation(pool, 1.0, mode).await;
+            }
+
+            let start = Instant::now();
+
             let resp = self.client.post(&endpoint)
                 .json(&payload)
                 .send()
                 .await;
+
+            let latency = start.elapsed().as_millis() as f32;
+            if let Some(pool) = &self.pool {
+                let _ = record_sync_latency(pool, latency, mode).await;
+            }
 
             match resp {
                 Ok(response) => {
                     if response.status().is_success() {
                         let json: serde_json::Value = response.json().await.unwrap_or_default();
                         if let Some(cloud_id) = json.get("cloud_id").and_then(|v| v.as_str()) {
-                            self.repo.mark_synced(organization_id, &mission.id, cloud_id).await?;
+                            let repo_res = self.repo.mark_synced(organization_id, &mission.id, cloud_id).await;
+                            if let Err(e) = repo_res {
+                                if let Some(pool) = &self.pool {
+                                    let _ = record_sync_daemon_error_total(pool, 1.0, mode, "DB_ERROR").await;
+                                }
+                                return Err(e);
+                            }
                         }
                     } else {
+                        if let Some(pool) = &self.pool {
+                            let _ = record_sync_daemon_error_total(pool, 1.0, mode, "HTTP_ERROR").await;
+                        }
                         self.repo.mark_sync_error(organization_id, &mission.id, &format!("HTTP {}", response.status())).await?;
                     }
                 }
                 Err(e) => {
+                    if let Some(pool) = &self.pool {
+                        let _ = record_sync_daemon_error_total(pool, 1.0, mode, "API_TIMEOUT").await;
+                    }
                     self.repo.mark_sync_error(organization_id, &mission.id, &e.to_string()).await?;
                 }
             }
