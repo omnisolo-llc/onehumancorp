@@ -1,11 +1,11 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 # build_script removed as protos are now built with Bazel rules
 
-rust_binary(
-    name = "server",
-    srcs = glob(["**/*.rs"]) + [
+rust_library(
+    name = "server_lib",
+    srcs = glob(["**/*.rs"], exclude = ["main.rs"]) + [
         "//src/agents/builtin:autodream.rs",
         "//src/agents/builtin:autodream/store.rs",
     ],
@@ -58,6 +58,17 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "server",
+    srcs = ["main.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":server_lib",
+        "@crates//:tokio",
+    ],
+)
+
 rust_test(
     name = "server_test",
     size = "medium",
@@ -65,7 +76,7 @@ rust_test(
         "//src/agents/builtin:autodream.rs",
         "//src/agents/builtin:autodream/store.rs",
     ],
-    crate_root = "main.rs",
+    crate_root = "lib.rs",
     data = glob(["migrations/*.sql", "**/*.rs"]),
     edition = "2024",
     env = {
