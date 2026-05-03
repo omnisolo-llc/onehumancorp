@@ -1,6 +1,6 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::{AgentServiceServer, AgentService},
+    proto::agent_service_server::AgentServiceServer,
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
 
     let addr: SocketAddr = address.parse()?;
-    let mut svc_impl = AgentServiceImpl::new(agent_id, cfg, auth);
+    let mut svc_impl = AgentServiceImpl::new(agent_id.clone(), cfg, auth);
     svc_impl.init_memory().await;
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
