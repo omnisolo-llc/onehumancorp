@@ -3,6 +3,9 @@ use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::org_service_client::OrgServiceClient;
+use std::sync::{Arc, Mutex};
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
@@ -99,14 +102,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
                 println!("Connected to server!");
+                let agent_id = format!("desktop_app_{}", chrono::Utc::now().timestamp());
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
-                        role: "Worker".into(),
-                        organization_id: "org_1".into(),
+                        id: agent_id,
+                        name: "OHC Desktop Controller".into(),
+                        role: "CONTROLLER".into(),
+                        organization_id: "default_org".into(),
                         status: "Running".into(),
-                        provider_type: "Standard".into(),
+                        provider_type: "Desktop".into(),
                     }),
                 });
                 match client.register_agent(request).await {
@@ -755,7 +759,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
-                            user_id: "current_user".to_string(), // In production, use actual user_id
+                            user_id: "default_user".to_string(),
                             referral_code: "".to_string(),
                         };
                         let response = client.create_referral(tonic::Request::new(req)).await;
@@ -884,22 +888,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
-                let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
-                let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let add_product_called_clone = add_product_called.clone();
+                let product_count = Arc::new(Mutex::new(0));
+                let product_limit = Arc::new(Mutex::new(10));
+
+                let dashboard_handle_for_init = dashboard_handle.clone();
+                let product_count_init = product_count.clone();
+                let product_limit_init = product_limit.clone();
+                tokio::spawn(async move {
+                    let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+                    // Fetch Quota
+                    if let Ok(mut client) = GrowthServiceClient::connect(url.clone()).await {
+                        let req = ohc::orchestration::GetQuotaRequest { user_id: "default_user".to_string() };
+                        if let Ok(resp) = client.get_quota(tonic::Request::new(req)).await {
+                            let quota = resp.into_inner();
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Ok(mut c) = product_count_init.lock() { *c = quota.used; }
+                                if let Ok(mut l) = product_limit_init.lock() { *l = quota.max; }
+                            });
+                        }
+                    }
+
+                    // Fetch Analytics for stats
+                    if let Ok(mut client) = OrgServiceClient::connect(url).await {
+                        if let Ok(resp) = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                            let stats = resp.into_inner();
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = dashboard_handle_for_init.upgrade() {
+                                    ui.set_active_helpers_count(stats.total_agents);
+                                    ui.set_tasks_in_progress_count(stats.active_handoffs);
+                                }
+                            });
+                        }
+                    }
+                });
 
                 let dashboard_handle_clone_add_product = dashboard_handle.clone();
                 let product_count_clone = product_count.clone();
+                let product_limit_clone = product_limit.clone();
                 dashboard.on_action_add_product(move || {
-                    *add_product_called_clone.borrow_mut() = true;
-
                     if let Some(ui) = dashboard_handle_clone_add_product.upgrade() {
-                        let count = *product_count_clone.borrow();
-                        if count >= 10 { // Free tier limit
-                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                        let count = *product_count_clone.lock().unwrap();
+                        let limit = *product_limit_clone.lock().unwrap();
+                        if count >= limit {
+                            ui.set_upgrade_prompt_message(format!("You've reached your limit of {} products. Upgrade to add more!", limit).into());
                             ui.set_show_upgrade_prompt(true);
                         } else {
-                            *product_count_clone.borrow_mut() += 1;
+                            *product_count_clone.lock().unwrap() += 1;
                         }
                     }
                 });
@@ -1008,24 +1043,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
-                let all_articles = vec![
-                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
-                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
-                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
-                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
-                ];
-                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
-
-                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
+                let all_articles_rc = Arc::new(Mutex::new(Vec::new()));
+                let hc_handle_init = help_center_ui.as_weak();
+                let articles_init = all_articles_rc.clone();
+                tokio::spawn(async move {
+                    let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                    if let Ok(mut client) = OrgServiceClient::connect(url).await {
+                        if let Ok(resp) = client.get_marketplace_items(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                            let items = resp.into_inner().items;
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = hc_handle_init.upgrade() {
+                                    let articles: Vec<app::HelpArticle> = items.into_iter().map(|item| {
+                                        app::HelpArticle {
+                                            category: "Marketplace".into(),
+                                            title: item.name.into(),
+                                            description: item.description.into(),
+                                        }
+                                    }).collect();
+                                    if let Ok(mut a) = articles_init.lock() { *a = articles.clone(); }
+                                    ui.set_articles(slint::ModelRc::new(slint::VecModel::from(articles)));
+                                }
+                            });
+                        }
+                    }
+                });
 
                 let hc_weak_for_search = help_center_ui.as_weak();
                 let articles_for_search = all_articles_rc.clone();
                 help_center_ui.on_execute_search(move || {
                     if let Some(ui) = hc_weak_for_search.upgrade() {
                         let query = ui.get_search_query().to_string().to_lowercase();
-                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                        let all = articles_for_search.lock().unwrap();
+                        let filtered: Vec<app::HelpArticle> = all.iter().filter(|a| {
                             a.title.to_lowercase().contains(&query) ||
                             a.description.to_lowercase().contains(&query) ||
                             a.category.to_lowercase().contains(&query)
@@ -1135,13 +1184,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
 
     let agents_ui_handle = agents_ui.as_weak();
-    let agent_count = std::rc::Rc::new(std::cell::RefCell::new(1)); // Free tier starts with 1 agent, limit is 1
+    let agent_count = Arc::new(Mutex::new(0));
+    let agent_limit = Arc::new(Mutex::new(1));
+
+    let agent_count_init = agent_count.clone();
+    let agent_limit_init = agent_limit.clone();
+    tokio::spawn(async move {
+        let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        if let Ok(mut client) = GrowthServiceClient::connect(url).await {
+            let req = ohc::orchestration::GetQuotaRequest { user_id: "default_user".to_string() };
+            if let Ok(resp) = client.get_quota(tonic::Request::new(req)).await {
+                let quota = resp.into_inner();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Ok(mut c) = agent_count_init.lock() { *c = std::cmp::max(1, quota.used / 10); }
+                    if let Ok(mut l) = agent_limit_init.lock() { *l = std::cmp::max(1, quota.max / 10); }
+                });
+            }
+        }
+    });
+
     let agent_hire_handle = agent_hire_ui.as_weak();
+    let agent_count_clone = agent_count.clone();
+    let agent_limit_clone = agent_limit.clone();
     agents_ui.on_hire_agent(move || {
         if let Some(ui) = agents_ui_handle.upgrade() {
-            let count = *agent_count.borrow();
-            if count >= 1 {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+            let count = *agent_count_clone.lock().unwrap();
+            let limit = *agent_limit_clone.lock().unwrap();
+            if count >= limit {
+                ui.set_upgrade_prompt_message(format!("You've reached your limit of {} helpers. Upgrade to unlock more power!", limit).into());
                 ui.set_show_upgrade_prompt(true);
             } else {
                 if let Some(hire_ui) = agent_hire_handle.upgrade() {
@@ -2584,7 +2654,7 @@ mod docs_tests {
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*docs_opened.borrow(), "Connect Apps should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
@@ -2853,7 +2923,7 @@ mod docs_tests {
             *publish_success_clone.borrow_mut() = true;
         });
 
-        // Step 0: Choose Agent -> Step 1
+        // Step 0: Choose Helper -> Step 1
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_is_advanced(), false);
         ui.set_is_advanced(true);
@@ -3306,7 +3376,7 @@ mod dashboard_docs_tests {
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
 
-        // 8. Test API Docs
+        // 8. Test Connect Apps
         let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
@@ -3314,7 +3384,7 @@ mod dashboard_docs_tests {
             let _api_docs = app::ApiDocs::new().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+        assert!(*api_docs_opened.borrow(), "Connect Apps should be opened from Dashboard");
     }
 }
 
@@ -3686,13 +3756,13 @@ mod remaining_e2e_tests {
 
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
-                name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                name: "Customer Support Helper".into(),
+                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 AI/$".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
-                name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                name: "Marketing Helper".into(),
+                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 AI/$".into(),
                 pct: 0.45,
             }
         ]));
@@ -3705,8 +3775,8 @@ mod remaining_e2e_tests {
         let retrieved_costs = cost_ui.get_agent_costs();
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
-        assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        assert_eq!(first_agent.name, "Customer Support Helper");
+        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 AI/$");
     }
 }
 
