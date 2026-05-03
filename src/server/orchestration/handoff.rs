@@ -37,10 +37,11 @@ impl HandoffManager {
                     if let Ok(true) = transport.acquire_lock(&lock_key, "handoff_manager", 60).await {
                         match &db_clone.store {
                             DbStore::Postgres => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                     .bind(&handoff.state_id)
                                     .bind(&handoff.tenant_id)
                                     .bind(&handoff.serialized_state)
+                                    .bind(handoff.timestamp as f64)
                                     .execute(&db_clone.pool)
                                     .await
                                 {
@@ -48,10 +49,11 @@ impl HandoffManager {
                                 }
                             }
                             DbStore::Sqlite(sqlite_pool) => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                     .bind(&handoff.state_id)
                                     .bind(&handoff.tenant_id)
                                     .bind(&handoff.serialized_state)
+                                    .bind(handoff.timestamp)
                                     .execute(sqlite_pool)
                                     .await
                                 {
@@ -127,7 +129,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();
@@ -200,6 +202,38 @@ mod tests {
             .unwrap();
 
         assert!(row2.is_none());
+
+        // Test Idempotency (Out of order timestamp)
+        let handoff3 = SyncStateHandoff {
+            tenant_id: "test_tenant".to_string(),
+            state_id: "test_state".to_string(), // Same ID as first handoff
+            serialized_state: b"older_world".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp: chrono::Utc::now().timestamp() - 1000, // Older timestamp
+        };
+
+        let mut buf3 = Vec::new();
+        handoff3.encode(&mut buf3).unwrap();
+
+        let msg3 = TeammateMeshEvent {
+            agent_id: "handoff".to_string(),
+            action: "mesh:coordination:handoff".to_string(),
+            status: "ok".to_string(),
+            payload: buf3,
+        };
+
+        transport.publish("mesh:coordination:handoff", msg3).await.unwrap();
+
+        // Let listener process
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let row3 = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let content3: Vec<u8> = row3.get("raw_content");
+        assert_eq!(content3, b"hello_world".to_vec()); // Should NOT have been overwritten by older state
 
         cancel();
     }

@@ -1,0 +1,3 @@
+-- 058_agent_memories_updated_at.sql
+
+ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
