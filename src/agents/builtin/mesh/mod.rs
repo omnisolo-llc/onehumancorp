@@ -3,6 +3,7 @@ pub mod transport;
 use async_trait::async_trait;
 use std::sync::Arc;
 use crate::mesh::transport::{MeshTransport, Message};
+use prost::Message as ProstMessage;
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
@@ -26,6 +27,11 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
+        // Validate it decodes to MeshTaskDispatch
+        if let Err(e) = crate::proto::hub::MeshTaskDispatch::decode(&payload[..]) {
+             tracing::error!("Invalid MeshTaskDispatch payload: {}", e);
+             // we still publish for backwards compatibility but we log the error
+        }
         self.transport.publish("mesh:tasks", Message {
             agent_id: "agent".to_string(),
             action: "mesh:tasks".to_string(),
@@ -35,6 +41,10 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        // Validate it decodes to MeshTaskStatus
+        if let Err(e) = crate::proto::hub::MeshTaskStatus::decode(&payload[..]) {
+             tracing::error!("Invalid MeshTaskStatus payload: {}", e);
+        }
         self.transport.publish("mesh:coordination", Message {
             agent_id: "agent".to_string(),
             action: "mesh:coordination".to_string(),
@@ -115,7 +125,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_teammate_mesh_client() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: std::sync::Arc<dyn crate::mesh::transport::MeshTransport> = std::sync::Arc::new(crate::mesh::transport::MemoryTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         let tasks_received = Arc::new(AtomicBool::new(false));
@@ -164,5 +174,23 @@ mod tests {
         sleep(Duration::from_millis(50)).await;
 
         assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
+    }
+    #[tokio::test]
+    async fn test_mesh_task_dispatch() {
+        let dispatch = crate::proto::hub::MeshTaskDispatch {
+            task_id: "task_1".to_string(),
+            title: "Task 1".to_string(),
+            description: "A task".to_string(),
+            assigned_agent_id: "agent_1".to_string(),
+            priority: "P1".to_string(),
+            payload: b"hello".to_vec(),
+        };
+        let mut buf = Vec::new();
+        use prost::Message;
+        dispatch.encode(&mut buf).unwrap();
+
+        let transport: std::sync::Arc<dyn crate::mesh::transport::MeshTransport> = std::sync::Arc::new(crate::mesh::transport::MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport);
+        mesh.publish_task(buf).await.unwrap();
     }
 }

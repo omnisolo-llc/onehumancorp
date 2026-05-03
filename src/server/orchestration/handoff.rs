@@ -1,6 +1,5 @@
-use crate::ohc::orchestration::SyncStateHandoff;
+use crate::ohc::orchestration::{SyncStateHandoff, MeshTaskDispatch, MeshTaskStatus};
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
-use crate::ohc::orchestration::TeammateMeshEvent;
 use std::sync::Arc;
 use prost::Message;
 use crate::db::{DB, DbStore};
@@ -80,7 +79,7 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        let msg = TeammateMeshEvent {
+        let msg = MeshMessage {
             agent_id: "handoff".to_string(),
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
@@ -150,7 +149,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        let msg = TeammateMeshEvent {
+        let msg = MeshMessage {
             agent_id: "handoff".to_string(),
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
@@ -182,7 +181,7 @@ mod tests {
         let mut buf2 = Vec::new();
         handoff2.encode(&mut buf2).unwrap();
 
-        let msg2 = TeammateMeshEvent {
+        let msg2 = MeshMessage {
             agent_id: "handoff".to_string(),
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
@@ -203,4 +202,80 @@ mod tests {
 
         cancel();
     }
+}
+
+impl HandoffManager {
+    pub async fn dispatch_task(&self, task_id: &str, title: &str, description: &str, assigned_agent_id: &str, priority: &str, payload: Vec<u8>) -> Result<(), String> {
+        let dispatch = MeshTaskDispatch {
+            task_id: task_id.to_string(),
+            title: title.to_string(),
+            description: description.to_string(),
+            assigned_agent_id: assigned_agent_id.to_string(),
+            priority: priority.to_string(),
+            payload,
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = MeshMessage {
+            agent_id: "handoff_manager".to_string(),
+            action: "mesh:task:dispatch".to_string(),
+            status: "ok".to_string(),
+            payload: buf,
+        };
+
+        self.transport.publish("mesh:tasks", msg).await
+    }
+
+    pub async fn send_task_status(&self, task_id: &str, status: &str, agent_id: &str, reason: &str) -> Result<(), String> {
+        let status_msg = MeshTaskStatus {
+            task_id: task_id.to_string(),
+            status: status.to_string(),
+            agent_id: agent_id.to_string(),
+            reason: reason.to_string(),
+        };
+
+        let mut buf = Vec::new();
+        status_msg.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = MeshMessage {
+            agent_id: "handoff_manager".to_string(),
+            action: "mesh:task:status".to_string(),
+            status: "ok".to_string(),
+            payload: buf,
+        };
+
+        self.transport.publish("mesh:coordination", msg).await
+    }
+}
+
+#[cfg(test)]
+mod new_tests {
+    use super::*;
+    #[tokio::test]
+    async fn test_handoff_dispatch() {
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        // Dummy db
+        let db = Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Postgres });
+        let manager = HandoffManager::new(transport.clone(), db, false);
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = transport.subscribe("mesh:tasks", Box::new(move |msg: MeshMessage| {
+            if msg.action == "mesh:task:dispatch" {
+                let decoded = crate::ohc::orchestration::MeshTaskDispatch::decode(&msg.payload[..]).unwrap();
+                if decoded.task_id == "t_1" {
+                    received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            }
+        })).await.unwrap();
+
+        manager.dispatch_task("t_1", "task", "desc", "a1", "P1", vec![]).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
 }

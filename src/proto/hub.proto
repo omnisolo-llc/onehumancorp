@@ -1563,3 +1563,18 @@ service McpService {
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
 }
+message MeshTaskDispatch {
+  string task_id = 1;
+  string title = 2;
+  string description = 3;
+  string assigned_agent_id = 4;
+  string priority = 5;
+  bytes payload = 6;
+}
+
+message MeshTaskStatus {
+  string task_id = 1;
+  string status = 2;
+  string agent_id = 3;
+  string reason = 4;
+}
