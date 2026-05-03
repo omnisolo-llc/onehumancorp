@@ -391,23 +391,26 @@ export component Dashboard inherits Window {
             spacing: 12px;
 
             // In-App Help Center '?' Button
-            Rectangle {
-                width: 50px;
-                height: 50px;
-                border-radius: 25px;
-                background: #3b82f6; // Blue
+            TooltipElement {
+                tooltip_id: "help_center";
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #3b82f6; // Blue
 
-                TouchArea {
-                    clicked => { open_help_center(); }
-                }
+                    TouchArea {
+                        clicked => { open_help_center(); }
+                    }
 
-                Text {
-                    text: "?";
-                    color: white;
-                    font-size: 24px;
-                    font-weight: 700;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                    Text {
+                        text: "?";
+                        color: white;
+                        font-size: 24px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
                 }
             }
 
