@@ -291,7 +291,6 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             enable_lazy_tool_loading: false,
-            current_dir: None,
             agent_id: self.agent_id.clone(),
             model,
             server_system_message,
@@ -490,7 +489,6 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 enable_lazy_tool_loading: false,
-                current_dir: None,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),

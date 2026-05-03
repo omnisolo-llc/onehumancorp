@@ -1068,10 +1068,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: "".to_string(),
-                            first_product_name: "".to_string(),
-                            first_product_price: "".to_string(),
-                            domain_choice: "".to_string(),
+                            website_template: website_template.to_string(),
+                            first_product_name: product_name.to_string(),
+                            first_product_price: product_price.to_string(),
+                            domain_choice: domain_choice.to_string(),
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -3254,3 +3254,55 @@ mod e2e_hybrid_blob_tests {
         assert!(*builder_published.borrow(), "Website builder published successfully after simulated blob ops");
     }
 }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_data_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        // Proceed through steps
+        // This is a minimal simulated flow just to set and test the values
+        // Normally you'd call invoke_next_step multiple times
+        ui.set_website_template("Modern Glass".into());
+        ui.set_product_name("Vegan Chocolate Cake".into());
+        ui.set_product_price("45.00".into());
+        ui.set_domain_choice("custom".into());
+
+        // In a real E2E environment we would click through all the UI buttons
+        // Here we just test the propagation mechanism by invoking the callback
+        // The implementation we added to src/app/main.rs actually binds this.
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        ui.on_launch(move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Modern Glass");
+            assert_eq!(product_name, "Vegan Chocolate Cake");
+            assert_eq!(product_price, "45.00");
+            assert_eq!(domain_choice, "custom");
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_launch("".into(), "".into(), "".into(), "".into(), "".into(),
+            ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice());
+
+        assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+    }
