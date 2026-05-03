@@ -182,10 +182,16 @@ impl IpcTransport {
             .await;
 
             if let Ok(rows) = rows {
+                use prost::Message as ProstMessage;
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        if let Ok(msg) = Message::decode(&payload[..]) {
+                            let _ = tx.send(msg);
+                        } else {
+                            // Fallback for legacy messages
+                            let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        }
                     }
                 }
             }
@@ -203,9 +209,13 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf);
+
         sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
-            .bind(&message.payload)
+            .bind(&buf)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -486,6 +496,41 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[tokio::test]
+    async fn test_ipc_transport_serialization() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_proto_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let msg = Message {
+            agent_id: "test_proto_agent".to_string(),
+            action: "proto_test_topic".to_string(),
+            status: "ok".to_string(),
+            payload: b"proto_test_payload".to_vec(),
+        };
+
+        transport.publish("proto_test_topic", msg).await.unwrap();
+
+        // Direct DB verification
+        use sqlx::Row;
+        use prost::Message as ProstMessage;
+
+        let row = sqlx::query("SELECT payload FROM mesh_messages WHERE topic = ?")
+            .bind("proto_test_topic")
+            .fetch_one(&transport.pool)
+            .await
+            .unwrap();
+
+        let raw_bytes: Vec<u8> = row.get("payload");
+        let decoded = Message::decode(&raw_bytes[..]).unwrap();
+
+        assert_eq!(decoded.agent_id, "test_proto_agent");
+        assert_eq!(decoded.action, "proto_test_topic");
+        assert_eq!(decoded.payload, b"proto_test_payload");
+    }
 
     #[tokio::test]
     async fn test_ipc_transport() {
