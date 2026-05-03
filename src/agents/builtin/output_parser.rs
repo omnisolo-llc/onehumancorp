@@ -30,42 +30,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         };
         let completion = resp.message.content.clone();
 
-        // Output Parsing: JSON robust extraction mechanic.
-        // Handles cases where LLM wraps response in markdown e.g. ```json ... ```
-        let mut json_str = completion.trim();
-        let obj_start = json_str.find('{');
-        let arr_start = json_str.find('[');
-
-        let start_idx = match (obj_start, arr_start) {
-            (Some(o), Some(a)) => std::cmp::min(o, a),
-            (Some(o), None) => o,
-            (None, Some(a)) => a,
-            (None, None) => 0,
-        };
-
-        if start_idx > 0 {
-            json_str = &json_str[start_idx..];
-        }
-
-        let obj_end = json_str.rfind('}');
-        let arr_end = json_str.rfind(']');
-
-        let end_idx = match (obj_end, arr_end) {
-            (Some(o), Some(a)) => std::cmp::max(o, a),
-            (Some(o), None) => o,
-            (None, Some(a)) => a,
-            (None, None) => json_str.len().saturating_sub(1),
-        };
-
-        if end_idx < json_str.len() {
-            json_str = &json_str[..=end_idx];
-        }
-
-        if json_str.is_empty() {
-            json_str = "null"; // If empty, fall back to null to trigger serde error
-        }
-
-        match serde_json::from_str::<T>(json_str) {
+        match serde_json::from_str::<T>(&completion) {
             Ok(parsed) => return Ok(parsed),
             Err(e) => {
                 if attempt >= max_retries {
@@ -114,27 +79,6 @@ mod tests {
                 stop_reason: "stop".to_string(),
             })
         }
-    }
-
-    #[tokio::test]
-    async fn test_parse_structured_output_markdown_wrapper() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                "```json\n{\n  \"result\": \"success_markdown\"\n}\n```".to_string()
-            ]),
-        });
-
-        let req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 100,
-            temperature: 0.0,
-        };
-
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_markdown");
     }
 
     #[tokio::test]
