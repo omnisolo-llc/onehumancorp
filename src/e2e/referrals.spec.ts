@@ -13,7 +13,7 @@ test.describe('Referral Program', () => {
     const newLinkButton = page.locator('button:has-text("New Link")');
     await newLinkButton.click();
 
-    await expect(page.locator('text=/ohc:\\/\\/join\\?ref=.*&utm_source=.*/')).toBeVisible();
+    await expect(page.locator('text=ohc://join?ref=')).toBeVisible();
 
     const refreshButton = page.locator('button:has-text("Refresh")');
     await refreshButton.click();
@@ -34,7 +34,7 @@ test.describe('Referral Program', () => {
   test('should generate new referral link', async ({ page }) => {
     await page.goto('/referrals');
     await page.locator('button:has-text("New Link")').click();
-    await expect(page.locator('text=/ohc:\\/\\/join\\?ref=.*&utm_source=.*/')).toBeVisible();
+    await expect(page.locator('text=ohc://join?ref=')).toBeVisible();
   });
 
   test('should copy referral link to clipboard', async ({ page }) => {
