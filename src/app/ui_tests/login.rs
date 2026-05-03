@@ -1,3 +1,4 @@
+use slint::ComponentHandle;
 use crate::app;
 
 fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() }
@@ -145,4 +146,45 @@ fn create_verify_verification_message() {
     assert_eq!(ui.get_verification_message(), "Please enter the 6-digit code sent to your phone.");
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
+}
+
+
+#[test]
+fn login_responsive_375() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(375, 800));
+    assert_eq!(window.size().width, 375);
+}
+
+#[test]
+fn login_responsive_414() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(414, 896));
+    assert_eq!(window.size().width, 414);
+}
+
+#[test]
+fn login_responsive_768() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(768, 1024));
+    assert_eq!(window.size().width, 768);
+}
+
+#[test]
+fn login_responsive_1024() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(1024, 768));
+    assert_eq!(window.size().width, 1024);
+}
+
+#[test]
+fn login_responsive_1440() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(1440, 900));
+    assert_eq!(window.size().width, 1440);
 }

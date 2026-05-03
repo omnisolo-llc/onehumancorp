@@ -29,8 +29,11 @@ export component Login inherits Window {
         spacing: 20px;
         padding: 32px;
 
-        GlassCard {
-            VerticalBox {
+        HorizontalBox {
+            alignment: center;
+            GlassCard {
+                width: min(400px, root.width - 32px);
+                VerticalBox {
                 spacing: 16px;
                 padding: 24px;
 
@@ -59,6 +62,7 @@ export component Login inherits Window {
                 }
 
                 LineEdit {
+                    height: 44px;
                     placeholder-text: "Email or Username";
                     text <=> username;
                 }
@@ -73,6 +77,7 @@ export component Login inherits Window {
                     alignment: center;
                     Text { text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
                     Button {
+                        height: 44px;
                         text: "Resend Verification Email";
                         clicked => { resend_verification(username); }
                     }
@@ -86,11 +91,13 @@ export component Login inherits Window {
                 }
 
                 Button {
+                    height: 44px;
                     text: is_sign_up ? "Sign Up" : "Sign In";
                     clicked => { login(username, password); }
                 }
 
                 Button {
+                    height: 44px;
                     text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
                     clicked => {
                         is_sign_up = !is_sign_up;
@@ -103,15 +110,18 @@ export component Login inherits Window {
                 }
 
                 Button {
+                    height: 44px;
                     text: "Continue with Google/Apple";
                     clicked => { oauth_login("SSO"); }
                 }
                 
                 Button {
+                    height: 44px;
                     text: "⚙ Fix Login Issues";
                     clicked => { open_settings(); }
                 }
             }
+        }
         }
     }
 }
