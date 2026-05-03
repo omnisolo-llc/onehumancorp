@@ -1,3 +1,4 @@
 pub mod tasks;
 pub mod orchestration_test;
 pub mod handoff;
+pub mod powersync_ticker;

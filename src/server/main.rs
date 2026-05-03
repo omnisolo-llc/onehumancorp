@@ -1067,6 +1067,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         telemetry_daemon.start();
     }
 
+    // Ensure shutdown handles stay in scope to prevent instant ticker shutdown
+    let (_shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+
+    // Start PowerSync Ticker Daemon (if in standalone mode)
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let powersync_ticker = std::sync::Arc::new(crate::orchestration::powersync_ticker::PowerSyncTicker::new(db.pool.clone()));
+        powersync_ticker.start(shutdown_rx, std::time::Duration::from_secs(10));
+    }
+
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
     tokio::spawn(async move {
