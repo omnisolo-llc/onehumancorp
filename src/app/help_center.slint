@@ -1,5 +1,32 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export component HelpCategory inherits Rectangle {
+    background: white;
+    border-radius: 8px;
+}
+
+export component HelpFaqItem inherits Rectangle {
+    background: white;
+    border-radius: 8px;
+    in-out property <bool> expanded: false;
+    in property <string> question: "";
+    in property <string> answer: "";
+
+    VerticalBox {
+        padding: 12px;
+        spacing: 8px;
+        TouchArea {
+            clicked => { root.expanded = !root.expanded; }
+            Text { text: root.question; font-weight: 700; font-size: 16px; color: #0f172a; }
+        }
+        if (root.expanded) : Text {
+            text: root.answer;
+            color: #64748b;
+            wrap: word-wrap;
+        }
+    }
+}
+
 export component HelpCenter inherits Window {
     width: 600px;
     height: 800px;
@@ -7,6 +34,7 @@ export component HelpCenter inherits Window {
     background: #f8fafc;
 
     in-out property <string> search_query: "";
+    in-out property <bool> ticket_modal_open: false;
 
     VerticalBox {
         padding: 16px;
@@ -24,23 +52,46 @@ export component HelpCenter inherits Window {
             text <=> search_query;
         }
 
-        ScrollView {
+        if (search_query != "") : VerticalBox {
+            Text { text: "Search Results for topics and articles"; font-weight: 700; font-size: 18px; color: #334155; }
+            Text { text: "Found 1 article matching your query."; color: #64748b; }
+        }
+
+        if (search_query == "") : ScrollView {
             VerticalBox {
                 spacing: 16px;
 
-                Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "Live Chat"; }
+                    Button { text: "Submit Ticket"; clicked => { ticket_modal_open = true; } }
+                }
+
+                if (ticket_modal_open) : Rectangle {
+                    background: #e2e8f0;
+                    border-radius: 8px;
+                    padding: 12px;
                     VerticalBox {
-                        padding: 12px;
-                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                        spacing: 8px;
+                        Text { text: "Submit a new Support Ticket"; font-weight: 700; }
+                        Text { text: "Please provide a subject and description of your issue."; }
+                        Button { text: "Cancel"; clicked => { ticket_modal_open = false; } }
                     }
                 }
 
-                Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                Text { text: "Popular Articles"; font-weight: 700; font-size: 18px; color: #334155; }
+
+                Text { text: "Getting Started Guide"; font-weight: 700; font-size: 18px; color: #334155; }
+                HelpCategory {
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Follow our beginner tutorial to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "My Store Category"; font-weight: 700; font-size: 18px; color: #334155; }
+                HelpCategory {
                     VerticalBox {
                         padding: 12px;
                         Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
@@ -49,8 +100,7 @@ export component HelpCenter inherits Window {
                 }
 
                 Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                HelpCategory {
                     VerticalBox {
                         padding: 12px;
                         Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
@@ -59,8 +109,7 @@ export component HelpCenter inherits Window {
                 }
 
                 Text { text: "AI Agents"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                HelpCategory {
                     VerticalBox {
                         padding: 12px;
                         Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
@@ -69,8 +118,7 @@ export component HelpCenter inherits Window {
                 }
 
                 Text { text: "Marketing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                HelpCategory {
                     VerticalBox {
                         padding: 12px;
                         Text { text: "How to run a promotion"; font-weight: 700; font-size: 16px; color: #0f172a; }
@@ -79,12 +127,30 @@ export component HelpCenter inherits Window {
                 }
 
                 Text { text: "Account & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
+                HelpCategory {
                     VerticalBox {
                         padding: 12px;
                         Text { text: "How to change your subscription"; font-weight: 700; font-size: 16px; color: #0f172a; }
                         Text { text: "Find out how to upgrade or downgrade your plan and view past invoices."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "FAQ (Frequently Asked Questions)"; font-weight: 700; font-size: 18px; color: #334155; }
+                HelpFaqItem {
+                    question: "How do I reset my password?";
+                    answer: "You can find the solution in your account settings under the security tab.";
+                }
+
+                Text { text: "Additional Resources"; font-weight: 700; font-size: 18px; color: #334155; }
+                HelpCategory {
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "Contact Support"; font-weight: 700; color: #0f172a; }
+                        Text { text: "Email us directly if you need help."; color: #64748b; }
+                        Text { text: "Keyboard Shortcuts: Ctrl + K to search."; color: #64748b; }
+                        Text { text: "Video Tutorials: Learn visually."; color: #64748b; }
+                        Text { text: "System Status: All systems operational."; color: #64748b; }
+                        Text { text: "Read our Documentation guide for advanced API usage."; color: #64748b; }
                     }
                 }
             }
