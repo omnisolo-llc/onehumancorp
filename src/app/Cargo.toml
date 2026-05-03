@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-path = "main.rs"
 crate-type = ["cdylib", "rlib"]
+path = "lib.rs"
 
 [[bin]]
 name = "app"
@@ -18,9 +18,19 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 serde_yaml = { workspace = true }
 futures = { workspace = true }
-wasm-bindgen = "0.2.105"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
-wasm-bindgen-futures = "0.4.54"
+console_log = "1"
+log = "0.4"
+getrandom = { version = "0.2", features = ["js"] }
+web-sys = { version = "0.3", features = ["Window"] }
+tokio = { version = "1", features = ["sync", "macros"] }
+tonic = { version = "0.12", default-features = false, features = ["prost"] }
+prost = "0.13"
+reqwest = { version = "0.12", features = ["json"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true }
@@ -28,13 +38,6 @@ tonic = { workspace = true }
 prost = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
 copypasta = "0.10.1"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { version = "1", features = ["sync", "macros"] }
-tonic = { version = "0.12", default-features = false, features = ["prost"] }
-prost = "0.13"
-reqwest = { version = "0.12", features = ["json"] }
-getrandom = { version = "0.2", features = ["js"] }
 
 [build-dependencies]
 slint-build = "1.8.0"
