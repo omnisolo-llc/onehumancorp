@@ -112,7 +112,7 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
         while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
@@ -127,6 +127,22 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
     if !cfg.server_system_message.is_empty() {
         combined_system.push_str(&cfg.server_system_message);
     }
+
+    // Format tools into [Tool Definitions]
+    if !tools.is_empty() {
+        if !combined_system.is_empty() {
+            combined_system.push_str("\n\n");
+        }
+        combined_system.push_str("[Tool Definitions]\n");
+        for tool in tools {
+            combined_system.push_str(&format!("Tool: {}\n", tool.name));
+            combined_system.push_str(&format!("Description: {}\n", tool.description));
+            combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
+        }
+        // Remove trailing newline
+        combined_system.pop();
+    }
+
     if !cfg.developer_instructions.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -134,6 +150,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
         combined_system.push_str("[Developer Instructions]\n");
         combined_system.push_str(&cfg.developer_instructions);
     }
+
     if !user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -254,7 +271,7 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg);
+        let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self.memory_store {
@@ -1728,6 +1745,29 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
     }
 
+
+    #[test]
+    fn test_hierarchical_system_prompt_with_tools() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "Server System Message".to_string();
+        cfg.developer_instructions = "Developer Instructions".to_string();
+        cfg.user_instructions = "User Instructions".to_string();
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: std::sync::Arc::new(MockToolExecutor),
+        };
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
+
+        let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+
+        assert_eq!(prompt, expected);
+    }
+
     #[test]
     fn test_hierarchical_system_prompt() {
         let mut cfg = AgentRunConfig::default();
@@ -1735,7 +1775,7 @@ mod tests {
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -1749,7 +1789,7 @@ mod tests {
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "Server System Message\n\n[User Instructions]\nUser Instructions"
@@ -1759,7 +1799,7 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2);
+        let prompt2 = build_hierarchical_system_prompt(&cfg2, &[]);
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
@@ -1777,7 +1817,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
@@ -1792,7 +1832,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
