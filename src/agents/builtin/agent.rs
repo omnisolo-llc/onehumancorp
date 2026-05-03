@@ -13,6 +13,7 @@ use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDe
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
     RunStarted { iteration: i32 },
+    PlanGenerated { plan: String },
     TextChunk { content: String },
     ToolCall { name: String, args_json: String, result: String, iteration: i32 },
     TaskComplete { content: String },
@@ -52,6 +53,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub enable_plan_and_execute: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -85,6 +87,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            enable_plan_and_execute: false,
         }
     }
 }
@@ -232,6 +235,27 @@ impl Agent {
         let mut messages: Vec<Message> = Vec::new();
         let mut last_checkpoint_id: Option<String> = None;
 
+        // Plan-and-Execute Mechanic
+        let mut prepend_plan = String::new();
+        if cfg.enable_plan_and_execute && cfg.resume_from_checkpoint_id.is_none() {
+            let plan_prompt = format!(
+                "You are tasked with generating a step-by-step plan to solve the following request.\n\nUser Request: {}\n\nBased on your system instructions, please output ONLY a numbered, step-by-step plan of action. Do not execute the plan, do not use tools, just output the plan.",
+                initial_message
+            );
+            let mut plan_req = ChatRequest {
+                model: cfg.model.clone(),
+                system: cfg.server_system_message.clone(),
+                messages: vec![Message::user(plan_prompt)],
+                tools: vec![],
+                max_tokens: cfg.max_tokens,
+                temperature: cfg.temperature,
+            };
+            if let Ok(plan_resp) = self.llm.chat(plan_req).await {
+                prepend_plan = plan_resp.message.content.clone();
+                on_event(AgentEvent::PlanGenerated { plan: prepend_plan.clone() });
+            }
+        }
+
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
             if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
                 let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
@@ -265,7 +289,12 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            let mut final_msg = String::new();
+            if !prepend_plan.is_empty() {
+                final_msg.push_str(&format!("[Generated Execution Plan]\n{}\n\n[User Request]\n", prepend_plan));
+            }
+            final_msg.push_str(initial_message);
+            messages.push(Message::user(final_msg));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -974,6 +1003,62 @@ mod tests {
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_plan_and_execute_architecture() {
+        struct MockLlmClientPlan {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientPlan {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // First call: plan generation. Should have NO tools.
+                    assert!(req.tools.is_empty(), "Plan generation request must not include tools");
+                    return Ok(ChatResponse {
+                        message: Message::assistant("1. Test\n2. Submit"),
+                        usage: ohc_builtin_agent_core::types::Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    });
+                } else {
+                    // Second call: actual execution. The prompt should have the plan prepended.
+                    let user_msg = req.messages.iter().find(|m| m.role == Role::User).unwrap();
+                    assert!(user_msg.content.contains("[Generated Execution Plan]"));
+                    assert!(user_msg.content.contains("1. Test\n2. Submit"));
+                    assert!(user_msg.content.contains("Please do my task"));
+                    return Ok(ChatResponse {
+                        message: Message::assistant("Task done"),
+                        usage: ohc_builtin_agent_core::types::Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    });
+                }
+            }
+        }
+
+        let llm = Arc::new(MockLlmClientPlan {
+            call_count: Mutex::new(0),
+        });
+        let agent = Agent::new(llm, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_plan_and_execute = true;
+        cfg.max_iterations = 1;
+
+        let mut plan_generated = false;
+        let mut on_event = |e: AgentEvent| {
+            if let AgentEvent::PlanGenerated { plan } = e {
+                assert_eq!(plan, "1. Test\n2. Submit");
+                plan_generated = true;
+            }
+        };
+
+        let result = agent.run(&cfg, "Please do my task", &mut on_event).await;
+        assert!(result.is_ok());
+        assert!(plan_generated, "PlanGenerated event was not emitted");
+    }
 
     #[tokio::test]
     async fn test_acon_context_strategy() {

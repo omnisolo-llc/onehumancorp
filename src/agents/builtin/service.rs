@@ -306,6 +306,7 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             enable_lazy_tool_loading: false,
+            enable_plan_and_execute: std::env::var("OHC_AGENT_ENABLE_PLAN_AND_EXECUTE").unwrap_or_else(|_| "false".to_string()).parse().unwrap_or(false),
             agent_id: self.agent_id.clone(),
             model,
             server_system_message,
@@ -440,6 +441,11 @@ impl AgentService for AgentServiceImpl {
                         message_count: message_count as i32,
                         ..Default::default()
                     },
+                    AgentEvent::PlanGenerated { plan } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("\n[Plan Generated]\n{}\n", plan),
+                        ..Default::default()
+                    },
                     AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
                         r#type: EventType::TextChunk as i32,
                         content: format!("[Checkpoint Saved: Iteration {}, Path: {}]\n", iteration, path),
@@ -518,6 +524,7 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 enable_lazy_tool_loading: false,
+                enable_plan_and_execute: std::env::var("OHC_AGENT_ENABLE_PLAN_AND_EXECUTE").unwrap_or_else(|_| "false".to_string()).parse().unwrap_or(false),
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
