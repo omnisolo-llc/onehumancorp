@@ -34,6 +34,7 @@ pub struct User {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct UserPublic {
     pub id: String,
     pub username: String,
@@ -47,6 +48,7 @@ pub struct UserPublic {
 }
 
 impl User {
+    #[allow(dead_code)]
     pub fn public_view(&self) -> UserPublic {
         UserPublic {
             id: self.id.clone(),
@@ -457,6 +459,7 @@ impl Store {
             }
         }
     }
+    #[allow(dead_code)]
     pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> User {
         let mut users = self.users.write().unwrap();
         let mut by_oidc = self.by_oidc.write().unwrap();
