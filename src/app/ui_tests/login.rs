@@ -146,3 +146,71 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+// --- Added UI Tests ---
+
+#[test]
+fn test_login_open_settings_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called_clone = called.clone();
+
+    ui.on_open_settings(move || {
+        *called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_open_settings();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn test_login_oauth_login_callback() {
+    let ui = create();
+    let arg = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let arg_clone = arg.clone();
+
+    ui.on_oauth_login(move |provider| {
+        *arg_clone.borrow_mut() = provider.to_string();
+    });
+
+    ui.invoke_oauth_login("Google".into());
+    assert_eq!(*arg.borrow(), "Google");
+}
+
+#[test]
+fn test_login_resend_verification_callback() {
+    let ui = create();
+    let arg = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let arg_clone = arg.clone();
+
+    ui.on_resend_verification(move |username| {
+        *arg_clone.borrow_mut() = username.to_string();
+    });
+
+    ui.invoke_resend_verification("test_user".into());
+    assert_eq!(*arg.borrow(), "test_user");
+}
+
+#[test]
+fn test_login_start_setup_wizard_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called_clone = called.clone();
+
+    ui.on_start_setup_wizard(move || {
+        *called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_start_setup_wizard();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn test_login_show_verification_toggle() {
+    let ui = create();
+    assert!(!ui.get_show_verification());
+    ui.set_show_verification(true);
+    assert!(ui.get_show_verification());
+    ui.set_show_verification(false);
+    assert!(!ui.get_show_verification());
+}
