@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
+### Cloud Scaling Improvements
+- 🤖 Implementer: Harness Upgrade - Prompt Construction: 'Lost in the Middle' Prevention (#9392)
+
+### Privacy/Offline Improvements
+- 🤖 Implementer: Harness Upgrade - Prompt Construction: 'Lost in the Middle' Prevention (#9392)
+
 ## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
 ### Cloud Scaling Improvements
 - chore: migrate protobufs to bazel and fix tests (#9343)
