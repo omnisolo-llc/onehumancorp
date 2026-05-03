@@ -64,7 +64,49 @@ Broadcasts a validated state machine event over structured Centrifuge channels.
 }
 ```
 
-### 3.3 Agents List
+### 3.3 Sub-Agent Queue Workflow
+
+The KAIROS Sub-Agent Queue and Teammate Mesh v2 interact to create a distributed state machine for asynchronous task execution.
+
+#### KAIROS Sub-Agent Queue Orchestration
+
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the distributed queue for asynchronous execution.
+
+**Payload:**
+```json
+{
+  "parent_task_id": "task_12345",
+  "payload": {
+    "instruction": "Verify the styling tokens in the frontend."
+  },
+  "scheduled_at": "2026-04-06T12:00:00Z"
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "queue_id": "queue_9876",
+  "status": "ENQUEUED"
+}
+```
+
+```mermaid
+graph TD
+    Client[Human CEO / Orchestrator] -->|POST /api/queue/subagent| Queue[(Distributed Task Queue)]
+    Queue -->|State: ENQUEUED| Mesh{Teammate Mesh v2}
+    Mesh -->|POST /api/mesh/v2/broadcast| Swarm[Agent Swarm]
+    Swarm -->|Task Claimed| Queue
+    Queue -->|State: IN_PROGRESS| Mesh
+    Swarm -->|Task Complete| Queue
+    Queue -->|State: COMPLETED| Mesh
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Client,Queue,Mesh,Swarm premium;
+```
+
+### 3.4 Agents List
 
 **Endpoint:** `GET /api/agents`
 Returns a list of all configured agents within the OHC swarm.
