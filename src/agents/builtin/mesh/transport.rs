@@ -209,19 +209,32 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
-            .bind(topic)
-            .bind(&message.payload)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut retries = 3;
+        while retries > 0 {
+            let res = sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+                .bind(topic)
+                .bind(&message.payload)
+                .execute(&self.pool)
+                .await;
 
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
+            match res {
+                Ok(_) => {
+                    // Deliver to local subscribers without polling delay
+                    if let Some(tx) = self.subs.get(topic) {
+                        let _ = tx.send(message);
+                    }
+                    return Ok(());
+                },
+                Err(e) => {
+                    retries -= 1;
+                    if retries == 0 {
+                        return Err(e.to_string());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
         }
-
-        Ok(())
+        Err("Publish failed after retries".to_string())
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -333,14 +346,26 @@ impl MeshTransport for RedisTransport {
         use prost::Message as ProstMessage;
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
-        let mut conn = self.publish_conn.lock().await;
-
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
         let payload_b64 = STANDARD.encode(&buf);
 
-        let _: () = conn.publish(topic, payload_b64).await.map_err(|e| e.to_string())?;
-        Ok(())
+        let mut retries = 3;
+        while retries > 0 {
+            let mut conn = self.publish_conn.lock().await;
+            let res: Result<(), _> = conn.publish(topic, payload_b64.clone()).await;
+            match res {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    retries -= 1;
+                    if retries == 0 {
+                        return Err(e.to_string());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
+        }
+        Err("Publish failed after retries".to_string())
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -492,6 +517,21 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
+    async fn test_publish_retry_logic() {
+        let db_url = format!("sqlite://{}/test_retry_{}.sqlite", std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string()), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let msg = Message {
+            topic: "test_topic".to_string(),
+            payload: b"test".to_vec(),
+        };
+
+        // Publish should succeed
+        let result = transport.publish("test_topic", msg).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_ipc_transport() {
         let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
         let db_path = format!("{}/test_ipc_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
@@ -550,6 +590,26 @@ mod tests {
         assert!(acquired_after_release);
     }
 
+
+    #[tokio::test]
+    async fn test_ipc_transport_locking_ttl() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_locks_ttl_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let acquired = transport.acquire_lock("ipc_resource_ttl", "agent_1", 1).await.unwrap();
+        assert!(acquired);
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        let acquired_again = transport.acquire_lock("ipc_resource_ttl", "agent_2", 1).await.unwrap();
+        assert!(acquired_again);
+    }
 
     #[tokio::test]
     async fn test_memory_transport() {

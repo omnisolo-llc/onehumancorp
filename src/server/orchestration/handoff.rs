@@ -34,10 +34,11 @@ impl HandoffManager {
                 tokio::spawn(async move {
                     match &db_clone.store {
                         DbStore::Postgres => {
-                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                 .bind(&handoff.state_id)
                                 .bind(&handoff.tenant_id)
                                 .bind(&handoff.serialized_state)
+                                .bind(handoff.timestamp as f64)
                                 .execute(&db_clone.pool)
                                 .await
                             {
@@ -45,10 +46,11 @@ impl HandoffManager {
                             }
                         }
                         DbStore::Sqlite(sqlite_pool) => {
-                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                 .bind(&handoff.state_id)
                                 .bind(&handoff.tenant_id)
                                 .bind(&handoff.serialized_state)
+                                .bind(handoff.timestamp)
                                 .execute(sqlite_pool)
                                 .await
                             {
@@ -110,6 +112,78 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handoff_listener_idempotency() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+            .unwrap()
+            .create_if_missing(true);
+
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+        let transport = Arc::new(MemoryTransport::new());
+        let manager = HandoffManager::new(transport.clone(), db.clone(), true);
+
+        let cancel = manager.start_listener().await.unwrap();
+
+        let handoff1 = SyncStateHandoff {
+            tenant_id: "test_tenant".to_string(),
+            state_id: "test_state_idempotent".to_string(),
+            serialized_state: b"old_state".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp: 1000,
+        };
+
+        let mut buf1 = Vec::new();
+        handoff1.encode(&mut buf1).unwrap();
+
+        let msg1 = MeshMessage {
+            topic: "mesh:coordination:handoff".to_string(),
+            payload: buf1,
+        };
+
+        transport.publish("mesh:coordination:handoff", msg1).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let handoff2 = SyncStateHandoff {
+            tenant_id: "test_tenant".to_string(),
+            state_id: "test_state_idempotent".to_string(),
+            serialized_state: b"new_state".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp: 2000,
+        };
+
+        let mut buf2 = Vec::new();
+        handoff2.encode(&mut buf2).unwrap();
+
+        let msg2 = MeshMessage {
+            topic: "mesh:coordination:handoff".to_string(),
+            payload: buf2,
+        };
+
+        transport.publish("mesh:coordination:handoff", msg2).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state_idempotent'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let content: Vec<u8> = row.get("raw_content");
+        assert_eq!(content, b"new_state".to_vec());
+
+        cancel();
+    }
+
+    #[tokio::test]
     async fn test_handoff_listener() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .unwrap()
@@ -120,7 +194,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();

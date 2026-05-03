@@ -1004,6 +1004,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("Failed to start handoff listener: {}", e);
     }
 
+    let mesh_for_health = mesh_transport.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            if let Ok(agents) = mesh_for_health.get_active_agents().await {
+                if agents.is_empty() {
+                    eprintln!("Health check alert: No active agents found in the mesh network!");
+                }
+            }
+        }
+    });
+
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
