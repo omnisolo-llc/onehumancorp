@@ -18,11 +18,11 @@ test.describe('Prompt Tuning Flow', () => {
 
     // Step 0: Tone
     await expect(page.locator('text=Prompt Tuning')).toBeVisible();
-    await page.locator('text=Friendly').click();
+    await page.locator('text=Friendly & Warm').click();
     await page.locator('button:has-text("Next")').click();
 
     // Step 1: Focus
-    await page.locator('text=Only discuss business').click();
+    await page.locator('text=Only about my products').click();
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: Examples
