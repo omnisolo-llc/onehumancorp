@@ -146,3 +146,50 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+// --- Visual Regression Locks ---
+
+#[test]
+fn login_visual_regression_no_emoji() {
+    let ui = create();
+    // In previous regressed version, there was an emoji component and incorrect title/subtitle structure.
+    // Here we ensure the canonical strings are perfectly set to match the audited design without "✨".
+    assert_eq!(ui.get_title_text(), "One Human Corp");
+}
+
+#[test]
+fn login_visual_regression_subtitle() {
+    let ui = create();
+    assert_eq!(ui.get_subtitle_text(), "Sign in to manage your business");
+}
+
+#[test]
+fn login_visual_regression_no_gear_icon() {
+    let ui = create();
+    // The previous regression had "⚙ App Settings" which violated design standards.
+    assert_eq!(ui.get_app_settings_text(), "App Settings");
+}
+
+#[test]
+fn login_open_settings_callback_fires() {
+    let ui = create();
+    let fired = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let fired_clone = fired.clone();
+    ui.on_open_settings(move || {
+        *fired_clone.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert!(*fired.borrow(), "Open settings callback should fire");
+}
+
+#[test]
+fn login_oauth_login_callback_fires() {
+    let ui = create();
+    let provider = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let provider_clone = provider.clone();
+    ui.on_oauth_login(move |p| {
+        *provider_clone.borrow_mut() = p.to_string();
+    });
+    ui.invoke_oauth_login("SSO".into());
+    assert_eq!(*provider.borrow(), "SSO");
+}
