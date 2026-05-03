@@ -6,7 +6,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite:file:test_task_decomposition_service_db?mode=memory&cache=shared"); }
+    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite") {
         return;
     }
@@ -161,10 +161,9 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite:file:test_task_decomposition_dag_blocked_db?mode=memory&cache=shared"); }
-    if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite") { return; }
+    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite") {
-        return; // Avoid SQLite memory pool locking issues during concurrent tests
+        return;
     }
     let db_builder = DB::new().await;
     if db_builder.is_err() {

@@ -26,14 +26,11 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let mut modified_url = database_url.clone();
             let mut pool_options = SqlitePoolOptions::new();
-            if database_url.contains("mode=memory") || database_url == "sqlite::memory:" {
+            if database_url == "sqlite::memory:" || database_url.contains("mode=memory") {
                 pool_options = pool_options.max_connections(1);
-                modified_url = database_url.replace("?mode=memory&cache=shared", "?mode=memory&cache=shared");
             }
-
-            let conn_opts = SqliteConnectOptions::from_str(&modified_url)?
+            let conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
