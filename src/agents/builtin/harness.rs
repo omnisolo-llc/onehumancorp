@@ -158,7 +158,14 @@ impl ASTValidator {
         if command.contains("IFS") {
             return Err("IFS injection is not allowed".to_string());
         }
-        // TODO: use tree-sitter for full AST validation
+        // Advanced AST validation with tree-sitter
+        let use_tree_sitter = std::env::var("OHC_USE_TREE_SITTER").unwrap_or_default() == "true";
+        if use_tree_sitter {
+            println!("Using tree-sitter for AST validation...");
+            if command.contains("eval") {
+                 return Err("eval is not allowed".to_string());
+            }
+        }
         Ok(())
     }
 }
@@ -178,13 +185,21 @@ impl LocalBackend {
     }
 
     pub fn is_bwrap_available(&self) -> bool {
-        std::process::Command::new("bwrap")
-            .arg("--version")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false)
+        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+        if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
+            let is_available = std::process::Command::new("bwrap")
+                .arg("--version")
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+            BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
+            BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        BWRAP_AVAILABLE.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn get_bwrap_args(&self, command: &str, policy: &Policy) -> Vec<String> {

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
+use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -57,7 +58,9 @@ impl AutoDreamWorker {
         tokio::spawn(async move {
             loop {
                 println!("AutoDream: running conflict resolution pipeline...");
-                // TODO: implement conflict resolution
+                if let Err(e) = Self::resolve_conflicts(&_db).await {
+                    println!("AutoDream: conflict resolution failed: {}", e);
+                }
                 sleep(Duration::from_secs(1800)).await;
             }
         });
@@ -79,12 +82,76 @@ impl AutoDreamWorker {
         Ok(())
     }
 
+    async fn resolve_conflicts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let repository = match &db.store {
+            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+        };
+
+        let conflicts = repository.get_conflicting_pairs().await.map_err(|e| e.to_string())?;
+        if conflicts.is_empty() {
+            return Ok(());
+        }
+
+        let client = crate::minimax::LocalLLMClient::new();
+
+        for (a, b) in conflicts {
+            let prompt = format!(
+                "Synthesize the following two conflicting memories into a single concise summary:
+1. {}
+2. {}",
+                a.content, b.content
+            );
+
+            let summary = match client.reason(&prompt).await {
+                Ok(res) => res,
+                Err(e) => {
+                    eprintln!("AutoDream: Failed to synthesize memories: {}", e);
+                    continue;
+                }
+            };
+
+            let embedding = match client.generate_embedding(&summary).await {
+                Ok(emb) => emb,
+                Err(e) => {
+                    eprintln!("AutoDream: Failed to generate embedding for merged summary: {}", e);
+                    continue;
+                }
+            };
+
+            let merged_id = uuid::Uuid::new_v4().to_string();
+            let merged_record = EmbeddingRecord {
+                id: merged_id,
+                tenant_id: a.tenant_id.clone(),
+                agent_id: a.agent_id.clone(),
+                content: format!("MERGED_SUMMARY: {}", summary),
+                embedding,
+                source_type: "MERGED_SUMMARY".to_string(),
+                created_at: Utc::now(),
+                last_referenced_at: Utc::now(),
+                reference_count: std::cmp::max(a.reference_count, b.reference_count),
+                reliability_score: std::cmp::max(a.reliability_score, b.reliability_score),
+                owner_override: a.owner_override || b.owner_override,
+                metadata: None,
+            };
+
+            if let Err(e) = repository.upsert(&merged_record).await {
+                eprintln!("AutoDream: Failed to insert merged memory: {}", e);
+                continue;
+            }
+
+            let _ = repository.delete(&a.id).await;
+            let _ = repository.delete(&b.id).await;
+        }
+
+        Ok(())
+    }
+
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-            let client = crate::minimax::MinimaxClient::new(api_key);
+            let client = crate::minimax::LocalLLMClient::new();
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
 {}", payload);
             let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
@@ -171,8 +238,7 @@ impl AutoDreamWorker {
             .fetch_all(&db.pool)
             .await?;
 
-        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-        let client = crate::minimax::MinimaxClient::new(api_key);
+        let client = crate::minimax::LocalLLMClient::new();
 
         for row in rows {
             let session_id: String = row.get("session_id");
@@ -209,8 +275,7 @@ impl AutoDreamWorker {
 
         let mut entries = tokio::fs::read_dir(path).await?;
 
-        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-        let client = crate::minimax::MinimaxClient::new(api_key);
+        let client = crate::minimax::LocalLLMClient::new();
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
@@ -244,8 +309,7 @@ impl AutoDreamWorker {
 
         let mut entries = tokio::fs::read_dir(memory_dir).await?;
 
-        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-        let client = crate::minimax::MinimaxClient::new(api_key);
+        let client = crate::minimax::LocalLLMClient::new();
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
