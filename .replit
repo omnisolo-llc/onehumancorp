@@ -1,4 +1,4 @@
-modules = ["rust-stable", "nodejs-20", "bash", "postgresql-16"]
+modules = ["rust-stable", "nodejs-20", "bash", "postgresql-16", "python-3.11"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -32,8 +32,4 @@ waitForPort = 5000
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
+externalPort = 80
