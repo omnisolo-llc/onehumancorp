@@ -177,11 +177,8 @@ impl GrowthService for MyGrowthService {
         let referral_code = if req.referral_code.is_empty() {
             referral_api::generate_referral_link(&req.user_id)
                 .map_err(|e| Status::internal(e))?
-                .split("ref=")
-                .nth(1)
-                .unwrap_or("")
-                .split('&')
-                .next()
+                .split('=')
+                .last()
                 .unwrap_or("error")
                 .to_string()
         } else {

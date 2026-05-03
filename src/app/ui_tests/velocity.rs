@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::SwarmVelocityWindow { crate::ui_tests::init(); app::SwarmVelocityWindow::new().unwrap() }
 
