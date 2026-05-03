@@ -43,6 +43,7 @@ rust_library(
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
+        "agents_md.rs",
         "guardrails.rs",
         "harness.rs",
         "legacy_mesh.rs",

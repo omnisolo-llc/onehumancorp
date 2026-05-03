@@ -1,3 +1,4 @@
+pub mod agents_md;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
 //
 // Configuration via environment variables:

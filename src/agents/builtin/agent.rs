@@ -51,6 +51,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub working_dir: Option<std::path::PathBuf>,
 }
 
 impl Default for AgentRunConfig {
@@ -83,6 +84,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            working_dir: None,
         }
     }
 }
@@ -294,6 +296,15 @@ impl Agent {
             // High-signal context at the very beginning and very end.
             if cfg.enable_lost_in_the_middle_prevention {
                 let mut reminder_text = String::new();
+
+                // Prompt Construction: Cascading AGENTS.md files
+                let pwd = cfg.working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                if let Ok(agents_md_context) = crate::agents_md::load_cascading_agents_md(&pwd) {
+                    if !agents_md_context.is_empty() {
+                        reminder_text.push_str(&format!("[Cascading AGENTS.md Context]\n{}\n\n", agents_md_context));
+                    }
+                }
+
                 if !cfg.developer_instructions.is_empty() {
                     reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
                 }
@@ -2192,5 +2203,63 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+}
+
+#[cfg(test)]
+mod additional_agent_tests {
+    use super::*;
+    use crate::agents_md::load_cascading_agents_md;
+    use tempfile::TempDir;
+    use std::fs;
+
+    #[tokio::test]
+    async fn test_cascading_agents_md_injection() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lost_in_the_middle_prevention = true;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Setup an AGENTS.md file
+        fs::File::create(root.join(".git")).unwrap();
+        let mut root_agents = fs::File::create(root.join("AGENTS.md")).unwrap();
+        std::io::Write::write_all(&mut root_agents, b"Global rules\n").unwrap();
+
+        cfg.working_dir = Some(root.to_path_buf());
+
+        // I will just use the MockToolExecutor and test it up to prompt construction
+        // because setting up the local MockLlmClient in a separate module correctly is painful.
+        // Or I can define my own mock inside this test.
+        struct LocalMockClient {
+            last_req: tokio::sync::Mutex<Option<ohc_builtin_agent_core::types::ChatRequest>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for LocalMockClient {
+            async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                *self.last_req.lock().await = Some(req);
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant("done"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let client = Arc::new(LocalMockClient {
+            last_req: tokio::sync::Mutex::new(None),
+        });
+
+        let agent = Agent::new(client.clone() as Arc<dyn LlmClient>, vec![]);
+
+        let mut on_event = |_e| {};
+        let _ = agent.run(&cfg, "Do the task", &mut on_event).await;
+
+        let req = client.last_req.lock().await.clone().unwrap();
+        let messages = req.messages;
+
+        // Final message (excluding user initial message) should contain our AGENTS.md injection
+        let has_injection = messages.iter().any(|m| m.content.contains("[Cascading AGENTS.md Context]") && m.content.contains("Global rules"));
+        assert!(has_injection, "The AGENTS.md content was not injected into the prompt");
     }
 }
