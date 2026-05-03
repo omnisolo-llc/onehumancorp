@@ -71,7 +71,7 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 
-  test('should display swarm observability section', async ({ page }) => {
+  test('should display agent actions today section', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Agent Actions Today')).toBeVisible();
   });
