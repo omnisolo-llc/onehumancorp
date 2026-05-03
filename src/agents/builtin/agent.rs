@@ -34,6 +34,7 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
+    pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
@@ -66,6 +67,7 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 0,
             confidence_threshold: 0.0,
+            enable_acon_context_strategy: false,
             enable_observation_masking: true,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
@@ -112,7 +114,7 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
         while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
@@ -127,6 +129,22 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
     if !cfg.server_system_message.is_empty() {
         combined_system.push_str(&cfg.server_system_message);
     }
+
+    // Format tools into [Tool Definitions]
+    if !tools.is_empty() {
+        if !combined_system.is_empty() {
+            combined_system.push_str("\n\n");
+        }
+        combined_system.push_str("[Tool Definitions]\n");
+        for tool in tools {
+            combined_system.push_str(&format!("Tool: {}\n", tool.name));
+            combined_system.push_str(&format!("Description: {}\n", tool.description));
+            combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
+        }
+        // Remove trailing newline
+        combined_system.pop();
+    }
+
     if !cfg.developer_instructions.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -134,6 +152,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
         combined_system.push_str("[Developer Instructions]\n");
         combined_system.push_str(&cfg.developer_instructions);
     }
+
     if !user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -254,7 +273,7 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg);
+        let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self.memory_store {
@@ -289,6 +308,25 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
+
+            // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
+            if cfg.enable_acon_context_strategy {
+                let msg_count = final_messages.len();
+                if msg_count > 3 {
+                    // We preserve the last 2 messages (usually assistant + tool results)
+                    // For older Tool role messages, we strip the raw tool output but keep reasoning
+                    let threshold = msg_count - 2;
+                    for i in 0..threshold {
+                        if final_messages[i].role == Role::Tool {
+                            for tr in &mut final_messages[i].tool_results {
+                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
+                                    tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
@@ -936,6 +974,110 @@ mod tests {
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_acon_context_strategy() {
+        struct MockLlmClientAcon {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientAcon {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Turn 1: Return a tool call to generate some history
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "I am thinking about calling a tool.".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_1".to_string(),
+                                name: "read_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 2 {
+                    // Turn 2: Another tool call
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "I need more info.".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_2".to_string(),
+                                name: "read_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 3 {
+                    // Turn 3: Final answer. We check the received messages.
+                    // The history should be: User, Assistant(call1), Tool(result1), Assistant(call2), Tool(result2)
+                    // With ACON enabled, result1 should be stripped. result2 should remain intact since it's in the last 2 messages.
+                    let messages = &req.messages;
+
+                    let mut found_acon = false;
+                    for m in messages {
+                        if m.role == Role::Tool {
+                            for tr in &m.tool_results {
+                                if tr.content.starts_with("[ACON:") {
+                                    found_acon = true;
+                                }
+                            }
+                        }
+                    }
+                    assert!(found_acon, "ACON should have stripped older tool results.");
+
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Extra answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "read_tool".to_string(),
+                description: "read".to_string(),
+                is_read_only: true,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ];
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
+        // Disable other mechanics to isolate the test
+        cfg.enable_observation_masking = false;
+        cfg.enable_context_compaction = false;
+        cfg.enable_lost_in_the_middle_prevention = false;
+
+        let client = Arc::new(MockLlmClientAcon { call_count: Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final answer");
+    }
 
     #[tokio::test]
     async fn test_tool_scoping_lazy_loading() {
@@ -1728,6 +1870,29 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
     }
 
+
+    #[test]
+    fn test_hierarchical_system_prompt_with_tools() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "Server System Message".to_string();
+        cfg.developer_instructions = "Developer Instructions".to_string();
+        cfg.user_instructions = "User Instructions".to_string();
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: std::sync::Arc::new(MockToolExecutor),
+        };
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
+
+        let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+
+        assert_eq!(prompt, expected);
+    }
+
     #[test]
     fn test_hierarchical_system_prompt() {
         let mut cfg = AgentRunConfig::default();
@@ -1735,7 +1900,7 @@ mod tests {
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -1749,7 +1914,7 @@ mod tests {
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "Server System Message\n\n[User Instructions]\nUser Instructions"
@@ -1759,7 +1924,7 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2);
+        let prompt2 = build_hierarchical_system_prompt(&cfg2, &[]);
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
@@ -1777,7 +1942,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
@@ -1792,7 +1957,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
