@@ -33,6 +33,22 @@ impl PlanTier {
             PlanTier::Business => None,      // Custom/Unlimited
         }
     }
+
+    pub fn max_agents(&self) -> Option<usize> {
+        match self {
+            PlanTier::Free => Some(1),
+            PlanTier::Starter => Some(5),
+            PlanTier::Pro | PlanTier::Business => None,
+        }
+    }
+
+    pub fn max_products(&self) -> Option<usize> {
+        match self {
+            PlanTier::Free => Some(10),
+            PlanTier::Starter => Some(50),
+            PlanTier::Pro | PlanTier::Business => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -147,5 +163,15 @@ mod tests {
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
         assert_eq!(PlanTier::Business.storage_limit_mb(), None);
+
+        assert_eq!(PlanTier::Free.max_agents(), Some(1));
+        assert_eq!(PlanTier::Starter.max_agents(), Some(5));
+        assert_eq!(PlanTier::Pro.max_agents(), None);
+        assert_eq!(PlanTier::Business.max_agents(), None);
+
+        assert_eq!(PlanTier::Free.max_products(), Some(10));
+        assert_eq!(PlanTier::Starter.max_products(), Some(50));
+        assert_eq!(PlanTier::Pro.max_products(), None);
+        assert_eq!(PlanTier::Business.max_products(), None);
     }
 }

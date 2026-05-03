@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 export struct UiAgent {
     id: string,
@@ -18,12 +19,20 @@ export component Agents inherits Window {
 
     in property <[UiAgent]> agents;
 
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
     callback hire_agent();
     callback fix_agent(string);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        if (show_upgrade_prompt) : UpgradePrompt {
+            message: root.upgrade_prompt_message;
+            action_dismiss => { root.show_upgrade_prompt = false; }
+        }
 
         HorizontalBox {
             Text { text: "Agents"; font-size: 20px; font-weight: 700; color: #1e293b; }
