@@ -33,6 +33,10 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
+        "@crates//:cc",
     ],
 )
 
@@ -104,6 +108,10 @@ rust_library(
         "@crates//:tracing-subscriber",
         "@crates//:urlencoding",
         "@crates//:uuid",
+
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
+        "@crates//:cc",
     ],
 )
 
@@ -149,6 +157,10 @@ rust_binary(
         "@crates//:tracing-subscriber",
         "@crates//:urlencoding",
         "@crates//:uuid",
+
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
+        "@crates//:cc",
     ],
 )
 

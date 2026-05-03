@@ -138,37 +138,77 @@ impl IsolationStrategy for ProcessIsolationStrategy {
     }
 }
 
-pub struct ASTValidator;
 
-impl ASTValidator {
+use tree_sitter::{Parser, Language, Node};
+
+
+
+pub trait CommandValidator: Send + Sync {
+    fn validate(&self, cmd: &str) -> Result<(), String>;
+}
+
+pub struct ASTCommandValidator;
+
+impl ASTCommandValidator {
     pub fn new() -> Self {
-        ASTValidator
+        ASTCommandValidator
     }
+}
 
-    pub fn validate(&self, command: &str) -> Result<(), String> {
-        if command.contains("sudo") {
-            return Err("sudo is not allowed".to_string());
-        }
-        if command.contains("zmodload") {
-            return Err("zmodload is not allowed".to_string());
-        }
-        if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
-            return Err("subshells and redirections are not allowed in stub".to_string());
-        }
-        if command.contains("IFS") {
-            return Err("IFS injection is not allowed".to_string());
-        }
-        // Advanced AST validation with tree-sitter
-        let use_tree_sitter = std::env::var("OHC_USE_TREE_SITTER").unwrap_or_default() == "true";
-        if use_tree_sitter {
-            println!("Using tree-sitter for AST validation...");
-            if command.contains("eval") {
-                 return Err("eval is not allowed".to_string());
+impl CommandValidator for ASTCommandValidator {
+    fn validate(&self, cmd: &str) -> Result<(), String> {
+        let mut parser = Parser::new();
+        let language = tree_sitter_bash::LANGUAGE.into();
+        parser.set_language(&language).map_err(|e| format!("Error loading bash grammar: {}", e))?;
+
+        let tree = parser.parse(cmd, None).ok_or("Failed to parse command")?;
+        let root_node = tree.root_node();
+
+        let mut cursor = root_node.walk();
+        let check_node = |node: Node| -> Result<(), String> {
+            let kind = node.kind();
+            let text = &cmd[node.start_byte()..node.end_byte()];
+
+            if kind == "command_name" {
+                if text == "zmodload" || text == "emulate" || text == "sudo" {
+                    return Err(format!("Dangerous operation detected: {}", text));
+                }
+            }
+
+            // We want to prevent Zsh process substitutions like =cmd
+            // tree-sitter-bash parses process substitutions as `process_substitution` node
+            if kind == "process_substitution" || kind == "extglob_pattern" {
+                 return Err(format!("Process substitution or obfuscation detected: {}", text));
+            }
+
+            // For `=cmd`, Zsh uses it as process substitution. tree-sitter-bash parses it often as `word` or `command_name` depending on context
+            // We should only block if it starts with '=' AND length > 1 (e.g. `=ls`), but avoid blocking assignments like `FOO=bar` or single `=`
+            // An assignment usually has kind `variable_assignment`. A simple word starting with `=` is our target.
+            if kind == "word" || kind == "command_name" {
+                if text.starts_with("=") && text.len() > 1 && !text.contains("==") {
+                     return Err(format!("Process substitution or obfuscation detected: {}", text));
+                }
+            }
+
+            if text.contains("sip.db") {
+                 return Err("Attempted access to internal state file sip.db".to_string());
+            }
+
+            Ok(())
+        };
+
+        let mut queue = vec![root_node];
+        while let Some(node) = queue.pop() {
+            check_node(node)?;
+            for child in node.children(&mut cursor) {
+                queue.push(child);
             }
         }
+
         Ok(())
     }
 }
+
 
 #[async_trait]
 pub trait HarnessBackend: Send + Sync {
@@ -176,11 +216,11 @@ pub trait HarnessBackend: Send + Sync {
 }
 
 pub struct LocalBackend {
-    validator: Arc<ASTValidator>,
+    validator: Arc<dyn CommandValidator>,
 }
 
 impl LocalBackend {
-    pub fn new(validator: Arc<ASTValidator>) -> Self {
+    pub fn new(validator: Arc<dyn CommandValidator>) -> Self {
         LocalBackend { validator }
     }
 
@@ -339,14 +379,14 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
+    validator: Arc<dyn CommandValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
 }
 
 impl Manager {
     pub fn new(config: Config) -> Self {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(ASTCommandValidator::new());
         let local_backend = Arc::new(LocalBackend::new(validator.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
         Manager {
@@ -443,22 +483,60 @@ mod tests {
     }
 
     #[test]
-    fn test_ast_validator() {
-        let validator = ASTValidator::new();
+    fn test_ast_validator_obfuscation() {
+        let validator = ASTCommandValidator::new();
         
+        // Allowed commands
         assert!(validator.validate("ls -l").is_ok());
         assert!(validator.validate("echo hello").is_ok());
+        assert!(validator.validate("cat my_file.txt").is_ok());
+        assert!(validator.validate("FOO=bar echo $FOO").is_ok());
+        assert!(validator.validate("if [ \"$A\" = \"$B\" ]; then echo 1; fi").is_ok());
         
+        // 1. sudo
         let err = validator.validate("sudo rm -rf /").unwrap_err();
-        assert_eq!(err, "sudo is not allowed");
+        assert!(err.contains("Dangerous operation detected"));
         
+        // 2. zmodload (Zsh module loading)
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
-        assert_eq!(err, "zmodload is not allowed");
+        assert!(err.contains("Dangerous operation detected"));
+
+        // 3. emulate (Zsh emulate)
+        let err = validator.validate("emulate sh").unwrap_err();
+        assert!(err.contains("Dangerous operation detected"));
+
+        // 4. sip.db access
+        let err = validator.validate("cat sip.db").unwrap_err();
+        assert!(err.contains("Attempted access to internal state file sip.db"));
+
+        // 5. Process substitution obfuscation: <()
+        let err = validator.validate("cat <(ls)").unwrap_err();
+        assert!(err.contains("Process substitution or obfuscation detected"));
+
+        // 6. Process substitution obfuscation: >()
+        let err = validator.validate("tee >(cat)").unwrap_err();
+        assert!(err.contains("Process substitution or obfuscation detected"));
+
+        // 7. Process substitution obfuscation: =cmd
+        let err = validator.validate("cat =ls").unwrap_err();
+        assert!(err.contains("Process substitution or obfuscation detected"));
+
+        // 8. sip.db embedded access
+        let err = validator.validate("rm -rf /var/lib/ohc/sip.db").unwrap_err();
+        assert!(err.contains("Attempted access to internal state file sip.db"));
+
+        // 9. Nested process substitution
+        let err = validator.validate("cat <(echo <(ls))").unwrap_err();
+        assert!(err.contains("Process substitution or obfuscation detected"));
+
+        // 10. Chained obfuscation
+        let err = validator.validate("zmodload zsh/net/tcp; cat sip.db").unwrap_err();
+        assert!(err.contains("Dangerous operation detected") || err.contains("Attempted access"));
     }
 
     #[test]
     fn test_get_bwrap_args() {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(ASTCommandValidator::new());
         let runner = LocalBackend::new(validator);
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
@@ -481,7 +559,7 @@ mod tests {
 
     #[test]
     fn test_policy_allow_read_deny_write() {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(ASTCommandValidator::new());
         let runner = LocalBackend::new(validator);
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
