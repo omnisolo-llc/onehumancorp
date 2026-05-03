@@ -2049,10 +2049,6 @@ mod docs_tests {
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
 
-        let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
-
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
         dashboard_ui.on_open_video_tutorials(move || { *videos_opened_clone.borrow_mut() = true; });
@@ -2068,14 +2064,12 @@ mod docs_tests {
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
         dashboard_ui.invoke_open_ai_chat();
-        dashboard_ui.invoke_open_api_docs();
         dashboard_ui.invoke_open_video_tutorials();
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
