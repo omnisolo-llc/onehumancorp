@@ -7,12 +7,16 @@ WORKSPACE="${TEST_WORKSPACE:-mono}"
 ROOT="${SRCDIR}"
 
 # The server binary is at //src/server:server
-# When using Bazel runfiles, it's at TEST_SRCDIR/TEST_WORKSPACE/bazel-bin/src/server/server
-SERVER_BIN="${SRCDIR}/bazel-bin/src/server/server"
+# When using Bazel runfiles, it's at TEST_SRCDIR/TEST_WORKSPACE/src/server/server
+SERVER_BIN="${SRCDIR}/${WORKSPACE}/src/server/server"
 
 if [[ ! -f "${SERVER_BIN}" ]]; then
-    echo "error: server binary not found at ${SERVER_BIN}"
+  if [[ -f "${SRCDIR}/src/server/server" ]]; then
+    SERVER_BIN="${SRCDIR}/src/server/server"
+  else
+    echo "error: server binary not found at ${SERVER_BIN} or ${SRCDIR}/src/server/server"
     exit 1
+  fi
 fi
 
 # Run playwright tests
