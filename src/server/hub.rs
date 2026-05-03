@@ -628,10 +628,12 @@ impl Hub {
             }
         };
         let backlog_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
+        let stuck_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'").fetch_one(&self.pool);
 
-        let (db_ping, backlog_res) = tokio::join!(ping_future, backlog_future);
+        let (db_ping, backlog_res, stuck_res) = tokio::join!(ping_future, backlog_future, stuck_future);
 
         let mission_sync_backlog = backlog_res.unwrap_or(0);
+        let stuck_missions = stuck_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -650,6 +652,7 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
+            "stuck_missions": stuck_missions,
         }))
     }
 }
@@ -809,5 +812,6 @@ mod tests {
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("mission_sync_backlog").is_some());
+        assert!(health.get("stuck_missions").is_some());
     }
 }
