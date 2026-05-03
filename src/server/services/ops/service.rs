@@ -299,13 +299,13 @@ impl OpsService for MyOpsService {
         let mut idle_agent_ids = Vec::new();
         let mut active_agent_ids = Vec::new();
 
-        for agent in agents {
+        for agent in agents.iter() {
             if agent.role == req.role {
                 current_count += 1;
                 if agent.status == "IDLE" {
-                    idle_agent_ids.push(agent.id);
+                    idle_agent_ids.push(agent.id.clone());
                 } else {
-                    active_agent_ids.push(agent.id);
+                    active_agent_ids.push(agent.id.clone());
                 }
             }
         }

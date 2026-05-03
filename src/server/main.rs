@@ -917,7 +917,7 @@ impl HubService for MyHubService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
         let meetings = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() }).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        Ok(Response::new(GetMeetingsResponse { meetings }))
+        Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
     }
 
     async fn start_onboarding(
