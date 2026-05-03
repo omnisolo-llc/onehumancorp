@@ -25,6 +25,7 @@ mod tests {
         // and doesn't fail under Postgres mocked conditions vs SQLite.
         // We simulate a mock connection pool.
         let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
