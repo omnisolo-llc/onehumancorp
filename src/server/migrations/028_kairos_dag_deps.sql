@@ -3,10 +3,8 @@
 
 ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS parent_plan_id TEXT;
 
--- Alter column type to JSONB (drop default first, cast, then set new default)
-ALTER TABLE shared_tasks ALTER COLUMN dependencies DROP DEFAULT;
+-- Alter column type to JSONB
 ALTER TABLE shared_tasks ALTER COLUMN dependencies TYPE JSONB USING dependencies::JSONB;
-ALTER TABLE shared_tasks ALTER COLUMN dependencies SET DEFAULT '[]'::JSONB;
 
 CREATE TABLE IF NOT EXISTS swarm_task_dependencies (
     task_id UUID REFERENCES swarm_tasks(id) ON DELETE CASCADE,
