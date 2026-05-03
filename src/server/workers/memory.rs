@@ -1,8 +1,7 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-use crate::minimax::LocalLLMClient;
-use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
+use chrono::Utc;
 
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,

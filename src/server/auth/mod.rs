@@ -5,7 +5,6 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use tonic::{Request, Response, Status};
 
 pub mod postgres_store;
@@ -90,8 +89,8 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>, // key -> user_id
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
-    secret: Vec<u8>,
-    oidc_cfg: RwLock<OIDCConfig>,
+    _secret: Vec<u8>,
+    _oidc_cfg: RwLock<OIDCConfig>,
 }
 
 impl Store {
@@ -136,8 +135,8 @@ impl Store {
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
-            secret,
-            oidc_cfg: RwLock::new(OIDCConfig {
+            _secret: secret,
+            _oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,
                 enabled,
@@ -362,7 +361,7 @@ impl Store {
         false
     }
 
-    pub fn issue_token(&self, user: &User) -> Result<String, String> {
+    pub fn issue_token(&self, _user: &User) -> Result<String, String> {
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
@@ -374,11 +373,11 @@ impl Store {
         {
             let now = chrono::Utc::now();
             let claims = Claims {
-                sub: user.id.clone(),
-                username: user.username.clone(),
-                email: user.email.clone(),
-                roles: user.roles.clone(),
-                organization_id: user.organization_id.clone(),
+                sub: _user.id.clone(),
+                username: _user.username.clone(),
+                email: _user.email.clone(),
+                roles: _user.roles.clone(),
+                organization_id: _user.organization_id.clone(),
                 session_id: None,
                 iat: now.timestamp(),
                 exp: (now + chrono::Duration::hours(24)).timestamp(),
@@ -386,14 +385,14 @@ impl Store {
             };
 
             let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
+            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self._secret))
                 .map_err(|e| e.to_string())?;
 
             Ok(token)
         }
     }
 
-    pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
+    pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
@@ -405,8 +404,8 @@ impl Store {
         {
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
-                token,
-                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+                _token,
+                &jsonwebtoken::DecodingKey::from_secret(&self._secret),
                 &validation
             );
 
