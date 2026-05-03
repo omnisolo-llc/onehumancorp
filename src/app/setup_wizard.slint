@@ -122,8 +122,8 @@ export component SetupWizard inherits Window {
                 alignment: end;
                 Text { text: "Advanced mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 TouchArea {
-                    width: 20px;
-                    height: 20px;
+                    width: 44px;
+                    height: 44px;
                     clicked => { toggle_advanced(); }
                     Rectangle {
                         width: 100%;
@@ -623,32 +623,35 @@ export component SetupWizard inherits Window {
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            min-height: 44px;
+                            Text { text: "○"; color: white; font-size: 16px; vertical-alignment: center; }
                             TouchArea {
                                 width: 100%;
                                 height: 100%;
                                 clicked => { root.go_to_add_products(); }
-                                Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                                Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; vertical-alignment: center; }
                             }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            min-height: 44px;
+                            Text { text: "○"; color: white; font-size: 16px; vertical-alignment: center; }
                             TouchArea {
                                 width: 100%;
                                 height: 100%;
                                 clicked => { root.go_to_connect_instagram(); }
-                                Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                                Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; vertical-alignment: center; }
                             }
                         }
                         HorizontalBox {
                             spacing: 10px;
-                            Text { text: "○"; color: white; font-size: 16px; }
+                            min-height: 44px;
+                            Text { text: "○"; color: white; font-size: 16px; vertical-alignment: center; }
                             TouchArea {
                                 width: 100%;
                                 height: 100%;
                                 clicked => { root.go_to_share_link(); }
-                                Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                                Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; vertical-alignment: center; }
                             }
                         }
                     }
