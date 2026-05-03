@@ -394,12 +394,30 @@ impl Store {
     }
 
     pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
+        let oidc_cfg = self.oidc_cfg.read().unwrap().clone();
+        if oidc_cfg.enabled {
+            let proper_oidc_cfg = crate::oidc::OIDCConfig {
+                issuer_url: oidc_cfg.issuer_url,
+                client_id: oidc_cfg.client_id,
+                enabled: oidc_cfg.enabled,
+            };
+            match crate::oidc::validate_oidc_token(token, &proper_oidc_cfg).await {
+                Ok(claims) => {
+                    if self.is_revoked(&claims.jti) {
+                        return Err("token revoked".to_string());
+                    }
+                    return Ok(claims);
+                }
+                Err(e) => return Err(format!("OIDC token validation failed: {}", e)),
+            }
+        }
+
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
             // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+            // OHC strictly requires SPIFFE/SPIRE mTLS identities unless OIDC is enabled for Thin Client.
+            return Err("Zero Secrets constraint: Static JWT validation is disabled. Thin clients must use OIDC.".to_string());
         }
         #[cfg(test)]
         {
