@@ -2172,7 +2172,6 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-        use slint::Global;
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
             match id.as_str() {
