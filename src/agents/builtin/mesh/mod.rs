@@ -2,8 +2,9 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message, MemoryTransport, RedisTransport};
-use tracing::{info, warn};
+use crate::mesh::transport::{MeshTransport, Message};
+#[cfg(test)]
+use crate::mesh::transport::MemoryTransport;
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
