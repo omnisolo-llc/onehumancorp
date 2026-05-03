@@ -44,6 +44,9 @@ export component SetupWizard inherits Window {
     in-out property <bool> launching: false;
     in-out property <bool> is_instant_build: false;
     in-out property <string> instant_bio: "";
+    in-out property <bool> is_generating_instant_preview: false;
+    in-out property <bool> is_generating_company_description: false;
+    in-out property <bool> is_generating_product_description: false;
 
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
@@ -53,6 +56,8 @@ export component SetupWizard inherits Window {
     callback launch(string, string, string, string, string, string, string, string, string);
     callback copy_link(string);
     callback generate_instant_preview();
+    callback generate_company_description(string, string);
+    callback generate_product_description(string);
 
     callback go_to_add_products();
     callback go_to_connect_instagram();
@@ -214,11 +219,16 @@ export component SetupWizard inherits Window {
                 LineEdit {
                     text <=> company_description;
                     height: 100px;
+                    enabled: !is_generating_company_description;
                 }
                 Button {
-                    text: "✨ Auto-suggest Description";
+                    text: is_generating_company_description ? "Generating..." : "✨ Auto-suggest Description";
                     height: 44px;
-                    clicked => { company_description = company_name + " is the best " + business_type + " in town."; }
+                    enabled: !is_generating_company_description && company_name != "";
+                    clicked => {
+                        is_generating_company_description = true;
+                        generate_company_description(company_name, business_type);
+                    }
                 }
             }
 
@@ -331,6 +341,41 @@ export component SetupWizard inherits Window {
                 Text { text: "Choose a Template"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "Select a design for your website"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
+                // Template Preview Visualization
+                Rectangle {
+                    height: 120px;
+                    background: @linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                    border-radius: 8px;
+                    border-width: 2px;
+                    border-color: #a855f7;
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 8px;
+                        Text {
+                            text: website_template == "" ? "Select a template below" : "Preview: " + website_template;
+                            color: white;
+                            font-family: "Outfit";
+                            horizontal-alignment: center;
+                            font-weight: 700;
+                        }
+                        Rectangle {
+                            height: 60px;
+                            width: 200px;
+                            background: website_template == "Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : #334155));
+                            border-radius: 4px;
+                            VerticalBox {
+                                alignment: center;
+                                Text {
+                                    text: company_name;
+                                    color: website_template == "Bold" ? white : black;
+                                    font-family: website_template == "Modern" ? "Inter" : "Outfit";
+                                    horizontal-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 GlassCard {
                     height: 80px;
                     background: website_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -370,11 +415,19 @@ export component SetupWizard inherits Window {
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
                 Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { text <=> product_description; height: 44px; }
-                Button {
-                    text: "✨ Auto-generate description";
+                LineEdit {
+                    text <=> product_description;
                     height: 44px;
-                    clicked => { product_description = "A premium " + product_name; }
+                    enabled: !is_generating_product_description;
+                }
+                Button {
+                    text: is_generating_product_description ? "Generating..." : "✨ Auto-generate description";
+                    height: 44px;
+                    enabled: !is_generating_product_description && product_name != "";
+                    clicked => {
+                        is_generating_product_description = true;
+                        generate_product_description(product_name);
+                    }
                 }
 
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
@@ -484,13 +537,26 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
                     text <=> instant_bio;
                     height: 120px;
+                    enabled: !is_generating_instant_preview;
                 }
 
-                GlassCard {
+                if (is_generating_instant_preview) : GlassCard {
+                    height: 54px;
+                    background: rgba(168, 85, 247, 0.5);
+                    VerticalBox { alignment: center; Text { text: "AI is brainstorming... 🧠"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                }
+
+                if (!is_generating_instant_preview) : GlassCard {
                     height: 54px;
                     background: rgba(168, 85, 247, 1.0);
                     VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { generate_instant_preview(); } }
+                    TouchArea {
+                        enabled: instant_bio != "";
+                        clicked => {
+                            is_generating_instant_preview = true;
+                            generate_instant_preview();
+                        }
+                    }
                 }
             }
 

@@ -212,3 +212,45 @@ fn e2e_test_onboarding_wizard_data_flow() {
     // The E2E tests inside src/app/main.rs check end-to-end routing.
     // This provides coverage for the UI getters correctly holding the required variables.
 }
+
+#[test]
+fn wizard_ai_generation_states() {
+    let ui = create();
+
+    // Check initial states
+    assert!(!ui.get_is_generating_company_description());
+    assert!(!ui.get_is_generating_product_description());
+    assert!(!ui.get_is_generating_instant_preview());
+
+    // Check company description generation state
+    ui.set_is_generating_company_description(true);
+    assert!(ui.get_is_generating_company_description());
+    ui.set_is_generating_company_description(false);
+    assert!(!ui.get_is_generating_company_description());
+
+    // Check product description generation state
+    ui.set_is_generating_product_description(true);
+    assert!(ui.get_is_generating_product_description());
+    ui.set_is_generating_product_description(false);
+    assert!(!ui.get_is_generating_product_description());
+
+    // Check instant preview generation state
+    ui.set_is_generating_instant_preview(true);
+    assert!(ui.get_is_generating_instant_preview());
+    ui.set_is_generating_instant_preview(false);
+    assert!(!ui.get_is_generating_instant_preview());
+}
+
+#[test]
+fn wizard_template_preview_retention() {
+    let ui = create();
+
+    ui.set_website_template("Modern".into());
+    assert_eq!(ui.get_website_template(), "Modern");
+
+    ui.set_website_template("Classic".into());
+    assert_eq!(ui.get_website_template(), "Classic");
+
+    ui.set_website_template("Bold".into());
+    assert_eq!(ui.get_website_template(), "Bold");
+}
