@@ -3,6 +3,9 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
+    out property <string> settings_btn_text: settings_btn.text;
+    out property <length> settings_btn_height: settings_btn.height;
+
     width: 400px;
     height: 600px;
     title: "One Human Corp - Login";
@@ -59,11 +62,13 @@ export component Login inherits Window {
                 }
 
                 LineEdit {
+                    height: 44px;
                     placeholder-text: "Email or Username";
                     text <=> username;
                 }
 
                 PasswordInput {
+                    height: 44px;
                     placeholder-text: "Password";
                     text <=> password;
                 }
@@ -73,6 +78,7 @@ export component Login inherits Window {
                     alignment: center;
                     Text { text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
                     Button {
+                    height: 44px;
                         text: "Resend Verification Email";
                         clicked => { resend_verification(username); }
                     }
@@ -86,11 +92,13 @@ export component Login inherits Window {
                 }
 
                 Button {
+                    height: 44px;
                     text: is_sign_up ? "Sign Up" : "Sign In";
                     clicked => { login(username, password); }
                 }
 
                 Button {
+                    height: 44px;
                     text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
                     clicked => {
                         is_sign_up = !is_sign_up;
@@ -103,12 +111,14 @@ export component Login inherits Window {
                 }
 
                 Button {
+                    height: 44px;
                     text: "Continue with Google/Apple";
                     clicked => { oauth_login("SSO"); }
                 }
                 
-                Button {
-                    text: "⚙ Fix Login Issues";
+                settings_btn := Button {
+                    height: 44px;
+                    text: "App Settings";
                     clicked => { open_settings(); }
                 }
             }
