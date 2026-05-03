@@ -1126,9 +1126,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     println!("Server listening on {}", addr);
 
     Server::builder()
-        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor.clone()))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
-        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor.clone()))
+        .add_service(crate::ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor.clone()))
         .serve(addr)
         .await?;
 
