@@ -23,17 +23,17 @@ test.describe('Dashboard Core', () => {
 
   test('should display new orders stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=New Orders')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
   });
 
   test('should display active AI helpers stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Active AI Helpers')).toBeVisible();
+    await expect(page.locator('text=Active Helpers')).toBeVisible();
   });
 
   test('should display tasks in progress stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Tasks in Progress')).toBeVisible();
+    await expect(page.locator('text=Active Help')).toBeVisible();
   });
 
   test('should show quick actions section', async ({ page }) => {
@@ -135,7 +135,7 @@ test.describe('Dashboard Mobile', () => {
   test('should verify plain language labels on mobile', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
-    await expect(page.locator('text=New Orders')).toBeVisible();
+    await expect(page.locator('text=Orders to Ship')).toBeVisible();
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 

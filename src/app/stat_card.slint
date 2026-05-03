@@ -1,0 +1,35 @@
+import { GlassCard } from "glass_card.slint";
+import { VerticalBox } from "std-widgets.slint";
+
+export component StatCard inherits GlassCard {
+    in property <string> label;
+    in property <string> value;
+    in property <color> value_color: #a855f7;
+
+    border-color: #e2e8f0;
+    border-width: 1px;
+    border-radius: 8px;
+    width: 100%;
+    min-height: 88px;
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        VerticalBox {
+            padding: 16px;
+            Text {
+                text: label;
+                color: #94a3b8;
+                font-family: "Inter";
+                font-size: 14px;
+            }
+            Text {
+                text: value;
+                font-size: 32px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: value_color;
+            }
+        }
+    }
+}

@@ -1,6 +1,7 @@
 import { TooltipElement } from "tooltip_element.slint";
-import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { StatCard } from "stat_card.slint";
 
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
@@ -27,6 +28,7 @@ export component Dashboard inherits Window {
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
+    in property <bool> is_loading: false;
 
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
@@ -73,7 +75,18 @@ export component Dashboard inherits Window {
         // Header
         HorizontalBox {
             spacing: 16px;
-            Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            VerticalBox {
+                alignment: center;
+                Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                if (is_loading) : Rectangle {
+                    height: 2px;
+                    width: 40px;
+                    background: #a855f7;
+                    border-radius: 1px;
+                    animate width { duration: 800ms; iteration-count: -1; easing: ease-in-out; }
+                    animate opacity { duration: 800ms; iteration-count: -1; easing: ease-in-out; }
+                }
+            }
             Rectangle {} // Spacer
             TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } } }
             TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
@@ -88,10 +101,6 @@ export component Dashboard inherits Window {
                 padding: 16px;
                 spacing: 8px;
 
-        if (show_upgrade_prompt) : UpgradePrompt {
-            message: root.upgrade_prompt_message;
-            action_dismiss => { root.show_upgrade_prompt = false; }
-        }
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
                 Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
@@ -133,164 +142,28 @@ export component Dashboard inherits Window {
         VerticalBox {
             spacing: 16px;
 
-            HorizontalBox {
-                visible: root.width > 768px;
+            // Large Screen (Grid)
+            if (root.width > 768px) : VerticalBox {
                 spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
-                    }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
-                    }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
             }
 
-            VerticalBox {
-                visible: root.width <= 768px;
+            // Small Screen (List)
+            if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Today's Sales"; color: #94a3b8; }
-                            Text { text: todays_sales; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Orders to Ship"; color: #94a3b8; }
-                            Text { text: new_orders_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                        }
-                    }
-                }
-            }
-
-            HorizontalBox {
-                visible: root.width > 768px;
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Help"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
-                    }
-                }
-            }
-
-            VerticalBox {
-                visible: root.width <= 768px;
-                spacing: 16px;
-
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Helpers"; color: #94a3b8; }
-                            Text { text: active_helpers_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
-                        }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 100%;
-                    min-height: 88px;
-
-                    TouchArea {
-                        width: 100%;
-                        height: 100%;
-                        VerticalBox {
-                            padding: 16px;
-                            Text { text: "Active Help"; color: #94a3b8; }
-                            Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
-                        }
-                    }
-                }
+                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
             }
         }
 
