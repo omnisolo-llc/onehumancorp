@@ -65,7 +65,7 @@ All A2A gRPC traffic is mandatorily encrypted via Mutual TLS (mTLS).
 - **Phase 3**: Cross-cluster A2A for multi-org collaborations (BACKLOG).
 
 ## 7. Implementation Details
-- **Architecture**: Microservices built in Go 1.26 leveraging Protobufs and gRPC for high-speed synchronous agent debates, and Redis Pub/Sub for asynchronous state management.
+- **Architecture**: Microservices built in Rust leveraging Protobufs and gRPC for high-speed synchronous agent debates, and Redis Pub/Sub for asynchronous state management.
 - **Identity Engine**: SPIFFE/SPIRE integrated to issue unique X.509 SVIDs per agent pod, enabling zero-trust intra-cluster communication.
 - **State Store**: Postgres backing the append-only log architecture, ensuring perfect auditability of agent intent.
 

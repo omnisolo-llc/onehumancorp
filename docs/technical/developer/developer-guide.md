@@ -9,16 +9,16 @@ This guide is intended for engineers who want to contribute to the One Human Cor
 
 The repo is intentionally built as a hybrid cloud-native and desktop product:
 
-1. Cloud-native shared service: a horizontally scalable Go API tier backed by Postgres, with `OHC_MULTITENANT=true` enabling org-aware routing.
+1. Cloud-native shared service: a horizontally scalable Rust API tier backed by Postgres, with `OHC_MULTITENANT=true` enabling org-aware routing.
 2. Headless API deployment: the same backend with `OHC_HEADLESS=true`, used by remote mobile or desktop clients that should not receive a hosted web UI.
-3. Desktop standalone mode: the Flutter desktop app manages a local backend lifecycle and local SQLite-backed state.
-4. Remote client mode: the Flutter app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
+3. Desktop standalone mode: the Slint desktop app manages a local backend lifecycle and local SQLite-backed state.
+4. Remote client mode: the Slint app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
 
 ## Prerequisites
 | Tool | Minimum Version | Install |
 |------|----------------|---------|
 | [Bazelisk](https://github.com/bazelbuild/bazelisk) | latest | `brew install bazelisk` or `go install github.com/bazelbuild/bazelisk@latest` |
-| Go | 1.25 | managed by Bazel automatically |
+| Rust | 1.75+ | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
 | Node.js | 22 | only needed for IDE tooling; tests run inside Bazel |
 | Docker | 24 | required for local Docker Compose and Kind e2e |
 | [Kind](https://kind.sigs.k8s.io/) | 0.23+ | `brew install kind` |
@@ -67,31 +67,25 @@ Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set 
 mono/
 ├── BUILD.bazel              Root build file
 ├── MODULE.bazel             Bazel module dependencies
-├── WORKSPACE                Legacy WORKSPACE (kept for rules_go compat)
-├── go.mod                   Go module
+├── Cargo.toml               Rust workspace dependencies
 ├── deploy/
 │   ├── docker/              Dockerfiles (backend + frontend)
 │   ├── docker-compose.yml   Local dev compose stack
-│   ├── helm/ohc/            Helm chart (server, ui, Redis, CNPG)
-│   └── tests/               Deploy artefact and Kind e2e tests
-├── docs/
-│   ├── features/            Feature-centric documentation (Design + CUJ + Guide)
-│   ├── developer/           This guide
-│   ├── templates/           Standard templates for docs
-│   ├── system-design.md     Top-level architecture
-│   └── roadmap.md           Strategic technical roadmap
+│   ├── helm/ohc/            Helm chart (server, Redis, CNPG)
+│   └── scripts/             Setup and deployment scripts
+├── docs/                    Architecture and feature documentation
 └── src/
-  ├── app/                 Flutter client for mobile, desktop, and web
-  ├── proto/               Protobuf definitions
-  └── server/              Go backend services and runtime entrypoint
-      ├── agents/          Agent provider registry, workers, and MCP bundles
-      ├── billing/         Usage tracking and model cost accounting
-      ├── checkpointer/    LangGraph checkpoint persistence
-      ├── dashboard/       HTTP handlers and UI-serving gateway
-      ├── domain/          Domain model (Org / Dept / Role)
-      ├── integrations/    External service integrations
-      ├── orchestration/   Agent hub and meeting rooms
-      └── tools/           Tooling dependency shims
+    ├── agents/              Agent provider registry, workers, and MCP bundles
+    ├── app/                 Slint client for desktop and web
+    ├── cli/                 CLI tooling
+    ├── proto/               Protobuf definitions
+    └── server/              Rust backend services and runtime entrypoint
+        ├── api/             HTTP API handlers
+        ├── auth/            JWT / OIDC authentication
+        ├── domain/          Domain model (Org / Dept / Role)
+        ├── integrations/    External service integrations
+        ├── orchestration/   Agent hub and meeting rooms
+        └── services/        Business logic services
 ```
 
 ---
@@ -105,9 +99,9 @@ mono/
 bazel build //...
 
 # Build just the backend binary
-bazel build //src/server:ohc
+bazel build //src/server:server
 
-# Build the Flutter web app (via Bazel)
+# Build the Slint app (via Bazel)
 bazel build //src/app:app
 ```
 
@@ -117,17 +111,11 @@ bazel build //src/app:app
 # Run all tests
 bazel test //...
 
-# Run all Go unit tests
+# Run all Rust unit tests
 bazel test //src/server/...
 
-# Run Flutter widget and service tests
-bazel test //src/app/lib/...
-
-# Run Flutter desktop e2e tests
-bazel test //src/app:app_desktop_e2e_test
-
-# Run Flutter web e2e tests
-bazel test //src/app:app_web_e2e_test
+# Run Slint component tests
+bazel test //src/app:app_test
 
 # Run deploy artefact verification
 bazel test //deploy:deploy_artifacts_test
@@ -142,47 +130,42 @@ bazel test //... --config=verbose
 bazel test //... --cache_test_results=no
 
 # Launch the local development environment (run these in separate terminals)
-bazelisk run //src/server:ohc
-bazelisk run //src/app:start
-
-# Launch standalone desktop mode
-bazelisk run //:desktop
+bazelisk run //src/server:server
+bazelisk run //src/app:app
 
 # Build Linux package artifacts
-bazelisk build //src/app:app_deb
+bazelisk build //release:app_deb
 # Requires rpmbuild on the host
-bazelisk build //src/app:app_rpm
+bazelisk build //release:app_rpm
 ```
 
 ### Lint / Type-check
 
 ```bash
-# Go vet (run via Bazel nogo)
+# Rust clippy / vet (run via Bazel)
 bazel build //... --keep_going
 
-# Flutter static analysis
-cd src/app && flutter analyze
+# Slint linter
+cd src/app && cargo clippy
 ```
 
 ---
 
 ## Running Tests Locally
 
-### Go Unit Tests
+### Rust Unit Tests
 
 ```bash
 bazel test //src/server/...
 ```
 
-### Flutter App Tests
+### Slint App Tests
 
 ```bash
-bazel test //src/app/lib/...
-bazel test //src/app:app_desktop_e2e_test
-bazel test //src/app:app_web_e2e_test
+bazel test //src/app:app_test
 ```
 
-The Bazel target `//src/app:app_web_e2e_test` starts the backend and Flutter web app automatically, then runs Playwright against the served build artifacts.
+The Bazel target `//src/app:app_test` runs headless component tests for all Slint UI components.
 
 ### Kind End-to-End Test
 
@@ -255,7 +238,7 @@ docker compose -f deploy/docker-compose.yml down -v
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP listen port |
 | `DATABASE_URL` | *(empty)* | PostgreSQL DSN; falls back to in-memory store when unset |
-| `REDIS_ADDR` | *(empty)* | Redis address e.g. `redis:6379`; pub-sub disabled when unset |
+| `REDIS_URL` | *(empty)* | Redis address e.g. `redis://redis:6379`; pub-sub disabled when unset |
 | `OHC_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
 | `OHC_HEADLESS` | `false` | Disables static UI serving so the backend runs as an API-only service |
 | `OHC_SERVE_UI` | `true` | Optional override for static UI serving |
@@ -266,26 +249,17 @@ docker compose -f deploy/docker-compose.yml down -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FRONTEND_STATIC_DIR` | `src/app/build/web` | Path to compiled Flutter artifacts |
+| `FRONTEND_STATIC_DIR` | `src/app/pkg` | Path to compiled Slint web artifacts |
 
 ---
 
 ## Adding a New API Endpoint
 
-1. Add the handler function in `src/server/dashboard/server.go` or the relevant handler file in `src/server/dashboard/`
-2. Register the route in `src/server/dashboard/server.go`
-3. Add a unit test in `src/server/dashboard/server_test.go`
+1. Add the handler function in `src/server/api/` or the relevant handler file in `src/server/`
+2. Register the route in `src/server/http.rs`
+3. Add a unit test in the same module
 4. Update the proto if a new message type is needed (`src/proto/`)
 5. Run `bazel test //src/server/...`
-
----
-
-## Adding a New Agent Role
-
-1. Define the role constant in `src/server/orchestration/service.go`
-2. Add any role-specific behaviour to `Hub.HandleMessage`
-3. Update the default `Catalog` in `src/server/billing/tracker.go` if the role uses a different model
-4. Add the role to the Skill Pack defaults in `src/server/dashboard/server.go`
 
 ---
 
@@ -297,7 +271,7 @@ All CI is driven by Bazel.  The GitHub Actions workflow runs:
 bazel test //...
 ```
 
-No raw `npm test`, `go test`, or shell scripts are invoked directly by CI.
+No raw `npm test`, `cargo test`, or shell scripts are invoked directly by CI.
 
 ---
 
@@ -307,7 +281,7 @@ No raw `npm test`, `go test`, or shell scripts are invoked directly by CI.
 bazel build //src/proto/...
 ```
 
-Generated Go stubs land in `bazel-bin/src/proto/`.
+Generated Rust stubs land in `bazel-bin/src/proto/`.
 
 ---
 
@@ -319,10 +293,6 @@ Generated Go stubs land in `bazel-bin/src/proto/`.
 bazel clean --expunge
 bazel test //...
 ```
-
-### `go: module lookup disabled by GOFLAGS` in Bazel
-
-Ensure `CGO_ENABLED=1` is set in `.bazelrc` (it already is).
 
 ### Kind cluster creation fails
 

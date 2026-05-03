@@ -60,7 +60,7 @@ The Billing API is locked to the `CEOID`. Agents cannot read their own cost summ
 - **Phase 3**: Multi-currency support and OHC-managed API proxying.
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
