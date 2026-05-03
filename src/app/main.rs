@@ -1373,10 +1373,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
-            let req_first_product_name = product_name.to_string();
-            let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let req_website_template = ui.get_website_template().to_string();
+            let req_first_product_name = ui.get_product_name().to_string();
+            let req_first_product_price = ui.get_product_price().to_string();
+            let req_domain_choice = ui.get_domain_choice().to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
