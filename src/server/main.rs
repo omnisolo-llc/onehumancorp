@@ -172,23 +172,83 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+        request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
-        println!("Received ConfigWizard request in wizard service");
+        let org_id = match request.metadata().get("x-spiffe-id") {
+            Some(v) => crate::auth::parse_spiffe_id(v.to_str().unwrap_or("")).unwrap_or(("system".to_string(), "".to_string())).0.to_string(),
+            None => "system".to_string(),
+        };
+
+        let req = request.into_inner();
+        let id = format!("{}-{}", org_id, req.role.to_lowercase().replace(" ", "-"));
+        let status = "IDLE";
+
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            .bind(&id)
+            .bind(&req.role)
+            .bind(&req.role)
+            .bind(&org_id)
+            .bind(status)
+            .bind(&req.provider)
+            .bind(true)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        println!("Processed ConfigWizard request in wizard service for agent: {}", req.role);
         Ok(tonic::Response::new(WizardResponse {
             success: true,
-            message: "success".to_string(),
+            message: "Agent configured successfully".to_string(),
         }))
     }
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+        request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
-        println!("Received PromptTuning request in wizard service");
+        let org_id = match request.metadata().get("x-spiffe-id") {
+            Some(v) => crate::auth::parse_spiffe_id(v.to_str().unwrap_or("")).unwrap_or(("system".to_string(), "".to_string())).0.to_string(),
+            None => "system".to_string(),
+        };
+
+        let req = request.into_inner();
+
+        // This stores prompt tuning into organization role profiles
+        let role = "TunedAgent";
+        let base_prompt = format!("Personality: {}. Focus: {}", req.personality, req.domain_focus.join(", "));
+        let capabilities_json = serde_json::to_string(&vec!["custom"]).unwrap();
+        let context_inputs_json = serde_json::to_string(&vec!["custom"]).unwrap();
+
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO role_profiles (organization_id, role, base_prompt, capabilities, context_inputs)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (organization_id, role) DO UPDATE SET base_prompt = EXCLUDED.base_prompt, capabilities = EXCLUDED.capabilities, context_inputs = EXCLUDED.context_inputs
+            "#
+        )
+        .bind(&org_id)
+        .bind(role)
+        .bind(base_prompt)
+        .bind(capabilities_json)
+        .bind(context_inputs_json)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        println!("Processed PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
-            message: "success".to_string(),
+            message: "Prompt tuned successfully".to_string(),
         }))
     }
 
