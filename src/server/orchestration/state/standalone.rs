@@ -3,20 +3,19 @@ use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use sqlx::Row;
 use chrono::Utc;
 
 pub struct StandaloneStateManager {
     db: Arc<DB>,
-    lock: Mutex<()>,
+    transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
 }
 
 impl StandaloneStateManager {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>) -> Self {
         Self {
             db,
-            lock: Mutex::new(()),
+            transport,
         }
     }
 }
@@ -32,7 +31,9 @@ impl StateManager for StandaloneStateManager {
         agent_id: Option<&str>,
         reason: Option<&str>,
     ) -> Result<(), String> {
-        let _guard = self.lock.lock().await;
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let owner_id = uuid::Uuid::new_v4().to_string();
+        let _guard = super::MeshLockGuard::acquire(self.transport.clone(), lock_key, owner_id, 30).await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
@@ -124,7 +125,9 @@ impl StateManager for StandaloneStateManager {
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
-        let _guard = self.lock.lock().await;
+        let lock_key = "ohc:lock:standalone:pull_tasks".to_string();
+        let owner_id = uuid::Uuid::new_v4().to_string();
+        let _guard = super::MeshLockGuard::acquire(self.transport.clone(), lock_key, owner_id, 30).await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,

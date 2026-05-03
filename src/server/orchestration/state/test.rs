@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::test;
 use chrono::Utc;
 use sqlx::sqlite::SqlitePoolOptions;
+use ohc_builtin_agent::mesh::transport::MemoryTransport;
 
 async fn setup_db() -> Arc<DB> {
     let db_id = uuid::Uuid::new_v4().to_string();
@@ -65,7 +66,8 @@ async fn setup_db() -> Arc<DB> {
 #[tokio::test]
 async fn test_single_agent_flow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let transport = Arc::new(MemoryTransport::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), transport);
 
     let task_id = uuid::Uuid::new_v4().to_string();
 
@@ -94,7 +96,8 @@ async fn test_single_agent_flow() {
 #[tokio::test]
 async fn test_dag_workflow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let transport = Arc::new(MemoryTransport::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), transport);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
@@ -136,8 +139,9 @@ use super::cloud::CloudStateManager;
 #[tokio::test]
 async fn test_cloud_dag_workflow_mock() {
     let db = setup_db().await;
+    let transport = Arc::new(MemoryTransport::new());
     // For unit coverage we instantiate it
-    let state_manager = CloudStateManager::new(db.clone(), None);
+    let state_manager = CloudStateManager::new(db.clone(), transport);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
