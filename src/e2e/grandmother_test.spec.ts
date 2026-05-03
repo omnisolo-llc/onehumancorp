@@ -20,7 +20,7 @@ test.describe('Grandmother Test - Plain Language Check', () => {
 
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
     await expect(page.locator('text=Active Helpers')).toBeVisible();
-    await expect(page.locator('text=Current AI Tasks')).toBeVisible();
-    await expect(page.locator('text=Agent Actions Today')).toBeVisible();
+    await expect(page.locator('text=Active Help')).toBeVisible();
+    await expect(page.locator('text=Helper Actions Today')).toBeVisible();
   });
 });

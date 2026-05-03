@@ -1216,10 +1216,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }).unwrap();
                             }
                             Err(e) => {
-                                let err_msg = e.to_string();
+                                let err_msg = if e.code() == tonic::Code::DeadlineExceeded {
+                                    "The connection is taking too long to respond. Please check your internet and try again.".to_string()
+                                } else if e.code() == tonic::Code::Unavailable {
+                                    "We're having trouble reaching our servers. Please try again in a few moments.".to_string()
+                                } else {
+                                    "Something went wrong while setting up your business. Please try again.".to_string()
+                                };
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
-                                        ui.set_launch_status("Onboarding Failed".into());
+                                        ui.set_launch_status("Almost there! We hit a small snag.".into());
                                         ui.set_launch_details(err_msg.into());
                                     }
                                 }).unwrap();
@@ -2702,7 +2708,7 @@ mod docs_tests {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
                 let count = *product_count_clone.borrow();
                 if count >= 10 { // Free tier limit
-                    ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                            ui.set_upgrade_prompt_message("You've added 10 products! Upgrade to our Pro plan to list even more items and grow your store.".into());
                     ui.set_show_upgrade_prompt(true);
                 } else {
                     *product_count_clone.borrow_mut() += 1;
@@ -2722,7 +2728,7 @@ mod docs_tests {
             if let Some(ui) = agents_ui_handle.upgrade() {
                 let count = *agent_count.borrow();
                 if count >= 1 {
-                    ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
                     ui.set_show_upgrade_prompt(true);
                 } else {
                     *agent_count.borrow_mut() += 1;
