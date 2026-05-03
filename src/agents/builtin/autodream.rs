@@ -93,58 +93,23 @@ impl AutoDreamWorker {
             return Ok(());
         }
 
-        let client = crate::minimax::LocalLLMClient::new();
-
         for (a, b) in conflicts {
-            let prompt = format!(
-                "Synthesize the following two conflicting memories into a single concise summary:
-1. {}
-2. {}",
-                a.content, b.content
-            );
-
-            let summary = match client.reason(&prompt).await {
-                Ok(res) => res,
-                Err(e) => {
-                    eprintln!("AutoDream: Failed to synthesize memories: {}", e);
-                    continue;
-                }
-            };
-
-            let embedding = match client.generate_embedding(&summary).await {
-                Ok(emb) => emb,
-                Err(e) => {
-                    eprintln!("AutoDream: Failed to generate embedding for merged summary: {}", e);
-                    continue;
-                }
-            };
-
-            let merged_id = uuid::Uuid::new_v4().to_string();
-            let merged_record = EmbeddingRecord {
-                id: merged_id,
-                tenant_id: a.tenant_id.clone(),
-                agent_id: a.agent_id.clone(),
-                content: format!("MERGED_SUMMARY: {}", summary),
-                embedding,
-                source_type: "MERGED_SUMMARY".to_string(),
-                created_at: Utc::now(),
-                last_referenced_at: Utc::now(),
-                reference_count: std::cmp::max(a.reference_count, b.reference_count),
-                reliability_score: std::cmp::max(a.reliability_score, b.reliability_score),
-                owner_override: a.owner_override || b.owner_override,
-                metadata: None,
-            };
-
-            if let Err(e) = repository.upsert(&merged_record).await {
-                eprintln!("AutoDream: Failed to insert merged memory: {}", e);
-                continue;
-            }
-
-            let _ = repository.delete(&a.id).await;
-            let _ = repository.delete(&b.id).await;
+            let (winner, loser) = Self::determine_conflict_winner(&a, &b);
+            let _ = repository.delete(&loser.id).await;
+            println!("AutoDream: Resolved conflict between {} and {}. Kept {}.", a.id, b.id, winner.id);
         }
 
         Ok(())
+    }
+
+    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
+        if a.owner_override != b.owner_override {
+            if a.owner_override { (a, b) } else { (b, a) }
+        } else if a.reliability_score != b.reliability_score {
+            if a.reliability_score > b.reliability_score { (a, b) } else { (b, a) }
+        } else {
+            if a.created_at >= b.created_at { (a, b) } else { (b, a) }
+        }
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
@@ -377,5 +342,53 @@ mod tests {
         let worker = AutoDreamWorker::new(db);
 
         assert!(worker.consolidate_epoch().await.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_conflict_logic {
+    use super::*;
+    use ohc_builtin_agent::memory_store::EmbeddingRecord;
+    use chrono::Utc;
+
+    #[test]
+    fn test_determine_conflict_winner() {
+        let now = Utc::now();
+        let earlier = now - chrono::Duration::hours(1);
+
+        let mut a = EmbeddingRecord {
+            id: "a".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
+            content: "a content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
+            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
+            owner_override: false, metadata: None,
+        };
+
+        let mut b = EmbeddingRecord {
+            id: "b".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
+            content: "b content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
+            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
+            owner_override: false, metadata: None,
+        };
+
+        // Test owner_override priority
+        a.owner_override = true;
+        b.reliability_score = 100; // Even with higher score, override wins
+        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+
+        // Test reliability_score priority
+        a.owner_override = false;
+        a.reliability_score = 40;
+        b.reliability_score = 50;
+        b.created_at = earlier; // older, but higher score
+        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "b");
+
+        // Test created_at priority
+        a.reliability_score = 50;
+        a.created_at = now;
+        b.created_at = earlier;
+        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
     }
 }
