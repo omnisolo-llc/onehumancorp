@@ -1,5 +1,5 @@
 use crate::app;
-use slint::ComponentHandle;
+
 
 fn create() -> app::Referrals { crate::ui_tests::init(); app::Referrals::new().unwrap() }
 
