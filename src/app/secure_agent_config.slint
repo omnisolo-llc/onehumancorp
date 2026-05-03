@@ -8,8 +8,8 @@ export component SecureAgentConfig inherits Window {
 
     callback save_config(string);
 
-    property <string> token: "";
-    property <string> error_text: "";
+    in-out property <string> token: "";
+    in-out property <string> error_text: "";
 
     background: #f8fafc;
 

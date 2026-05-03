@@ -7,12 +7,10 @@ cargo_build_script(
     srcs = ["build.rs"],
     data = glob(["*.slint"]) + [
         "//src/proto:hub.proto",
-        "@protobuf//:protoc",
     ],
     edition = "2024",
     deps = [
         "@crates//:slint-build",
-        "@crates//:tonic-build",
     ],
 )
 
@@ -93,6 +91,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_tonic",
+        "//src/server:server_lib",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -115,11 +114,10 @@ exports_files([
 
 rust_test(
     name = "app_test",
-    size = "small",
+    size = "large",
     srcs = [
         "main.rs",
-        "ui_tests.rs",
-    ],
+    ] + glob(["ui_tests/**/*.rs"]),
     crate_root = "main.rs",
     data = [
         "agent_config.slint",
@@ -179,8 +177,14 @@ rust_test(
         "welcome_checklist.slint",
     ],
     edition = "2024",
+    tags = ["exclusive"],
+    env = {
+        "SLINT_BACKEND": "software",
+        "RUST_TEST_THREADS": "1",
+    },
     deps = [
         "//src/proto:hub_tonic",
+        "//src/server:server_lib",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -205,6 +209,7 @@ rust_shared_library(
     srcs = ["main.rs"],
     data = glob(["*.slint"]),
     edition = "2024",
+    target_compatible_with = ["@platforms//cpu:wasm32"],
     deps = [
         ":build_script_wasm",
         "@crates//:chrono",

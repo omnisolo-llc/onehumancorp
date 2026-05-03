@@ -61,7 +61,7 @@ impl ReferralRepository {
 
     pub fn get_stats(&self, inviter_id: &str) -> Result<ReferralStats, String> {
         let referrals = self.get_referrals_by_inviter(inviter_id)?;
-        
+
         let mut stats = ReferralStats {
             invites_sent: referrals.len(),
             signups: 0,

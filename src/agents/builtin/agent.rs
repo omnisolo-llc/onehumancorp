@@ -35,6 +35,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
@@ -49,6 +50,7 @@ pub struct AgentRunConfig {
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
+    pub enable_lazy_tool_loading: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -65,6 +67,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
@@ -79,6 +82,7 @@ impl Default for AgentRunConfig {
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
+            enable_lazy_tool_loading: false,
         }
     }
 }
@@ -184,6 +188,14 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send,
     {
+        let mut session_tools = self.tools.clone();
+        let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
+
+        if cfg.enable_lazy_tool_loading {
+            let active_tools_clone = active_tools.clone();
+            session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
+        }
+
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
@@ -193,16 +205,6 @@ impl Agent {
         }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        let tool_defs: Vec<ToolDefinition> = self
-            .tools
-            .iter()
-            .map(|t| ToolDefinition {
-                name: t.name.clone(),
-                description: t.description.clone(),
-                parameters: t.parameters.clone(),
-            })
-            .collect();
 
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
@@ -287,15 +289,55 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
-            if !cfg.developer_instructions.is_empty() {
+
+            // Prompt Construction Mechanic: "Lost in the Middle" Prevention
+            // High-signal context at the very beginning and very end.
+            if cfg.enable_lost_in_the_middle_prevention {
+                let mut reminder_text = String::new();
+                if !cfg.developer_instructions.is_empty() {
+                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
+                }
+                if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                    // Truncate user instructions if it's too long, just to remind the core objective
+                    let mut end_idx = 1000;
+                    if cfg.user_instructions.len() > 1000 {
+                        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+                            end_idx -= 1;
+                        }
+                    } else {
+                        end_idx = cfg.user_instructions.len();
+                    }
+                    let summary = &cfg.user_instructions[..end_idx];
+                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
+                }
+
+                if !reminder_text.is_empty() {
+                    final_messages.push(Message::user(reminder_text.trim()));
+                }
+            } else if !cfg.developer_instructions.is_empty() {
                 final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
+            }
+
+            let mut req_tools = Vec::new();
+            for t in &session_tools {
+                if !cfg.enable_lazy_tool_loading
+                    || t.name == "ToolSearch"
+                    || t.name == "LazyLoadTools"
+                    || active_tools.read().await.contains(&t.name)
+                {
+                    req_tools.push(ToolDefinition {
+                        name: t.name.clone(),
+                        description: t.description.clone(),
+                        parameters: t.parameters.clone(),
+                    });
+                }
             }
 
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
-                tools: tool_defs.clone(),
+                tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
             };
@@ -479,6 +521,7 @@ impl Agent {
                 }
                 let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
+                let session_tools_clone = session_tools.clone();
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
@@ -486,7 +529,7 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -606,7 +649,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc).await {
+                    match self.execute_tool(&tc, &session_tools).await {
                         Ok(r) => {
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
@@ -735,6 +778,43 @@ impl Agent {
                 }
             }
 
+            // 3. Git State Checkpointing (Claude Code)
+            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
+                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let thread = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+
+                // Only commit if .git exists to avoid turning random directories into repos
+                if std::path::Path::new(&wd).join(".git").exists() {
+                    let mut add_cmd = tokio::process::Command::new("git");
+                    add_cmd.current_dir(&wd).arg("add").arg("-A");
+                    if add_cmd.output().await.is_ok() {
+                        let mut diff_cmd = tokio::process::Command::new("git");
+                        diff_cmd.current_dir(&wd).arg("diff").arg("--cached").arg("--quiet");
+                        // If it fails (exit code 1), it means there ARE changes staged
+                        if let Ok(diff_out) = diff_cmd.output().await {
+                            if !diff_out.status.success() {
+                                let mut commit_cmd = tokio::process::Command::new("git");
+                                commit_cmd.current_dir(&wd)
+                                    .arg("commit")
+                                    .arg("-m")
+                                    .arg(format!("🤖 Agent checkpoint: Iteration {} (Thread: {})", iteration, thread));
+
+                                if let Ok(commit_out) = commit_cmd.output().await {
+                                    if commit_out.status.success() {
+                                        on_event(AgentEvent::CheckpointSaved {
+                                            iteration,
+                                            path: format!("git:{}", wd),
+                                        });
+                                    } else {
+                                        tracing::warn!("Failed to create git commit: {}", String::from_utf8_lossy(&commit_out.stderr));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -838,9 +918,9 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
+        session_tools: &[Tool],
     ) -> Result<String, ToolError> {
-        let tool = self
-            .tools
+        let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
@@ -851,6 +931,106 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
+    use tokio::sync::Mutex;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_tool_scoping_lazy_loading() {
+        // We will mock an LLM that first receives a ChatRequest with ONLY "ToolSearch", "LazyLoadTools".
+        // It will call LazyLoadTools with "HeavyTool".
+        // Then the next ChatRequest should include "HeavyTool".
+
+        struct AssertingMockLlm {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for AssertingMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Assert that HeavyTool is NOT in the tools list
+                    assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
+                    // Return a call to LazyLoadTools
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Loading HeavyTool".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "load_1".to_string(),
+                                name: "LazyLoadTools".to_string(),
+                                arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 2 {
+                    // Assert that HeavyTool IS in the tools list
+                    assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
+                    // Call the HeavyTool
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Using HeavyTool".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "heavy_1".to_string(),
+                                name: "HeavyTool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else {
+                    // Done
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final Answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+
+        }
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let client = Arc::new(AssertingMockLlm { call_count: Mutex::new(0) });
+
+        // Include HeavyTool in the agent's definitions.
+        let agent = Agent::new(client, vec![
+            crate::tools::Tool {
+                name: "HeavyTool".to_string(),
+                description: "A heavy tool".to_string(),
+                parameters: serde_json::Value::Null,
+                is_read_only: false,
+                execute: Arc::new(DummyToolExecutor),
+            }
+        ]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lazy_tool_loading = true; // THIS IS THE KEY MECHANIC
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final Answer");
+    }
+
     #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
@@ -1000,9 +1180,7 @@ mod tests {
     }
 
 
-    use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
-    use std::sync::Arc;
+    use ohc_builtin_agent_core::types::{ChatRequest};
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
 
@@ -1787,6 +1965,80 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_git_state_checkpointing() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_mutating".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let dir = tempfile::tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+
+        // Setup git repo
+        std::process::Command::new("git").current_dir(&wd).arg("init").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.name").arg("Agent").status().unwrap();
+        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.email").arg("agent@example.com").status().unwrap();
+
+        // Make a change
+        std::fs::write(wd.join("test.txt"), "hello").unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_git_state_checkpointing = true;
+        cfg.workspace_path = Some(wd.to_string_lossy().to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify event was emitted
+        let mut found_checkpoint_event = false;
+        for e in events {
+            if let AgentEvent::CheckpointSaved { path, .. } = e {
+                if path.starts_with("git:") {
+                    found_checkpoint_event = true;
+                }
+            }
+        }
+        assert!(found_checkpoint_event);
+
+        // Verify git log
+        let output = std::process::Command::new("git").current_dir(&wd).arg("log").arg("--oneline").output().unwrap();
+        let log_str = String::from_utf8_lossy(&output.stdout);
+        assert!(log_str.contains("Agent checkpoint: Iteration 0"));
+    }
+
+    #[tokio::test]
     async fn test_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -1850,4 +2102,65 @@ mod tests {
         assert!(found_checkpoint_event);
     }
 
+    // We will replace MockLlmClient locally for the test
+    struct RecordingLlmClient {
+        last_request: tokio::sync::Mutex<Option<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for RecordingLlmClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut lr = self.last_request.lock().await;
+            *lr = Some(req);
+            Ok(ChatResponse {
+                message: Message::assistant("Final answer"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prompt_construction_lost_in_the_middle_prevention() {
+        let client = Arc::new(RecordingLlmClient {
+            last_request: tokio::sync::Mutex::new(None),
+        });
+
+        // Create an agent and we will inject some state so messages.len() > 3
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lost_in_the_middle_prevention = true;
+        cfg.enable_state_checkpointing = true;
+        cfg.developer_instructions = "Developer instructions here.".to_string();
+        cfg.user_instructions = "Super long user instructions that span many many words.".to_string();
+
+        let scratchpad_path = format!(".test_checkpoint_litm_{}.json", uuid::Uuid::new_v4());
+        cfg.state_scratchpad_path = Some(scratchpad_path.clone());
+
+        // Pre-fill some messages to make len > 3
+        let initial_msgs = vec![
+            Message::user("Task: Do something"),
+            Message::assistant("Thinking..."),
+            Message::assistant("Still thinking..."),
+            Message::user("Please continue"),
+        ];
+        tokio::fs::write(&scratchpad_path, serde_json::to_string(&initial_msgs).unwrap()).await.unwrap();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Continue working", &mut on_event).await;
+        assert!(result.is_ok());
+
+        let lr = client.last_request.lock().await;
+        let req = lr.as_ref().unwrap();
+        let last_msg = req.messages.last().unwrap();
+
+        assert_eq!(last_msg.role, Role::User);
+        assert!(last_msg.content.contains("[System Reminder: Developer instructions here.]"));
+        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
+
+        let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
 }

@@ -34,6 +34,7 @@ export component SetupWizard inherits Window {
     // New Steps State
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
+    in-out property <string> product_description: "";
     in-out property <string> product_price: "";
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
@@ -46,9 +47,16 @@ export component SetupWizard inherits Window {
 
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI agents...\nBuilding website...";
+    in-out property <bool> launch_success: false;
+    in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
     callback launch(string, string, string, string, string, string, string, string, string);
+    callback copy_link(string);
     callback generate_instant_preview();
+
+    callback go_to_add_products();
+    callback go_to_connect_instagram();
+    callback go_to_share_link();
 
     callback next_step();
     callback select_business_type(string);
@@ -361,6 +369,14 @@ export component SetupWizard inherits Window {
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
+                Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { text <=> product_description; height: 44px; }
+                Button {
+                    text: "✨ Auto-generate description";
+                    height: 44px;
+                    clicked => { product_description = "A premium " + product_name; }
+                }
+
                 Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
 
@@ -433,12 +449,27 @@ export component SetupWizard inherits Window {
                     }
                 }
 
-                if (launching) : GlassCard {
+                if (launching && !launch_success) : GlassCard {
                     VerticalBox {
                         padding: 16px;
                         alignment: center;
                         Text { text: launch_status; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
                         Text { text: launch_details; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+                    }
+                }
+
+                if (launch_success) : GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        alignment: center;
+                        spacing: 16px;
+                        Text { text: "🎊 CONFETTI! SUCCESS 🎊"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Your business is live!"; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                        Button {
+                            text: "Copy Shareable Link";
+                            height: 44px;
+                            clicked => { copy_link(shareable_link); }
+                        }
                     }
                 }
             }
@@ -480,17 +511,32 @@ export component SetupWizard inherits Window {
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_add_products(); }
+                                Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_connect_instagram(); }
+                                Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_share_link(); }
+                                Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                     }
                 }
@@ -532,6 +578,14 @@ export component SetupWizard inherits Window {
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice);
                 } }
+            }
+
+            if (step == 9 && launch_success) : GlassCard {
+                width: 240px;
+                height: 54px;
+                background: rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = 10; } }
             }
 
             if (step == 10) : GlassCard {

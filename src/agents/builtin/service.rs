@@ -290,6 +290,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
             model,
             server_system_message,
@@ -301,6 +302,7 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
+            enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
@@ -486,6 +488,7 @@ impl AgentService for AgentServiceImpl {
         if sub_req.sub_agent_address.is_empty() {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
@@ -500,6 +503,7 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
                 enable_observation_masking: true,
+                enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
