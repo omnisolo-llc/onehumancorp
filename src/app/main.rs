@@ -1085,6 +1085,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_admin_name = ui.get_admin_name().to_string();
             let req_admin_password = ui.get_admin_password().to_string();
 
+            let req_website_template = website_template.to_string();
+            let req_product_name = product_name.to_string();
+            let req_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
+
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
             if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
@@ -1104,10 +1109,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: website_template.to_string(),
-                            first_product_name: product_name.to_string(),
-                            first_product_price: product_price.to_string(),
-                            domain_choice: domain_choice.to_string(),
+                            website_template: req_website_template,
+                            first_product_name: req_product_name,
+                            first_product_price: req_product_price,
+                            domain_choice: req_domain_choice,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -3395,7 +3400,7 @@ mod e2e_hybrid_blob_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
             assert_eq!(website_template, "Modern Glass");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
