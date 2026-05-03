@@ -914,11 +914,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
 
-                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let share_store_called_clone = share_store_called.clone();
-
                 let business_share_ui = app::BusinessShare::new().unwrap();
                 let business_share_handle = business_share_ui.as_weak();
+                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let share_store_called_clone = share_store_called.clone();
 
                 business_share_ui.on_copy_link({
                     let bs_handle_clone_for_copy = business_share_handle.clone();
@@ -1326,7 +1325,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -3853,3 +3852,29 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
+
+
+#[test]
+fn test_business_share_flow() {
+    crate::ui_tests::init();
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let business_share_ui = app::BusinessShare::new().unwrap();
+    let bs_handle = business_share_ui.as_weak();
+
+    let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let share_store_called_clone = share_store_called.clone();
+
+    dashboard_ui.on_action_share_store({
+        let bs_handle_clone = bs_handle.clone();
+        move || {
+            *share_store_called_clone.borrow_mut() = true;
+            if let Some(ui) = bs_handle_clone.upgrade() {
+                let _ = ui.show();
+            }
+        }
+    });
+
+    dashboard_ui.invoke_action_share_store();
+    assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+}
