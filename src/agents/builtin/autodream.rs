@@ -123,11 +123,9 @@ impl AutoDreamWorker {
     pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<crate::ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
         println!("AutoDream: searching memories with limit {}", limit);
 
-        let is_sqlite = std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite");
-
         let mut results = Vec::new();
 
-        if is_sqlite {
+        if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
             let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY created_at DESC LIMIT $1")
                 .bind(limit)
