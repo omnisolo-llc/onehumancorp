@@ -1592,6 +1592,7 @@ mod growth_e2e_tests {
         assert_eq!(r.conversions, 12);
     }
 
+
     #[test]
     fn test_e2e_growth_referrals_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1618,9 +1619,10 @@ mod growth_e2e_tests {
         let referrals_ui = app::Referrals::new().unwrap();
         let referrals_handle = referrals_ui.as_weak();
 
+        let referrals_handle_for_dashboard = referrals_handle.clone();
         dashboard_ui.on_action_open_referrals(move || {
             *share_store_called_clone.borrow_mut() = true;
-            if let Some(ui) = referrals_handle.upgrade() {
+            if let Some(ui) = referrals_handle_for_dashboard.upgrade() {
                 let _ = ui.show();
             }
         });
@@ -1652,6 +1654,25 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
+
+        // Test invite copy mock
+        let invite_copy_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let invite_copy_invoked_clone = invite_copy_invoked.clone();
+        let ui_handle_copy = referrals_handle.clone();
+        referrals_ui.on_send_invite_message(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            *invite_copy_invoked_clone.borrow_mut() = true;
+            let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
+            CLIPBOARD.with(|cb| {
+                if let Some(ctx) = cb.borrow_mut().as_mut() {
+                    let _ = ctx.set_contents(pre_filled_msg.clone());
+                }
+            });
+            if let Some(ui) = ui_handle_copy.upgrade() {
+                ui.set_invite_copy_status("Invite message copied!".into());
+            }
+        });
+
         // Set up mock stats for test
         referrals_ui.set_total_referrals(5);
         referrals_ui.set_click_count(100);
@@ -1673,8 +1694,14 @@ mod growth_e2e_tests {
         referrals_ui.invoke_generate_new_link();
         assert!(*new_link_generated.borrow(), "generate_new_link should be invoked");
 
+
         referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
         assert!(*link_shared.borrow(), "share_link should be invoked");
+
+        referrals_ui.invoke_send_invite_message(referrals_ui.get_my_referral_link());
+        assert!(*invite_copy_invoked.borrow(), "send_invite_message should be invoked");
+        assert_eq!(referrals_ui.get_invite_copy_status(), "Invite message copied!");
+
     }
 
     #[test]
