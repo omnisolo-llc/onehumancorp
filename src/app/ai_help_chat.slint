@@ -1,13 +1,21 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct ChatMessage {
+    sender: string,
+    text: string,
+    article_link: string,
+}
+
 export component AiHelpChat inherits Window {
-    width: 600px;
+    min-width: 375px; max-width: 1440px; preferred-width: 600px;
     height: 800px;
     title: "AI Help Assistant";
     background: white;
 
     in-out property <string> user_input: "";
+    in property <[ChatMessage]> messages: [];
     callback send_message();
+    callback open_article(string);
 
     VerticalBox {
         padding: 16px;
@@ -27,7 +35,33 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 12px;
+                for msg in messages : VerticalBox {
+                    spacing: 4px;
+                    Rectangle {
+                        background: msg.sender == "user" ? #0ea5e9 : #e2e8f0;
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 8px;
+                            Text {
+                                text: msg.text;
+                                color: msg.sender == "user" ? white : #0f172a;
+                                wrap: word-wrap;
+                            }
+                            if (msg.article_link != "") : TouchArea {
+                                width: 100%; height: 20px;
+                                clicked => { open_article(msg.article_link); }
+                                Text {
+                                    text: "Read the full article →";
+                                    color: #2563eb;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         HorizontalBox {

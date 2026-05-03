@@ -1,26 +1,40 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+export struct ApiEndpoint {
+    method: string,
+    path: string,
+    description: string,
+}
+
 export component ApiDocs inherits Window {
-    width: 800px;
-    height: 600px;
-    title: "Connect Custom Software";
+    min-width: 375px; max-width: 1440px; preferred-width: 600px;
+    height: 800px;
+    title: "API Reference";
     background: #f8fafc;
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
+
+    in property <[ApiEndpoint]> endpoints: [
+        { method: "GET", path: "/v1/products", description: "List all products in your store." },
+        { method: "POST", path: "/v1/products", description: "Create a new product." },
+        { method: "GET", path: "/v1/orders", description: "List all recent orders." },
+        { method: "POST", path: "/v1/orders", description: "Create a custom order." },
+        { method: "GET", path: "/v1/customers", description: "List all your customers." },
+    ];
 
     VerticalBox {
         padding: 16px;
         spacing: 20px;
 
         Text {
-            text: "Custom Integration";
+            text: "Interactive API";
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
         }
 
         Text {
-            text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+            text: "Advanced configuration for connecting custom software via OpenAPI / Swagger.";
             color: #ef4444; // red warning
             wrap: word-wrap;
         }
@@ -28,16 +42,14 @@ export component ApiDocs inherits Window {
         ScrollView {
             VerticalBox {
                 spacing: 24px;
-
-                VerticalBox {
+                for ep in endpoints : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Text { text: ep.description; font-weight: 700; font-size: 16px; color: #334155; }
                     Rectangle {
-                        background: #1e293b; border-radius: 8px; // dark theme for code
+                        background: #1e293b; border-radius: 8px;
                         VerticalBox {
                             padding: 16px; spacing: 8px;
-                            Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
-                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            Text { text: ep.method + " " + ep.path; font-weight: 700; color: ep.method == "GET" ? #10b981 : #3b82f6; }
                         }
                     }
                 }

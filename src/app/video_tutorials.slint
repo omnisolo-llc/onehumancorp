@@ -1,12 +1,31 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+export struct VideoMeta {
+    title: string,
+    description: string,
+    duration: string,
+}
+
 export component VideoTutorials inherits Window {
-    width: 600px;
+    min-width: 375px; max-width: 1440px; preferred-width: 600px;
     height: 800px;
     title: "Video Tutorials";
     background: #f8fafc;
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
+
+    in property <[VideoMeta]> videos: [
+        { title: "Set up your store", description: "How to add your first product", duration: "1:20" },
+        { title: "Accept your first payment", description: "Connect your bank account", duration: "0:45" },
+        { title: "Activate AI Support", description: "Let AI handle your emails", duration: "1:10" },
+        { title: "Design your website", description: "Customize colors and fonts", duration: "1:25" },
+        { title: "Manage inventory", description: "Track your stock levels", duration: "0:50" },
+        { title: "Create a discount code", description: "Run a holiday promotion", duration: "1:00" },
+        { title: "View financial reports", description: "Understand your profit margins", duration: "1:15" },
+        { title: "Add an Instagram link", description: "Connect your social media", duration: "0:30" },
+        { title: "Set up local delivery", description: "Configure delivery zones", duration: "1:05" },
+        { title: "Upgrade your plan", description: "Unlock premium features", duration: "0:40" },
+    ];
 
     VerticalBox {
         padding: 16px;
@@ -22,8 +41,7 @@ export component VideoTutorials inherits Window {
         ScrollView {
             VerticalBox {
                 spacing: 24px;
-
-                Rectangle {
+                for video in videos : Rectangle {
                     background: white; border-radius: 12px;
                     VerticalBox {
                         padding: 16px; spacing: 12px;
@@ -31,25 +49,11 @@ export component VideoTutorials inherits Window {
                             height: 200px;
                             background: #e2e8f0;
                             border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            // Portrait optimized placeholder
+                            Text { text: "▶ Play Video (" + video.duration + ")"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
                         }
-                        Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
-                    }
-                }
-
-                Rectangle {
-                    background: white; border-radius: 12px;
-                    VerticalBox {
-                        padding: 16px; spacing: 12px;
-                        Rectangle {
-                            height: 200px;
-                            background: #e2e8f0;
-                            border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
-                        }
-                        Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                        Text { text: video.title; font-weight: 700; font-size: 18px; color: #0f172a; }
+                        Text { text: video.description; color: #475569; wrap: word-wrap; }
                     }
                 }
             }

@@ -174,6 +174,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "add_product" => "Add".into(),
                                 "view_orders" => "Orders".into(),
                                 "messages" => "Chat".into(),
+                                "menu_help_center" => "Find answers to common questions and learn how to use the app.".into(),
+                                "menu_billing" => "Manage your subscription plan and view past invoices.".into(),
+                                "menu_connect_apps" => "Advanced settings for developers to connect custom software.".into(),
+                                "menu_video_tutorials" => "Watch short video guides to learn how to use OHC.".into(),
+                                "menu_app_tour" => "Take a quick guided tour of the main features.".into(),
+                                "menu_release_notes" => "See the latest updates and improvements to OHC.".into(),
                                 _ => "".into(),
                             }
                         });
@@ -219,6 +225,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "add_product" => "Add".into(),
                                 "view_orders" => "Orders".into(),
                                 "messages" => "Chat".into(),
+                                "menu_help_center" => "Find answers to common questions and learn how to use the app.".into(),
+                                "menu_billing" => "Manage your subscription plan and view past invoices.".into(),
+                                "menu_connect_apps" => "Advanced settings for developers to connect custom software.".into(),
+                                "menu_video_tutorials" => "Watch short video guides to learn how to use OHC.".into(),
+                                "menu_app_tour" => "Take a quick guided tour of the main features.".into(),
+                                "menu_release_notes" => "See the latest updates and improvements to OHC.".into(),
                                 _ => "".into(),
                             }
                         });
@@ -1046,6 +1058,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let videos = vec![
+                    app::VideoMeta { title: "Set up your store".into(), description: "How to add your first product".into(), duration: "1:20".into() },
+                    app::VideoMeta { title: "Accept your first payment".into(), description: "Connect your bank account".into(), duration: "0:45".into() },
+                    app::VideoMeta { title: "Activate AI Support".into(), description: "Let AI handle your emails".into(), duration: "1:10".into() },
+                    app::VideoMeta { title: "Design your website".into(), description: "Customize colors and fonts".into(), duration: "1:25".into() },
+                    app::VideoMeta { title: "Manage inventory".into(), description: "Track your stock levels".into(), duration: "0:50".into() },
+                ];
+                video_tutorials_ui.set_videos(slint::ModelRc::new(slint::VecModel::from(videos)));
                 Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
@@ -2230,6 +2250,7 @@ mod tests {
 
 #[cfg(test)]
 mod docs_tests {
+    use slint::Model;
     use super::*;
 
     #[test]
@@ -2692,6 +2713,14 @@ mod docs_tests {
         assert_eq!(help_center.get_search_query(), "");
         assert_eq!(help_center.get_articles().row_count(), 2);
 
+        let article_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let article_opened_clone = article_opened.clone();
+        help_center.on_read_article(move |_| {
+            *article_opened_clone.borrow_mut() = true;
+        });
+        help_center.invoke_read_article("How to add products".into());
+        assert!(*article_opened.borrow(), "Article should be opened from Help Center");
+
         help_center.set_search_query("add products".into());
         help_center.invoke_execute_search(); // Must invoke callback to execute search in test
         assert_eq!(help_center.get_search_query(), "add products");
@@ -2750,6 +2779,12 @@ mod docs_tests {
                 "add_product" => "Add".into(),
                 "view_orders" => "Orders".into(),
                 "messages" => "Chat".into(),
+                                "menu_help_center" => "Find answers to common questions and learn how to use the app.".into(),
+                                "menu_billing" => "Manage your subscription plan and view past invoices.".into(),
+                                "menu_connect_apps" => "Advanced settings for developers to connect custom software.".into(),
+                                "menu_video_tutorials" => "Watch short video guides to learn how to use OHC.".into(),
+                                "menu_app_tour" => "Take a quick guided tour of the main features.".into(),
+                                "menu_release_notes" => "See the latest updates and improvements to OHC.".into(),
                 _ => "".into(),
             }
         });
@@ -2803,6 +2838,87 @@ mod docs_tests {
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ApiDocs::new().unwrap();
+    }
+
+    #[test]
+    fn test_e2e_video_tutorials_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || { *opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*opened.borrow(), "Video Tutorials should be opened from Dashboard");
+
+        let vt = app::VideoTutorials::new().unwrap();
+        assert_eq!(vt.get_videos().row_count(), 10, "Videos array should be populated with data");
+    }
+
+    #[test]
+    fn test_e2e_api_docs_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard_ui.on_open_api_docs(move || { *opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*opened.borrow(), "API Docs should be opened from Dashboard");
+
+        let ad = app::ApiDocs::new().unwrap();
+        assert_eq!(ad.get_endpoints().row_count(), 5, "Endpoints array should be populated with data");
+    }
+
+    #[test]
+    fn test_e2e_release_notes_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let opened_clone = opened.clone();
+        dashboard_ui.on_open_release_notes(move || { *opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*opened.borrow(), "Release Notes should be opened from Dashboard");
     }
     #[test]
     fn test_e2e_agent_config_flow() {
@@ -2903,6 +3019,14 @@ mod docs_tests {
         assert_eq!(ui.get_current_step(), 2);
         ui.set_current_step(3);
         assert_eq!(ui.get_current_step(), 3);
+
+        // Test overlay anchoring variables
+        ui.set_target_x(100.0);
+        ui.set_target_y(200.0);
+        ui.set_target_width(50.0);
+        ui.set_target_height(50.0);
+        assert_eq!(ui.get_target_x(), 100.0);
+        assert_eq!(ui.get_target_y(), 200.0);
     }
 
     #[test]
