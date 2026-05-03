@@ -990,4 +990,22 @@ mod isolation_tests {
         assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
     }
+
+    #[test]
+    fn test_rls_migration_harden_empty_string_removed() {
+        // Read the migrations file to verify that the empty string bypass does not exist in 055
+        let content = std::fs::read_to_string("src/server/migrations/055_harden_remaining_rls_policies.sql").unwrap_or_else(|_| {
+            std::fs::read_to_string("../../src/server/migrations/055_harden_remaining_rls_policies.sql").unwrap_or_else(|_| {
+                std::fs::read_to_string("../../../src/server/migrations/055_harden_remaining_rls_policies.sql").expect("failed to load migration test file")
+            })
+        });
+
+        // Assert that the vulnerable empty string check is strictly NOT in the new policies.
+        assert!(!content.contains("current_setting('app.current_tenant', true) = ''"),
+                "Migration file must not contain the empty string bypass vulnerability!");
+
+        // And assert it does contain the correct bypass
+        assert!(content.contains("current_setting('app.current_tenant', true) = 'system'"),
+                "Migration file must contain the secure 'system' bypass.");
+    }
 }
