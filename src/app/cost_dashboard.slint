@@ -31,60 +31,59 @@ export component CostDashboard inherits Window {
             Button { text: "Refresh"; height: 44px; }
         }
 
-        Rectangle {
-            if (root.width <= 768px) : VerticalBox {
-                spacing: 16px;
+        // Summary Cards
+        if (root.width <= 768px) : VerticalBox {
+            spacing: 16px;
 
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
 
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Total Spend"; color: #94a3b8; }
-                        Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                    }
-                }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Total Tokens"; color: #94a3b8; }
-                        Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                    }
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Spend"; color: #94a3b8; }
+                    Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                 }
             }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
 
-            if (root.width > 768px) : HorizontalBox {
-                spacing: 16px;
-                
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 220px;
-
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Total Spend"; color: #94a3b8; }
-                        Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
-                    }
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Tokens"; color: #94a3b8; }
+                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
-                GlassCard {
-                    border-color: #e2e8f0;
-                    border-width: 1px;
-                    border-radius: 8px;
-                    width: 220px;
+            }
+        }
 
-                    VerticalBox {
-                        padding: 16px;
-                        Text { text: "Total Tokens"; color: #94a3b8; }
-                        Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
-                    }
+        if (root.width > 768px) : HorizontalBox {
+            spacing: 16px;
+
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Spend"; color: #94a3b8; }
+                    Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
+                }
+            }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Tokens"; color: #94a3b8; }
+                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
