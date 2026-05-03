@@ -74,8 +74,8 @@ impl OrgService for MyOrgService {
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings())
         );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
+        let agents = agents_res.map_err(|e| Status::internal(format!("Failed to fetch agents: {}", e)))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(format!("Failed to fetch meetings: {}", e)))?;
         let summary = self.hub.tracker().summary("system");
         
         let mut total_msgs = 0;
