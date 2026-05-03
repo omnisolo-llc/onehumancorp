@@ -33,7 +33,7 @@ export component AgentConfig inherits Window {
             Text { text: "Configure Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             CheckBox {
-                text: "Pro mode";
+                text: "Advanced mode";
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; save_state(); }
             }

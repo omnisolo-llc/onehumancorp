@@ -21,7 +21,7 @@ export component GrowBusiness inherits Window {
             Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             CheckBox {
-                text: "Expert Mode";
+                text: "Advanced mode";
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; save_state(); }
             }

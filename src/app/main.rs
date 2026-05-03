@@ -3440,6 +3440,97 @@ mod remaining_e2e_tests {
     }
 
     #[test]
+    fn test_progressive_disclosure_sync() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let setup_wizard = app::SetupWizard::new().unwrap();
+        setup_wizard.set_is_advanced(false);
+        let sw_weak = setup_wizard.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = sw_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        setup_wizard.on_save_state({
+            let ui_weak = setup_wizard.as_weak();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_global_is_advanced(ui.get_is_advanced());
+                }
+            }
+        });
+
+        let agent_config = app::AgentConfig::new().unwrap();
+        agent_config.set_is_advanced(false);
+        let ac_weak = agent_config.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = ac_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        let website_builder = app::WebsiteBuilder::new().unwrap();
+        website_builder.set_is_advanced(false);
+        let wb_weak = website_builder.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = wb_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        website_builder.on_save_state({
+            let ui_weak = website_builder.as_weak();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_global_is_advanced(ui.get_is_advanced());
+                }
+            }
+        });
+
+        let grow_business = app::GrowBusiness::new().unwrap();
+        grow_business.set_is_advanced(false);
+        let gb_weak = grow_business.as_weak();
+        add_advanced_listener(Box::new(move |val| {
+            if let Some(ui) = gb_weak.upgrade() {
+                ui.set_is_advanced(val);
+            }
+        }));
+
+        grow_business.on_save_state({
+            let ui_weak = grow_business.as_weak();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_global_is_advanced(ui.get_is_advanced());
+                }
+            }
+        });
+
+        // Initial state
+        assert_eq!(setup_wizard.get_is_advanced(), false);
+        assert_eq!(agent_config.get_is_advanced(), false);
+        assert_eq!(website_builder.get_is_advanced(), false);
+        assert_eq!(grow_business.get_is_advanced(), false);
+
+        // Toggle in SetupWizard
+        setup_wizard.invoke_toggle_advanced();
+        assert_eq!(setup_wizard.get_is_advanced(), true);
+
+        // Verify sync
+        assert_eq!(agent_config.get_is_advanced(), true);
+        assert_eq!(website_builder.get_is_advanced(), true);
+        assert_eq!(grow_business.get_is_advanced(), true);
+
+        // Toggle off in WebsiteBuilder
+        website_builder.set_is_advanced(false);
+        website_builder.invoke_save_state();
+
+        // Verify sync
+        assert_eq!(setup_wizard.get_is_advanced(), false);
+        assert_eq!(agent_config.get_is_advanced(), false);
+        assert_eq!(grow_business.get_is_advanced(), false);
+    }
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
