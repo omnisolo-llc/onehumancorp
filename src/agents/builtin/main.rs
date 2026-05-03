@@ -1,6 +1,6 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::AgentServiceServer,
+    proto::agent_service_server::{AgentServiceServer, AgentService},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
             let heartbeat_transport = transport.clone();
-            let heartbeat_agent_id = agent_id.clone();
+            let heartbeat_agent_id = agent_id;
             tokio::spawn(async move {
                 loop {
                     if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "active", 30).await {
