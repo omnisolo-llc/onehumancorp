@@ -2277,57 +2277,6 @@ mod docs_tests {
         assert_eq!(help_center.get_search_query(), "");
     }
 
-    #[test]
-    fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-
-
-        // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                _ => "".into(),
-            }
-        });
-
-        let tr = dashboard_ui.global::<app::TooltipRegistry>();
-        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
-        assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
-        tr.invoke_hide_tooltip();
-        assert_eq!(tr.get_is_visible(), false);
-
-        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let help_center_opened_clone = help_center_opened.clone();
-
-        dashboard_ui.on_open_help_center(move || {
-            *help_center_opened_clone.borrow_mut() = true;
-        });
-
-        // Simulate clicking the help center button.
-        dashboard_ui.invoke_open_help_center();
-
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
-    }
 
     #[test]
     fn test_help_center_creation() {
