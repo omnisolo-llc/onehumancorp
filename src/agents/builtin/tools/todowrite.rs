@@ -90,6 +90,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
             Use to track progress on multi-step tasks."
             .to_string(),
         is_read_only: false,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -125,6 +126,7 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
         name: "TodoRead".to_string(),
         description: "Read the current todo list.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {}

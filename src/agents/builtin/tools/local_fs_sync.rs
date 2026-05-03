@@ -56,6 +56,7 @@ pub fn local_fs_sync_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "local_fs_sync".to_string(),
         description: "Performs local file system operations restricted to .agent-task/ directory.".to_string(),
         is_read_only: false,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

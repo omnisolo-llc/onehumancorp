@@ -34,6 +34,7 @@ pub fn topic_retrieve_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
         name: "TopicRetrieve".to_string(),
         description: "Pull a detailed memory topic file on demand based on hints from the lightweight index.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -79,6 +80,7 @@ pub fn transcript_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
         name: "TranscriptSearch".to_string(),
         description: "Search raw historical conversation transcripts across all past sessions.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

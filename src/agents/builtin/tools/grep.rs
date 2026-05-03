@@ -112,6 +112,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Grep".to_string(),
         description: "Search for a regex pattern in files under a directory. Returns file:line:content matches.".to_string(),
         is_read_only: true,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

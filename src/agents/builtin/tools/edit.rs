@@ -60,6 +60,7 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             The old_str must appear exactly once in the file."
             .to_string(),
         is_read_only: false,
+            is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

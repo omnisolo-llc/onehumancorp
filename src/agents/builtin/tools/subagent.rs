@@ -92,7 +92,8 @@ pub fn subagent_tool() -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
         description: "Spawn a subagent to work on a task in an isolated context (fork, teammate, or worktree) and return a condensed summary.".to_string(),
-        is_read_only: false, // It might mutate the world depending on the mode
+        is_read_only: false,
+            is_subagent: true, // It might mutate the world depending on the mode
         parameters: json!({
             "type": "object",
             "properties": {
