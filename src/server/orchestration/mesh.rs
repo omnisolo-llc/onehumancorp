@@ -1,4 +1,5 @@
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use crate::ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use std::sync::Arc;
@@ -9,6 +10,9 @@ use opentelemetry::KeyValue;
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 }
 
 pub struct CentrifugeNode {
@@ -30,8 +34,10 @@ impl CentrifugeNode {
 impl TeammateMesh for CentrifugeNode {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
-        self.transport.publish(topic, Message {
-            topic: topic.to_string(),
+        self.transport.publish(topic, TeammateMeshEvent {
+            agent_id: "sys".to_string(),
+            action: topic.to_string(),
+            status: "ok".to_string(),
             payload,
         }).await
     }
@@ -46,6 +52,14 @@ impl TeammateMesh for CentrifugeNode {
         });
 
         self.transport.subscribe(topic, wrapped_handler).await
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.transport.release_lock(resource, owner).await
     }
 }
 
@@ -69,8 +83,10 @@ impl RueidisMapping {
 impl TeammateMesh for RueidisMapping {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
-        self.transport.publish(topic, Message {
-            topic: topic.to_string(),
+        self.transport.publish(topic, TeammateMeshEvent {
+            agent_id: "sys".to_string(),
+            action: topic.to_string(),
+            status: "ok".to_string(),
             payload,
         }).await
     }
@@ -78,6 +94,14 @@ impl TeammateMesh for RueidisMapping {
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         // The redis mapping delegates entirely to the underlying transport for subscription events
         self.transport.subscribe(topic, handler).await
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.transport.release_lock(resource, owner).await
     }
 }
 
