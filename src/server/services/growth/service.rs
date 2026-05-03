@@ -540,9 +540,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_flow() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if database_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&database_url)).await, Ok(Ok(_))) { return; }
-        let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match PgPool::connect(&database_url).await { Ok(p) => p, Err(_) => return, };
         let service = MyGrowthService::new(pool);
 
         let mut req = Request::new(CreateReferralRequest {
@@ -551,29 +550,23 @@ mod tests {
         });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
 
-        let resp_res = service.create_referral(req).await;
-        if let Ok(resp) = resp_res {
-            let resp = resp.into_inner();
-            assert_eq!(resp.user_id, "test_user");
-            assert_eq!(resp.referral_code, "TESTCODE");
+        let resp = service.create_referral(req).await.unwrap().into_inner();
+        assert_eq!(resp.user_id, "test_user");
+        assert_eq!(resp.referral_code, "TESTCODE");
 
-            let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
-            click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-            let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
-            assert_eq!(click_resp.clicks, 1);
+        let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
+        assert_eq!(click_resp.clicks, 1);
 
-            let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
-            conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-            let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
-            assert_eq!(conv_resp.conversions, 1);
+        let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
+        assert_eq!(conv_resp.conversions, 1);
 
-            let mut list_req = Request::new(EmptyRequest {});
-            list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-            let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
-            assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
-        } else {
-            let err_msg = resp_res.err().unwrap().message().to_string();
-            assert!(err_msg.contains("pool timed out") || err_msg.contains("Connection refused") || err_msg.contains("no such file") || err_msg.contains("error communicating"));
-        }
+        let mut list_req = Request::new(EmptyRequest {});
+        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
+        assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
     }
 }
