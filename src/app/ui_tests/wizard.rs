@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::SetupWizard { crate::ui_tests::init(); app::SetupWizard::new().unwrap() }
 
@@ -206,10 +207,34 @@ fn e2e_test_onboarding_wizard_data_flow() {
     ui.set_product_price("45.00".into());
     ui.set_domain_choice("custom".into());
 
-    // In a real e2e environment, this would click the Launch button which triggers `on_launch`.
-    // We mock that the Launch sets launch_success = true if data propagates.
-    // The E2E tests inside src/app/main.rs check end-to-end routing.
-    // This provides coverage for the UI getters correctly holding the required variables.
+    let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let copied_link_clone = copied_link.clone();
+    ui.on_copy_link(move |link| {
+        *copied_link_clone.borrow_mut() = link.to_string();
+    });
+
+    let ui_weak = ui.as_weak();
+    ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
+        if let Some(u) = ui_weak.upgrade() {
+            u.set_launch_success(true);
+            let shareable_link = u.get_shareable_link();
+            u.invoke_copy_link(shareable_link);
+        }
+    });
+
+    ui.invoke_launch(
+        ui.get_business_type(),
+        ui.get_company_name(),
+        ui.get_company_description(),
+        ui.get_payment_pref(),
+        ui.get_admin_email(),
+        ui.get_website_template(),
+        ui.get_product_name(),
+        ui.get_product_price(),
+        ui.get_domain_choice()
+    );
+
+    assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
 }
 
 #[test]
