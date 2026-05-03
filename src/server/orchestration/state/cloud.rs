@@ -65,7 +65,7 @@ impl CloudStateManager {
     async fn transition_state_inner(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        _tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -162,18 +162,18 @@ impl StateManager for CloudStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        _tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
     ) -> Result<(), String> {
-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let lock_key = format!("ohc:lock:{}:task:{}", _tenant_id, task_id);
 
         let lock_guard = RedisLockGuard::acquire(self.redis_client.as_ref(), lock_key).await?;
 
         // Will drop automatically when block exits
-        self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
+        self.transition_state_inner(task_id, _tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
