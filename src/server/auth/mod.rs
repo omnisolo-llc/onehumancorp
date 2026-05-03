@@ -363,63 +363,63 @@ impl Store {
     }
 
     pub fn issue_token(&self, user: &User) -> Result<String, String> {
-        let now = Utc::now();
-        let claims = Claims {
-            sub: user.id.clone(),
-            username: user.username.clone(),
-            email: user.email.clone(),
-            roles: user.roles.clone(),
-            organization_id: user.organization_id.clone(),
-            session_id: None,
-            iat: now.timestamp(),
-            exp: (now + chrono::Duration::hours(24)).timestamp(),
-            jti: hex::encode(random_bytes(8)),
-        };
+        #[cfg(not(test))]
+        {
+            // ZERO SECRETS ENFORCEMENT:
+            // JWT generation via static symmetric secrets is disabled.
+            // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
+            return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
+        }
+        #[cfg(test)]
+        {
+            let now = chrono::Utc::now();
+            let claims = Claims {
+                sub: user.id.clone(),
+                username: user.username.clone(),
+                email: user.email.clone(),
+                roles: user.roles.clone(),
+                organization_id: user.organization_id.clone(),
+                session_id: None,
+                iat: now.timestamp(),
+                exp: (now + chrono::Duration::hours(24)).timestamp(),
+                jti: hex::encode(random_bytes(8)),
+            };
 
-        let header = Header::new(Algorithm::HS256);
-        let token = encode(&header, &claims, &EncodingKey::from_secret(&self.secret))
-            .map_err(|e| e.to_string())?;
-            
-        Ok(token)
+            let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
+                .map_err(|e| e.to_string())?;
+
+            Ok(token)
+        }
     }
 
     pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
-        let validation = Validation::new(Algorithm::HS256);
-        let token_data = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(&self.secret),
-            &validation
-        );
+        #[cfg(not(test))]
+        {
+            // ZERO SECRETS ENFORCEMENT:
+            // Static JWT validation is disabled.
+            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+        }
+        #[cfg(test)]
+        {
+            let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+            let token_data = jsonwebtoken::decode::<Claims>(
+                token,
+                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+                &validation
+            );
 
-        match token_data {
-            Ok(data) => {
-                if self.is_revoked(&data.claims.jti) {
-                    return Err("token revoked".to_string());
-                }
-                Ok(data.claims)
-            }
-            Err(e) => {
-                let cfg_opt = {
-                    let oidc_cfg = self.oidc_cfg.read().unwrap();
-                    if oidc_cfg.enabled {
-                        Some(crate::oidc::OIDCConfig {
-                            issuer_url: oidc_cfg.issuer_url.clone(),
-                            client_id: oidc_cfg.client_id.clone(),
-                            enabled: oidc_cfg.enabled,
-                        })
-                    } else {
-                        None
+            match token_data {
+                Ok(data) => {
+                    if self.is_revoked(&data.claims.jti) {
+                        return Err("token revoked".to_string());
                     }
-                };
-
-                if let Some(cfg) = cfg_opt {
-                     let claims = crate::oidc::validate_oidc_token(token, &cfg).await?;
-                     if self.is_revoked(&claims.jti) {
-                         return Err("token revoked".to_string());
-                     }
-                     return Ok(claims);
+                    Ok(data.claims)
                 }
-                Err(e.to_string())
+                Err(_) => {
+                    Err("Invalid token".to_string())
+                }
             }
         }
     }
