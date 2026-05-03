@@ -120,7 +120,6 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
         join_handles.push(tokio::spawn(async move {
             let job = Job {
                 id: format!("job_{}_{}_{}", name, run_id, i),
-                tenant_id: "benchmark_tenant".to_string(),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
                 agent_role: "test_agent".to_string(),
                 payload: "{}".to_string(),

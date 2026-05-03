@@ -71,7 +71,6 @@ rust_library(
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
     ] + [
-        "@crates//:tempfile",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:flate2",
