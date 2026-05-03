@@ -6,11 +6,15 @@ use chrono::Utc;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
+    sqlite_mu: tokio::sync::Mutex<()>,
 }
 
 impl TaskDecompositionService {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self {
+            db,
+            sqlite_mu: tokio::sync::Mutex::new(()),
+        }
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
@@ -96,8 +100,8 @@ impl TaskDecompositionService {
                     SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
                     WHERE st.status = 'PENDING'
                     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
-                    FOR UPDATE SKIP LOCKED
                     LIMIT 1
+                    FOR UPDATE SKIP LOCKED
                     "#
                 )
                 .fetch_optional(&mut *tx)
@@ -175,6 +179,8 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mu.lock().await;
+
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
