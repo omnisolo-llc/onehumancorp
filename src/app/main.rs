@@ -96,20 +96,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let login_ui_from_login = login_ui_handle.clone();
-    login_ui.on_login({
-        let login_handle = login_ui_handle.clone();
-        move |email, _password| {
-            if let Some(ui) = login_handle.upgrade() {
-                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
-                if ui.get_is_sign_up() {
-                    ui.invoke_start_setup_wizard();
-                } else {
-                    println!("Login as {}...", email);
-                }
-            }
-        }
-    });
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
@@ -527,63 +513,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_go_to_dashboard({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let _ = ui.hide();
-            }
+    let init_dashboard = std::rc::Rc::new({
+        let referrals_handle = referrals_handle.clone();
 
-    let my_plan_ui = app::MyPlan::new().unwrap();
-    let my_plan_handle = my_plan_ui.as_weak();
+        move |target: &str| {
+            let my_plan_ui = app::MyPlan::new().unwrap();
+            let my_plan_handle = my_plan_ui.as_weak();
 
-    let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle = pricing_ui.as_weak();
+            let pricing_ui = app::Pricing::new().unwrap();
+            let pricing_handle = pricing_ui.as_weak();
 
-    let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-    let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+            let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+            let cost_dashboard_handle = cost_dashboard_ui.as_weak();
 
-    let pricing_handle_clone = pricing_handle.clone();
-    my_plan_ui.on_upgrade(move || {
-        if let Some(ui) = pricing_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
+            let pricing_handle_clone = pricing_handle.clone();
+            my_plan_ui.on_upgrade(move || {
+                if let Some(ui) = pricing_handle_clone.upgrade() {
+                    let _ = ui.show();
+                }
+            });
 
-    let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
-    my_plan_ui.on_view_details(move || {
-        if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
+            let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
+            my_plan_ui.on_view_details(move || {
+                if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                    let _ = ui.show();
+                }
+            });
 
-    my_plan_ui.on_view_history(move || {
-        // Handle view history (e.g. open an invoice history modal or trigger backend flow)
-    });
+            my_plan_ui.on_view_history(move || {
+                // Handle view history (e.g. open an invoice history modal or trigger backend flow)
+            });
 
-    my_plan_ui.on_cancel_subscription(move || {
-        // Handle cancel subscription (e.g. Stripe API call)
-    });
+            my_plan_ui.on_cancel_subscription(move || {
+                // Handle cancel subscription (e.g. Stripe API call)
+            });
 
-    my_plan_ui.on_update_payment(move || {
-        // Handle update payment method
-    });
+            my_plan_ui.on_update_payment(move || {
+                // Handle update payment method
+            });
 
-    my_plan_ui.on_download_invoice(move || {
-        // Handle download invoice
-    });
+            my_plan_ui.on_download_invoice(move || {
+                // Handle download invoice
+            });
 
-    let my_plan_handle_pricing_clone = my_plan_handle.clone();
-    pricing_ui.on_select_plan(move |plan| {
-        if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
-            ui.set_tier(plan.into());
-            let _ = ui.show();
-        }
-    });
+            let my_plan_handle_pricing_clone = my_plan_handle.clone();
+            pricing_ui.on_select_plan(move |plan| {
+                if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
+                    ui.set_tier(plan.into());
+                    let _ = ui.show();
+                }
+            });
 
-    pricing_ui.on_toggle_billing_cycle(move || {
-        // Logic for toggling billing cycle
-    });
+            pricing_ui.on_toggle_billing_cycle(move || {
+                // Logic for toggling billing cycle
+            });
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
@@ -649,7 +632,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
                     Box::leak(Box::new(business_share_ui));
                 } else {
                     let referrals_handle_clone = referrals_handle.clone();
@@ -675,19 +657,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = my_plan_handle_clone.upgrade() {
                         let _ = ui.show();
                     }
                 });
+
+                if target == "analytics" {
+                    dashboard.invoke_action_see_analytics();
+                }
+
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
-
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
             }
+
+            Box::leak(Box::new(my_plan_ui));
+            Box::leak(Box::new(pricing_ui));
+            Box::leak(Box::new(cost_dashboard_ui));
+        }
+    });
+
+    let login_ui_from_login = login_ui_handle.clone();
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        let init_dashboard_clone = init_dashboard.clone();
+        // Since login_ui.on_login is declared BEFORE init_dashboard, we can't easily capture it without moving on_login!
+        // We will move on_login!
+        move |email, _password| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.invoke_start_setup_wizard();
+                } else {
+                    println!("Login as {}...", email);
+                    init_dashboard_clone("");
+                    let _ = ui.hide();
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_dashboard({
+        let ui_handle = setup_wizard_handle.clone();
+        let init_dashboard_clone = init_dashboard.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            init_dashboard_clone("");
         }
     });
 
@@ -701,25 +718,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // In a real flow, this might jump to a specific product adding UI
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+            if let Ok(builder) = app::WebsiteBuilder::new() {
+                builder.show().unwrap();
+                Box::leak(Box::new(builder));
             }
         }
     });
 
     welcome_checklist_ui.on_go_to_connect_instagram({
         let handle = welcome_checklist_handle.clone();
+        let init_dashboard_clone = init_dashboard.clone();
         move || {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // Similarly, jump to integrations or marketing
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+            init_dashboard_clone("analytics");
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_dashboard({
+        let handle = welcome_checklist_handle.clone();
+        let init_dashboard_clone = init_dashboard.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
             }
+            init_dashboard_clone("");
         }
     });
 
@@ -1365,6 +1389,14 @@ mod tests {
 
         ui.invoke_go_to_share_link();
         assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
+
+        let dashboard_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_clone = dashboard_clicked.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_clicked.borrow(), "Go to dashboard callback should be triggered");
     }
 
     #[test]

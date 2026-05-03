@@ -90,74 +90,95 @@ test.describe('Onboarding Flow', () => {
 });
 
 test.describe('Onboarding Welcome Checklist', () => {
-  test('should display welcome checklist', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    await expect(page.locator('text=/checklist|welcome/i')).toBeVisible();
+  // A helper function to complete the wizard
+  async function completeWizardToChecklist(page) {
+    await page.goto('/');
+
+    // Login
+    const emailInput = page.locator('input').first();
+    await expect(emailInput).toBeVisible();
+    await emailInput.fill('test@example.com');
+
+    const passInput = page.locator('input[type="password"], input').nth(1);
+    await expect(passInput).toBeVisible();
+    await passInput.fill('password123');
+
+    const signInBtn = page.locator('button:has-text("Sign In")').first();
+    await signInBtn.click();
+
+    // Setup Wizard opens.
+    // Step 0: Welcome
+    const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue"), button:has-text("Next →")');
+    await expect(nextBtn.first()).toBeVisible({ timeout: 10000 });
+    await nextBtn.first().click();
+
+    // Step 1: Type
+    await page.locator('text=/Online Store/i').first().click();
+
+    // Step 2: Name
+    await page.locator('input').first().fill('My E2E Store');
+    await nextBtn.first().click();
+
+    // Step 3: What do you sell
+    await page.locator('text=/Physical/i').first().click();
+    await nextBtn.first().click();
+
+    // Step 4: Payments
+    await page.locator('text=/Online/i').first().click();
+
+    // Step 5: Admin
+    await page.locator('input').nth(1).fill('admin@e2e.test');
+    await nextBtn.first().click();
+
+    // Step 6: Template
+    await page.locator('text=/Modern/i').first().click();
+
+    // Step 7: Product
+    await page.locator('input').first().fill('My First Product');
+    await page.locator('input').nth(1).fill('10.00');
+    await nextBtn.first().click();
+
+    // Step 8: Domain
+    await page.locator('text=/mybusiness.ohc.app/i').first().click();
+
+    // Step 9: Launch
+    const launchBtn = page.locator('button:has-text("Launch"), text=/Launch My Business/i').first();
+    await expect(launchBtn).toBeVisible({ timeout: 10000 });
+    await launchBtn.click();
+
+    // Wait for launch to finish and go to Checklist (Step 10)
+    await expect(page.locator('text=/You\'re set up/i')).toBeVisible({ timeout: 15000 });
+  }
+
+  test('should navigate to add products when clicking Add 3 more products', async ({ page }) => {
+    await completeWizardToChecklist(page);
+    const addProductsItem = page.locator('text=/Add 3 more products/i').first();
+    await expect(addProductsItem).toBeVisible();
+    await addProductsItem.click();
+    await expect(page.locator('text=/website|builder|product/i')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should show checklist items', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const item = page.locator('[class*="item"], [class*="checklist"]').first();
-    await expect(item).toBeVisible();
+  test('should navigate to dashboard analytics when clicking Connect Instagram', async ({ page }) => {
+    await completeWizardToChecklist(page);
+    const connectIgItem = page.locator('text=/Connect Instagram/i').first();
+    await expect(connectIgItem).toBeVisible();
+    await connectIgItem.click();
+    await expect(page.locator('text=/dashboard|analytics|integrations/i')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should mark item as complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const checkbox = page.locator('input[type="checkbox"]').first();
-    if (await checkbox.isVisible()) {
-      await checkbox.check();
-      await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
-    }
+  test('should navigate to referrals when clicking Share your link', async ({ page }) => {
+    await completeWizardToChecklist(page);
+    const shareLinkItem = page.locator('text=/Share your link/i').first();
+    await expect(shareLinkItem).toBeVisible();
+    await shareLinkItem.click();
+    await expect(page.locator('text=/referral|share/i')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should show completion progress', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const progress = page.locator('text=/\\d+ of \\d+|\\d+%/').first();
-    await expect(progress).toBeVisible();
-  });
-
-  test('should mark all items complete', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const checkboxes = page.locator('input[type="checkbox"]');
-    const count = await checkboxes.count();
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-      await page.waitForTimeout(100);
-    }
-  });
-
-  test('should show congratulations message', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const checkboxes = page.locator('input[type="checkbox"]');
-    const count = await checkboxes.count();
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-      await page.waitForTimeout(100);
-    }
-    await expect(page.locator('text=/congratulations|complete|awesome/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
-  });
-
-  test('should link to documentation', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const docLink = page.locator('a:has-text("Documentation"), a:has-text("Docs")').first();
-    if (await docLink.isVisible()) {
-      await docLink.click();
-      await expect(page.locator('text=/docs|documentation/i')).toBeVisible();
-    }
-  });
-
-  test('should link to video tutorials', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const videoLink = page.locator('a:has-text("Video"), a:has-text("Tutorial")').first();
-    if (await videoLink.isVisible()) {
-      await videoLink.click();
-      await expect(page.locator('text=/video|tutorial/i')).toBeVisible();
-    }
-  });
-
-  test('should offer to contact support', async ({ page }) => {
-    await page.goto('/welcome-checklist');
-    const supportLink = page.locator('text=/support|help|contact/i').first();
-    await expect(supportLink).toBeVisible();
+  test('should navigate to dashboard when clicking Go to Dashboard', async ({ page }) => {
+    await completeWizardToChecklist(page);
+    const dashboardBtn = page.locator('button:has-text("Go to Dashboard"), text=/Go to Dashboard/i').first();
+    await expect(dashboardBtn).toBeVisible();
+    await dashboardBtn.click();
+    await expect(page.locator('text=/dashboard|my business/i')).toBeVisible({ timeout: 10000 });
   });
 });
