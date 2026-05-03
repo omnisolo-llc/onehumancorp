@@ -9,7 +9,7 @@ export struct UiPromptExample {
 export component PromptTuning inherits Window {
     width: 700px;
     height: 500px;
-    title: "Tune Agent";
+    title: "Tune Helper";
 
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly";
@@ -164,7 +164,7 @@ export component PromptTuning inherits Window {
                 VerticalBox {
                     padding: 16px;
                     if (is_advanced) : VerticalBox {
-                        Text { text: "Raw System Prompt JSON"; color: #1e293b; font-weight: 700; }
+                        Text { text: "Advanced Instruction Format"; color: #1e293b; font-weight: 700; }
                         LineEdit {
                             text: "{\n  \"tone\": \"" + tone + "\",\n  \"focus_business\": " + (focus_only_business ? "true" : "false") + "\n}";
                             height: 100px;
@@ -185,7 +185,7 @@ export component PromptTuning inherits Window {
                             border-radius: 8px;
                             HorizontalBox {
                                 padding: 8px;
-                                Text { text: "Agent: Hi there! How can I help you today?"; color: white; }
+                                Text { text: "Helper: Hi there! How can I help you today?"; color: white; }
                             }
                         }
                         HorizontalBox {
