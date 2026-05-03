@@ -61,7 +61,7 @@ CI runners are dynamically provisioned as Kubernetes `Jobs`. Build caching is ha
 - **Resource Usage**: CPU/Memory footprint of CI jobs is logged to the Billing Engine.
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.

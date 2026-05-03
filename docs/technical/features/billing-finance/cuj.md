@@ -20,7 +20,7 @@ The CEO reviews the daily token burn rate, identifies inefficient agents, and ma
 
 ## 3. Implementation Details
 - **Architecture**: The Cost Estimation & Billing Engine tracks metrics asynchronously to avoid latency.
-- **Stack**: Go 1.26, Postgres, Redis. The frontend fetches data via REST and SSE.
+- **Stack**: Rust, Postgres, Redis. The frontend fetches data via REST and SSE.
 - **Tracking Accuracy**: Token counts are derived directly from the LLM provider's response metadata.
 
 ## 4. Edge Cases

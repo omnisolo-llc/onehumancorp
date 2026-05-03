@@ -62,7 +62,7 @@ Trust bundles are backed up to S3. In the event of a total SPIRE failure, the `H
 - **Phase 3**: OIDC Federation for Human CEO login (BACKLOG).
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.

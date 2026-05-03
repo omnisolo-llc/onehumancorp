@@ -19,7 +19,7 @@ The Autonomous SRE feature enables the platform to monitor, identify, and resolv
 
 ## 3. Implementation Details
 - **Architecture**: The `sre-engine.md` details how SRE agents ingest OpenTelemetry data. The engine operates on the Kubernetes API.
-- **Stack**: Go 1.26, OpenTelemetry, Redis for rate-limiting, and PostgreSQL for incident history.
+- **Stack**: Rust, OpenTelemetry, Redis for rate-limiting, and PostgreSQL for incident history.
 - **Agent Roles**: Specialized SRE agents are equipped with restricted, read-only filesystem access by default but can request elevated, short-lived "break-glass" privileges.
 - **Security Check**: Employs least privilege. Agent Pods run as non-root and have minimal egress rights.
 

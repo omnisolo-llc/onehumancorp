@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Persistence & Disaster Reco
 - OHC Hub configured with local storage driver supporting CSI snapshots.
 
 ## Implementation Details
-- **Architecture**: The Persistence & DR tests utilize Go 1.26 table-driven tests. Integration logic runs against a local PostgreSQL seeder and a mock Kubernetes CSI (Container Storage Interface) driver.
+- **Architecture**: The Persistence & DR tests utilize Rust table-driven tests. Integration logic runs against a local PostgreSQL seeder and a mock Kubernetes CSI (Container Storage Interface) driver.
 - **Execution**: Run hermetically under Bazel 9.0.0 (`bazelisk test //...`). The suite explicitly avoids mocking the database layer, running `pg_dump`/`pg_restore` commands directly against the seeded PostgreSQL instance to ensure true end-to-end coverage of the Snapshot Fabric.
 - **Validation**: Strict >95% test coverage ensures that LangGraph checkpointer state logic and event serialization to `events.jsonl` are rock-solid.
 

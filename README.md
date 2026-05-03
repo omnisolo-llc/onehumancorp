@@ -30,16 +30,15 @@ The platform supports four operating modes:
 
 | Mode | Local footprint | Remote footprint | Notes |
 |------|-----------------|------------------|-------|
-| **Cloud-native shared service** | Flutter mobile, desktop, or web client | Go API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
-| **Headless cloud API** | Flutter mobile or desktop client | API-only Go server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
-| **Desktop standalone** | Flutter desktop shell plus local Go backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
+| **Cloud-native shared service** | Slint desktop or web client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Headless cloud API** | Slint desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
+| **Desktop standalone** | Slint desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
 ```mermaid
 graph TD;
-    MobileClient[Flutter Client\nAndroid / iOS] --> API[Go Server / API];
-    DesktopClient[Flutter Desktop App\nStandalone or Remote] --> API;
-    WebClient[Flutter Web] --> API;
+    DesktopClient[Slint Desktop App\nStandalone or Remote] --> API[Rust Server / API];
+    WebClient[Slint Web Client] --> API;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
     Orchestration --> Agents[AI Agents];
@@ -68,7 +67,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 
 ### Remote clients and standalone mode
 
-The Flutter app already supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
+The Slint desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
 
 Headless server deployments keep the API, auth, health probes, and metrics online while skipping static UI serving. That is the intended mode for mobile clients and desktop clients that should connect to cloud-hosted services instead of running a local backend.
 
@@ -104,7 +103,7 @@ bazelisk run //:deploy_dev
 Services:
 | Service | Port | Description |
 |---------|------|-------------|
-| `server` | 8080 | Go API server, auth endpoints, and optional embedded UI |
+| `server` | 8080 | Rust API server, auth endpoints, and optional embedded UI |
 | `postgres` | 5432 | PostgreSQL |
 | `redis` | 6379 | Redis |
 | `chatwoot` | 3002 | Chat platform |

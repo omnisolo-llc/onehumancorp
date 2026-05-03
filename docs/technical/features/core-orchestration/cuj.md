@@ -19,7 +19,7 @@ The CEO provides a massive goal and watches the Orchestrator spin up departments
 | 4 | Agents conflict | Security flags SWE PR | Hub creates conflict room | New room visible |
 
 ## 3. Implementation Details
-- **Architecture**: The protocol orchestrates agent coordination via a Go 1.26 backend using asynchronous pub/sub patterns. Redis handles standard eventing.
+- **Architecture**: The protocol orchestrates agent coordination via a Rust backend using asynchronous pub/sub patterns. Redis handles standard eventing.
 - **Security**: All interactions require mTLS with identity verification via SPIFFE SVIDs.
 - **State Management**: Transcripts are captured natively via Postgres.
 

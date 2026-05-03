@@ -29,16 +29,16 @@ graph TD
     class D,E,F,G,H premium;
 ```
 
-1.  **Local Proxy Component**: A new component running in the Standalone Desktop (Flutter Host/Embedded Go Server) that initiates a secure, reverse-tunneled gRPC or WebSocket connection to the OHC Cloud Orchestrator.
+1.  **Local Proxy Component**: A new component running in the Standalone Desktop (Slint Host/Embedded Rust Server) that initiates a secure, reverse-tunneled gRPC or WebSocket connection to the OHC Cloud Orchestrator.
 2.  **Authentication**: This connection MUST use SPIFFE/SPIRE zero-trust identity, exchanging short-lived JWTs/SVIDs to authenticate the Standalone Desktop instance to the Cloud Orchestrator.
 3.  **MCP Integration**: The Local Proxy will expose the local MCP server's JSON-RPC interface over this reverse tunnel. The Cloud Orchestrator's MCP Switchboard will register this reverse-tunneled connection as a dynamic tool provider for the authenticated user's session.
 4.  **Security Boundaries**: The Local Proxy must strictly enforce read/write policies using the existing `bwrap` integration and intercept local network requests.
 
 ## Implementation Prompt
 **Task**: Implement the Local Proxy for the OHC Hybrid Agentic OS.
-1.  **Backend Implementation**: Create a new service in `src/server/agents/mcp/proxy` in Go.
+1.  **Backend Implementation**: Create a new service in `src/server/agents/mcp/proxy` in Rust.
 2.  **Reverse Tunnel Server**: Implement the server-side endpoint in the Cloud Orchestrator that accepts incoming gRPC/WebSocket connections from the local proxy. Ensure strict SPIFFE ID validation based on `docs/research/spiffe_mcp_langgraph_sync.md`.
-3.  **Local Proxy Client**: Implement the client logic that runs in the Standalone Mode (embedded Go server). It should connect to the Cloud Orchestrator and multiplex the local MCP JSON-RPC traffic.
+3.  **Local Proxy Client**: Implement the client logic that runs in the Standalone Mode (embedded Rust server). It should connect to the Cloud Orchestrator and multiplex the local MCP JSON-RPC traffic.
 4.  **Integration**: Update the MCP Switchboard to dynamically route requests to the reverse-tunneled MCP server when the cloud agent requests a locally-available tool.
 5.  **Metrics**: Add OpenTelemetry spans and Prometheus metrics (e.g., `ohc_mcp_proxy_connections_active`, `ohc_mcp_proxy_bytes_transferred`).
-6.  **Testing**: Write comprehensive unit tests in Go ensuring 100% test coverage. Add an E2E test verifying a cloud agent can successfully call a mock tool registered via the local proxy.
+6.  **Testing**: Write comprehensive unit tests in Rust ensuring 100% test coverage. Add an E2E test verifying a cloud agent can successfully call a mock tool registered via the local proxy.

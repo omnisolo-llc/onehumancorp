@@ -34,9 +34,8 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 ```mermaid
 graph TD
     subgraph "Thin Client Mode (UI-Only)"
-        Mobile[Flutter Mobile Client] -->|API/OAuth| BE[OHC Backend Server]
-        Desktop[Flutter Desktop Client] -->|API/OAuth| BE
-        Web[Flutter Web Client] -->|API/OAuth| BE
+        Desktop[Slint Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
+        Web[Slint Web Client] -->|API/OAuth| BE
     end
     
     subgraph "Cloud-Native Mode (Multi-Tenant)"
@@ -72,32 +71,32 @@ graph TD
 ```
 
 ### 3.1 Operating Modes
-- **Cloud-native shared service**: the Go API tier runs in Kubernetes, scales horizontally, and relies on Postgres as the consistency boundary.
+- **Cloud-native shared service**: the Rust API tier runs in Kubernetes, scales horizontally, and relies on Postgres as the consistency boundary.
 - **Headless remote-service mode**: the backend runs with UI serving disabled so mobile and desktop clients use it as an API-only service.
 - **Desktop standalone mode**: the desktop shell manages a local backend lifecycle, local SQLite-backed state, and optional public integrations.
-- **Remote client mode**: the Flutter app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
+- **Remote client mode**: the Slint app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
 
 ### 3.2 Hybrid Parity and Graceful Degradation
-- **Standalone Wrapper Spec**: The desktop wrapper must instantiate the Go backend as a child process, utilizing SQLite instead of Postgres and relying on local process boundaries rather than strict multi-tenant container isolation.
+- **Standalone Wrapper Spec**: The desktop wrapper must instantiate the Rust backend as a child process, utilizing SQLite instead of Postgres and relying on local process boundaries rather than strict multi-tenant container isolation.
 - **Thin Client APIs**: All UI actions must map to identical REST or gRPC definitions regardless of the target backend. Endpoints gracefully degrade if a service is unavailable (e.g., if Redis Pub/Sub is missing, fallback to local memory channels).
 - **Verification**: Architectural changes must maintain parity across both hybrid targets.
 
 ### 3.3 Orchestration Hub (`src/server/orchestration/`)
-The `Hub` is the central coordinator using a thread-safe registry (`sync.RWMutex`). It manages:
+The `Hub` is the central coordinator using a thread-safe registry (`tokio::sync::RwLock`). It manages:
 - **Agent Lifecycle**: `RegisterAgent(Agent)`, `FireAgent(id)`.
 - **Communication**: `Publish(Message)` routes events to specific agent inboxes or meeting room transcripts.
 - **Meeting Rooms**: Persisted workspaces for multi-agent collaboration on specific tasks. This is where cross-functional roles (e.g., a PM, UI/UX Designer, and SWE) converse, debate constraints, define scopes, design products, and implement them based on the CEO's goal.
 - **Capability Plugin Mesh**: A decentralized capability system where agents dynamically ingest "Capability Plugins" at runtime. Capabilities are hosted as standalone K8s services exposing a standardized `CapabilityManifest`, enabling agents to discover and adopt new tools and roles on the fly via the MCP Gateway.
 
-### 3.4 Data Models (Go & Protobuf)
-#### Domain Entities (`src/server/domain/organization.go`)
-```go
-type Organization struct {
-    ID           string        `json:"id"`
-    Name         string        `json:"name"`
-    Domain       string        `json:"domain"`
-    Members      []Employee    `json:"members"`
-    RoleProfiles []RoleProfile `json:"roleProfiles"`
+### 3.4 Data Models (Rust & Protobuf)
+#### Domain Entities (`src/server/domain/organization.rs`)
+```rust
+struct Organization {
+    id: String,
+    name: String,
+    domain: String,
+    members: Vec<Employee>,
+    role_profiles: Vec<RoleProfile>,
 }
 ```
 #### Protobuf API Contract (`src/proto/agent.proto`)

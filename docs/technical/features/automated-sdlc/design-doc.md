@@ -15,7 +15,7 @@ The Automated Software Development Life Cycle (SDLC) orchestrates the entire eng
 
 ## 3. Architecture
 The architecture centers around the `Hub` which manages the CI/CD state machines using LangGraph for tracking.
-- **Orchestration**: Go 1.26 `Hub` tracks the SDLC state machines. Feedback loops (e.g., test failures) are routed natively back to SWE agents using LangGraph state updates.
+- **Orchestration**: Rust `Hub` tracks the SDLC state machines. Feedback loops (e.g., test failures) are routed natively back to SWE agents using LangGraph state updates.
 - **Execution Environments**: Leverages ephemeral Kubernetes Jobs to spin up isolated runner environments for each step in the SDLC.
 - **Testing Engine**: Uses Bazel 9.0.0 for deterministic remote execution builds and tests. The pipeline parses results and routes them back to the Hub.
 
@@ -31,7 +31,7 @@ To trigger an automated SDLC run:
 
 ## 6. Configuration
 The system relies on Kubernetes CRDs and the Hub state.
-- **Network Sandboxing**: If strict sandboxing prevents necessary network resolution (e.g., pulling images or fetching external modules), the pipeline gracefully falls back to a restricted `go test` and logs a warning for the DevOps agent.
+- **Network Sandboxing**: If strict sandboxing prevents necessary network resolution (e.g., pulling images or fetching external modules), the pipeline gracefully falls back to a restricted `cargo test` and logs a warning for the DevOps agent.
 - **Read-Only File Systems (EROFS)**: During sandboxed `npm install` runs, default cache directories may fail. The pipeline dynamically sets `npm_config_cache` to a writable temporary directory.
 - **Infinite Test Loops**: A malformed test written by an agent could run indefinitely. The pipeline enforces a strict 10-minute timeout per test target before terminating the pod and flagging a failure.
 

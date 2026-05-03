@@ -61,7 +61,7 @@ MCP servers are deployed as independent sidecars or centralized deployments in K
 - **Phase 3**: "Tool Marketplace" where users can install new community MCP servers (BACKLOG).
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.

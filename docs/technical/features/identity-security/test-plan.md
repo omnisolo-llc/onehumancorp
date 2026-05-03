@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Hybrid Identity Management 
 - Kubernetes test cluster with SPIFFE/SPIRE deployed.
 
 ## Implementation Details
-- **Architecture**: Tested via Go 1.26 table-driven tests that utilize standard library features. The integration suite mocks the SPIRE server using a localized dummy CA that signs ephemeral X.509 SVIDs to validate the mTLS handshake pathways.
+- **Architecture**: Tested via Tested via Rust table-driven tests that utilize standard library features. The integration suite mocks the SPIRE server using a localized dummy CA that signs ephemeral X.509 SVIDs to validate the mTLS handshake pathways.
 - **Execution**: All tests run hermetically under Bazel 9.0.0 remote execution (`bazelisk test //...`). The suite simulates Kubernetes pod admission webhook injections to ensure the `ohc-operator` correctly mutates pods with the SPIRE sidecar.
 - **Validation**: Strict >95% test coverage is required for all AuthN/AuthZ interceptors. Tests validate OIDC token flows for the React UI and SVID flows for inter-agent gRPC calls.
 

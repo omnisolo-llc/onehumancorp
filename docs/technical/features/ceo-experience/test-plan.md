@@ -47,7 +47,7 @@ A high-level summary of the testing strategy for the CEO Dashboard feature, ensu
 - Backend mocked or running at `localhost:8080`.
 
 ## Implementation Details
-- **Architecture**: The frontend is tested using Vitest for unit tests (Zustand state, D3.js logic) and Playwright for End-to-End UI testing. The Go 1.26 backend uses Table-Driven Tests for the REST/SSE endpoints.
+- **Architecture**: The frontend is tested using Vitest for unit tests (Zustand state, D3.js logic) and Playwright for End-to-End UI testing. The Rust backend uses Table-Driven Tests for the REST/SSE endpoints.
 - **Data Mocks**: In accordance with the "Real Data Law," Playwright E2E tests do not mock the backend. They run against a localized Bazel sandbox containing a seeded PostgreSQL instance populated with the `HoldingCompany` CRD test data.
 - **Validation**: Enforces strict >95% test coverage. Visual regressions are caught using Playwright snapshot testing, ensuring the Apple-standard aesthetic is maintained.
 

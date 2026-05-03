@@ -25,7 +25,7 @@ You can build your own MCP server in any language. Just provide a manifest file 
 - Ensure the MCP server is running on a reachable network path.
 
 ## Implementation Details
-- **Architecture**: The OHC MCP Gateway serves as a unified proxy written in Go 1.26. It intercepts all JSON-RPC calls from agents to underlying tool servers.
+- **Architecture**: The OHC MCP Gateway serves as a unified proxy written in Rust. It intercepts all JSON-RPC calls from agents to underlying tool servers.
 - **Protocol**: Exposes the standard Model Context Protocol (MCP) spec over gRPC/SSE, allowing external developer tools to integrate natively.
 - **Security**: The Gateway strips and manages tokens. Agents are never given raw API keys. SSVID-based routing strictly enforces RBAC policies (e.g., ensuring only Finance agents access QuickBooks).
 

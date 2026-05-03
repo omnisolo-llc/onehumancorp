@@ -19,7 +19,7 @@ The CEO expands the capability of their AI workforce by linking an external tool
 | 4 | Assign tool | CEO grants to PR Agent | RBAC mapping created | Agent sees tool in list |
 
 ## 3. Implementation Details
-- **Architecture**: Integrated via Go 1.26 MCP Gateway acting as a reverse-proxy for standard MCP JSON-RPC messages.
+- **Architecture**: Integrated via Rust MCP Gateway acting as a reverse-proxy for standard MCP JSON-RPC messages.
 - **Stack**: OHC Kubernetes Operator for managing deployed MCP sidecars.
 - **Security Check**: Employs strictly fail-closed policies on network timeouts.
 

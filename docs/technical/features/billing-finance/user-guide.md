@@ -27,7 +27,7 @@ If you are using a self-hosted LLM, you can update the pricing in the "Model Cat
 ## Implementation Details
 - **Architecture**: The Cost Estimation & Billing Engine acts as a middleware interceptor in the MCP Gateway. Every prompt and completion payload size is calculated.
 - **State Management**: Token metrics are recorded per agent role and saved to the Postgres database alongside task IDs for granular cost tracing.
-- **Execution**: Managed via Go 1.26 backends, with asynchronous event aggregation preventing latency overhead on LLM responses.
+- **Execution**: Managed via Rust backends, with asynchronous event aggregation preventing latency overhead on LLM responses.
 
 ## Edge Cases
 - **Streaming Tokens**: Calculating cost on streaming LLM responses requires chunk counting. Disconnects mid-stream will log the exact chunk count received before the failure.

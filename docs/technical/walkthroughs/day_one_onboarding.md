@@ -10,7 +10,7 @@ Whether you are targeting **Cloud-Native Mode**, **Standalone Desktop Mode**, or
 
 Before starting, ensure your system has the following core dependencies:
 - **Bazelisk:** The Bazel wrapper that standardizes build execution.
-- **Go:** The primary language for the OHC Backend services.
+- **Rust:** The primary language for the OHC Backend services.
 - **Docker:** (Optional but recommended) For local isolated infrastructure (Postgres, Redis).
 
 ## 2. The Master Setup Script
@@ -50,7 +50,7 @@ Once your environment is configured, use the Quick Start script to launch the lo
 
 **What this does:**
 - Enforces `OHC_SOURCE_MODE=standalone`.
-- Starts the Go API server in the background.
+- Starts the Rust API server in the background.
 - Runs a diagnostic check (`ohc-diagnostics.sh`) to ensure the agent hub and APIs are responsive.
 
 ## 5. The OHC Hybrid CLI Master Menu

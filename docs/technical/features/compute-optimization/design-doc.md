@@ -18,7 +18,7 @@ The Compute Optimization engine maximizes throughput and Return on Investment (R
 
 ## 3. Implementation Details
 - **Architecture**: A hardware-aware scheduling controller extending the `ohc-operator`. Uses node affinity to place `high-vram` labeled agent pods onto appropriate nodes.
-- **Stack**: Go 1.26, Kubernetes Scheduler, NVIDIA Device Plugin.
+- **Stack**: Rust, Kubernetes Scheduler, NVIDIA Device Plugin.
 - **VRAM Budgeting**: Departments are allocated a virtual "GPU Budget" to prevent runaway compute costs. If a department exceeds its quota, it must queue agent workloads or burst into CPU-based smaller models.
 
 ## 4. Edge Cases

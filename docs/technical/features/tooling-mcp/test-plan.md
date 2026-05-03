@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Tooling & MCP Gateway featu
 - A mock MCP Server container simulating a generic REST API.
 
 ## Implementation Details
-- **Architecture**: The MCP Gateway tests utilize Go 1.26 table-driven unit tests. Integration tests spin up a mock HTTP server conforming to the Model Context Protocol (MCP) spec over gRPC/SSE, ensuring the Hub router correctly proxies JSON-RPC payloads.
+- **Architecture**: The MCP Gateway tests utilize Rust table-driven unit tests. Integration tests spin up a mock HTTP server conforming to the Model Context Protocol (MCP) spec over gRPC/SSE, ensuring the Hub router correctly proxies JSON-RPC payloads.
 - **Execution**: All tests run hermetically under Bazel 9.0.0 remote execution (`bazelisk test //...`). Tests enforce >95% coverage on the proxy layer and validation middleware.
 - **Validation**: Strict validation of SSVID-based routing and RBAC ensures tests verify that an agent acting as a "SWE" cannot access tools assigned strictly to a "Finance" role.
 

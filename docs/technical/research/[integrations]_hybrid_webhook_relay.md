@@ -16,15 +16,15 @@ Competitors like Claude Code and Replit Agent do not natively solve the local-we
 **Architecture:**
 We need a Webhook Relay service in the Cloud-Native tier and a matching receiver in the Standalone Desktop tier.
 
-1.  **Cloud Relay (Webhook Ingestion)**: A new endpoint in the Go backend (`/api/webhooks/relay/{tenant_id}`) that accepts raw incoming HTTP payloads.
+1.  **Cloud Relay (Webhook Ingestion)**: A new endpoint in the Rust backend (`/api/webhooks/relay/{tenant_id}`) that accepts raw incoming HTTP payloads.
 2.  **Routing & Security**: The Cloud Relay looks up active reverse-tunnel connections (established via gRPC/WebSocket with SPIFFE/SPIRE identity) for the target `tenant_id`.
-3.  **Local Receiver**: The embedded Go server in the Standalone Desktop listens on the reverse tunnel. When a webhook payload is received, it pushes the event onto the local Redis Pub/Sub (or direct channel if Redis is absent) for the Teammate Mesh to consume.
+3.  **Local Receiver**: The embedded Rust server in the Standalone Desktop listens on the reverse tunnel. When a webhook payload is received, it pushes the event onto the local Redis Pub/Sub (or direct channel if Redis is absent) for the Teammate Mesh to consume.
 4.  **Graceful Degradation**: If the local instance is offline, the Cloud Relay should queue the webhook in PostgreSQL (or Redis) and deliver it when the local instance reconnects.
 
 ## Implementation Prompt
 **Task**: Implement the Hybrid Webhook Relay in `src/server/lib/integrations/`.
-1.  **Cloud Relay**: Implement `RelayServer` in Go that exposes an ingestion endpoint. It must authenticate external webhook signatures (e.g., standard HMAC verification) if configured.
+1.  **Cloud Relay**: Implement `RelayServer` in Rust that exposes an ingestion endpoint. It must authenticate external webhook signatures (e.g., standard HMAC verification) if configured.
 2.  **State Management**: Implement a persistent queue mechanism using PostgreSQL to store webhooks if the target local instance is disconnected.
 3.  **Tunnel Delivery**: Implement the delivery mechanism over the existing `Teammate Mesh` reverse-tunnel infrastructure.
-4.  **Local Receiver**: Implement `LocalReceiver` in the embedded Go server that processes relayed webhooks and dispatches them to the local agent swarm.
+4.  **Local Receiver**: Implement `LocalReceiver` in the embedded Rust server that processes relayed webhooks and dispatches them to the local agent swarm.
 5.  **Tests & Metrics**: Write 100% coverage unit tests. Ensure metrics (e.g., `ohc_webhook_relayed_total`, `ohc_webhook_queue_depth`) are exposed via OpenTelemetry.
