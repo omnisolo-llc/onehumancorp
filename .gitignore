@@ -116,3 +116,4 @@ playwright-report/
 debian-binary
 /*.diff
 /srcs/
+/scratch/
