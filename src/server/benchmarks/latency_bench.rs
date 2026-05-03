@@ -1,6 +1,6 @@
 use std::time::Instant;
 use std::sync::Arc;
-use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
+use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue, SqliteTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -37,6 +37,17 @@ pub async fn bench_queue_latency() {
     println!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("Memory", mem_queue).await;
+
+    // 3. Standalone Mode - SQLite
+    println!("--- Standalone Mode (SQLite) ---");
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .expect("Failed to connect to in-memory SQLite for benchmark");
+    let sqlite_queue = SqliteTaskQueue::new(sqlite_pool);
+    sqlite_queue.init().await.expect("Failed to initialize SQLite schema");
+    bench_queue("SQLite", Arc::new(sqlite_queue)).await;
 }
 
 pub async fn bench_dashboard_snapshot() {

@@ -1,0 +1,57 @@
+--- cache.rs
++++ cache.rs
+@@ -1,6 +1,7 @@
+ use std::time::{Duration, Instant};
+ use dashmap::DashMap;
+ use crate::pricing::compression;
++use redis::AsyncCommands;
+
+ #[derive(Debug, Clone)]
+ pub struct CacheEntry {
+@@ -37,6 +38,48 @@
+     }
+ }
+
++pub struct RedisEmbeddingCache {
++    client: redis::Client,
++    ttl: usize,
++}
++
++impl RedisEmbeddingCache {
++    pub fn new(url: &str, ttl_secs: usize) -> Result<Self, redis::RedisError> {
++        let client = redis::Client::open(url)?;
++        Ok(RedisEmbeddingCache { client, ttl: ttl_secs })
++    }
++
++    fn hash_prompt(&self, prompt: &str) -> String {
++        use sha2::{Sha256, Digest};
++        let mut hasher = Sha256::new();
++        hasher.update(prompt.as_bytes());
++        hex::encode(hasher.finalize())
++    }
++
++    pub async fn get(&self, prompt: &str) -> Option<String> {
++        let key = format!("embed:{}", self.hash_prompt(prompt));
++        let mut con = self.client.get_multiplexed_async_connection().await.ok()?;
++        let compressed: Option<Vec<u8>> = con.get(&key).await.ok();
++
++        if let Some(c_data) = compressed {
++            if let Ok(decompressed) = compression::decompress(&c_data) {
++                return Some(decompressed);
++            }
++        }
++        None
++    }
++
++    pub async fn set(&self, prompt: &str, response: &str) {
++        let key = format!("embed:{}", self.hash_prompt(prompt));
++        if let Ok(compressed) = compression::compress(response) {
++            if let Ok(mut con) = self.client.get_multiplexed_async_connection().await {
++                let _: Result<(), _> = con.set_ex(&key, compressed, self.ttl as u64).await;
++            }
++        }
++    }
++}
++
+ pub struct CompressedEmbeddingCache {
+     entries: DashMap<String, CacheEntry>,

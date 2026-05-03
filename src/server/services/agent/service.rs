@@ -23,15 +23,17 @@ impl MyAgentManagerService {
     async fn get_snapshot(&self) -> DashboardSnapshot {
         let hub_clone1 = self.hub.clone();
         let hub_clone2 = self.hub.clone();
+        let hub_clone3 = self.hub.clone();
 
-        let (agents, meetings) = tokio::join!(
+        let (agents, meetings, costs) = tokio::join!(
             tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
+            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
+            tokio::task::spawn_blocking(move || { hub_clone3.get_cost_auditor() })
         );
         let agents = agents.unwrap_or_else(|_| vec![]);
         let meetings = meetings.unwrap_or_else(|_| vec![]);
 
-        let cost_auditor = self.hub.get_cost_auditor();
+        let cost_auditor = costs.unwrap_or_else(|_| self.hub.get_cost_auditor());
         let costs = Summary {
             total_cost_usd: cost_auditor.get_total_cost(),
             total_tokens: cost_auditor.get_total_tokens(),

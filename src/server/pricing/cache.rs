@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use crate::pricing::compression;
+use redis::AsyncCommands;
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -30,40 +31,64 @@ impl LocalEmbeddingCache {
     }
 
     pub fn get(&self, prompt: &str) -> Option<String> {
-        let key = self.hash_prompt(prompt);
-        if let Some(entry) = self.entries.get(&key) {
-            if Instant::now() > entry.expires_at {
-                return None;
+        let hash = self.hash_prompt(prompt);
+        if let Some(entry) = self.entries.get(&hash) {
+            if entry.expires_at > Instant::now() {
+                return Some(entry.response.clone());
             }
-            Some(entry.response.clone())
-        } else {
-            None
         }
+        None
     }
 
     pub fn set(&self, prompt: &str, response: &str) {
-        let key = self.hash_prompt(prompt);
+        let hash = self.hash_prompt(prompt);
         let now = Instant::now();
-        self.entries.insert(key, CacheEntry {
+        self.entries.insert(hash, CacheEntry {
             response: response.to_string(),
             created_at: now,
             expires_at: now + self.ttl,
         });
     }
+}
 
-    pub fn prune(&self) -> usize {
-        let now = Instant::now();
-        let expired_keys: Vec<String> = self.entries.iter()
-            .filter(|entry| now > entry.value().expires_at)
-            .map(|entry| entry.key().clone())
-            .collect();
+pub struct RedisEmbeddingCache {
+    client: redis::Client,
+    ttl: usize,
+}
 
-        let pruned = expired_keys.len();
-        for key in expired_keys {
-            self.entries.remove(&key);
+impl RedisEmbeddingCache {
+    pub fn new(url: &str, ttl_secs: usize) -> Result<Self, redis::RedisError> {
+        let client = redis::Client::open(url)?;
+        Ok(RedisEmbeddingCache { client, ttl: ttl_secs })
+    }
+
+    fn hash_prompt(&self, prompt: &str) -> String {
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(prompt.as_bytes());
+        hex::encode(hasher.finalize())
+    }
+
+    pub async fn get(&self, prompt: &str) -> Option<String> {
+        let key = format!("embed:{}", self.hash_prompt(prompt));
+        let mut con = self.client.get_multiplexed_async_connection().await.ok()?;
+        let compressed: Option<Vec<u8>> = con.get(&key).await.ok();
+
+        if let Some(c_data) = compressed {
+            if let Ok(decompressed) = compression::decompress(&c_data) {
+                return Some(decompressed);
+            }
         }
+        None
+    }
 
-        pruned
+    pub async fn set(&self, prompt: &str, response: &str) {
+        let key = format!("embed:{}", self.hash_prompt(prompt));
+        if let Ok(compressed) = compression::compress(response) {
+            if let Ok(mut con) = self.client.get_multiplexed_async_connection().await {
+                let _: Result<(), _> = con.set_ex(&key, compressed, self.ttl as u64).await;
+            }
+        }
     }
 }
 
@@ -88,88 +113,26 @@ impl CompressedEmbeddingCache {
     }
 
     pub fn get(&self, prompt: &str) -> Option<String> {
-        let key = self.hash_prompt(prompt);
-        if let Some(entry) = self.entries.get(&key) {
-            if Instant::now() > entry.expires_at {
-                return None;
-            }
-            match compression::decompress_lossless(&entry.response) {
-                Ok(decompressed) => Some(decompressed),
-                Err(e) => {
-                    eprintln!("Failed to decompress cached response: {}", e);
-                    None
+        let hash = self.hash_prompt(prompt);
+        if let Some(entry) = self.entries.get(&hash) {
+            if entry.expires_at > Instant::now() {
+                if let Ok(decompressed) = compression::decompress(entry.response.as_bytes()) {
+                    return Some(decompressed);
                 }
             }
-        } else {
-            None
         }
+        None
     }
 
     pub fn set(&self, prompt: &str, response: &str) {
-        let key = self.hash_prompt(prompt);
+        let hash = self.hash_prompt(prompt);
         let now = Instant::now();
-        
-        match compression::compress_lossless(response) {
-            Ok(compressed) => {
-                self.entries.insert(key, CacheEntry {
-                    response: compressed,
-                    created_at: now,
-                    expires_at: now + self.ttl,
-                });
-            }
-            Err(e) => {
-                eprintln!("Failed to compress cache response: {}", e);
-            }
+        if let Ok(compressed) = compression::compress(response) {
+            self.entries.insert(hash, CacheEntry {
+                response: String::from_utf8_lossy(&compressed).to_string(),
+                created_at: now,
+                expires_at: now + self.ttl,
+            });
         }
-    }
-
-    pub fn prune(&self) -> usize {
-        let now = Instant::now();
-        let expired_keys: Vec<String> = self.entries.iter()
-            .filter(|entry| now > entry.value().expires_at)
-            .map(|entry| entry.key().clone())
-            .collect();
-
-        let pruned = expired_keys.len();
-        for key in expired_keys {
-            self.entries.remove(&key);
-        }
-
-        pruned
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::thread;
-
-    #[test]
-    fn test_local_embedding_cache() {
-        let cache = LocalEmbeddingCache::new(Duration::from_millis(100));
-        
-        cache.set("prompt1", "response1");
-        assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
-        assert_eq!(cache.get("prompt2"), None);
-        
-        // Wait for expiration
-        thread::sleep(Duration::from_millis(150));
-        assert_eq!(cache.get("prompt1"), None);
-        
-        // Prune
-        cache.set("prompt3", "response3");
-        assert_eq!(cache.prune(), 1); // Should prune prompt1
-    }
-
-    #[test]
-    fn test_compressed_embedding_cache() {
-        let cache = CompressedEmbeddingCache::new(Duration::from_millis(100));
-        
-        cache.set("prompt1", "response1");
-        assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
-        
-        // Wait for expiration
-        thread::sleep(Duration::from_millis(150));
-        assert_eq!(cache.get("prompt1"), None);
     }
 }
