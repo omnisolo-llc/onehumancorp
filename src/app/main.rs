@@ -166,6 +166,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                                "grow_business" => "Grow Business".into(),
+                                "referrals" => "Referrals".into(),
+                                "stats" => "Stats".into(),
+                                "share" => "Share".into(),
+                                "add_product" => "Add".into(),
+                                "view_orders" => "Orders".into(),
+                                "messages" => "Chat".into(),
                                 _ => "".into(),
                             }
                         });
@@ -203,6 +211,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                                "grow_business" => "Grow Business".into(),
+                                "referrals" => "Referrals".into(),
+                                "stats" => "Stats".into(),
+                                "share" => "Share".into(),
+                                "add_product" => "Add".into(),
+                                "view_orders" => "Orders".into(),
+                                "messages" => "Chat".into(),
                                 _ => "".into(),
                             }
                         });
@@ -1007,6 +1023,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
+
+                let all_articles = vec![
+                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
+                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
+                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
+                ];
+                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+
+                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
+
+                let hc_weak_for_search = help_center_ui.as_weak();
+                let articles_for_search = all_articles_rc.clone();
+                help_center_ui.on_execute_search(move || {
+                    if let Some(ui) = hc_weak_for_search.upgrade() {
+                        let query = ui.get_search_query().to_string().to_lowercase();
+                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                            a.title.to_lowercase().contains(&query) ||
+                            a.description.to_lowercase().contains(&query) ||
+                            a.category.to_lowercase().contains(&query)
+                        }).cloned().collect();
+                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                    }
+                });
+
                 let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
@@ -2634,10 +2677,37 @@ mod docs_tests {
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
 
         let help_center = app::HelpCenter::new().unwrap();
-        assert_eq!(help_center.get_search_query(), "");
+        let all_articles = vec![
+            app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
+            app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+        ];
+        let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+        help_center.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
 
-        help_center.set_search_query("how to add products".into());
-        assert_eq!(help_center.get_search_query(), "how to add products");
+        let hc_weak_for_search = help_center.as_weak();
+        let articles_for_search = all_articles_rc.clone();
+        help_center.on_execute_search(move || {
+            if let Some(ui) = hc_weak_for_search.upgrade() {
+                let query = ui.get_search_query().to_string().to_lowercase();
+                let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                    a.title.to_lowercase().contains(&query) ||
+                    a.description.to_lowercase().contains(&query) ||
+                    a.category.to_lowercase().contains(&query)
+                }).cloned().collect();
+                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+            }
+        });
+
+        use slint::Model;
+        assert_eq!(help_center.get_search_query(), "");
+        assert_eq!(help_center.get_articles().row_count(), 2);
+
+        help_center.set_search_query("add products".into());
+        help_center.invoke_execute_search(); // Must invoke callback to execute search in test
+        assert_eq!(help_center.get_search_query(), "add products");
+        assert_eq!(help_center.get_articles().row_count(), 1, "Articles should be filtered by search query");
+
+        // Assert InteractiveWalkthrough creation/state behavior is validated elsewhere
     }
 
 #[test]
@@ -2682,6 +2752,14 @@ mod docs_tests {
                 "ask_ai" => "Ask the AI Assistant".into(),
                 "menu" => "Open Menu".into(),
                 "help_center" => "Help Center".into(),
+                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+                "grow_business" => "Grow Business".into(),
+                "referrals" => "Referrals".into(),
+                "stats" => "Stats".into(),
+                "share" => "Share".into(),
+                "add_product" => "Add".into(),
+                "view_orders" => "Orders".into(),
+                "messages" => "Chat".into(),
                 _ => "".into(),
             }
         });
