@@ -141,15 +141,16 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    mesh_transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, mesh_transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
         let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, mesh_transport }
     }
 }
 
@@ -846,7 +847,7 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
-            match self.hub.publish_teammate_event(req.channel, event) {
+            match self.mesh_transport.publish(&req.channel, event).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -866,15 +867,25 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("topic is required"));
         }
         
-        let rx = self.hub.subscribe_teammate_mesh(req.topic);
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
         
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(event) => Ok(event),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
-            
-        Ok(Response::new(Box::pin(rx_stream) as Self::StreamTeammateMeshStream))
+        let handler = Box::new(move |msg| {
+            let _ = tx.try_send(Ok(msg));
+        });
+
+        match self.mesh_transport.subscribe(&req.topic, handler).await {
+            Ok(cancel) => {
+                let rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
+                let _cancel_guard = std::sync::Arc::new(CancelGuard(Some(cancel)));
+                let wrapped_stream = tokio_stream::StreamExt::map(rx_stream, move |item| {
+                    let _ = _cancel_guard.clone(); // Keep the guard alive as long as the stream is alive
+                    item
+                });
+
+                Ok(Response::new(Box::pin(wrapped_stream) as Self::StreamTeammateMeshStream))
+            }
+            Err(e) => Err(Status::internal(e)),
+        }
     }
 
     async fn invite(
@@ -1032,7 +1043,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .with_state(mesh_transport);
+        .with_state(mesh_transport.clone());
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
@@ -1052,7 +1063,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), mesh_transport.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
@@ -1136,3 +1147,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 }
 pub mod tools;
 pub mod workers;
+
+struct CancelGuard(Option<Box<dyn Fn() + Send + Sync>>);
+impl Drop for CancelGuard {
+    fn drop(&mut self) {
+        if let Some(f) = self.0.take() {
+            f();
+        }
+    }
+}
