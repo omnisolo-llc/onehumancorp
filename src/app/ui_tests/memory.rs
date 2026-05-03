@@ -82,3 +82,12 @@ fn create_verify_velocity_score() {
     ui.set_velocity_score(23);
     assert_eq!(ui.get_velocity_score(), 23);
 }
+
+
+#[test]
+fn mem_plain_language() {
+    let ui = create();
+    assert_eq!(ui.get_text_live_activity(), slint::SharedString::from("Live Agent Activity"));
+    assert_eq!(ui.get_text_saved_history(), slint::SharedString::from("Saved History"));
+    assert_eq!(ui.get_text_automatic_processes(), slint::SharedString::from("Automatic Processes"));
+}

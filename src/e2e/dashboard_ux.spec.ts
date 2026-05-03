@@ -76,3 +76,34 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
+
+test('should verify grandmother test plain language labels for My Team and Agent Actions Today', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  await expect(page.locator('text=My Team')).toBeVisible();
+  await expect(page.locator('text=Agent Actions Today')).toBeVisible();
+});
+
+test('should verify grandmother test plain language labels for Memory Dashboard components', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  // The App Tour surfaces dashboard components like SwarmMemory naturally.
+  const menuBtn = page.locator('button:has-text("Menu")');
+  if (await menuBtn.isVisible()) {
+      await menuBtn.click();
+      await page.locator('button:has-text("App Tour")').click();
+  }
+
+  await expect(page.locator('text=Memory Dashboard').first()).toBeVisible({ timeout: 2000 });
+  await expect(page.locator('text=Live Agent Activity').first()).toBeVisible({ timeout: 2000 });
+  await expect(page.locator('text=Saved History').first()).toBeVisible({ timeout: 2000 });
+  await expect(page.locator('text=Automatic Processes').first()).toBeVisible({ timeout: 2000 });
+});

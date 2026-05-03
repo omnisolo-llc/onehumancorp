@@ -121,3 +121,11 @@ fn create_verify_tasks_in_progress_count() {
     ui.set_tasks_in_progress_count(33);
     assert_eq!(ui.get_tasks_in_progress_count(), 33);
 }
+
+
+
+#[test]
+fn dashboard_plain_language() {
+    let ui = create();
+    assert_eq!(ui.get_text_my_team(), slint::SharedString::from("My Team"));
+}

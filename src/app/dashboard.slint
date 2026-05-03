@@ -27,6 +27,7 @@ export component Dashboard inherits Window {
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
+    out property <string> text_my_team: "My Team";
 
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
@@ -133,11 +134,12 @@ export component Dashboard inherits Window {
         VerticalBox {
             spacing: 16px;
 
-            HorizontalBox {
+            Rectangle {
                 visible: root.width > 768px;
-                spacing: 16px;
+                HorizontalBox {
+                    spacing: 16px;
 
-                GlassCard {
+                    GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
@@ -172,12 +174,14 @@ export component Dashboard inherits Window {
                     }
                 }
             }
+            }
 
-            VerticalBox {
+            Rectangle {
                 visible: root.width <= 768px;
-                spacing: 16px;
+                VerticalBox {
+                    spacing: 16px;
 
-                GlassCard {
+                    GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
@@ -212,12 +216,14 @@ export component Dashboard inherits Window {
                     }
                 }
             }
+            }
 
-            HorizontalBox {
+            Rectangle {
                 visible: root.width > 768px;
-                spacing: 16px;
+                HorizontalBox {
+                    spacing: 16px;
 
-                GlassCard {
+                    GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
@@ -252,12 +258,14 @@ export component Dashboard inherits Window {
                     }
                 }
             }
+            }
 
-            VerticalBox {
+            Rectangle {
                 visible: root.width <= 768px;
-                spacing: 16px;
+                VerticalBox {
+                    spacing: 16px;
 
-                GlassCard {
+                    GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
@@ -291,6 +299,7 @@ export component Dashboard inherits Window {
                         }
                     }
                 }
+            }
             }
         }
 
@@ -357,7 +366,7 @@ export component Dashboard inherits Window {
         }
 
         // My Team
-        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Text { text: text_my_team; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;

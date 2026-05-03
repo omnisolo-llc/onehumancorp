@@ -32,11 +32,12 @@ export component CostDashboard inherits Window {
         }
 
         // Summary Cards
-        VerticalBox {
+        Rectangle {
             visible: root.width <= 768px;
-            spacing: 16px;
+            VerticalBox {
+                spacing: 16px;
 
-            GlassCard {
+                GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -59,12 +60,14 @@ export component CostDashboard inherits Window {
                 }
             }
         }
+        }
 
-        HorizontalBox {
+        Rectangle {
             visible: root.width > 768px;
-            spacing: 16px;
+            HorizontalBox {
+                spacing: 16px;
 
-            GlassCard {
+                GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -88,6 +91,7 @@ export component CostDashboard inherits Window {
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
+        }
         }
 
         Text { text: "Usage per Agent"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
