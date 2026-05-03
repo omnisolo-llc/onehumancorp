@@ -716,7 +716,9 @@ pub async fn start_builtin_agent(
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
                                     let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                        topic: "agent_events".to_string(),
+                                        agent_id: "agent".to_string(),
+                                        action: "agent_events".to_string(),
+                                        status: "ok".to_string(),
                                         payload: buf,
                                     }).await;
                                 }
