@@ -2397,6 +2397,95 @@ mod docs_tests {
     }
 
     #[test]
+    fn test_e2e_help_and_documentation_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // 1. Test opening Help Center from Dashboard
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+            let help_center = app::HelpCenter::new().unwrap();
+            assert_eq!(help_center.get_search_query(), "");
+        });
+        dashboard_ui.invoke_open_help_center();
+        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+
+        // 2. Test opening AI Help Chat from Dashboard
+        let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ai_chat_opened_clone = ai_chat_opened.clone();
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+            let ai_chat = app::AiHelpChat::new().unwrap();
+            ai_chat.set_user_input("How to add product".into());
+            assert_eq!(ai_chat.get_user_input(), "How to add product");
+        });
+        dashboard_ui.invoke_open_ai_chat();
+        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+
+        // 3. Test Interactive Walkthrough
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+            let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+            walkthrough.set_current_step(1);
+            assert_eq!(walkthrough.get_current_step(), 1);
+        });
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+
+        // 4. Test Video Tutorials
+        let video_tutorials_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let video_tutorials_opened_clone = video_tutorials_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || {
+            *video_tutorials_opened_clone.borrow_mut() = true;
+            let video_tutorials = app::VideoTutorials::new().unwrap();
+            video_tutorials.set_selected_video_title("Billing Help".into());
+            assert_eq!(video_tutorials.get_selected_video_title(), "Billing Help");
+        });
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+
+        // 5. Test Release Notes
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+            let release_notes = app::ReleaseNotes::new().unwrap();
+            release_notes.set_show_latest_only(true);
+            assert_eq!(release_notes.get_show_latest_only(), true);
+        });
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+
+        // 6. Test API Docs
+        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let api_docs_opened_clone = api_docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || {
+            *api_docs_opened_clone.borrow_mut() = true;
+            let _api_docs = app::ApiDocs::new().unwrap();
+        });
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+    }
+
+    #[test]
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
