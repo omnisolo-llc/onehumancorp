@@ -4,13 +4,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use dashmap::DashMap;
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, prost::Message)]
-pub struct Message {
-    #[prost(string, tag = "1")]
-    pub topic: String,
-    #[prost(bytes = "vec", tag = "2")]
-    pub payload: Vec<u8>,
-}
+pub use crate::proto::hub::TeammateMeshEvent as Message;
 
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
@@ -191,7 +185,7 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { topic: topic.clone(), payload });
+                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
                     }
                 }
             }
@@ -375,9 +369,8 @@ impl MeshTransport for RedisTransport {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
-
-        let key = format!("ohc:lock:{}", resource);
-        let result: bool = redis::cmd("SET")
+        let key = format!("lock:{}", resource);
+        let res: Option<String> = redis::cmd("SET")
             .arg(&key)
             .arg(owner)
             .arg("NX")
@@ -385,54 +378,57 @@ impl MeshTransport for RedisTransport {
             .arg(ttl_seconds)
             .query_async(&mut *conn)
             .await
-            .unwrap_or(false);
+            .map_err(|e| e.to_string())?;
 
-        Ok(result)
+        Ok(res.is_some())
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
+        let key = format!("lock:{}", resource);
+        let script = redis::Script::new(r#"
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            else
+                return 0
+            end
+        "#);
 
-        let key = format!("ohc:lock:{}", resource);
-
-        // Use a Lua script to ensure we only delete the lock if we own it
-        let script = redis::Script::new(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
-        );
-
-        let _: () = script
-            .key(&key)
-            .arg(owner)
-            .invoke_async(&mut *conn)
-            .await
-            .map_err(|e| e.to_string())?;
-
+        let _: i32 = script.key(&key).arg(owner).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
-
-        let key = "mesh:presence";
-
-        let mut pipe = redis::pipe();
-        pipe.atomic()
-            .cmd("HSET").arg(key).arg(agent_id).arg(status)
-            .cmd("EXPIRE").arg(key).arg(ttl_seconds);
-
-        let _: () = pipe.query_async(&mut *conn).await.map_err(|e| e.to_string())?;
-
+        let key = format!("presence:{}", agent_id);
+        let _: () = redis::cmd("SET")
+            .arg(&key)
+            .arg(status)
+            .arg("EX")
+            .arg(ttl_seconds)
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         let mut conn = self.publish_conn.lock().await;
+        let keys: Vec<String> = redis::cmd("KEYS")
+            .arg("presence:*")
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let key = "mesh:presence";
-        let hash: std::collections::HashMap<String, String> = conn.hgetall(key).await.unwrap_or_default();
-
-        let agents = hash.into_iter().collect();
-        Ok(agents)
+        let mut active = Vec::new();
+        for key in keys {
+            let status: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut *conn).await.map_err(|e| e.to_string())?;
+            if let Some(s) = status {
+                let agent_id = key.strip_prefix("presence:").unwrap_or(&key).to_string();
+                active.push((agent_id, s));
+            }
+        }
+        Ok(active)
     }
 }
 
@@ -506,7 +502,7 @@ mod tests {
         let received_clone = received.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "ipc_test_topic" && msg.payload == b"ipc_hello" {
+            if msg.action == "ipc_test_topic" && msg.payload == b"ipc_hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -515,7 +511,9 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         let msg = Message {
-            topic: "ipc_test_topic".to_string(),
+            agent_id: "test".to_string(),
+            action: "ipc_test_topic".to_string(),
+            status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
         };
 
@@ -558,7 +556,7 @@ mod tests {
         let received_clone = received.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "test_topic" && msg.payload == b"hello" {
+            if msg.action == "test_topic" && msg.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -566,7 +564,9 @@ mod tests {
         let cancel = transport.subscribe("test_topic", handler).await.unwrap();
 
         let msg = Message {
-            topic: "test_topic".to_string(),
+            agent_id: "test".to_string(),
+            action: "test_topic".to_string(),
+            status: "ok".to_string(),
             payload: b"hello".to_vec(),
         };
 
@@ -688,7 +688,9 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         let msg = Message {
-            topic: "test_topic_redis".to_string(),
+            agent_id: "test".to_string(),
+            action: "test_topic_redis".to_string(),
+            status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
         };
 
@@ -699,7 +701,7 @@ mod tests {
 
         assert!(result.is_ok());
         if let Ok(Some(received_msg)) = result {
-             assert_eq!(received_msg.topic, "test_topic_redis");
+             assert_eq!(received_msg.action, "test_topic_redis");
              assert_eq!(received_msg.payload, b"hello redis");
         } else {
              panic!("Did not receive message");

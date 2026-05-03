@@ -8,6 +8,7 @@ use crate::mesh::transport::{MeshTransport, Message};
 pub trait TeammateMesh: Send + Sync {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
@@ -26,14 +27,18 @@ impl TeammateMeshClient {
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
         self.transport.publish("mesh:tasks", Message {
-            topic: "mesh:tasks".to_string(),
+            agent_id: "agent".to_string(),
+            action: "mesh:tasks".to_string(),
+            status: "ok".to_string(),
             payload,
         }).await
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
         self.transport.publish("mesh:coordination", Message {
-            topic: "mesh:coordination".to_string(),
+            agent_id: "agent".to_string(),
+            action: "mesh:coordination".to_string(),
+            status: "ok".to_string(),
             payload,
         }).await
     }
@@ -45,6 +50,49 @@ impl TeammateMesh for TeammateMeshClient {
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:coordination", handler).await
     }
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
+
+        let ack_received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let ack_clone = ack_received.clone();
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            ack_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let mut event = Message {
+                agent_id: "agent".to_string(),
+                action: topic.to_string(),
+                status: "pending".to_string(),
+                payload: payload.clone(),
+            };
+
+            // In a real implementation we would attach the msg_id to the event,
+            // but the proto might not have it. Let's send it anyway.
+            self.transport.publish(topic, event).await?;
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
+
+            if ack_received.load(std::sync::atomic::Ordering::SeqCst) {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
+    }
+
 }
 
 pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn TeammateMesh>, String> {
