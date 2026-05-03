@@ -112,16 +112,58 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+
+pub(crate) async fn get_cascading_agents_md(start_path: &str) -> String {
+    let mut current_dir = match std::fs::canonicalize(start_path) {
+        Ok(path) => path,
+        Err(_) => match std::env::current_dir() {
+            Ok(cwd) => cwd.join(start_path),
+            Err(_) => std::path::PathBuf::from(start_path),
+        },
+    };
+    let mut agents_md_contents = Vec::new();
+
+    loop {
+        let md_path = current_dir.join("AGENTS.md");
+        if tokio::fs::try_exists(&md_path).await.unwrap_or(false) {
+            if let Ok(content) = tokio::fs::read_to_string(&md_path).await {
+                let header = format!("\n--- From AGENTS.md at {} ---\n", md_path.display());
+                agents_md_contents.push(format!("{}{}", header, content));
+            }
+        }
+
+        // Stop if we hit a .git directory or if we can't go up further
+        if tokio::fs::try_exists(current_dir.join(".git")).await.unwrap_or(false) || !current_dir.pop() {
+            break;
+        }
+    }
+
+    // Reverse so root is first, leaf is last
+    agents_md_contents.reverse();
+    agents_md_contents.join("\n")
+}
+
+pub(crate) async fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
+    // Add AGENTS.md content
+    let start_path = cfg.workspace_path.as_deref().unwrap_or(".");
+    let agents_md_content = get_cascading_agents_md(start_path).await;
+
+    let mut combined_user_instructions = String::new();
+    if !agents_md_content.is_empty() {
+        combined_user_instructions.push_str(&agents_md_content);
+        combined_user_instructions.push_str("\n\n");
+    }
+    combined_user_instructions.push_str(&cfg.user_instructions);
+
     let mut end_idx = 32768;
-    if cfg.user_instructions.len() > 32768 {
-        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+    if combined_user_instructions.len() > 32768 {
+        while end_idx > 0 && !combined_user_instructions.is_char_boundary(end_idx) {
             end_idx -= 1;
         }
     } else {
-        end_idx = cfg.user_instructions.len();
+        end_idx = combined_user_instructions.len();
     }
-    let user_instr = &cfg.user_instructions[..end_idx];
+    let user_instr = &combined_user_instructions[..end_idx];
 
     let mut combined_system = String::new();
     if !cfg.server_system_message.is_empty() {
@@ -254,7 +296,7 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg);
+        let mut combined_system = build_hierarchical_system_prompt(cfg).await;
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self.memory_store {
@@ -1698,28 +1740,28 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Output guardrail tripped"));
     }
 
-    #[test]
-    fn test_hierarchical_system_prompt() {
+    #[tokio::test]
+    async fn test_hierarchical_system_prompt() {
         let mut cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg).await;
         assert_eq!(
             prompt,
             "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
         );
     }
 
-    #[test]
-    fn test_hierarchical_system_prompt_missing_sections() {
+    #[tokio::test]
+    async fn test_hierarchical_system_prompt_missing_sections() {
         let mut cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg).await;
         assert_eq!(
             prompt,
             "Server System Message\n\n[User Instructions]\nUser Instructions"
@@ -1729,15 +1771,15 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2);
+        let prompt2 = build_hierarchical_system_prompt(&cfg2).await;
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
         );
     }
 
-    #[test]
-    fn test_hierarchical_system_prompt_truncation_safe() {
+    #[tokio::test]
+    async fn test_hierarchical_system_prompt_truncation_safe() {
         let mut cfg = AgentRunConfig::default();
         // A single emoji is 4 bytes.
         let emoji = "🚀"; // 4 bytes
@@ -1747,14 +1789,14 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg).await;
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
     }
 
-    #[test]
-    fn test_hierarchical_system_prompt_truncation_safe_boundary() {
+    #[tokio::test]
+    async fn test_hierarchical_system_prompt_truncation_safe_boundary() {
         let mut cfg = AgentRunConfig::default();
         // Construct a string where the 32768th byte is in the middle of a multibyte character.
         // Let's use 1-byte chars until 32766, then a 3-byte char.
@@ -1762,7 +1804,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg);
+        let prompt = build_hierarchical_system_prompt(&cfg).await;
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
@@ -2164,3 +2206,31 @@ mod tests {
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
 }
+
+
+    #[tokio::test]
+    async fn test_cascading_agents_md() {
+        let root_dir = tempfile::tempdir().unwrap();
+        let root_path = root_dir.path();
+
+        // Mock a .git directory at root to stop traversal
+        std::fs::create_dir_all(root_path.join(".git")).unwrap();
+        std::fs::write(root_path.join("AGENTS.md"), "Root agent rule").unwrap();
+
+        let sub_dir = root_path.join("src").join("module");
+        std::fs::create_dir_all(&sub_dir).unwrap();
+        std::fs::write(sub_dir.join("AGENTS.md"), "Leaf agent rule").unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.workspace_path = Some(sub_dir.to_string_lossy().to_string());
+        cfg.user_instructions = "My task".to_string();
+
+        let prompt = build_hierarchical_system_prompt(&cfg).await;
+
+        assert!(prompt.contains("[User Instructions]"));
+        assert!(prompt.contains("My task"));
+        assert!(prompt.contains("Root agent rule"));
+        assert!(prompt.contains("Leaf agent rule"));
+        // Check order: Root first, then Leaf
+        assert!(prompt.find("Root agent rule").unwrap() < prompt.find("Leaf agent rule").unwrap());
+    }
