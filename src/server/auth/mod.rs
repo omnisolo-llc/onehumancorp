@@ -33,34 +33,8 @@ pub struct User {
     pub oidc_subject: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct UserPublic {
-    pub id: String,
-    pub username: String,
-    pub email: String,
-    pub roles: Vec<String>,
-    pub active: bool,
-    pub organization_id: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub oidc_subject: Option<String>,
-}
 
-impl User {
-    pub fn public_view(&self) -> UserPublic {
-        UserPublic {
-            id: self.id.clone(),
-            username: self.username.clone(),
-            email: self.email.clone(),
-            roles: self.roles.clone(),
-            active: self.active,
-            organization_id: self.organization_id.clone(),
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            oidc_subject: self.oidc_subject.clone(),
-        }
-    }
-}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -451,66 +425,7 @@ impl Store {
             }
         }
     }
-    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> User {
-        let mut users = self.users.write().unwrap();
-        let mut by_oidc = self.by_oidc.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
-        let mut by_name = self.by_name.write().unwrap();
 
-        let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
-        if let Some(user_id) = by_oidc.get(&oidc_key) {
-            if let Some(user) = users.get(user_id) {
-                return user.clone();
-            }
-        }
-
-        if !email.is_empty() {
-            let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
-            if let Some(user_id) = by_email.get(&email_key) {
-                if let Some(user) = users.get_mut(user_id) {
-                    user.oidc_subject = Some(sub.to_string());
-                    by_oidc.insert(oidc_key, user_id.clone());
-                    return user.clone();
-                }
-            }
-        }
-
-        let mut uname = preferred_username.to_string();
-        if uname.is_empty() {
-            uname = email.to_string();
-        }
-        // de-duplicate username
-        let name_key = TenantKey { org_id: org_id.to_string(), key: uname.clone() };
-        if by_name.contains_key(&name_key) {
-             uname = format!("{}_{}", uname, hex::encode(random_bytes(3)));
-        }
-
-        let now = Utc::now();
-        let id = hex::encode(random_bytes(8));
-        let user = User {
-            id: id.clone(),
-            username: uname.clone(),
-            email: email.to_string(),
-            password_hash: String::new(), // No password for OIDC users
-            roles: vec![ROLE_VIEWER.to_string()],
-            active: true,
-            organization_id: Some(org_id.to_string()),
-            oidc_subject: Some(sub.to_string()),
-            created_at: now,
-            updated_at: now,
-        };
-
-        users.insert(id.clone(), user.clone());
-        if !uname.is_empty() {
-            by_name.insert(TenantKey { org_id: org_id.to_string(), key: uname }, id.clone());
-        }
-        if !email.is_empty() {
-            by_email.insert(TenantKey { org_id: org_id.to_string(), key: email.to_string() }, id.clone());
-        }
-        by_oidc.insert(oidc_key, id);
-
-        user
-    }
 }
 
 fn random_bytes(n: usize) -> Vec<u8> {
