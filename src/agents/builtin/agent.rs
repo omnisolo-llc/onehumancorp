@@ -521,15 +521,20 @@ impl Agent {
                 }
                 let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
-                let session_tools_clone = session_tools.clone();
+                let tool_opt = session_tools.iter().find(|t| t.name == tc.name).cloned();
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
+                    let tool = match tool_opt {
+                        Some(t) => t,
+                        None => { let name = tc_clone.name.clone(); return (tc_clone, Err(ToolError::LlmRecoverable(format!("unknown tool: {}", name)))); },
+                    };
+
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
+                        match tool.execute.execute(tc_clone.arguments.clone()).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -931,6 +936,84 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_concurrent_read_only_tools() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let active_tools = Arc::new(AtomicUsize::new(0));
+        let max_concurrent = Arc::new(AtomicUsize::new(0));
+
+        struct ConcurrentTool {
+            active: Arc<AtomicUsize>,
+            max_con: Arc<AtomicUsize>,
+        }
+
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for ConcurrentTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                let current = self.active.fetch_add(1, Ordering::SeqCst) + 1;
+                let mut max = self.max_con.load(Ordering::SeqCst);
+                while current > max {
+                    match self.max_con.compare_exchange_weak(max, current, Ordering::SeqCst, Ordering::SeqCst) {
+                        Ok(_) => break,
+                        Err(x) => max = x,
+                    }
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                self.active.fetch_sub(1, Ordering::SeqCst);
+                Ok("done".to_string())
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "concurrent_tool".to_string(),
+                description: "Test".to_string(),
+                is_read_only: true, // IMPORTANT
+                parameters: serde_json::json!({}),
+                execute: Arc::new(ConcurrentTool {
+                    active: active_tools.clone(),
+                    max_con: max_concurrent.clone(),
+                }),
+            }
+        ];
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "tool call".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "concurrent_tool".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "2".to_string(), name: "concurrent_tool".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "3".to_string(), name: "concurrent_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final Answer"),
+                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let mut agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        agent.run(&cfg, "Hello", &mut |e| events.push(e)).await.unwrap();
+
+        let max = max_concurrent.load(Ordering::SeqCst);
+        assert!(max > 1, "Tools did not execute concurrently (max concurrent was {})", max);
+    }
+
     use super::*;
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
