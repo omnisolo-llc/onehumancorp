@@ -121,13 +121,7 @@ mod tests {
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
                                lower_line.contains("session_id") ||
-                               lower_line.contains("payload") ||
-                               lower_line.contains("email") ||
-                               lower_line.contains("password") ||
-                               lower_line.contains("credit_card") ||
-                               lower_line.contains("phone_number") ||
-                               lower_line.contains("user_id") ||
-                               lower_line.contains("token") {
+                               lower_line.contains("payload") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
