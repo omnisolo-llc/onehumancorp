@@ -200,8 +200,14 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        );
+        let agents = agents_res.unwrap();
+        let meetings = meetings_res.unwrap();
 
         let mut msg_count = 0;
         for m in meetings.iter() {
