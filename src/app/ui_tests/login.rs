@@ -146,3 +146,13 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+#[test]
+fn create_verify_app_settings_button() {
+    let ui = create();
+    let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = clicked.clone();
+    ui.on_open_settings(move || { *c.borrow_mut() = true; });
+    ui.invoke_open_settings();
+    assert!(*clicked.borrow());
+}
