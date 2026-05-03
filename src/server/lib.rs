@@ -968,6 +968,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .execute(pool)
             .await;
         }
+
+        let db_path = "ohc-standalone.db";
+        if std::path::Path::new(db_path).exists() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(db_path)?.permissions();
+                perms.set_mode(0o600);
+                std::fs::set_permissions(db_path, perms)?;
+            }
+        }
     }
 
     // Start Mesh API server

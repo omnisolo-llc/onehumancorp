@@ -27,7 +27,6 @@ pub mod tail;
 pub mod hybrid_blob;
 pub mod anthropic_memory;
 pub mod lazy_load;
-pub mod browser;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -109,7 +108,6 @@ pub fn all_tools(
         ollama::ollama_tool(),
         subagent::subagent_tool(),
         hybrid_blob::hybrid_blob_tool(),
-        browser::browser_tool(working_dir.clone()),
     ];
 
     if let Some(accessor) = memory_accessor {

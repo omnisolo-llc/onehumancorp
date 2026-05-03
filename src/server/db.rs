@@ -26,40 +26,6 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let mut db_path_str = database_url.trim_start_matches("sqlite://");
-            if let Some(idx) = db_path_str.find('?') {
-                db_path_str = &db_path_str[..idx];
-            }
-
-            if db_path_str != ":memory:" {
-                let db_path = Path::new(db_path_str);
-
-                if let Some(parent) = db_path.parent() {
-                    if !parent.as_os_str().is_empty() {
-                        std::fs::create_dir_all(parent)?;
-                    }
-                }
-
-                if !db_path.exists() {
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::OpenOptionsExt;
-                        std::fs::OpenOptions::new()
-                            .write(true)
-                            .create_new(true)
-                            .mode(0o600)
-                            .open(db_path)?;
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        std::fs::OpenOptions::new()
-                            .write(true)
-                            .create_new(true)
-                            .open(db_path)?;
-                    }
-                }
-            }
-
             let conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
@@ -296,56 +262,5 @@ mod autodream_db_tests {
             .unwrap();
         // Just checking configuration parses ok for multitenancy logic
         let _ = pool;
-    }
-
-    #[tokio::test]
-    async fn test_secure_sqlite_file_permissions() {
-        let temp_db_path = format!("ohc-standalone-{}.db", uuid::Uuid::new_v4());
-        let temp_db_url = format!("sqlite://{}?cipher=sqlcipher&key=testkey", temp_db_path);
-
-        // This simulates what happens when DB::new is called with a sqlite url.
-        // We will test the file creation logic here since DB::new() has other dependencies that could fail without proper mock.
-        let mut db_path_str = temp_db_url.trim_start_matches("sqlite://");
-        if let Some(idx) = db_path_str.find('?') {
-            db_path_str = &db_path_str[..idx];
-        }
-
-        let db_path = std::path::Path::new(db_path_str);
-
-        if let Some(parent) = db_path.parent() {
-            if !parent.as_os_str().is_empty() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
-        }
-
-        if !db_path.exists() {
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                std::fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .mode(0o600)
-                    .open(db_path).unwrap();
-            }
-            #[cfg(not(unix))]
-            {
-                std::fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(db_path).unwrap();
-            }
-        }
-
-        assert!(db_path.exists());
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let metadata = std::fs::metadata(db_path).unwrap();
-            assert_eq!(metadata.permissions().mode() & 0o777, 0o600, "File permissions are not strictly 0o600");
-        }
-
-        let _ = std::fs::remove_file(db_path);
     }
 }
