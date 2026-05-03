@@ -947,7 +947,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = ohc_builtin_agent::memory_store::MemoryConsolidationWorker::new(vector_repo);
+    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
     // Ensure local database permissions are secure in standalone mode
@@ -1110,3 +1110,4 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 pub mod tools;
+pub mod workers;
