@@ -20,8 +20,7 @@ mod tests {
     async fn test_sipdb_chaos_parity() {
         let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
         let sip_db = SipDB::new(pool, "test_org".to_string());
