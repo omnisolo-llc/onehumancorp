@@ -144,3 +144,13 @@ fn create_verify_click_count() {
     ui.set_click_count(28);
     assert_eq!(ui.get_click_count(), 28);
 }
+
+#[test]
+fn share_flow_send_invite_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_send_invite_message(move |_| { *c.borrow_mut() = true; });
+    ui.invoke_send_invite_message("test_link".into());
+    assert!(*called.borrow());
+}
