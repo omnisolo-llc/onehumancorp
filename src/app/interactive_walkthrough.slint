@@ -4,24 +4,25 @@ import { GlassCard } from "glass_card.slint";
 export component InteractiveWalkthrough inherits Window {
     width: 600px;
     height: 800px;
-    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    background: transparent;
     always-on-top: true;
 
     in-out property <int> current_step: 0;
 
-    Rectangle {
-        background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-        opacity: 0.5;
-        width: parent.width;
-        height: parent.height;
-    }
+    VerticalBox {
+        alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
+        padding-top: current_step == 0 ? 100px : 0;
+        padding-bottom: current_step == 2 || current_step == 3 ? 100px : 0;
 
-    GlassCard {
-        x: 20px;
-        y: 100px;
-        width: 335px;
+        HorizontalBox {
+            alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
+            padding-left: current_step == 0 ? 20px : 0;
+            padding-right: current_step == 2 || current_step == 3 ? 20px : 0;
 
-        VerticalBox {
+            GlassCard {
+                width: 335px;
+
+                VerticalBox {
             padding: 20px;
             spacing: 16px;
 
@@ -67,5 +68,7 @@ export component InteractiveWalkthrough inherits Window {
                 }
             }
         }
+        }
+    }
     }
 }

@@ -1,5 +1,11 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct HelpArticle {
+    title: string,
+    description: string,
+    category: string,
+}
+
 export component HelpCenter inherits Window {
     width: 600px;
     height: 800px;
@@ -7,6 +13,18 @@ export component HelpCenter inherits Window {
     background: #f8fafc;
 
     in-out property <string> search_query: "";
+    callback execute_search();
+
+    changed search_query => { root.execute_search(); }
+
+    in property <[HelpArticle]> articles: [
+        { category: "Getting Started", title: "Set up your store in 5 minutes", description: "Follow our simple guide to add your first product and go live." },
+        { category: "My Store", title: "How to add products", description: "Learn how to list new items, add photos, and set prices." },
+        { category: "Payments & Billing", title: "How to accept Apple Pay", description: "Enable Apple Pay with one click in your payment settings." },
+        { category: "AI Helpers", title: "What can the Customer Success Helper do?", description: "Your helper can reply to customer emails and Instagram DMs automatically." },
+        { category: "Marketing", title: "How to run a promotion", description: "Learn how to create discount codes and share them on social media." },
+        { category: "Account & Billing", title: "How to change your subscription", description: "Find out how to upgrade or downgrade your plan and view past invoices." }
+    ];
 
     VerticalBox {
         padding: 16px;
@@ -28,63 +46,17 @@ export component HelpCenter inherits Window {
             VerticalBox {
                 spacing: 16px;
 
-                Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
+                for article in articles : VerticalBox {
+                    spacing: 16px;
 
-                Text { text: "My Store"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to add products"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to list new items, add photos, and set prices."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Enable Apple Pay with one click in your payment settings."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "AI Helpers"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "What can the Customer Success Helper do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Your helper can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Marketing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to run a promotion"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Learn how to create discount codes and share them on social media."; color: #64748b; wrap: word-wrap; }
-                    }
-                }
-
-                Text { text: "Account & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
-                Rectangle {
-                    background: white; border-radius: 8px;
-                    VerticalBox {
-                        padding: 12px;
-                        Text { text: "How to change your subscription"; font-weight: 700; font-size: 16px; color: #0f172a; }
-                        Text { text: "Find out how to upgrade or downgrade your plan and view past invoices."; color: #64748b; wrap: word-wrap; }
+                    Text { text: article.category; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: white; border-radius: 8px;
+                        VerticalBox {
+                            padding: 12px;
+                            Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
+                            Text { text: article.description; color: #64748b; wrap: word-wrap; }
+                        }
                     }
                 }
             }
