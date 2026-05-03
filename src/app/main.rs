@@ -118,8 +118,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let _login_ui_from_login = login_ui_handle.clone();
+    let app_dashboard_ui = std::rc::Rc::new(app::Dashboard::new().unwrap());
+    let app_business_share_ui = std::rc::Rc::new(app::BusinessShare::new().unwrap());
+    let app_referrals_ui = std::rc::Rc::new(app::Referrals::new().unwrap());
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
+        let dash_ui = app_dashboard_ui.clone();
         move |email, _password| {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
@@ -129,10 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
+                    dash_ui.show().unwrap();
                 }
             }
         }
@@ -150,6 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     login_ui.on_oauth_login({
         let login_handle = login_ui_handle.clone();
+        let dash_ui = app_dashboard_ui.clone();
         move |provider| {
             if let Some(ui) = login_handle.upgrade() {
                 if ui.get_is_sign_up() {
@@ -158,10 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
+                    dash_ui.show().unwrap();
                 }
             }
         }
@@ -639,10 +638,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
 
-    let my_plan_ui = app::MyPlan::new().unwrap();
+    let my_plan_ui = std::rc::Rc::new(app::MyPlan::new().unwrap());
     let my_plan_handle = my_plan_ui.as_weak();
 
-    let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_ui = std::rc::Rc::new(app::Pricing::new().unwrap());
     let pricing_handle = pricing_ui.as_weak();
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
@@ -709,7 +708,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
-                if let Ok(business_share_ui) = app::BusinessShare::new() {
+                let business_share_ui = app_business_share_ui.clone();
+                if true {
                     let business_share_handle = business_share_ui.as_weak();
 
                     business_share_ui.on_copy_link({
@@ -759,8 +759,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
+
                 } else {
                     let referrals_handle_clone = referrals_handle.clone();
                     let ref_handle_clone_for_open = referrals_handle.clone();
@@ -793,10 +792,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
                 let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
 
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
             }
         }
     });
@@ -807,55 +803,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     welcome_checklist_ui.on_go_to_add_products({
         let handle = welcome_checklist_handle.clone();
+        let dash_ui = app_dashboard_ui.clone();
         move || {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // In a real flow, this might jump to a specific product adding UI
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
+            dash_ui.show().unwrap();
         }
     });
 
     welcome_checklist_ui.on_go_to_connect_instagram({
         let handle = welcome_checklist_handle.clone();
+        let dash_ui = app_dashboard_ui.clone();
         move || {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // Similarly, jump to integrations or marketing
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
+            dash_ui.show().unwrap();
         }
     });
 
     welcome_checklist_ui.on_go_to_share_link({
         let handle = welcome_checklist_handle.clone();
+        let ref_ui = app_referrals_ui.clone();
         move || {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(referrals) = app::Referrals::new() {
-                referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
-            }
+            ref_ui.show().unwrap();
         }
     });
 
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
+        let dash_ui = app_dashboard_ui.clone();
         move || {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
+            dash_ui.show().unwrap();
         }
     });
 
@@ -2770,7 +2756,7 @@ mod remaining_e2e_tests {
         dashboard_ui.invoke_open_billing();
         assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
 
-        let my_plan_ui = app::MyPlan::new().unwrap();
+        let my_plan_ui = std::rc::Rc::new(app::MyPlan::new().unwrap());
         let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let upgrade_opened_clone = upgrade_opened.clone();
         my_plan_ui.on_upgrade(move || {
@@ -2797,7 +2783,7 @@ mod remaining_e2e_tests {
         my_plan_ui.invoke_update_payment();
         my_plan_ui.invoke_download_invoice();
 
-        let pricing_ui = app::Pricing::new().unwrap();
+        let pricing_ui = std::rc::Rc::new(app::Pricing::new().unwrap());
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
