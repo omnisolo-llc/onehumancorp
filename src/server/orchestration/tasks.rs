@@ -297,7 +297,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            action_risk: row.get("action_risk"),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -343,7 +343,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: dt_created,
             updated_at: dt_updated,
-            action_risk: row.get("action_risk"),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -395,7 +395,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get("action_risk"),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -445,7 +445,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get("action_risk"),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
