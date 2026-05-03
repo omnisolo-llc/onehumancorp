@@ -73,12 +73,12 @@ test.describe('Dashboard Core', () => {
 
   test('should display swarm observability section', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Swarm Observability')).toBeVisible();
+    await expect(page.locator('text=Agent Actions Today')).toBeVisible();
   });
 
-  test('should show company structure section', async ({ page }) => {
+  test('should show my team section', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Company Structure')).toBeVisible();
+    await expect(page.locator('text=My Team')).toBeVisible();
   });
 
   test('should display help buttons', async ({ page }) => {
