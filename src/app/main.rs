@@ -2026,6 +2026,19 @@ mod docs_tests {
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2088,6 +2101,19 @@ mod docs_tests {
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
@@ -2105,6 +2131,22 @@ mod docs_tests {
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
+
+        use slint::Global;
+        use slint::ComponentHandle;
+
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            if id == "add_product" {
+                "Click to add a new product to your store".into()
+            } else {
+                "".into()
+            }
+        });
+
+        dashboard_ui.global::<app::TooltipRegistry>().invoke_show_tooltip("add_product".into(), 10.0, 20.0);
+
+        assert_eq!(dashboard_ui.global::<app::TooltipRegistry>().get_active_text(), "Click to add a new product to your store");
+        assert_eq!(dashboard_ui.global::<app::TooltipRegistry>().get_is_visible(), true);
 
         // Let's call the tooltip registry API directly to verify the Slint logic works without relying on real pointer events.
         // Wait, Slint doesn't let us easily query the UI tree or globals from Rust without exporting them or setting them up.
