@@ -1,0 +1,178 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { TooltipElement } from "./tooltip_element.slint";
+
+export component PosTerminal inherits Window {
+    width: 375px;
+    height: 812px;
+    title: "In-Person Sale";
+    background: #0f172a;
+
+    in-out property <string> total_amount: "0.00";
+    in-out property <string> item_name: "";
+    in-out property <bool> is_processing: false;
+    in-out property <bool> is_success: false;
+    in-out property <string> status_message: "Ready for Tap to Pay";
+
+    callback tap_to_pay();
+    callback close_terminal();
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 24px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text {
+                text: "In-Person Sale";
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+            }
+            Button {
+                text: "X";
+                width: 44px;
+                height: 44px;
+                clicked => { root.close_terminal(); }
+            }
+        }
+
+        if (!root.is_success) : VerticalBox {
+            spacing: 16px;
+
+            Text {
+                text: "Item / Service";
+                color: #94a3b8;
+                font-size: 14px;
+                font-family: "Inter";
+            }
+
+            Rectangle {
+                background: #1e293b;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: #334155;
+                height: 44px;
+
+                LineEdit {
+                    x: 12px;
+                    width: parent.width - 24px;
+                    height: 100%;
+                    font-size: 16px;
+                    font-family: "Inter";
+                    placeholder-text: "e.g. Plumbing Repair";
+                    text <=> root.item_name;
+                }
+            }
+
+            Text {
+                text: "Amount ($)";
+                color: #94a3b8;
+                font-size: 14px;
+                font-family: "Inter";
+            }
+
+            Rectangle {
+                background: #1e293b;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: #334155;
+                height: 60px;
+
+                LineEdit {
+                    x: 12px;
+                    width: parent.width - 24px;
+                    height: 100%;
+                    font-size: 32px;
+                    font-family: "Outfit";
+                    placeholder-text: "0.00";
+                    text <=> root.total_amount;
+                }
+            }
+
+            Rectangle {
+                height: 40px;
+            }
+
+            Rectangle {
+                height: 60px;
+                border-radius: 30px;
+                background: root.is_processing ? #475569 : #3b82f6;
+
+                TouchArea {
+                    clicked => {
+                        if (!root.is_processing) {
+                            root.is_processing = true;
+                            root.status_message = "Processing... Present Card";
+                            root.tap_to_pay();
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.is_processing ? "Processing..." : "Tap to Pay";
+                    color: white;
+                    font-size: 20px;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: root.status_message;
+                color: #cbd5e1;
+                font-size: 14px;
+                font-family: "Inter";
+                horizontal-alignment: center;
+            }
+        }
+
+        if (root.is_success) : VerticalBox {
+            spacing: 24px;
+            alignment: center;
+
+            Rectangle {
+                width: 80px;
+                height: 80px;
+                border-radius: 40px;
+                background: #10b981; // Success Green
+
+                Text {
+                    text: "✓";
+                    color: white;
+                    font-size: 40px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: "Payment Successful";
+                color: white;
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: "Inventory and ledgers have been updated automatically.";
+                color: #94a3b8;
+                font-size: 14px;
+                font-family: "Inter";
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+
+            Rectangle { height: 20px; }
+
+            Button {
+                text: "Done";
+                height: 50px;
+                clicked => { root.close_terminal(); }
+            }
+        }
+    }
+}
