@@ -1,0 +1,89 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component SwarmObservabilityDashboard inherits Window {
+    width: 1024px;
+    height: 768px;
+    title: "Swarm Observability Dashboard";
+
+    in property <int> active_connections: 0;
+    in property <int> events_per_sec: 0;
+    in property <string> avg_latency: "0ms";
+
+    // Glassmorphism background
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    always-on-top: true;
+
+    Rectangle {
+        background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+        opacity: 0.5;
+        width: parent.width;
+        height: parent.height;
+    }
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text { text: "Swarm Observability Dashboard"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+        Rectangle {
+            // Glassmorphism card
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            width: 800px;
+
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+
+                Text { text: "Undercover Mode"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+                HorizontalBox {
+                    spacing: 16px;
+                    Rectangle {
+                        width: 200px;
+                        height: 100px;
+                        background: rgba(16, 185, 129, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Mesh Connections"; color: white; }
+                            Text { text: active_connections + " Active"; color: #10b981; font-size: 24px; font-weight: 700; }
+                        }
+                    }
+                    Rectangle {
+                        width: 200px;
+                        height: 100px;
+                        background: rgba(59, 130, 246, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Events / Sec"; color: white; }
+                            Text { text: events_per_sec; color: #3b82f6; font-size: 24px; font-weight: 700; }
+                        }
+                    }
+                    Rectangle {
+                        width: 200px;
+                        height: 100px;
+                        background: rgba(245, 158, 11, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: "Latency"; color: white; }
+                            Text { text: avg_latency; color: #f59e0b; font-size: 24px; font-weight: 700; }
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+                    Button { text: "Enable Undercover Mode"; height: 44px; clicked => { root.visible = false; } }
+                }
+            }
+        }
+    }
+}

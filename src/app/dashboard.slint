@@ -18,6 +18,7 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
+    callback open_swarm_observability();
     width: 375px;
     height: 800px;
     title: "Dashboard";
@@ -109,6 +110,7 @@ export component Dashboard inherits Window {
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+                Button { text: "Swarm Observability"; height: 44px; clicked => { open_swarm_observability(); show_menu = false; } }
             }
         }
 
