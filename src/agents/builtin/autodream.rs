@@ -34,31 +34,20 @@ impl AutoDreamWorker {
         tokio::spawn(async move {
             loop {
                 println!("AutoDream: running completed tasks ingestion pipeline...");
-                let mut total_consolidated = 0;
-
-                match Self::ingest_completed_tasks(&db).await {
-                    Ok(count) => total_consolidated += count,
-                    Err(e) => println!("AutoDream: tasks ingestion failed: {}", e),
+                if let Err(e) = Self::ingest_completed_tasks(&db).await {
+                    println!("AutoDream: tasks ingestion failed: {}", e);
                 }
-                match Self::process_db_memories(&db).await {
-                    Ok(count) => total_consolidated += count,
-                    Err(e) => println!("AutoDream: DB memories processing failed: {}", e),
+                if let Err(e) = Self::process_db_memories(&db).await {
+                    println!("AutoDream: DB memories processing failed: {}", e);
                 }
-                match Self::process_fs_memories(&db).await {
-                    Ok(count) => total_consolidated += count,
-                    Err(e) => println!("AutoDream: FS memories processing failed: {}", e),
+                if let Err(e) = Self::process_fs_memories(&db).await {
+                    println!("AutoDream: FS memories processing failed: {}", e);
                 }
-                match Self::consolidate_agent_task_memories(&db).await {
-                    Ok(count) => total_consolidated += count,
-                    Err(e) => println!("AutoDream: agent-task memories consolidation failed: {}", e),
+                if let Err(e) = Self::consolidate_agent_task_memories(&db).await {
+                    println!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
-                match Self::process_mesh_messages(&db).await {
-                    Ok(count) => total_consolidated += count,
-                    Err(e) => println!("AutoDream: Mesh messages processing failed: {}", e),
-                }
-
-                if let Err(e) = db.record_autodream_telemetry(total_consolidated).await {
-                    println!("AutoDream: failed to record telemetry: {}", e);
+                if let Err(e) = Self::process_mesh_messages(&db).await {
+                    println!("AutoDream: Mesh messages processing failed: {}", e);
                 }
                 sleep(Duration::from_secs(120)).await;
             }
@@ -90,9 +79,9 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
-        let mut count = 0;
+
         for (id, org_id, payload, table) in tasks {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
@@ -121,43 +110,13 @@ impl AutoDreamWorker {
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             println!("AutoDream: ingested completed task {} from {}", id, table);
-            count += 1;
         }
         
-        Ok(count)
+        Ok(())
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("AutoDream: consolidating epoch...");
-
-        let mut total_consolidated = 0;
-
-        match Self::ingest_completed_tasks(&self.db).await {
-            Ok(count) => total_consolidated += count,
-            Err(e) => println!("AutoDream: tasks ingestion failed: {}", e),
-        }
-        match Self::process_db_memories(&self.db).await {
-            Ok(count) => total_consolidated += count,
-            Err(e) => println!("AutoDream: DB memories processing failed: {}", e),
-        }
-        match Self::process_fs_memories(&self.db).await {
-            Ok(count) => total_consolidated += count,
-            Err(e) => println!("AutoDream: FS memories processing failed: {}", e),
-        }
-        match Self::consolidate_agent_task_memories(&self.db).await {
-            Ok(count) => total_consolidated += count,
-            Err(e) => println!("AutoDream: agent-task memories consolidation failed: {}", e),
-        }
-        match Self::process_mesh_messages(&self.db).await {
-            Ok(count) => total_consolidated += count,
-            Err(e) => println!("AutoDream: Mesh messages processing failed: {}", e),
-        }
-
-        if let Err(e) = self.db.record_autodream_telemetry(total_consolidated).await {
-            println!("AutoDream: failed to record telemetry: {}", e);
-        }
-
-        println!("AutoDream: epoch consolidated {} memories.", total_consolidated);
         Ok(())
     }
 
@@ -209,14 +168,13 @@ impl AutoDreamWorker {
         Ok(results)
     }
 
-    async fn process_db_memories(db: &Arc<DB>) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn process_db_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
 
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
-        let mut count = 0;
 
         for row in rows {
             let session_id: String = row.get("session_id");
@@ -234,29 +192,27 @@ impl AutoDreamWorker {
                         .bind(&session_id)
                         .execute(&db.pool)
                         .await?;
-                    count += 1;
                 }
                 Err(e) => {
                     println!("AutoDreamWorker: failed to embed session: {}", e);
                 }
             }
         }
-        Ok(count)
+        Ok(())
     }
 
-    async fn process_fs_memories(db: &Arc<DB>) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn process_fs_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
         if !path.exists() {
-            return Ok(0);
+            return Ok(());
         }
 
         let mut entries = tokio::fs::read_dir(path).await?;
 
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
-        let mut count = 0;
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
@@ -271,7 +227,6 @@ impl AutoDreamWorker {
                         db.insert_agent_memory(&mem_id, "system", "fs-agent", &content, &emb_str).await?;
                         
                         tokio::fs::remove_file(path).await?;
-                        count += 1;
                     }
                     Err(e) => {
                         println!("AutoDreamWorker: failed to embed fs memory {:?}: {}", path, e);
@@ -279,21 +234,20 @@ impl AutoDreamWorker {
                 }
             }
         }
-        Ok(count)
+        Ok(())
     }
 
-    async fn consolidate_agent_task_memories(db: &Arc<DB>) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn consolidate_agent_task_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::path::Path::new(".agent-task/memory");
 
         if !memory_dir.exists() {
-            return Ok(0);
+            return Ok(());
         }
 
         let mut entries = tokio::fs::read_dir(memory_dir).await?;
 
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
-        let mut count = 0;
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
@@ -317,7 +271,6 @@ impl AutoDreamWorker {
 
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;
-                        count += 1;
                         println!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
@@ -326,25 +279,25 @@ impl AutoDreamWorker {
                 }
             }
         }
-        Ok(count)
+        Ok(())
     }
 
-    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         println!("AutoDreamWorker: stub for process_mesh_messages");
-        Ok(0)
+        Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use tokio::test;
     use crate::db::DB;
 
     // A dummy test to satisfy coverage constraints for the AutoDreamWorker.
     // Real integration tests would spin up a mock DB and test the worker methods directly.
-    #[tokio::test]
+    #[test]
     async fn test_autodream_worker_init() {
         // Skip actual db execution to prevent CI timeouts
         if std::env::var("DATABASE_URL").is_err() {
@@ -362,23 +315,5 @@ mod tests {
         let worker = AutoDreamWorker::new(db);
 
         assert!(worker.consolidate_epoch().await.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_autodream_telemetry_recording() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(database_url)
-            .unwrap();
-
-        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-
-        let result = db.record_autodream_telemetry(5).await;
-        assert!(result.is_ok() || result.is_err());
     }
 }

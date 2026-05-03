@@ -735,6 +735,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_go_to_dashboard({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();
 
@@ -775,9 +782,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Handle download invoice
     });
 
-    let my_plan_handle_for_dashboard = my_plan_handle.clone();
-    let gb_handle_for_dashboard = grow_business_handle.clone();
-
     let my_plan_handle_pricing_clone = my_plan_handle.clone();
     pricing_ui.on_select_plan(move |plan| {
         if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
@@ -790,31 +794,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Logic for toggling billing cycle
     });
 
-    setup_wizard_ui.on_go_to_dashboard({
-        let ui_handle = setup_wizard_handle.clone();
-        let my_plan_handle_for_dashboard_clone = my_plan_handle_for_dashboard.clone();
-        let gb_handle_for_dashboard_clone = gb_handle_for_dashboard.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let _ = ui.hide();
-            }
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
-
-                let my_plan_handle_clone = my_plan_handle_for_dashboard_clone.clone();
-                dashboard.on_open_billing(move || {
-                    if let Some(ui) = my_plan_handle_clone.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                let gb_handle_clone = gb_handle_for_dashboard_clone.clone();
-                dashboard.on_action_grow_business(move || {
-                    if let Some(ui) = gb_handle_clone.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
                 dashboard.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -924,12 +905,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
+
+                Box::leak(Box::new(my_plan_ui));
+                Box::leak(Box::new(pricing_ui));
             }
         }
     });
-
-    Box::leak(Box::new(my_plan_ui));
-    Box::leak(Box::new(pricing_ui));
 
     let agents_ui = app::Agents::new()?;
     let agent_hire_ui = app::AgentHire::new()?;
