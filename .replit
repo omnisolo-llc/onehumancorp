@@ -22,18 +22,14 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PROTOC=$(which protoc) STANDALONE_MODE=true cargo run --bin server 2>&1"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PROTOC=$(which protoc) STANDALONE_MODE=true /nix/store/brzjqpcbk04hzmhsqlmp7vng4jdis2yc-rust-mixed/bin/cargo run --bin server &>/tmp/ohc-server.log & /home/runner/workspace/scripts/serve-wasm.sh 2>&1"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
