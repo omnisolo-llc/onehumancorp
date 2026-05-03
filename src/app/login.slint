@@ -87,6 +87,7 @@ export component Login inherits Window {
 
                 Button {
                     text: is_sign_up ? "Sign Up" : "Sign In";
+                    primary: true;
                     clicked => { login(username, password); }
                 }
 
@@ -108,7 +109,7 @@ export component Login inherits Window {
                 }
                 
                 Button {
-                    text: "⚙ Fix Login Issues";
+                    text: "Help Signing In";
                     clicked => { open_settings(); }
                 }
             }
