@@ -20,6 +20,46 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+
+use std::sync::OnceLock;
+use std::sync::Mutex;
+use std::collections::HashMap;
+
+static TOOLTIP_REGISTRY: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+
+fn init_registry() -> Mutex<HashMap<String, String>> {
+    let mut map = HashMap::new();
+    map.insert("ask_ai".to_string(), "Ask the AI Assistant".to_string());
+    map.insert("menu".to_string(), "Open Menu".to_string());
+    map.insert("help_center".to_string(), "Help Center".to_string());
+    map.insert("quick_actions_hint".to_string(), "These buttons are shortcuts to your most common daily tasks.".to_string());
+    map.insert("grow_business".to_string(), "Grow Business".to_string());
+    map.insert("referrals".to_string(), "Referrals".to_string());
+    map.insert("stats".to_string(), "Stats".to_string());
+    map.insert("share".to_string(), "Share".to_string());
+    map.insert("add_product".to_string(), "Add".to_string());
+    map.insert("view_orders".to_string(), "Orders".to_string());
+    map.insert("messages".to_string(), "Chat".to_string());
+    Mutex::new(map)
+}
+
+pub fn get_tooltip(id: &str) -> String {
+    let registry = TOOLTIP_REGISTRY.get_or_init(init_registry);
+    let map = registry.lock().unwrap();
+    map.get(id).cloned().unwrap_or_default()
+}
+
+pub fn update_tooltip(id: String, text: String) {
+    let registry = TOOLTIP_REGISTRY.get_or_init(init_registry);
+    registry.lock().unwrap().insert(id, text);
+}
+
+fn setup_dashboard_documentation(dashboard: &app::Dashboard) {
+    dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        get_tooltip(id.as_str()).into()
+    });
+}
+
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -161,22 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
-                        });
+                        setup_dashboard_documentation(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -206,22 +231,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
-                        });
+                        setup_dashboard_documentation(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -782,6 +792,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -795,6 +806,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -883,6 +895,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 let dashboard_handle = dashboard.as_weak();
                 let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1173,6 +1186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -1187,6 +1201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -1214,6 +1229,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                setup_dashboard_documentation(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1647,6 +1663,7 @@ mod growth_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
 
         // Mock wiring for action_share_store since we don't have the main closure here
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1768,6 +1785,7 @@ mod e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2549,6 +2567,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
@@ -2626,6 +2645,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
 
@@ -2663,6 +2683,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2728,6 +2749,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2966,6 +2988,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let grow_business_opened_clone = grow_business_opened.clone();
 
@@ -3058,6 +3081,7 @@ mod docs_tests {
 
         // Test dashboard product limit soft paywall
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Free tier product limit mock
         let dashboard_handle_add_product = dashboard_ui.as_weak();
         let product_count_clone = product_count.clone();
@@ -3147,6 +3171,7 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3227,6 +3252,7 @@ mod dashboard_docs_tests {
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3346,6 +3372,7 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3406,6 +3433,7 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3592,6 +3620,7 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3733,6 +3762,7 @@ mod e2e_hybrid_blob_tests {
 
         // Navigate to dashboard and then to WebsiteBuilder where we upload an image (simulated by blob tool)
         let dashboard_ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&dashboard_ui);
 
         let website_builder_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let website_builder_opened_clone = website_builder_opened.clone();
@@ -3788,6 +3818,7 @@ mod e2e_hybrid_blob_tests {
     fn test_dashboard_loading_state() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::Dashboard::new().unwrap();
+        setup_dashboard_documentation(&ui);
         assert!(!ui.get_is_loading());
         ui.set_is_loading(true);
         assert!(ui.get_is_loading());
@@ -3853,3 +3884,19 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
+
+#[cfg(test)]
+mod tooltip_registry_tests {
+    use super::*;
+
+    #[test]
+    fn test_tooltip_registry() {
+        assert_eq!(get_tooltip("ask_ai"), "Ask the AI Assistant");
+
+        update_tooltip("ask_ai".to_string(), "New AI Text".to_string());
+        assert_eq!(get_tooltip("ask_ai"), "New AI Text");
+
+        update_tooltip("new_button".to_string(), "A New Button".to_string());
+        assert_eq!(get_tooltip("new_button"), "A New Button");
+    }
+}
