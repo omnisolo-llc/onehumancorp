@@ -54,7 +54,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: id={}, error={}", p.id, e);
+                    eprintln!("failed to upsert mission from sync daemon: error={}", e);
                 }
             }
         }
@@ -151,7 +151,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert CRDT delta: id={}, error={}", delta.id, e);
+                    eprintln!("failed to upsert CRDT delta: error={}", e);
                 }
             }
         }
@@ -214,7 +214,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to enqueue escalation job: id={}, error={}", p.memory_id, e);
+                    eprintln!("failed to enqueue escalation job: error={}", e);
                 }
             }
         }
