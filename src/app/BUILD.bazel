@@ -7,12 +7,10 @@ cargo_build_script(
     srcs = ["build.rs"],
     data = glob(["*.slint"]) + [
         "//src/proto:hub.proto",
-        "@protobuf//:protoc",
     ],
     edition = "2024",
     deps = [
         "@crates//:slint-build",
-        "@crates//:tonic-build",
     ],
 )
 
@@ -93,6 +91,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_tonic",
+        "//src/server:server_lib",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -185,6 +184,7 @@ rust_test(
     },
     deps = [
         "//src/proto:hub_tonic",
+        "//src/server:server_lib",
         ":build_script",
         "@crates//:chrono",
         "@crates//:copypasta",
@@ -209,6 +209,7 @@ rust_shared_library(
     srcs = ["main.rs"],
     data = glob(["*.slint"]),
     edition = "2024",
+    target_compatible_with = ["@platforms//cpu:wasm32"],
     deps = [
         ":build_script_wasm",
         "@crates//:chrono",
