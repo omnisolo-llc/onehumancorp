@@ -51,7 +51,6 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
-    pub current_dir: Option<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -84,44 +83,8 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
-            current_dir: None,
         }
     }
-}
-
-pub(crate) fn gather_cascading_agents_md(workspace_path: Option<&str>, current_dir: Option<&str>) -> String {
-    let mut cascaded = String::new();
-    let root = match workspace_path {
-        Some(p) => std::path::PathBuf::from(p),
-        None => return cascaded,
-    };
-    let current = match current_dir {
-        Some(c) => std::path::PathBuf::from(c),
-        None => root.clone(),
-    };
-
-    let mut current_search = root.clone();
-    let rel_path = match current.strip_prefix(&root) {
-        Ok(p) => p.to_path_buf(),
-        Err(_) => std::path::PathBuf::new(),
-    };
-
-    let mut components = vec![std::path::Component::CurDir];
-    components.extend(rel_path.components());
-
-    for comp in components {
-        current_search.push(comp);
-        let agents_md_path = current_search.join("AGENTS.md");
-        if agents_md_path.exists() && agents_md_path.is_file() {
-            if let Ok(content) = std::fs::read_to_string(&agents_md_path) {
-                if !cascaded.is_empty() {
-                    cascaded.push_str("\n\n");
-                }
-                cascaded.push_str(&content);
-            }
-        }
-    }
-    cascaded
 }
 
 /// Progress metrics for a running agent task.
@@ -150,34 +113,15 @@ impl AgentProgress {
 }
 
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig) -> String {
-    // Prompt Construction: OpenAI Codex Mechanic
-    // 1. Server-controlled System Message (Highest Priority)
-    // 2. Tool Definitions (Handled externally)
-    // 3. Developer Instructions
-    // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
-    // 5. Conversation History (Handled externally)
-
-    let mut cascaded_user_instructions = cfg.user_instructions.clone();
-    let cascaded_md = gather_cascading_agents_md(
-        cfg.workspace_path.as_deref(),
-        cfg.current_dir.as_deref()
-    );
-    if !cascaded_md.is_empty() {
-        if !cascaded_user_instructions.is_empty() {
-            cascaded_user_instructions.push_str("\n\n");
-        }
-        cascaded_user_instructions.push_str(&cascaded_md);
-    }
-
     let mut end_idx = 32768;
-    if cascaded_user_instructions.len() > 32768 {
-        while end_idx > 0 && !cascaded_user_instructions.is_char_boundary(end_idx) {
+    if cfg.user_instructions.len() > 32768 {
+        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
             end_idx -= 1;
         }
     } else {
-        end_idx = cascaded_user_instructions.len();
+        end_idx = cfg.user_instructions.len();
     }
-    let user_instr = &cascaded_user_instructions[..end_idx];
+    let user_instr = &cfg.user_instructions[..end_idx];
 
     let mut combined_system = String::new();
     if !cfg.server_system_message.is_empty() {
@@ -1823,60 +1767,6 @@ mod tests {
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
         assert_eq!(user_part.len(), 32766);
-    }
-
-    #[test]
-    fn test_cascading_agents_md() {
-        use std::fs;
-        use tempfile::tempdir;
-
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-        let sub = root.join("sub");
-        let subsub = sub.join("subsub");
-
-        fs::create_dir_all(&subsub).unwrap();
-        fs::write(root.join("AGENTS.md"), "Root instructions").unwrap();
-        fs::write(sub.join("AGENTS.md"), "Sub instructions").unwrap();
-        fs::write(subsub.join("AGENTS.md"), "Subsub instructions").unwrap();
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.workspace_path = Some(root.to_str().unwrap().to_string());
-        cfg.current_dir = Some(subsub.to_str().unwrap().to_string());
-        cfg.user_instructions = "Base user instructions".to_string();
-
-        let prompt = build_hierarchical_system_prompt(&cfg);
-
-        // Check cascading order
-        assert!(prompt.contains("[User Instructions]"));
-        assert!(prompt.contains("Base user instructions\n\nRoot instructions\n\nSub instructions\n\nSubsub instructions"));
-    }
-
-    #[test]
-    fn test_cascading_agents_md_truncation() {
-        use std::fs;
-        use tempfile::tempdir;
-
-        let dir = tempdir().unwrap();
-        let root = dir.path();
-        let sub = root.join("sub");
-
-        fs::create_dir_all(&sub).unwrap();
-        // Create an AGENTS.md that is very large to test truncation
-        let large_content = "b".repeat(40000);
-        fs::write(root.join("AGENTS.md"), &large_content).unwrap();
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.workspace_path = Some(root.to_str().unwrap().to_string());
-        cfg.current_dir = Some(sub.to_str().unwrap().to_string());
-        cfg.user_instructions = "Base user".to_string();
-
-        let prompt = build_hierarchical_system_prompt(&cfg);
-        let user_part = prompt.trim_start_matches("[User Instructions]\n");
-
-        // Base user\n\n + large_content will exceed 32768, so it should be truncated to 32768
-        assert_eq!(user_part.len(), 32768);
-        assert!(user_part.starts_with("Base user\n\n"));
     }
 
     #[tokio::test]

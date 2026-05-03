@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
 fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }

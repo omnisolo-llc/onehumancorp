@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::ReleaseNotes { crate::ui_tests::init(); app::ReleaseNotes::new().unwrap() }
 

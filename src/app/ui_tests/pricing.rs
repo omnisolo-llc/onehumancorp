@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create_p() -> app::Pricing { crate::ui_tests::init(); app::Pricing::new().unwrap() }
 fn create_m() -> app::MyPlan { crate::ui_tests::init(); app::MyPlan::new().unwrap() }
