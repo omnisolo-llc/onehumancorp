@@ -804,15 +804,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
+            let handle = ui_weak.clone();
             if let Some(ui) = ui_weak.upgrade() {
-                // Here we would normally call an AI endpoint.
-                // For now, we simulate the extraction as requested by the test and the design doc.
-                ui.set_company_name("AI Generated Store".into());
-                ui.set_business_type("Online Store".into());
-
-                ui.set_admin_email("admin@ai-generated.test".into());
-                ui.set_payment_pref("online".into());
-                ui.set_step(6); // Skip straight to Review & Launch
+                let bio = ui.get_instant_bio().to_string();
+                tokio::spawn(async move {
+                    match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        Ok(mut client) => {
+                            let req = ohc::orchestration::InstantBuildRequest { bio };
+                            let response = client.instant_build(tonic::Request::new(req)).await;
+                            if let Ok(resp) = response {
+                                let result = resp.into_inner();
+                                let cn = result.company_name;
+                                let bt = result.business_type;
+                                let ae = result.admin_email;
+                                let pp = result.payment_pref;
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle.upgrade() {
+                                        ui.set_company_name(cn.into());
+                                        ui.set_business_type(bt.into());
+                                        ui.set_admin_email(ae.into());
+                                        ui.set_payment_pref(pp.into());
+                                        ui.set_step(6); // Skip straight to Review & Launch
+                                    }
+                                }).unwrap();
+                            }
+                        }
+                        Err(e) => println!("Failed to call instant build: {:?}", e),
+                    }
+                });
             }
         }
     });
