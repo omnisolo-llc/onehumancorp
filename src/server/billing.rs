@@ -43,6 +43,18 @@ impl Tracker {
         }
     }
 
+    pub async fn check_storage_quota(&self, tenant_id: &str, storage_used_mb: u32) -> Result<RateLimitStatus, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.record_storage(tenant_id, storage_used_mb).await
+        } else {
+            Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
+        }
+    }
+
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await

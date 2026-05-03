@@ -143,6 +143,39 @@ impl RedisRateLimiter {
             user_message: None,
         })
     }
+
+    pub async fn record_storage(&self, tenant_id: &str, storage_used_mb: u32) -> Result<RateLimitStatus, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let tenant_key = format!("tenant:{}:storage_used_mb", tenant_id);
+
+        let _: () = conn.set(&tenant_key, storage_used_mb).await.map_err(|e| e.to_string())?;
+
+        if let Some(limit) = tier.storage_limit_mb() {
+            if storage_used_mb >= limit {
+                return Ok(RateLimitStatus {
+                    is_allowed: true, // Soft limit - allow but warn
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "You have reached your {} tier limit of {} MB storage. Consider upgrading to keep your business running smoothly!",
+                        match tier {
+                            PlanTier::Free => "Free",
+                            PlanTier::Starter => "Starter",
+                            _ => "Current",
+                        },
+                        limit
+                    )),
+                });
+            }
+        }
+
+        Ok(RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -173,5 +206,16 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(50));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+    }
+
+    #[tokio::test]
+    async fn test_rate_limit_status_struct() {
+        let status = RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: true,
+            user_message: Some("Warning".to_string()),
+        };
+        assert!(status.is_allowed);
+        assert!(status.soft_limit_reached);
     }
 }

@@ -847,6 +847,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         if let Some(ui) = my_plan_handle_select.upgrade() {
             ui.set_tier(format!("{} Tier", plan).into());
+            if plan == "Pro" {
+                ui.set_action_limit("Unlimited".into());
+                ui.set_limit_storage("50.0 GB".into());
+                ui.set_estimated_bill("$99.00".into());
+            } else if plan == "Starter" {
+                ui.set_action_limit("1000".into());
+                ui.set_limit_storage("5.0 GB".into());
+                ui.set_estimated_bill("$29.00".into());
+            } else if plan == "Free" {
+                ui.set_action_limit("100".into());
+                ui.set_limit_storage("500 MB".into());
+                ui.set_estimated_bill("$0.00".into());
+            }
             let _ = ui.show();
         }
     });
@@ -861,6 +874,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
     my_plan_ui.on_view_details(move || {
         if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+            ui.set_total_spend("$45.50".into());
+            ui.set_total_tokens("1,500,000".into());
+            let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiAgentCost {
+                    name: "Customer Support Agent".into(),
+                    cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(), pct: 0.55
+                },
+                app::UiAgentCost {
+                    name: "Marketing Agent".into(),
+                    cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(), pct: 0.45
+                }
+            ]));
+            ui.set_agent_costs(agent_costs);
             let _ = ui.show();
         }
     });
@@ -1001,6 +1027,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = my_plan_handle_clone_billing.upgrade() {
+                        ui.set_tier("Starter Tier".into());
+                        ui.set_total_actions("150".into());
+                        ui.set_action_limit("1000".into());
+                        ui.set_used_storage("150.5 MB".into());
+                        ui.set_limit_storage("5.0 GB".into());
+                        ui.set_estimated_bill("$29.00".into());
                         let _ = ui.show();
                     }
                 });
