@@ -93,8 +93,9 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT id, dependencies FROM shared_tasks_decomposition
-                    WHERE status = 'PENDING'
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
@@ -131,6 +132,7 @@ impl TaskDecompositionService {
                         }
                     }
                     if !is_ready {
+                        tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
                 }
@@ -177,8 +179,14 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT id, dependencies FROM shared_tasks_decomposition
-                    WHERE status = 'PENDING'
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
+                    )
                     LIMIT 1
                     "#
                 )
@@ -212,6 +220,7 @@ impl TaskDecompositionService {
                         }
                     }
                     if !is_ready {
+                        tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
                 }
@@ -325,7 +334,10 @@ impl TaskDecompositionService {
             status: row.get("status"),
             priority: row.get("priority"),
             payload,
-            locked_until: None,
+            locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
             ultraplan_phase: row.get("ultraplan_phase"),
             deliberation_log,
             depth: row.get("depth"),
@@ -335,6 +347,213 @@ impl TaskDecompositionService {
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
+    }
+
+
+
+    pub async fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE id = $1"
+                )
+                .bind(task_id)
+                .fetch_one(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let dt_created: chrono::DateTime<chrono::Utc> = row.get("created_at");
+                let dt_updated: chrono::DateTime<chrono::Utc> = row.get("updated_at");
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: row.get("mission_id"),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies: {
+                        let val: serde_json::Value = row.get("dependencies");
+                        serde_json::from_value(val).unwrap_or_default()
+                    },
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: row.get("priority"),
+                    payload: {
+                        let val: serde_json::Value = row.get("payload");
+                        serde_json::to_string(&val).unwrap_or_else(|_| "{}".to_string())
+                    },
+                    locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: {
+                        let val: serde_json::Value = row.get("deliberation_log");
+                        Some(serde_json::to_string(&val).unwrap_or_else(|_| "[]".to_string()))
+                    },
+                    depth: row.get("depth"),
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: row.get("action_risk"),
+                    approval_status: row.get("approval_status"),
+                    proposed_content: row.get("proposed_content"),
+                })
+            },
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let created_str: String = row.get("created_at");
+                let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                    .unwrap_or_else(|_| Utc::now());
+
+                let updated_str: String = row.get("updated_at");
+                let dt_updated = chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
+                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&chrono::Utc)))
+                    .unwrap_or_else(|_| Utc::now());
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: row.get("mission_id"),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies: {
+                        let val: String = row.get("dependencies");
+                        serde_json::from_str(&val).unwrap_or_default()
+                    },
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: row.get("priority"),
+                    payload: row.get("payload"),
+                    locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: row.get("deliberation_log"),
+                    depth: row.get("depth"),
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: row.get("action_risk"),
+                    approval_status: row.get("approval_status"),
+                    proposed_content: row.get("proposed_content"),
+                })
+            }
+        }
+    }
+
+
+    pub async fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let old_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let old_status = match old_status {
+                    Some(s) => s,
+                    None => return Err("Task not found".to_string())
+                };
+
+                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
+                )
+                .bind(payload_update)
+                .bind(now)
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(task_id)
+                .bind(old_status)
+                .bind("FAILED")
+                .bind(agent_id)
+                .bind(now)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            },
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+                let old_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let old_status = match old_status {
+                    Some(s) => s,
+                    None => return Err("Task not found".to_string())
+                };
+
+                // SQLite json patching
+                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+                sqlx::query(
+                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"
+                )
+                .bind(payload_update)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(task_id)
+                .bind(old_status)
+                .bind("FAILED")
+                .bind(agent_id)
+                .bind(now.to_rfc3339())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }
+        }
     }
 
     pub async fn update_status(&self, id: &str, new_status: &str, agent_id: &str) -> Result<(), String> {

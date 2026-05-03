@@ -149,6 +149,32 @@ impl TaskManager {
     }
 
 
+
+    pub fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
+        let mut tasks = self.tasks.write().unwrap();
+        if let Some(task) = tasks.get_mut(task_id) {
+            if task.assigned_agent_id.as_deref() == Some(agent_id) {
+                task.status = "FAILED".to_string();
+
+                let mut payload_map: serde_json::Value = if task.payload.is_empty() {
+                    serde_json::json!({})
+                } else {
+                    serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({}))
+                };
+
+                payload_map["error"] = serde_json::Value::String(reason.to_string());
+                payload_map["failed_at"] = serde_json::Value::String(Utc::now().to_rfc3339());
+
+                task.payload = payload_map.to_string();
+                task.updated_at = Utc::now();
+                return Ok(());
+            } else {
+                return Err("task not assigned to this agent".to_string());
+            }
+        }
+        Err("task not found".to_string())
+    }
+
     pub fn approve_task(&self, task_id: &str, is_approved: bool) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
@@ -191,7 +217,6 @@ impl TaskManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
     #[test]
     fn test_create_and_get_task() {
         let tm = TaskManager::new();
@@ -203,7 +228,6 @@ mod tests {
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.id, task.id);
     }
-
     #[test]
     fn test_claim_task() {
         let tm = TaskManager::new();
@@ -219,7 +243,6 @@ mod tests {
         let claimed_again = tm.claim_task(&task.id, "agent2".to_string()).unwrap();
         assert!(claimed_again.is_none());
     }
-
     #[test]
     fn test_review_task() {
         let tm = TaskManager::new();
@@ -235,7 +258,22 @@ mod tests {
         // Try to review with wrong agent
         assert!(tm.review_task(&task.id, "agent2").is_err());
     }
+    #[test]
+    fn test_fail_task() {
+        let tm = TaskManager::new();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
 
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
+
+        tm.fail_task(&task.id, "agent1", "Error reason").unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.status, "FAILED");
+
+        let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
+        assert_eq!(payload["error"], "Error reason");
+        assert!(payload["failed_at"].is_string());
+    }
     #[test]
     fn test_complete_task() {
         let tm = TaskManager::new();

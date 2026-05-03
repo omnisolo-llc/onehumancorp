@@ -2,6 +2,7 @@ import { TooltipElement } from "tooltip_element.slint";
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
+import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 
 export struct UiPendingApproval {
@@ -53,6 +54,9 @@ export component Dashboard inherits Window {
     callback action_open_referrals();
     callback action_grow_business();
 
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
 
@@ -60,6 +64,11 @@ export component Dashboard inherits Window {
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        if (show_upgrade_prompt) : UpgradePrompt {
+            message: root.upgrade_prompt_message;
+            action_dismiss => { root.show_upgrade_prompt = false; }
+        }
 
         // Header
         HorizontalBox {
@@ -78,6 +87,11 @@ export component Dashboard inherits Window {
             VerticalBox {
                 padding: 16px;
                 spacing: 8px;
+
+        if (show_upgrade_prompt) : UpgradePrompt {
+            message: root.upgrade_prompt_message;
+            action_dismiss => { root.show_upgrade_prompt = false; }
+        }
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
                 Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
@@ -119,7 +133,8 @@ export component Dashboard inherits Window {
         VerticalBox {
             spacing: 16px;
 
-            if (root.width > 768px) : HorizontalBox {
+            HorizontalBox {
+                visible: root.width > 768px;
                 spacing: 16px;
 
                 GlassCard {
@@ -158,7 +173,8 @@ export component Dashboard inherits Window {
                 }
             }
 
-            if (root.width <= 768px) : VerticalBox {
+            VerticalBox {
+                visible: root.width <= 768px;
                 spacing: 16px;
 
                 GlassCard {
@@ -197,7 +213,8 @@ export component Dashboard inherits Window {
                 }
             }
 
-            if (root.width > 768px) : HorizontalBox {
+            HorizontalBox {
+                visible: root.width > 768px;
                 spacing: 16px;
 
                 GlassCard {
@@ -236,7 +253,8 @@ export component Dashboard inherits Window {
                 }
             }
 
-            if (root.width <= 768px) : VerticalBox {
+            VerticalBox {
+                visible: root.width <= 768px;
                 spacing: 16px;
 
                 GlassCard {
@@ -338,8 +356,8 @@ export component Dashboard inherits Window {
             messages: mesh_messages;
         }
 
-        // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        // My Team
+        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;

@@ -962,7 +962,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     content TEXT NOT NULL,
                     embedding VECTOR(1536),
                     source_type TEXT NOT NULL,
-                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    reference_count INTEGER DEFAULT 0,
+                    reliability_score INTEGER DEFAULT 50,
+                    owner_override BOOLEAN DEFAULT FALSE,
+                    metadata TEXT
                 );"
             )
             .execute(pool)
@@ -1049,8 +1054,25 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
-        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
+        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
+
+        let repo = Arc::new(crate::services::sync::local_repository_impl::PgLocalRepository::new(db.pool.clone()));
+        let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url, db.pool.clone()));
+
+        let cloud_sync_clone = cloud_sync.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
+                    eprintln!("failed to push pending missions: {}", e);
+                }
+                if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
+                    eprintln!("failed to pull mission updates: {}", e);
+                }
+            }
+        });
     }
 
     // Start Scheduler Background Task
@@ -1075,7 +1097,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     from_agent: "system-scheduler".to_string(),
                     to_agent: task.agent_id.clone(),
                     r#type: "task".to_string(),
-                    content: format!("Scheduled Task triggered: {}. Payload: {}", task.name, task.payload),
+                    content: format!("Scheduled Task triggered: {}.", task.name),
                     occurred_at_unix: Utc::now().timestamp(),
                     meeting_id: String::new(),
                 };
@@ -1104,3 +1126,4 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+pub mod tools;
