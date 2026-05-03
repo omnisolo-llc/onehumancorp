@@ -43,6 +43,7 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Write".to_string(),
         description: "Write content to a file. Creates parent directories as needed. Overwrites any existing content.".to_string(),
         is_read_only: false,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {

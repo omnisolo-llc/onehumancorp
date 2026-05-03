@@ -55,6 +55,7 @@ pub fn head_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         name: "Head".to_string(),
         description: "Read the first N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
+        is_subagent: false,
         parameters: json!({
             "type": "object",
             "properties": {
