@@ -15,6 +15,7 @@ export component BusinessShare inherits Window {
     callback copy_link();
     callback share_to_instagram();
     callback share_to_x();
+    callback share_to_whatsapp();
     callback close();
 
     VerticalBox {
@@ -70,6 +71,12 @@ export component BusinessShare inherits Window {
                 text: "🐦 Share to X";
                 height: 48px;
                 clicked => { share_to_x(); }
+            }
+
+            Button {
+                text: "💬 Share to WhatsApp";
+                height: 48px;
+                clicked => { share_to_whatsapp(); }
             }
         }
 

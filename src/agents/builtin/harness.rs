@@ -169,11 +169,12 @@ pub trait HarnessBackend: Send + Sync {
 }
 
 pub struct LocalBackend {
+    validator: Arc<ASTValidator>,
 }
 
 impl LocalBackend {
-    pub fn new() -> Self {
-        LocalBackend { }
+    pub fn new(validator: Arc<ASTValidator>) -> Self {
+        LocalBackend { validator }
     }
 
     pub fn is_bwrap_available(&self) -> bool {
@@ -261,7 +262,7 @@ impl LocalBackend {
 #[async_trait]
 impl HarnessBackend for LocalBackend {
     async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
-        // Validation now happens in Manager::execute_with_policy
+        self.validator.validate(command)?;
 
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
@@ -326,54 +327,27 @@ pub struct Manager {
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
-    init_latency: opentelemetry::metrics::Histogram<f64>,
-    db_io_latency: opentelemetry::metrics::Histogram<f64>,
 }
 
 impl Manager {
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
-        let local_backend = Arc::new(LocalBackend::new());
+        let local_backend = Arc::new(LocalBackend::new(validator.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
-
-        let meter = opentelemetry::global::meter("ohc.harness");
-        let init_latency = meter.f64_histogram("harness_init_latency").build();
-        let db_io_latency = meter.f64_histogram("harness_db_io_latency").build();
-
         Manager {
             config,
             validator,
             local_backend,
             docker_backend,
-            init_latency,
-            db_io_latency,
         }
     }
 
     pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType) -> Result<ResultModel, String> {
-        let deployment_mode = std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string());
-        let mode_label = if deployment_mode == "true" { "standalone" } else { "cloud" };
-
-        let start_init = std::time::Instant::now();
         let policy = policy.unwrap_or(&self.config.default_policy);
-
-        // Validate the command here to account for actual init overhead rather than just unwrap_or
-        let validation_res = self.validator.validate(command);
-        let init_duration = start_init.elapsed().as_secs_f64();
-        self.init_latency.record(init_duration, &[opentelemetry::KeyValue::new("deployment_mode", mode_label)]);
-
-        validation_res?;
-
-        let start_io = std::time::Instant::now();
-        let result = match backend_type {
+        match backend_type {
             BackendType::Local => self.local_backend.execute(command, policy).await,
             BackendType::Docker => self.docker_backend.execute(command, policy).await,
-        };
-        let io_duration = start_io.elapsed().as_secs_f64();
-
-        self.db_io_latency.record(io_duration, &[opentelemetry::KeyValue::new("deployment_mode", mode_label)]);
-
-        result
+        }
     }
 }
 
@@ -469,7 +443,8 @@ mod tests {
 
     #[test]
     fn test_get_bwrap_args() {
-        let runner = LocalBackend::new();
+        let validator = Arc::new(ASTValidator::new());
+        let runner = LocalBackend::new(validator);
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
             read_only_paths: vec!["/etc".to_string()],
@@ -491,7 +466,8 @@ mod tests {
 
     #[test]
     fn test_policy_allow_read_deny_write() {
-        let runner = LocalBackend::new();
+        let validator = Arc::new(ASTValidator::new());
+        let runner = LocalBackend::new(validator);
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
             deny_write: vec!["/tmp/protected".to_string()],
@@ -520,26 +496,5 @@ mod tests {
         let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
         assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
         assert_eq!(docker_res.exit_code, 0);
-    }
-
-    #[tokio::test]
-    async fn test_telemetry_emission() {
-        // We verify telemetry emission via checking that it doesn't panic when we set OHC_STANDALONE.
-        // Opentelemetry API allows registering instruments globally without a provider in testing.
-        unsafe {
-            std::env::set_var("OHC_STANDALONE", "true");
-        }
-        let config = Config::default();
-        let manager = Manager::new(config);
-        let command = "echo telemetry_test";
-
-        let local_res = manager.execute_with_policy(command, None, BackendType::Local).await;
-        assert!(local_res.is_ok());
-
-        unsafe {
-            std::env::set_var("OHC_STANDALONE", "false");
-        }
-        let local_res2 = manager.execute_with_policy(command, None, BackendType::Local).await;
-        assert!(local_res2.is_ok());
     }
 }

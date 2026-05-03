@@ -642,22 +642,6 @@ impl Hub {
             Err(_) => 0,
         };
 
-        let local_to_cloud_sync_errors: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL")
-            .fetch_one(&self.pool)
-            .await
-        {
-            Ok(count) => count,
-            Err(_) => 0,
-        };
-
-        let hybrid_mode_switching_stuck: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
-            .fetch_one(&self.pool)
-            .await
-        {
-            Ok(count) => count,
-            Err(_) => 0,
-        };
-
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -665,8 +649,6 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "mission_sync_backlog": mission_sync_backlog,
-            "local_to_cloud_sync_errors": local_to_cloud_sync_errors,
-            "hybrid_mode_switching_stuck": hybrid_mode_switching_stuck,
         }))
     }
 }
@@ -795,7 +777,5 @@ mod tests {
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("mission_sync_backlog").is_some());
-        assert!(health.get("local_to_cloud_sync_errors").is_some());
-        assert!(health.get("hybrid_mode_switching_stuck").is_some());
     }
 }

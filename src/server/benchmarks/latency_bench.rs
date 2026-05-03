@@ -89,14 +89,19 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let _ = hub.get_agents();
-        let _ = hub.get_meetings();
+        let hub_clone1 = hub.clone();
+        let hub_clone2 = hub.clone();
+
+        let (_, _) = tokio::join!(
+            tokio::task::spawn_blocking(move || { let _ = hub_clone1.get_agents(); }),
+            tokio::task::spawn_blocking(move || { let _ = hub_clone2.get_meetings(); })
+        );
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    println!("Synchronous Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)

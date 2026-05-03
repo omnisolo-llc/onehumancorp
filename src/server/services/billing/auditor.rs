@@ -256,4 +256,43 @@ mod tests {
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
     }
+
+    #[test]
+    fn test_record_cache_hit() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            cost_per_cached_input_token: 0.0005,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let event = AuditEvent {
+            agent_id: "agent1".to_string(),
+            input_tokens: 100,
+            output_tokens: 50,
+            cached_input_tokens: 100,
+            local_embedding_tokens: 0,
+        };
+
+        let savings = auditor.record_cache_hit(event);
+        assert!(savings > 0.0);
+        assert_eq!(auditor.get_total_savings(), savings);
+    }
+
+    #[test]
+    fn test_record_storage_compression() {
+        let config = CostConfig {
+            cost_per_gb_month: 0.1,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let original_bytes = 1024 * 1024 * 1024 * 2; // 2GB
+        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+
+        let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
+        assert_eq!(savings, 0.1);
+        assert_eq!(auditor.get_total_storage_savings(), 0.1);
+    }
 }
