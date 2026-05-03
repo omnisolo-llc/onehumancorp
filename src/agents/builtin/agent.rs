@@ -34,6 +34,7 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
+    pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
@@ -66,6 +67,7 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 0,
             confidence_threshold: 0.0,
+            enable_acon_context_strategy: false,
             enable_observation_masking: true,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
@@ -306,6 +308,25 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
+
+            // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
+            if cfg.enable_acon_context_strategy {
+                let msg_count = final_messages.len();
+                if msg_count > 3 {
+                    // We preserve the last 2 messages (usually assistant + tool results)
+                    // For older Tool role messages, we strip the raw tool output but keep reasoning
+                    let threshold = msg_count - 2;
+                    for i in 0..threshold {
+                        if final_messages[i].role == Role::Tool {
+                            for tr in &mut final_messages[i].tool_results {
+                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
+                                    tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
@@ -953,6 +974,110 @@ mod tests {
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_acon_context_strategy() {
+        struct MockLlmClientAcon {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientAcon {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Turn 1: Return a tool call to generate some history
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "I am thinking about calling a tool.".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_1".to_string(),
+                                name: "read_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 2 {
+                    // Turn 2: Another tool call
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "I need more info.".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_2".to_string(),
+                                name: "read_tool".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 3 {
+                    // Turn 3: Final answer. We check the received messages.
+                    // The history should be: User, Assistant(call1), Tool(result1), Assistant(call2), Tool(result2)
+                    // With ACON enabled, result1 should be stripped. result2 should remain intact since it's in the last 2 messages.
+                    let messages = &req.messages;
+
+                    let mut found_acon = false;
+                    for m in messages {
+                        if m.role == Role::Tool {
+                            for tr in &m.tool_results {
+                                if tr.content.starts_with("[ACON:") {
+                                    found_acon = true;
+                                }
+                            }
+                        }
+                    }
+                    assert!(found_acon, "ACON should have stripped older tool results.");
+
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Extra answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "read_tool".to_string(),
+                description: "read".to_string(),
+                is_read_only: true,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ];
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
+        // Disable other mechanics to isolate the test
+        cfg.enable_observation_masking = false;
+        cfg.enable_context_compaction = false;
+        cfg.enable_lost_in_the_middle_prevention = false;
+
+        let client = Arc::new(MockLlmClientAcon { call_count: Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final answer");
+    }
 
     #[tokio::test]
     async fn test_tool_scoping_lazy_loading() {
