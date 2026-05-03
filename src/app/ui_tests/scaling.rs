@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwrap() }
 

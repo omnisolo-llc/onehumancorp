@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 fn create() -> app::InteractiveWalkthrough { crate::ui_tests::init(); app::InteractiveWalkthrough::new().unwrap() }
 

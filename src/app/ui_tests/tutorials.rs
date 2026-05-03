@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 fn create() -> app::VideoTutorials { crate::ui_tests::init(); app::VideoTutorials::new().unwrap() }
 
