@@ -3,9 +3,11 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
-    width: 400px;
-    height: 600px;
+    preferred-width: 400px;
+    min-width: 375px;
     title: "One Human Corp - Login";
+
+    out property <length> card_width: card.width;
 
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
@@ -29,20 +31,16 @@ export component Login inherits Window {
         spacing: 20px;
         padding: 32px;
 
-        GlassCard {
-            VerticalBox {
-                spacing: 16px;
-                padding: 24px;
+        HorizontalBox {
+            alignment: center;
+            card := GlassCard {
+                width: min(336px, root.width - 64px);
+                VerticalBox {
+                    spacing: 16px;
+                    padding: 24px;
 
-                Text {
-                    text: "✨";
-                    font-size: 64px;
-                    horizontal-alignment: center;
-                    color: #a855f7;
-                }
-
-                Text {
-                    text: "One Human Corp";
+                    Text {
+                        text: "One Human Corp";
                     font-size: 28px;
                     font-weight: 700;
                     horizontal-alignment: center;
@@ -108,9 +106,10 @@ export component Login inherits Window {
                 }
                 
                 Button {
-                    text: "⚙ App Settings";
+                    text: "App Settings";
                     clicked => { open_settings(); }
                 }
+            }
             }
         }
     }

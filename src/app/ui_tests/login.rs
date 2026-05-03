@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() }
 
@@ -145,4 +146,52 @@ fn create_verify_verification_message() {
     assert_eq!(ui.get_verification_message(), "Please enter the 6-digit code sent to your phone.");
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
+}
+
+// --- Responsive Tests ---
+
+#[test]
+fn test_responsive_375px() {
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(375, 800));
+    // Evaluate layout
+    slint::platform::update_timers_and_animations();
+    let w = ui.get_card_width();
+    assert!(w <= 375.0, "Card width {} should be less than or equal to window width 375", w);
+}
+
+#[test]
+fn test_responsive_414px() {
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(414, 896));
+    slint::platform::update_timers_and_animations();
+    let w = ui.get_card_width();
+    assert!(w <= 336.0, "Card width {} should be constrained by min(336px, root.width - 64px) which is 336 at 414px", w);
+}
+
+#[test]
+fn test_responsive_768px() {
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(768, 1024));
+    slint::platform::update_timers_and_animations();
+    let w = ui.get_card_width();
+    assert!(w <= 336.0, "Card width {} should be max 336", w);
+}
+
+#[test]
+fn test_responsive_1024px() {
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(1024, 768));
+    slint::platform::update_timers_and_animations();
+    let w = ui.get_card_width();
+    assert!(w <= 336.0, "Card width {} should be max 336", w);
+}
+
+#[test]
+fn test_responsive_1440px() {
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(1440, 900));
+    slint::platform::update_timers_and_animations();
+    let w = ui.get_card_width();
+    assert!(w <= 336.0, "Card width {} should be max 336", w);
 }
