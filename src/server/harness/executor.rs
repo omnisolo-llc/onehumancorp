@@ -1,5 +1,6 @@
-use super::sandbox::SandboxManager;
+use super::sandbox::manager::{SandboxManager, ShellType};
 use sqlx::PgPool;
+use std::time::Duration;
 
 pub struct LocalShellTask {
     manager: SandboxManager,
@@ -13,16 +14,7 @@ impl LocalShellTask {
     }
 
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
-        let wrapped_cmd = match self.manager.wrap_command(cmd).await {
-            Ok(c) => c,
-            Err(e) => return Err(self.manager.annotate_error(e, String::new())),
-        };
-
-        // In a real execution, we would run `wrapped_cmd` using `tokio::process::Command`
-        // For the scope of this harness executor logic, we just return the wrapped command
-        // or execute it if needed. Let's return the wrapped command as a success placeholder
-        // to show interception logic.
-        Ok(format!("Executing: {}", wrapped_cmd))
+        self.manager.execute(cmd, ShellType::Bash, Duration::from_secs(120)).await
     }
 }
 
@@ -36,7 +28,7 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
+        assert!(msg.contains("hello"));
     }
 
     #[tokio::test]
