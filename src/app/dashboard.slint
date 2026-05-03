@@ -94,7 +94,7 @@ export component Dashboard inherits Window {
         }
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
@@ -246,7 +246,7 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
+                            Text { text: "Active Help"; color: #94a3b8; }
                             Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                         }
                     }
@@ -286,7 +286,7 @@ export component Dashboard inherits Window {
                         height: 100%;
                         VerticalBox {
                             padding: 16px;
-                            Text { text: "Current AI Tasks"; color: #94a3b8; }
+                            Text { text: "Active Help"; color: #94a3b8; }
                             Text { text: tasks_in_progress_count; font-size: 32px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                         }
                     }
