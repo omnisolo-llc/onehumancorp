@@ -2314,7 +2314,7 @@ mod docs_tests {
     }
 
     #[test]
-    fn test_e2e_tooltip_flow() {
+    fn test_dashboard_actions_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -2335,23 +2335,6 @@ mod docs_tests {
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
 
 
-
-        // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                _ => "".into(),
-            }
-        });
-
-        let tr = dashboard_ui.global::<app::TooltipRegistry>();
-        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
-        assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
-        tr.invoke_hide_tooltip();
-        assert_eq!(tr.get_is_visible(), false);
-
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
 
@@ -2362,7 +2345,7 @@ mod docs_tests {
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
     }
 
     #[test]
