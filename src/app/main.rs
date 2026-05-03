@@ -1844,6 +1844,20 @@ mod e2e_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
+        // Step 6: Template -> Step 7
+        ui.invoke_select_template("Classic".into());
+        assert_eq!(ui.get_step(), 7);
+
+        // Step 7: Product -> Step 8
+        ui.set_product_name("My First Product".into());
+        ui.set_product_price("10.0".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 8);
+
+        // Step 8: Domain -> Step 9
+        ui.invoke_select_domain("subdomain".into());
+        assert_eq!(ui.get_step(), 9);
+
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
@@ -1864,7 +1878,7 @@ mod e2e_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(7);
+                u.set_step(10);
             }
         });
 
@@ -1882,7 +1896,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 10);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2270,7 +2284,7 @@ mod docs_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(7);
+                u.set_step(10);
             }
         });
 
@@ -2287,7 +2301,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
 
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 10);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2405,7 +2419,14 @@ mod docs_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
-
+        assert_eq!(ui.get_sell_digital(), false);
+        assert_eq!(ui.get_sell_services(), false);
+        assert_eq!(ui.get_sell_food(), false);
+        assert_eq!(ui.get_sell_subscriptions(), false);
+        assert_eq!(ui.get_website_template(), "Classic");
+        assert_eq!(ui.get_product_name(), "My First Product");
+        assert_eq!(ui.get_product_price(), "10.0");
+        assert_eq!(ui.get_domain_choice(), "subdomain");
     }
 
     #[test]
