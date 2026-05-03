@@ -867,13 +867,6 @@ mod tests {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
-                        Ok(true)
-                    })
-                })
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -1008,13 +1001,6 @@ mod tests {
     async fn test_task_queue_service_fail_task() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
-                        Ok(true)
-                    })
-                })
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -1064,13 +1050,6 @@ mod tests {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
-                        Ok(true)
-                    })
-                })
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
