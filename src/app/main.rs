@@ -166,6 +166,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "add_product" => "Add a new product".into(),
+                                "view_orders" => "View your orders".into(),
+                                "messages" => "View your messages".into(),
+                                "stats" => "View your stats".into(),
+                                "share" => "Share your store".into(),
+                                "grow" => "Grow your business".into(),
+                                "referrals" => "Refer a friend".into(),
                                 _ => "".into(),
                             }
                         });
@@ -203,6 +210,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "ask_ai" => "Ask the AI Assistant".into(),
                                 "menu" => "Open Menu".into(),
                                 "help_center" => "Help Center".into(),
+                                "add_product" => "Add a new product".into(),
+                                "view_orders" => "View your orders".into(),
+                                "messages" => "View your messages".into(),
+                                "stats" => "View your stats".into(),
+                                "share" => "Share your store".into(),
+                                "grow" => "Grow your business".into(),
+                                "referrals" => "Refer a friend".into(),
                                 _ => "".into(),
                             }
                         });
@@ -2682,6 +2696,13 @@ mod docs_tests {
                 "ask_ai" => "Ask the AI Assistant".into(),
                 "menu" => "Open Menu".into(),
                 "help_center" => "Help Center".into(),
+                                "add_product" => "Add a new product".into(),
+                                "view_orders" => "View your orders".into(),
+                                "messages" => "View your messages".into(),
+                                "stats" => "View your stats".into(),
+                                "share" => "Share your store".into(),
+                                "grow" => "Grow your business".into(),
+                                "referrals" => "Refer a friend".into(),
                 _ => "".into(),
             }
         });
