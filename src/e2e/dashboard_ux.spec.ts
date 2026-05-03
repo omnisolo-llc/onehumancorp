@@ -50,11 +50,36 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await questionMarkBtn.click();
   await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
 
-  await expect(page.locator('text=Add Product')).toBeVisible();
-  await expect(page.locator('text=View Orders')).toBeVisible();
-  await expect(page.locator('text=Messages')).toBeVisible();
-  await expect(page.locator('text=Analytics')).toBeVisible();
-  await expect(page.locator('text=Share Store')).toBeVisible();
+  // Verify bottom navigation bar buttons are present
+  const btnAdd = page.locator('button:has-text("Add")');
+  await expect(btnAdd).toBeVisible();
+  const boxAdd = await btnAdd.boundingBox();
+  expect(boxAdd?.height).toBeGreaterThanOrEqual(44);
+  expect(boxAdd?.width).toBeGreaterThanOrEqual(44);
+
+  const btnOrders = page.locator('button:has-text("Orders")');
+  await expect(btnOrders).toBeVisible();
+  const boxOrders = await btnOrders.boundingBox();
+  expect(boxOrders?.height).toBeGreaterThanOrEqual(44);
+  expect(boxOrders?.width).toBeGreaterThanOrEqual(44);
+
+  const btnChat = page.locator('button:has-text("Chat")');
+  await expect(btnChat).toBeVisible();
+  const boxChat = await btnChat.boundingBox();
+  expect(boxChat?.height).toBeGreaterThanOrEqual(44);
+  expect(boxChat?.width).toBeGreaterThanOrEqual(44);
+
+  const btnStats = page.locator('button:has-text("Stats")');
+  await expect(btnStats).toBeVisible();
+  const boxStats = await btnStats.boundingBox();
+  expect(boxStats?.height).toBeGreaterThanOrEqual(44);
+  expect(boxStats?.width).toBeGreaterThanOrEqual(44);
+
+  const btnShare = page.locator('button:has-text("Share")');
+  await expect(btnShare).toBeVisible();
+  const boxShare = await btnShare.boundingBox();
+  expect(boxShare?.height).toBeGreaterThanOrEqual(44);
+  expect(boxShare?.width).toBeGreaterThanOrEqual(44);
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {

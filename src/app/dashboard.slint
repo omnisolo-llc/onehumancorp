@@ -306,19 +306,8 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                TooltipElement { tooltip_id: "add_product"; Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); } } }
-                TooltipElement { tooltip_id: "view_orders"; Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } } }
-                TooltipElement { tooltip_id: "messages"; Button { text: "Messages"; height: 44px; clicked => { action_check_messages(); } } }
-            }
-            HorizontalBox {
-                spacing: 8px;
-                Button { text: "Analytics"; height: 44px; clicked => { action_see_analytics(); } }
-                Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
-                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
-            }
-            HorizontalBox {
-                spacing: 8px;
                 Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } }
+                Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } }
             }
         }
         if (pending_approvals.length > 0) : VerticalBox {
@@ -380,10 +369,54 @@ export component Dashboard inherits Window {
     }
 }
 
+        // Floating Bottom Navigation Bar
+    Rectangle {
+        y: parent.height - 80px;
+        x: 0;
+        width: parent.width;
+        height: 80px;
+        background: #1e293b.transparentize(20%); // Glassmorphism backdrop
+
+        HorizontalBox {
+            alignment: center;
+            spacing: 4px;
+
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "add_product";
+                    Button { text: "Add"; width: 64px; height: 44px; clicked => { action_add_product(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "view_orders";
+                    Button { text: "Orders"; width: 64px; height: 44px; clicked => { action_view_orders(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "messages";
+                    Button { text: "Chat"; width: 64px; height: 44px; clicked => { action_check_messages(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                Button { text: "Stats"; width: 64px; height: 44px; clicked => { action_see_analytics(); } }
+            }
+            VerticalBox {
+                alignment: center;
+                Button { text: "Share"; width: 64px; height: 44px; clicked => { action_share_store(); } }
+            }
+        }
+    }
+
     // Floating Help & Chat Buttons
     Rectangle {
         x: parent.width - 130px;
-        y: parent.height - 80px;
+        y: parent.height - 160px;
         width: 120px;
         height: 60px;
 
