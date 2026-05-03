@@ -33,7 +33,7 @@ export component AgentConfig inherits Window {
             Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             CheckBox {
-                text: "Advanced mode";
+                text: "Pro mode";
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; save_state(); }
             }
@@ -43,7 +43,7 @@ export component AgentConfig inherits Window {
         if (step == 0) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Advanced: API Key Overrides"; font-family: "Inter"; font-size: 14px; color: #1e293b; }
+                Text { text: "Connect my Instagram"; font-family: "Inter"; font-size: 14px; color: #1e293b; }
                 LineEdit { placeholder-text: "sk-proj-..."; }
             }
             spacing: 10px;

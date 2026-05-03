@@ -147,19 +147,15 @@ impl ASTValidator {
 
     pub fn validate(&self, command: &str) -> Result<(), String> {
         if command.contains("sudo") {
-            crate::telemetry::increment_harness_violations();
             return Err("sudo is not allowed".to_string());
         }
         if command.contains("zmodload") {
-            crate::telemetry::increment_harness_violations();
             return Err("zmodload is not allowed".to_string());
         }
         if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
-            crate::telemetry::increment_harness_violations();
             return Err("subshells and redirections are not allowed in stub".to_string());
         }
         if command.contains("IFS") {
-            crate::telemetry::increment_harness_violations();
             return Err("IFS injection is not allowed".to_string());
         }
         // TODO: use tree-sitter for full AST validation
@@ -268,20 +264,14 @@ impl HarnessBackend for LocalBackend {
     async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
         self.validator.validate(command)?;
 
-        crate::telemetry::increment_harness_tool_invocations();
-        let start_time = std::time::Instant::now();
-
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
 
-            let output_result = tokio::process::Command::new("bwrap")
+            let output = tokio::process::Command::new("bwrap")
                 .args(&args)
                 .output()
-                .await;
-
-            crate::telemetry::record_harness_execution_duration(start_time.elapsed().as_secs_f64());
-
-            let output = output_result.map_err(|e| format!("failed to execute bwrap: {}", e))?;
+                .await
+                .map_err(|e| format!("failed to execute bwrap: {}", e))?;
 
             Ok(ResultModel {
                 stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -289,7 +279,6 @@ impl HarnessBackend for LocalBackend {
                 exit_code: output.status.code().unwrap_or(-1),
             })
         } else {
-            crate::telemetry::record_harness_execution_duration(start_time.elapsed().as_secs_f64());
             // Fallback for non-Linux or systems without bwrap
             Ok(ResultModel {
                 stdout: format!("Simulated output for: {}", command),
@@ -450,21 +439,6 @@ mod tests {
         
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
-    }
-
-    #[tokio::test]
-    async fn test_harness_telemetry_functions_called() {
-        let validator = Arc::new(ASTValidator::new());
-        let runner = LocalBackend::new(validator);
-        let policy = Policy::default();
-
-        // This will call `increment_harness_tool_invocations` and `record_harness_execution_duration`
-        let _ = runner.execute("ls", &policy).await;
-
-        // This will call `increment_harness_violations`
-        let _ = runner.execute("sudo ls", &policy).await;
-
-        // We just ensure they don't panic.
     }
 
     #[test]

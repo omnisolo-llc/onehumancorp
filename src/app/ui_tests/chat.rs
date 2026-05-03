@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::Chat { crate::ui_tests::init(); app::Chat::new().unwrap() }
 

@@ -1,12 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
-### Cloud Scaling Improvements
-- feat: Add Mode-Specific Prometheus Metrics to Hybrid Sync Daemon (#9524)
-
-### Privacy/Offline Improvements
-- feat: Add Mode-Specific Prometheus Metrics to Hybrid Sync Daemon (#9524)
-
 ## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
 ### UI & UX Improvements
 - Fix onboarding confetti state transition and wire checklist navigation (#9418)

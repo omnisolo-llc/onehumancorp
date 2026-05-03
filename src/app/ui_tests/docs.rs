@@ -1,5 +1,5 @@
 use crate::app;
-
+use slint::ComponentHandle;
 
 fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwrap() }
 
