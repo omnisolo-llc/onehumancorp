@@ -68,18 +68,9 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let hub_clone1 = self.hub.clone();
-        let hub_clone2 = self.hub.clone();
-        let hub_clone3 = self.hub.clone();
-
-        let (agents, meetings, summary) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
-            tokio::task::spawn_blocking(move || { hub_clone3.tracker().summary("system") })
-        );
-        let agents = agents.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let meetings = meetings.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let summary = summary.unwrap_or_else(|_| Default::default());
+        let agents = self.hub.get_agents();
+        let meetings = self.hub.get_meetings();
+        let summary = self.hub.tracker().summary("system");
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
