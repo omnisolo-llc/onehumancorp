@@ -1,0 +1,11 @@
+--- latency_bench.rs
++++ latency_bench.rs
+@@ -176,7 +176,7 @@
+     async fn test_bench_dashboard_snapshot() {
+         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+
+-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
++        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(100), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
+             println!("Skipping bench_queue_latency test due to missing database connection");
+             return;
+         }

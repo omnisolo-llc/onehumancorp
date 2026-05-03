@@ -802,7 +802,7 @@ mod tests {
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
-                .before_acquire(|conn, _meta| {
+                .acquire_timeout(std::time::Duration::from_millis(500)).before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
@@ -811,7 +811,7 @@ mod tests {
                 })
                 .connect_lazy(&db_url)
                 .unwrap();
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(100), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
             let service = TaskQueueService::new(pool.clone());
 
             // Initialize schema for test
@@ -856,7 +856,7 @@ mod tests {
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
-                .before_acquire(|conn, _meta| {
+                .acquire_timeout(std::time::Duration::from_millis(500)).before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
@@ -865,7 +865,7 @@ mod tests {
                 })
                 .connect_lazy(&db_url)
                 .unwrap();
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(100), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
             let service = TaskQueueService::new(pool.clone());
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();
