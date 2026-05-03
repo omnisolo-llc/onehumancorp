@@ -7,6 +7,7 @@ export component ReleaseNotes inherits Window {
     background: #f8fafc;
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
+    callback open_changelog();
 
     VerticalBox {
         padding: 16px;
@@ -17,6 +18,15 @@ export component ReleaseNotes inherits Window {
             font-size: 24px;
             font-weight: 700;
             color: #0f172a;
+        }
+
+        Text {
+            text: "Link to the full changelog on the website →";
+            color: #3b82f6;
+            font-size: 14px;
+            TouchArea {
+                clicked => { root.open_changelog(); }
+            }
         }
 
         ScrollView {

@@ -14,6 +14,7 @@ export component HelpCenter inherits Window {
 
     in-out property <string> search_query: "";
     callback execute_search();
+    callback open_article();
 
     changed search_query => { root.execute_search(); }
 
@@ -56,6 +57,14 @@ export component HelpCenter inherits Window {
                             padding: 12px;
                             Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
                             Text { text: article.description; color: #64748b; wrap: word-wrap; }
+                            Text {
+                                text: "Read the full article →";
+                                color: #3b82f6;
+                                font-size: 14px;
+                                TouchArea {
+                                    clicked => { root.open_article(); }
+                                }
+                            }
                         }
                     }
                 }

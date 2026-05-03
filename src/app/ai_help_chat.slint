@@ -8,6 +8,7 @@ export component AiHelpChat inherits Window {
 
     in-out property <string> user_input: "";
     callback send_message();
+    callback open_article();
 
     VerticalBox {
         padding: 16px;
@@ -22,6 +23,15 @@ export component AiHelpChat inherits Window {
                     text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
                     color: #0f172a;
                     wrap: word-wrap;
+                }
+
+                Text {
+                    text: "Read the full article →";
+                    color: #3b82f6;
+                    font-size: 14px;
+                    TouchArea {
+                        clicked => { root.open_article(); }
+                    }
                 }
             }
         }

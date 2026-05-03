@@ -1034,7 +1034,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let help_center_handle = help_center_ui.as_weak();
+                                let help_center_handle = help_center_ui.as_weak();
+                help_center_ui.on_open_article(move || {
+                    let _ = Ok::<(), ()>(());
+                });
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
@@ -1057,7 +1060,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(api_docs_ui));
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
-                let release_notes_handle = release_notes_ui.as_weak();
+                                let release_notes_handle = release_notes_ui.as_weak();
+                release_notes_ui.on_open_changelog(move || {
+                    let _ = Ok::<(), ()>(());
+                });
                 Box::leak(Box::new(release_notes_ui));
 
                 ai_chat_ui.on_send_message({
@@ -1070,6 +1076,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // In a real implementation this would query the backend
                         }
                     }
+                });
+                ai_chat_ui.on_open_article(move || {
+                    let _ = Ok::<(), ()>(());
                 });
                 Box::leak(Box::new(ai_chat_ui));
 
@@ -2602,8 +2611,26 @@ mod docs_tests {
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
 
+        let article_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let article_opened_clone = article_opened.clone();
+        ai_chat.on_open_article(move || { *article_opened_clone.borrow_mut() = true; });
+        ai_chat.invoke_open_article();
+        assert!(*article_opened.borrow(), "AI Chat open_article should be called via the button");
+
         let help_center = app::HelpCenter::new().unwrap();
         assert_eq!(help_center.get_search_query(), "");
+        let hc_article_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let hc_article_opened_clone = hc_article_opened.clone();
+        help_center.on_open_article(move || { *hc_article_opened_clone.borrow_mut() = true; });
+        help_center.invoke_open_article();
+        assert!(*hc_article_opened.borrow(), "Help Center open_article should be called via the button");
+
+        let release_notes = app::ReleaseNotes::new().unwrap();
+        let rn_changelog_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let rn_changelog_opened_clone = rn_changelog_opened.clone();
+        release_notes.on_open_changelog(move || { *rn_changelog_opened_clone.borrow_mut() = true; });
+        release_notes.invoke_open_changelog();
+        assert!(*rn_changelog_opened.borrow(), "Release Notes open_changelog should be called via the button");
     }
 
 
@@ -2643,6 +2670,12 @@ mod docs_tests {
         ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+
+        let article_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let article_opened_clone = article_opened.clone();
+        ai_chat.on_open_article(move || { *article_opened_clone.borrow_mut() = true; });
+        ai_chat.invoke_open_article();
+        assert!(*article_opened.borrow(), "AI Chat open_article should be called via the button");
     }
 
     #[test]
