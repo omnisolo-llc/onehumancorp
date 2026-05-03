@@ -7,7 +7,8 @@ export component AiHelpChat inherits Window {
     background: white;
 
     in-out property <string> user_input: "";
-    callback send_message();
+    in property <[string]> messages;
+    callback send_message(string);
 
     VerticalBox {
         padding: 16px;
@@ -27,7 +28,23 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 8px;
+                for msg in messages : Rectangle {
+                    background: #f8fafc;
+                    border-radius: 8px;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text {
+                            text: msg;
+                            color: #334155;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
         }
 
         HorizontalBox {
@@ -38,7 +55,12 @@ export component AiHelpChat inherits Window {
             }
             Button {
                 text: "Send";
-                clicked => { send_message(); }
+                clicked => {
+                    if (user_input != "") {
+                        send_message(user_input);
+                        user_input = "";
+                    }
+                }
             }
         }
     }
