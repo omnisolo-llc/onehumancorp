@@ -210,27 +210,33 @@ test.describe('Onboarding Welcome Checklist', () => {
     await expect(page.locator('text=/congratulations|complete|awesome/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
   });
 
-  test('should link to documentation', async ({ page }) => {
+  test('should link to documentation', async ({ page, context }) => {
     await page.goto('/welcome-checklist');
-    const docLink = page.locator('a:has-text("Documentation"), a:has-text("Docs")').first();
-    if (await docLink.isVisible()) {
-      await docLink.click();
-      await expect(page.locator('text=/docs|documentation/i')).toBeVisible();
-    }
+    const docLink = page.locator('text=/Documentation/i').first();
+
+    const pagePromise = context.waitForEvent('page');
+    await docLink.click();
+    const newPage = await pagePromise;
+    await expect(newPage).toHaveURL(/docs\.ohc\.app/);
   });
 
-  test('should link to video tutorials', async ({ page }) => {
+  test('should link to video tutorials', async ({ page, context }) => {
     await page.goto('/welcome-checklist');
-    const videoLink = page.locator('a:has-text("Video"), a:has-text("Tutorial")').first();
-    if (await videoLink.isVisible()) {
-      await videoLink.click();
-      await expect(page.locator('text=/video|tutorial/i')).toBeVisible();
-    }
+    const videoLink = page.locator('text=/Video|Tutorial/i').first();
+
+    const pagePromise = context.waitForEvent('page');
+    await videoLink.click();
+    const newPage = await pagePromise;
+    await expect(newPage).toHaveURL(/docs\.ohc\.app\/tutorials/);
   });
 
-  test('should offer to contact support', async ({ page }) => {
+  test('should offer to contact support', async ({ page, context }) => {
     await page.goto('/welcome-checklist');
     const supportLink = page.locator('text=/support|help|contact/i').first();
-    await expect(supportLink).toBeVisible();
+
+    const pagePromise = context.waitForEvent('page');
+    await supportLink.click();
+    const newPage = await pagePromise;
+    await expect(newPage).toHaveURL(/support\.ohc\.app/);
   });
 });

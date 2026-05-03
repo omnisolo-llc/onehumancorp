@@ -1,17 +1,24 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
     width: 600px;
-    height: 400px;
+    height: 600px;
     title: "Welcome Checklist";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in-out property <bool> item1_checked: true;
+    in-out property <bool> item2_checked: false;
+    in-out property <bool> item3_checked: false;
+    in-out property <bool> item4_checked: false;
+    property <int> completed_count: (item1_checked ? 1 : 0) + (item2_checked ? 1 : 0) + (item3_checked ? 1 : 0) + (item4_checked ? 1 : 0);
 
     callback go_to_dashboard();
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback open_link(string);
 
     VerticalBox {
         alignment: center;
@@ -33,39 +40,61 @@ export component WelcomeChecklist inherits Window {
                 }
 
                 HorizontalBox {
+                    alignment: space-between;
+                    Text { text: "Progress: " + completed_count + " of 4 (" + (completed_count * 25) + "%)"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
+                }
+
+                HorizontalBox {
                     spacing: 10px;
-                    Text { text: "✓"; color: #10b981; }
-                    Text { text: "Business live"; color: white; font-family: "Inter"; }
+                    alignment: space-between;
+                    CheckBox { checked <=> item1_checked; text: "Business live"; }
+                    Rectangle { width: 44px; } // spacer
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    alignment: space-between;
+                    CheckBox { checked <=> item2_checked; text: "Add 3 more products"; }
                     TouchArea {
-                        width: 100%;
-                        height: 100%;
+                        width: 44px; height: 32px;
                         clicked => { root.go_to_add_products(); }
-                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                        Text { text: "→ Go"; color: #a855f7; font-family: "Inter"; horizontal-alignment: center; vertical-alignment: center; }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    alignment: space-between;
+                    CheckBox { checked <=> item3_checked; text: "Connect Instagram"; }
                     TouchArea {
-                        width: 100%;
-                        height: 100%;
+                        width: 44px; height: 32px;
                         clicked => { root.go_to_connect_instagram(); }
-                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                        Text { text: "→ Go"; color: #a855f7; font-family: "Inter"; horizontal-alignment: center; vertical-alignment: center; }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
-                    Text { text: "○"; color: white; }
+                    alignment: space-between;
+                    CheckBox { checked <=> item4_checked; text: "Share your link with a friend"; }
                     TouchArea {
-                        width: 100%;
-                        height: 100%;
+                        width: 44px; height: 32px;
                         clicked => { root.go_to_share_link(); }
-                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                        Text { text: "→ Go"; color: #a855f7; font-family: "Inter"; horizontal-alignment: center; vertical-alignment: center; }
                     }
+                }
+
+                if (completed_count == 4) : Text {
+                    text: "Congratulations! You're all set up. Awesome job!";
+                    font-size: 18px;
+                    color: #10b981;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalBox {
+                    spacing: 16px;
+                    alignment: center;
+                    TouchArea { clicked => { open_link("https://docs.ohc.app"); } Text { text: "Documentation"; color: #a855f7; font-family: "Inter"; } }
+                    TouchArea { clicked => { open_link("https://docs.ohc.app/tutorials"); } Text { text: "Video Tutorials"; color: #a855f7; font-family: "Inter"; } }
+                    TouchArea { clicked => { open_link("https://support.ohc.app"); } Text { text: "Contact Support"; color: #a855f7; font-family: "Inter"; } }
                 }
 
                 Button {

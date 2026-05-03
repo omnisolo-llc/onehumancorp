@@ -885,6 +885,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    welcome_checklist_ui.on_open_link(|url| {
+        println!("Opening URL: {}", url);
+        #[cfg(target_os = "linux")]
+        let _ = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
+        #[cfg(target_os = "windows")]
+        let _ = std::process::Command::new("cmd").args(&["/C", "start", url.as_str()]).spawn();
+        #[cfg(target_os = "macos")]
+        let _ = std::process::Command::new("open").arg(url.as_str()).spawn();
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window.open_with_url_and_target(url.as_str(), "_blank");
+            }
+        }
+    });
+
     welcome_checklist_ui.on_go_to_dashboard({
         let handle = welcome_checklist_handle.clone();
         move || {
