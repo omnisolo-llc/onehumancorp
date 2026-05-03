@@ -1340,10 +1340,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -3618,6 +3618,16 @@ mod remaining_e2e_tests {
         assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
 
         let my_plan_ui = app::MyPlan::new().unwrap();
+
+        let view_details_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_details_opened_clone = view_details_opened.clone();
+        my_plan_ui.on_view_details(move || {
+            *view_details_opened_clone.borrow_mut() = true;
+        });
+
+        my_plan_ui.invoke_view_details();
+        assert!(*view_details_opened.borrow(), "View Cost Details should be opened from MyPlan");
+
         let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let upgrade_opened_clone = upgrade_opened.clone();
         my_plan_ui.on_upgrade(move || {
