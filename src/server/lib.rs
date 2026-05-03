@@ -1054,8 +1054,25 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
-        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
+        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
+
+        let repo = Arc::new(crate::services::sync::local_repository_impl::PgLocalRepository::new(db.pool.clone()));
+        let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url, db.pool.clone()));
+
+        let cloud_sync_clone = cloud_sync.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
+                    eprintln!("failed to push pending missions: {}", e);
+                }
+                if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
+                    eprintln!("failed to pull mission updates: {}", e);
+                }
+            }
+        });
     }
 
     // Start Scheduler Background Task
