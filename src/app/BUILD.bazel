@@ -60,7 +60,6 @@ cargo_build_script(
         "vector_memory_visualizer.slint",
         "video_tutorials.slint",
         "website_builder.slint",
-        "welcome_checklist.slint",
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -131,7 +130,6 @@ rust_binary(
         "vector_memory_visualizer.slint",
         "video_tutorials.slint",
         "website_builder.slint",
-        "welcome_checklist.slint",
     ],
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -218,7 +216,6 @@ rust_test(
         "vector_memory_visualizer.slint",
         "video_tutorials.slint",
         "website_builder.slint",
-        "welcome_checklist.slint",
     ],
     edition = "2024",
     deps = [

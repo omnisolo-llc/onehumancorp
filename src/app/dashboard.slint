@@ -52,6 +52,17 @@ export component Dashboard inherits Window {
     callback action_share_store();
     callback action_open_referrals();
 
+    in-out property <bool> show_welcome_checklist: false;
+    in-out property <bool> wc_business_live: true;
+    in-out property <bool> wc_added_products: false;
+    in-out property <bool> wc_connected_instagram: false;
+    in-out property <bool> wc_shared_link: false;
+
+    callback checklist_add_products();
+    callback checklist_connect_instagram();
+    callback checklist_share_link();
+    callback checklist_dismiss();
+
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
 
@@ -83,6 +94,56 @@ export component Dashboard inherits Window {
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+            }
+        }
+
+        if (show_welcome_checklist) : GlassCard {
+            border-color: #a855f7;
+            border-width: 1px;
+            background: rgba(168, 85, 247, 0.1);
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+
+                HorizontalBox {
+                    Text { text: "You're set up! Here's what to do next:"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; wrap: word-wrap; }
+                    Rectangle {}
+                    Button { text: "X"; width: 44px; height: 44px; clicked => { show_welcome_checklist = false; checklist_dismiss(); } }
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: wc_business_live ? "✓" : "○"; color: wc_business_live ? #10b981 : white; font-size: 16px; }
+                    Text { text: "Business live"; color: white; font-family: "Inter"; font-size: 16px; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: wc_added_products ? "✓" : "○"; color: wc_added_products ? #10b981 : white; font-size: 16px; }
+                    TouchArea {
+                        width: 100%; height: 100%;
+                        clicked => { checklist_add_products(); }
+                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                    }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: wc_connected_instagram ? "✓" : "○"; color: wc_connected_instagram ? #10b981 : white; font-size: 16px; }
+                    TouchArea {
+                        width: 100%; height: 100%;
+                        clicked => { checklist_connect_instagram(); }
+                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                    }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: wc_shared_link ? "✓" : "○"; color: wc_shared_link ? #10b981 : white; font-size: 16px; }
+                    TouchArea {
+                        width: 100%; height: 100%;
+                        clicked => { checklist_share_link(); }
+                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                    }
+                }
             }
         }
 

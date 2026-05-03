@@ -533,6 +533,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
             }
+        }
+    });
 
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();
@@ -675,6 +677,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                dashboard.on_checklist_add_products({
+                    let dashboard_handle_clone = dashboard_handle.clone();
+                    move || {
+                        if let Some(ui) = dashboard_handle_clone.upgrade() {
+                            ui.invoke_action_add_product();
+                        }
+                    }
+                });
+
+                dashboard.on_checklist_connect_instagram({
+                    move || {
+                        // Normally would trigger an integration connection flow
+                        println!("checklist_connect_instagram triggered");
+                    }
+                });
+
+                dashboard.on_checklist_share_link({
+                    let dashboard_handle_clone = dashboard_handle.clone();
+                    move || {
+                        if let Some(ui) = dashboard_handle_clone.upgrade() {
+                            ui.invoke_action_share_store();
+                        }
+                    }
+                });
+
+                dashboard.on_checklist_dismiss({
+                    let dashboard_handle_clone = dashboard_handle.clone();
+                    move || {
+                        if let Some(ui) = dashboard_handle_clone.upgrade() {
+                            ui.set_show_welcome_checklist(false);
+                        }
+                    }
+                });
 
                 let my_plan_handle_clone = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
@@ -682,72 +717,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                dashboard.set_show_welcome_checklist(true);
+
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
                 Box::leak(Box::new(my_plan_ui));
                 Box::leak(Box::new(pricing_ui));
             }
-        }
-    });
 
-    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
-    let _ = welcome_checklist_ui.hide();
-
-    welcome_checklist_ui.on_go_to_add_products({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // In a real flow, this might jump to a specific product adding UI
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_connect_instagram({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // Similarly, jump to integrations or marketing
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_share_link({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(referrals) = app::Referrals::new() {
-                referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_dashboard({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
 
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
@@ -1331,41 +1310,6 @@ mod e2e_tests {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_welcome_checklist_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_welcome_checklist_creation because no display server is available.");
-            return;
-        }
-        let ui = app::WelcomeChecklist::new().unwrap();
-
-        let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_products_clone = add_products_clicked.clone();
-        ui.on_go_to_add_products(move || {
-            *add_products_clone.borrow_mut() = true;
-        });
-
-        let connect_instagram_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let connect_instagram_clone = connect_instagram_clicked.clone();
-        ui.on_go_to_connect_instagram(move || {
-            *connect_instagram_clone.borrow_mut() = true;
-        });
-
-        let share_link_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_link_clone = share_link_clicked.clone();
-        ui.on_go_to_share_link(move || {
-            *share_link_clone.borrow_mut() = true;
-        });
-
-        ui.invoke_go_to_add_products();
-        assert!(*add_products_clicked.borrow(), "Add products callback should be triggered");
-
-        ui.invoke_go_to_connect_instagram();
-        assert!(*connect_instagram_clicked.borrow(), "Connect instagram callback should be triggered");
-
-        ui.invoke_go_to_share_link();
-        assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
-    }
 
     #[test]
     fn test_login_creation() {
