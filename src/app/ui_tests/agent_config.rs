@@ -1,5 +1,5 @@
 use crate::app;
-use slint::ComponentHandle;
+
 
 fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new().unwrap() }
 
