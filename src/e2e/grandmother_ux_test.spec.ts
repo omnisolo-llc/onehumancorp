@@ -4,7 +4,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
   test('Login screen shows plain language App Settings button', async ({ page }) => {
     await page.goto('/login');
     await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
-    await expect(page.locator('button:has-text("⚙ Fix Login Issues")')).toBeVisible();
+    await expect(page.locator('button:has-text("App Settings")')).toBeVisible();
   });
 
   test('Integrations screen uses plain language for external tools', async ({ page }) => {
