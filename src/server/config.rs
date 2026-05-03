@@ -112,6 +112,24 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
     };
     cfg.database_url = Some(sqlite_url);
+
+    // Set proper file permissions for local storage wrapper in standalone mode atomically
+    #[cfg(unix)]
+    {
+        use std::fs::OpenOptions;
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let db_path = "ohc-standalone.db";
+        if let Err(e) = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .mode(0o600)
+            .open(db_path)
+        {
+            eprintln!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+        }
+    }
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
