@@ -30,5 +30,7 @@ rust_library(
         "@crates//:base64",
         "@crates//:dashmap",
         "@crates//:tempfile",
+        "@crates//:image",
+        "@crates//:webp",
     ],
 )

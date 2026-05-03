@@ -67,7 +67,7 @@ impl Hub {
             pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
-            tracker: Tracker::new(),
+            tracker: Tracker::new_with_redis(&std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
@@ -457,6 +457,25 @@ impl Hub {
     }
 
     pub fn log_event(&self, event: serde_json::Value) {
+        if let Some(event_type) = event["type"].as_str() {
+            if event_type == "LLMResponse" {
+                if let (Some(tenant_id), Some(model), Some(tokens)) = (
+                    event["organization_id"].as_str().or(event["tenant_id"].as_str()),
+                    event["model"].as_str(),
+                    event["usage"]["total_tokens"].as_u64()
+                ) {
+                    self.tracker.metrics.record_llm_tokens(tenant_id, model, tokens);
+                }
+            } else if event_type == "StorageWrite" {
+                if let (Some(tenant_id), Some(bytes)) = (
+                    event["organization_id"].as_str().or(event["tenant_id"].as_str()),
+                    event["bytes"].as_u64()
+                ) {
+                    self.tracker.metrics.record_storage_bytes(tenant_id, bytes);
+                }
+            }
+        }
+
         let _ = self.event_log_tx.try_send(event);
     }
 

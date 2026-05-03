@@ -67,3 +67,42 @@ pub fn minify_json_prompt(data: &str) -> String {
     }
     data.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_compression() {
+        let original = "Hello World! This is a test string to be compressed.";
+        let compressed = compress_lossless(original).unwrap();
+        assert!(compressed.starts_with(COMPRESSION_PREFIX));
+        assert_eq!(original, decompress_lossless(&compressed).unwrap());
+    }
+
+    #[test]
+    fn test_decompress_uncompressed() {
+        let original = "Just a normal string";
+        assert_eq!(original, decompress_lossless(original).unwrap());
+    }
+
+    #[test]
+    fn test_reduce_tokens() {
+        let input = "The quick brown fox is jumping";
+        assert_eq!(reduce_tokens(input), "quick brown fox jumping");
+    }
+
+    #[test]
+    fn test_truncate_by_word_count() {
+        let input = "One two three four five";
+        assert_eq!(truncate_by_word_count(input, 3), "One two three");
+        assert_eq!(truncate_by_word_count(input, 10), input);
+        assert_eq!(truncate_by_word_count(input, 0), "");
+    }
+
+    #[test]
+    fn test_minify_json_prompt() {
+        let input = r#"{"key": "value"}"#;
+        assert_eq!(minify_json_prompt(input), r#"{"key":"value"}"#);
+        assert_eq!(minify_json_prompt("invalid"), "invalid");
+    }
+}

@@ -30,11 +30,18 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, _customer_id: &str) -> Result<String, String> {
+    pub async fn create_checkout_session(
+        &self,
+        _price_id: &str,
+        _customer_id: &str,
+    ) -> Result<String, String> {
         Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
     }
 
-    pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn get_subscription(
+        &self,
+        _subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "active".to_string(),
@@ -43,21 +50,40 @@ impl StripeClient {
     }
 
     pub async fn list_invoices(&self, _customer_id: &str) -> Result<Vec<StripeInvoice>, String> {
-        Ok(vec![
-            StripeInvoice {
-                id: "in_test_...".to_string(),
-                amount_due: 2900,
-                status: "paid".to_string(),
-                invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
-            }
-        ])
+        Ok(vec![StripeInvoice {
+            id: "in_test_...".to_string(),
+            amount_due: 2900,
+            status: "paid".to_string(),
+            invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
+        }])
     }
 
-    pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn cancel_subscription(
+        &self,
+        _subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "canceled".to_string(),
             current_period_end: 1714560000,
         })
+    }
+
+    pub async fn create_payment_intent(
+        &self,
+        amount: i64,
+        currency: &str,
+        customer_id: &str,
+    ) -> Result<String, String> {
+        // Optimization: Use ACH (us_bank_account) for transactions >= $1,000 (100000 cents) to minimize fees.
+        // For smaller amounts, use standard cards.
+        let payment_method_types = if amount >= 100_000 {
+            vec!["us_bank_account".to_string(), "card".to_string()]
+        } else {
+            vec!["card".to_string()]
+        };
+
+        // Mock returning a client secret
+        Ok(format!("pi_test_{}_secret_...", amount))
     }
 }

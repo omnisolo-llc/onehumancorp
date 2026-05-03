@@ -5,16 +5,18 @@ use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
 use std::sync::Arc;
+use crate::pricing::metrics::PricingMetrics;
 
 #[derive(Clone)]
 pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
     pub stripe_client: Option<Arc<StripeClient>>,
+    pub metrics: Arc<PricingMetrics>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None }
+        Tracker { rate_limiter: None, stripe_client: None, metrics: Arc::new(PricingMetrics::new()) }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -25,9 +27,10 @@ impl Tracker {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
                 stripe_client,
+                metrics: Arc::new(PricingMetrics::new()),
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client }
+            Tracker { rate_limiter: None, stripe_client, metrics: Arc::new(PricingMetrics::new()) }
         }
     }
 
