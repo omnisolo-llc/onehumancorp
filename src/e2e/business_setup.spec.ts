@@ -217,6 +217,57 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await expect(page.locator('text="Launch My Business →"')).toBeVisible();
   });
+
+  test('should show welcome checklist after successful launch', async ({ page }) => {
+    await page.click('text=Guided Setup →');
+    await page.click('text=🛒 Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
+    await page.click('text=Next →');
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
+    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('text=Next →');
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
+    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
+    await page.click('text=Next →');
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    // Launch the business
+    await page.click('text="Launch My Business →"');
+
+    // Wait for the success state/confetti
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Click view welcome checklist
+    const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');
+    await viewChecklistBtn.click();
+
+    // We should be on step 10 now
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible();
+
+    // Verify the checklist elements exist
+    const addProducts = page.locator('text="Add 3 more products"');
+    await expect(addProducts).toBeVisible();
+
+    const connectInstagram = page.locator('text="Connect Instagram"');
+    await expect(connectInstagram).toBeVisible();
+
+    const shareLink = page.locator('text="Share your link with a friend"');
+    await expect(shareLink).toBeVisible();
+
+    const dashboardLink = page.locator('text="Go to Dashboard →"');
+    await expect(dashboardLink).toBeVisible();
+
+    // Verify exit state by clicking to Dashboard
+    await dashboardLink.click();
+  });
 });
 
 test.describe('Business Setup Wizard Validation', () => {
