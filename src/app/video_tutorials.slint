@@ -1,5 +1,11 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+
+export struct VideoTutorial {
+    title: string,
+    description: string,
+}
+
 export component VideoTutorials inherits Window {
     width: 600px;
     height: 800px;
@@ -7,6 +13,19 @@ export component VideoTutorials inherits Window {
     background: #f8fafc;
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
+
+    in property <[VideoTutorial]> tutorials: [
+        { title: "How to add your first product", description: "A quick 60-second guide to listing items in your store." },
+        { title: "Setting up AI Helpers", description: "Learn how to let AI handle your customer emails and social media." },
+        { title: "Connecting Apple Pay", description: "Enable Apple Pay for one-tap checkout." },
+        { title: "Managing Your Inventory", description: "How to update stock levels and hide sold out items." },
+        { title: "Setting Up A Custom Domain", description: "Link your own web address to your OHC store." },
+        { title: "Running A Discount Sale", description: "Create coupon codes for holidays and specials." },
+        { title: "Viewing Business Analytics", description: "Understand your sales dashboard and visitor stats." },
+        { title: "Adding A Team Member", description: "Give staff access to specific parts of your store." },
+        { title: "Designing Your Storefront", description: "Customize colors, fonts, and layouts." },
+        { title: "Handling Returns and Refunds", description: "Process a customer return with a few taps." }
+    ];
 
     VerticalBox {
         padding: 16px;
@@ -23,7 +42,7 @@ export component VideoTutorials inherits Window {
             VerticalBox {
                 spacing: 24px;
 
-                Rectangle {
+                for tutorial in tutorials : Rectangle {
                     background: white; border-radius: 12px;
                     VerticalBox {
                         padding: 16px; spacing: 12px;
@@ -33,23 +52,8 @@ export component VideoTutorials inherits Window {
                             border-radius: 8px;
                             Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
                         }
-                        Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
-                    }
-                }
-
-                Rectangle {
-                    background: white; border-radius: 12px;
-                    VerticalBox {
-                        padding: 16px; spacing: 12px;
-                        Rectangle {
-                            height: 200px;
-                            background: #e2e8f0;
-                            border-radius: 8px;
-                            Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
-                        }
-                        Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                        Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                        Text { text: tutorial.title; font-weight: 700; font-size: 18px; color: #0f172a; }
+                        Text { text: tutorial.description; color: #475569; wrap: word-wrap; }
                     }
                 }
             }

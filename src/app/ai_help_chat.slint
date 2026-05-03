@@ -1,4 +1,12 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
+
+
+export struct ChatMsg {
+    sender: string,
+    text: string,
+    article_link: string,
+}
 
 export component AiHelpChat inherits Window {
     width: 600px;
@@ -7,7 +15,9 @@ export component AiHelpChat inherits Window {
     background: white;
 
     in-out property <string> user_input: "";
+    in-out property <[ChatMsg]> chat_history: [];
     callback send_message();
+    callback open_article(string);
 
     VerticalBox {
         padding: 16px;
@@ -27,8 +37,25 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 12px;
+                for msg in chat_history : Rectangle {
+                    background: msg.sender == "user" ? #e0f2fe : #f1f5f9;
+                    border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        spacing: 8px;
+                        Text { text: msg.sender == "user" ? "You:" : "AI:"; font-weight: 700; color: #334155; }
+                        Text { text: msg.text; wrap: word-wrap; color: #0f172a; }
+                        if (msg.article_link != "") : TooltipElement { tooltip_id: "read_full_article"; Button {
+                            text: "Read the full article ->";
+                            clicked => { open_article(msg.article_link); }
+                        } }
+                    }
+                }
+            }
         }
+
 
         HorizontalBox {
             spacing: 8px;

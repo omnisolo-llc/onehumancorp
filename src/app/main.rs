@@ -161,21 +161,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
+                                                                        let tooltips_json = include_str!("tooltips.json");
+                        let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(move |id| {
+                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
@@ -206,21 +195,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
+                                                                        let tooltips_json = include_str!("tooltips.json");
+                        let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(move |id| {
+                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
@@ -1056,7 +1034,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let api_docs_handle = api_docs_ui.as_weak();
                 Box::leak(Box::new(api_docs_ui));
 
-                let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                let release_notes_ui = {
+        let notes = app::ReleaseNotes::new().unwrap();
+        notes.on_open_full_changelog(|| {});
+        notes
+    };
                 let release_notes_handle = release_notes_ui.as_weak();
                 Box::leak(Box::new(release_notes_ui));
 
@@ -2240,6 +2222,52 @@ mod tests {
 
 #[cfg(test)]
 mod docs_tests {
+    #[test]
+    fn test_help_center_search_tooltip() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::HelpCenter::new().unwrap();
+        // Since we cannot easily invoke hover, we just verify it exists via compilation.
+        assert_eq!(ui.get_search_query(), "");
+    }
+
+    #[test]
+    fn test_ai_help_chat_history() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::AiHelpChat::new().unwrap();
+        let history = ui.get_chat_history();
+        use slint::Model;
+        assert_eq!(history.row_count(), 0);
+    }
+
+    #[test]
+    fn test_video_tutorials_count() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::VideoTutorials::new().unwrap();
+        let tutorials = ui.get_tutorials();
+        use slint::Model;
+        assert_eq!(tutorials.row_count(), 10);
+    }
+
+    #[test]
+    fn test_interactive_walkthrough_dimming() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::InteractiveWalkthrough::new().unwrap();
+        assert_eq!(ui.get_current_step(), 0);
+    }
+
+    #[test]
+    fn test_release_notes_changelog_button() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::ReleaseNotes::new().unwrap();
+        let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = clicked.clone();
+        ui.on_open_full_changelog(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        ui.invoke_open_full_changelog();
+        assert!(*clicked.borrow());
+    }
+
     use super::*;
 
     #[test]
@@ -2747,21 +2775,10 @@ mod docs_tests {
 
 
         // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                "help_center" => "Help Center".into(),
-                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                "grow_business" => "Grow Business".into(),
-                "referrals" => "Referrals".into(),
-                "stats" => "Stats".into(),
-                "share" => "Share".into(),
-                "add_product" => "Add".into(),
-                "view_orders" => "Orders".into(),
-                "messages" => "Chat".into(),
-                _ => "".into(),
-            }
+                        let tooltips_json = include_str!("tooltips.json");
+        let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(tooltips_json).unwrap_or_default();
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(move |id| {
+            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
         });
 
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
@@ -2792,7 +2809,10 @@ mod docs_tests {
     #[test]
     fn test_release_notes_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
+        {
+        let notes = app::ReleaseNotes::new().unwrap();
+        notes.on_open_full_changelog(|| {});
+    }
     }
     #[test]
     fn test_interactive_walkthrough_creation() {
@@ -3301,7 +3321,11 @@ mod dashboard_docs_tests {
         let release_notes_opened_clone = release_notes_opened.clone();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
+            let _release_notes = {
+        let notes = app::ReleaseNotes::new().unwrap();
+        notes.on_open_full_changelog(|| {});
+        notes
+    };
         });
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");

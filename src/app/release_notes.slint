@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export component ReleaseNotes inherits Window {
     width: 600px;
@@ -7,6 +8,7 @@ export component ReleaseNotes inherits Window {
     background: #f8fafc;
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
+    callback open_full_changelog();
 
     VerticalBox {
         padding: 16px;
@@ -76,5 +78,11 @@ export component ReleaseNotes inherits Window {
                 }
             }
         }
+
+        TooltipElement { tooltip_id: "read_full_changelog"; Button {
+            text: "Read Full Changelog";
+            height: 44px;
+            clicked => { open_full_changelog(); }
+        } }
     }
 }

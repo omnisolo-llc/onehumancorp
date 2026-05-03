@@ -85,8 +85,10 @@ rust_binary(
         "video_tutorials.slint",
         "website_builder.slint",
         "welcome_checklist.slint",
+        "tooltips.json",
     ],
     edition = "2024",
+    compile_data = ["tooltips.json"],
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_tonic",
@@ -173,8 +175,10 @@ rust_test(
         "video_tutorials.slint",
         "website_builder.slint",
         "welcome_checklist.slint",
+        "tooltips.json",
     ],
     edition = "2024",
+    compile_data = ["tooltips.json"],
     tags = ["exclusive"],
     env = {
         "SLINT_BACKEND": "software",
