@@ -51,6 +51,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub enable_magentic_manager: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -83,6 +84,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            enable_magentic_manager: false,
         }
     }
 }
@@ -151,6 +153,7 @@ pub struct Agent {
     pub progress: Arc<AgentProgress>,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub task_store: Option<crate::tools::SharedTaskStore>,
 }
 
 impl Agent {
@@ -164,6 +167,7 @@ impl Agent {
             progress: Arc::new(AgentProgress::default()),
             memory_store: None,
             checkpointer: None,
+            task_store: None,
         }
     }
 
@@ -174,6 +178,11 @@ impl Agent {
 
     pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>) -> Self {
         self.checkpointer = Some(checkpointer);
+        self
+    }
+
+    pub fn with_task_store(mut self, store: crate::tools::SharedTaskStore) -> Self {
+        self.task_store = Some(store);
         self
     }
 
@@ -289,6 +298,29 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
+
+            // AutoGen Architecture Mechanic: Magnetic Manager Agent
+            // Dynamically inject the task ledger so the manager can update or delegate tasks.
+            if cfg.enable_magentic_manager {
+                if let Some(store) = &self.task_store {
+                    let task_store = store.read().await;
+                    let tasks = task_store.list();
+                    if !tasks.is_empty() {
+                        let mut ledger_summary = String::from("[Current Task Ledger (Magentic Manager Mode)]\n");
+                        for task in tasks {
+                            ledger_summary.push_str(&format!(
+                                "- [{}] {} (Status: {})\n  Description: {}\n  Assignee: {}\n",
+                                task.id, task.title, task.status, task.description, task.assignee
+                            ));
+                            if let Some(res) = &task.result {
+                                ledger_summary.push_str(&format!("  Result: {}\n", res));
+                            }
+                        }
+                        ledger_summary.push_str("Update the task status, delegate to a subagent, or create new tasks as needed.");
+                        final_messages.push(Message::user(ledger_summary));
+                    }
+                }
+            }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
@@ -1767,6 +1799,40 @@ mod tests {
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
         assert_eq!(user_part.len(), 32766);
+    }
+
+    #[tokio::test]
+    async fn test_magentic_manager_ledger_update() {
+        let store = Arc::new(tokio::sync::RwLock::new(crate::tools::task::TaskStore::default()));
+        store.write().await.create(crate::tools::task::Task {
+            id: "task-123".to_string(),
+            title: "Build Feature".to_string(),
+            description: "Do X".to_string(),
+            status: "pending".to_string(),
+            result: None,
+            created_at: 0,
+            updated_at: 0,
+            assignee: "Subagent".to_string(),
+        });
+
+        let client = Arc::new(RecordingLlmClient {
+            last_request: tokio::sync::Mutex::new(None),
+        });
+
+        let agent = Agent::new(client.clone(), vec![]).with_task_store(store);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_magentic_manager = true;
+
+        let mut events = vec![];
+        let _ = agent.run(&cfg, "Manager, do your job.", &mut |e| events.push(e)).await;
+
+        let last_req = client.last_request.lock().await.clone().unwrap();
+        let messages_str = serde_json::to_string(&last_req.messages).unwrap();
+
+        assert!(messages_str.contains("Current Task Ledger (Magentic Manager Mode)"));
+        assert!(messages_str.contains("Build Feature"));
+        assert!(messages_str.contains("Subagent"));
     }
 
     #[tokio::test]

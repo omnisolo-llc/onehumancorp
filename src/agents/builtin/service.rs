@@ -332,6 +332,7 @@ impl AgentServiceImpl {
             workspace_path: None,
             thread_id: None,
             resume_from_checkpoint_id: None,
+            enable_magentic_manager: false,
         }
     }
 
@@ -546,6 +547,7 @@ impl AgentService for AgentServiceImpl {
                 workspace_path: None,
                 thread_id: None,
                 resume_from_checkpoint_id: None,
+                enable_magentic_manager: false,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
