@@ -146,3 +146,57 @@ fn create_verify_verification_message() {
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }
+
+#[test]
+fn login_oauth_callback() {
+    let ui = create();
+    let provider = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let p = provider.clone();
+    ui.on_oauth_login(move |prov| { *p.borrow_mut() = prov.to_string(); });
+
+    ui.invoke_oauth_login("SSO".into());
+    assert_eq!(*provider.borrow(), "SSO");
+}
+
+#[test]
+fn login_open_settings_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_open_settings(move || { *c.borrow_mut() = true; });
+
+    ui.invoke_open_settings();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn login_resend_verification_callback() {
+    let ui = create();
+    let username = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let u = username.clone();
+    ui.on_resend_verification(move |usr| { *u.borrow_mut() = usr.to_string(); });
+
+    ui.invoke_resend_verification("test_user".into());
+    assert_eq!(*username.borrow(), "test_user");
+}
+
+#[test]
+fn login_start_setup_wizard_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_start_setup_wizard(move || { *c.borrow_mut() = true; });
+
+    ui.invoke_start_setup_wizard();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn login_loading_property() {
+    let ui = create();
+    assert!(!ui.get_loading());
+    ui.set_loading(true);
+    assert!(ui.get_loading());
+    ui.set_loading(false);
+    assert!(!ui.get_loading());
+}
