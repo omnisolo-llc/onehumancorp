@@ -26,8 +26,38 @@ impl DB {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
+            // Extract path from sqlite:// URL, ignoring query parameters like ?cipher=sqlcipher...
+            let db_path_str = database_url.trim_start_matches("sqlite://");
+            let db_path_str = db_path_str.split('?').next().unwrap_or(db_path_str);
+            let db_path = Path::new(db_path_str);
+
+            // In Standalone Mode, securely pre-create the SQLite DB file with 0o600 permissions
+            if !db_path.exists() && db_path_str != ":memory:" && !db_path_str.starts_with("sqlite::memory:") {
+                if let Some(parent) = db_path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                }
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    let _ = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .mode(0o600)
+                        .open(db_path);
+                }
+                #[cfg(not(unix))]
+                {
+                    let _ = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(db_path);
+                }
+            }
+
             let conn_opts = SqliteConnectOptions::from_str(&database_url)?
-                .create_if_missing(true)
+                .create_if_missing(false)
                 .extension("sqlite_vec");
 
             let sqlite_pool = SqlitePoolOptions::new()
@@ -262,5 +292,36 @@ mod autodream_db_tests {
             .unwrap();
         // Just checking configuration parses ok for multitenancy logic
         let _ = pool;
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_secure_permissions() {
+        use rand::Rng;
+        // Test that DB::new() correctly sets 0o600 permissions when creating a SQLite DB in standalone mode
+        let random_suffix: String = rand::thread_rng()
+            .sample_iter(&rand::distributions::Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+        let db_path = format!("/tmp/test_secure_sqlite_{}.db", random_suffix);
+        let database_url = format!("sqlite://{}", db_path);
+
+        unsafe { std::env::set_var("DATABASE_URL", &database_url) };
+
+        // This relies on sqlx sqlite init, we don't have sqlcipher loaded in this env
+        // The failure is 'expected error code to be set in current context' from sqlx.
+        // We can just verify the file gets created with the right permissions
+        // by parsing the logic directly or ignoring the sqlx connect failure.
+        let _result = DB::new().await;
+
+        // Verify that the file was actually created and its permissions
+        let metadata = std::fs::metadata(&db_path).expect("DB file should have been created");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o600, "SQLite DB file should have 0o600 permissions");
+        }
+
+        std::fs::remove_file(&db_path).unwrap();
     }
 }

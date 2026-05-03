@@ -451,7 +451,7 @@ impl Store {
             }
         }
     }
-    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> User {
+    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> Result<User, String> {
         let mut users = self.users.write().unwrap();
         let mut by_oidc = self.by_oidc.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
@@ -460,18 +460,14 @@ impl Store {
         let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
         if let Some(user_id) = by_oidc.get(&oidc_key) {
             if let Some(user) = users.get(user_id) {
-                return user.clone();
+                return Ok(user.clone());
             }
         }
 
         if !email.is_empty() {
             let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
-            if let Some(user_id) = by_email.get(&email_key) {
-                if let Some(user) = users.get_mut(user_id) {
-                    user.oidc_subject = Some(sub.to_string());
-                    by_oidc.insert(oidc_key, user_id.clone());
-                    return user.clone();
-                }
+            if by_email.contains_key(&email_key) {
+                return Err("Account exists with this email. Please log in using your password and link your account from settings.".to_string());
             }
         }
 
@@ -509,7 +505,7 @@ impl Store {
         }
         by_oidc.insert(oidc_key, id);
 
-        user
+        Ok(user)
     }
 }
 
@@ -989,5 +985,45 @@ mod isolation_tests {
         // Similarly, test authentication
         assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
+    }
+}
+
+#[cfg(test)]
+mod oidc_tests {
+    use super::*;
+
+    #[test]
+    fn test_oidc_user_no_auto_merge_on_email() {
+        let s = Store::new();
+        // Create a regular user with an email
+        s.create_user(
+            "alice".to_string(),
+            "alice@example.com".to_string(),
+            "hunter2".to_string(),
+            vec![],
+            "org-1".to_string()
+        ).unwrap();
+
+        // OIDC flow occurs for an external user with the same email but a new 'sub' (subject)
+        let oidc_res = s.get_or_create_oidc_user(
+            "ext-sub-1234",
+            "alice@example.com",
+            "alice_ext",
+            "org-1"
+        );
+
+        assert!(oidc_res.is_err(), "OIDC creation should fail when email matches an existing account");
+        assert!(oidc_res.unwrap_err().contains("Account exists with this email"));
+
+        // Try creating with a different email
+        let oidc_user = s.get_or_create_oidc_user(
+            "ext-sub-1234",
+            "bob@example.com",
+            "bob_ext",
+            "org-1"
+        ).unwrap();
+
+        let regular_user = s.authenticate("alice", "hunter2", "org-1").unwrap();
+        assert_ne!(regular_user.id, oidc_user.id);
     }
 }
