@@ -1,10 +1,12 @@
+#![allow(dead_code)]
 #[cfg(test)]
 use crate::app;
 use slint::ComponentHandle;
 use slint::Model;
 
-    // #[test]
+    #[test]
     fn test_ui_suite_coverage() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         test_login_initial_state();
         test_wizard_step_navigation();
         test_ref_code();
