@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Hardware-Aware Agent Schedu
 - Kubernetes test cluster with simulated GPU device plugins.
 
 ## Implementation Details
-- **Architecture**: The scheduler tests use Go 1.26 table-driven unit tests to validate the scoring algorithms. Integration tests leverage `envtest` (a Kubernetes testing framework) to mock the API server and validate that the `ohc-operator` applies the correct `nodeSelector` and `tolerations` to `TeamMember` pods.
+- **Architecture**: The scheduler tests use Rust table-driven unit tests to validate the scoring algorithms. Integration tests leverage `envtest` (a Kubernetes testing framework) to mock the API server and validate that the `ohc-operator` applies the correct `nodeSelector` and `tolerations` to `TeamMember` pods.
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox. Real hardware is not required; the test suite mocks the NVIDIA device plugin responses.
 - **Validation**: >95% test coverage is strictly enforced on the custom scheduling controller logic.
 

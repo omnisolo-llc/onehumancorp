@@ -13,13 +13,13 @@ This document defines the structural and aesthetic vision for the OHC "Hybrid Ag
 ## Architecture & Data Flow
 - **Task Decomposition**: KAIROS orchestrates the database schema to decompose complex feature requests.
 - **Teammate Mesh**: Realtime communication layer using production Redis Pub/Sub channels (Cloud) or local event bus (Standalone).
-- **Sub-Agent Queue**: Background queuing logic (BullMQ/Celery style) for agent orchestration.
+- **Sub-Agent Queue**: Background queuing logic for agent orchestration, using async task processing with tokio.
 - **Durable State**: Production Vector DB (e.g. pgvector/Pinecone) integration for AutoDream architectural consolidation.
 
 ## Shared Task List Implementation
 - **Schema**: Tables for `shared_tasks`, `task_dependencies`, `sub_agent_queues`. Ensure `convertBindVars` is implemented for robust degraded Standalone Mode fallback (stripping clauses like `FOR UPDATE SKIP LOCKED`).
-- **Backend API**: Endpoints located in `src/server/api/tasks/queue.go` returning structured queueing logic and ensuring robust >95% test coverage.
-- **UI Task List**: Built in Flutter (`apps/desktop/lib/ui/shared_task_list.dart`) explicitly using `ConsumerWidget` with Riverpod for state management. Adheres strictly to the Visual Excellence Mandate.
+- **Backend API**: Endpoints located in `src/server/` returning structured queueing logic and ensuring robust >95% test coverage.
+- **UI Task List**: Built in Slint (`src/app/task_list.slint`) explicitly using reactive state management. Adheres strictly to the Visual Excellence Mandate.
 
 ## Observability
 All tasks and orchestrations must export metrics via OpenTelemetry and Prometheus (`prometheus.NewCounterVec`).

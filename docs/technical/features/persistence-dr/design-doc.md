@@ -19,7 +19,7 @@ The Persistence and DR framework ("Snapshot Fabric") enables One Human Corp to s
 ## 3. Implementation Details
 - **Architecture**: The Snapshot Fabric leverages Kubernetes CSI (Container Storage Interface) volume snapshots combined with Postgres `pg_dump`/`pg_restore` for database state.
 - **State Management**: LangGraph checkpointers serialize the exact multi-agent state (memory, pending tasks, active tools) into the append-only `events.jsonl` log. Restoring a snapshot replays or truncates this log deterministically.
-- **Execution**: Orchestrated via Go 1.26 in the OHC Hub. The Operator pauses the `HoldingCompany` CRD reconciliation loop during the restoration process.
+- **Execution**: Orchestrated via Rust in the OHC Hub. The Operator pauses the `HoldingCompany` CRD reconciliation loop during the restoration process.
 
 ## 4. Edge Cases
 - **In-Flight Tool Operations**: If an agent is executing a long-running external API call (e.g., provisioning AWS infrastructure) during a snapshot restore, the external state might become orphaned from the restored internal state.
