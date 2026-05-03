@@ -141,6 +141,7 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    db: Arc<crate::db::DB>,
 }
 
 impl MyHubService {
@@ -148,8 +149,8 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone());
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, db: db.clone() }
     }
 }
 
@@ -928,6 +929,117 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+
+    async fn generate_site_draft(
+        &self,
+        request: Request<ohc::orchestration::GenerateSiteDraftRequest>,
+    ) -> Result<Response<ohc::orchestration::GenerateSiteDraftResponse>, Status> {
+        let req = request.into_inner();
+        let org_id = req.organization_id;
+        let bio = req.instant_bio;
+
+        if org_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required"));
+        }
+
+        let prompt = format!(
+            "Analyze this business bio: \"{}\". \n\
+            Return a JSON object with a complete 'site_definition' for a website builder.\n\
+            The JSON must match this structure:\n\
+            {{\n\
+              \"name\": \"Business Name\",\n\
+              \"tagline\": \"A catchy tagline\",\n\
+              \"template\": \"Modern|Classic|Playful\",\n\
+              \"primary_color\": \"#HEXCODE\",\n\
+              \"blocks\": [\n\
+                {{\n\
+                  \"type\": \"hero\",\n\
+                  \"headline\": \"Main Heading\",\n\
+                  \"subheadline\": \"Supporting text\"\n\
+                }},\n\
+                {{\n\
+                  \"type\": \"product_grid\",\n\
+                  \"products\": [\n\
+                    {{\"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"Desc\"}}\n\
+                  ]\n\
+                }}\n\
+              ]\n\
+            }}",
+            bio
+        );
+
+        let reason_req = tonic::Request::new(ohc::orchestration::ReasonRequest {
+            prompt,
+            from_agent_id: "setup_wizard".to_string(),
+        });
+
+        let reason_resp = self.reason(reason_req).await?;
+        let content = reason_resp.into_inner().content;
+
+        let site_definition_json = match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(json) => json.to_string(),
+            Err(_) => {
+                // Fallback structured data
+                serde_json::json!({
+                    "name": "Generated Business",
+                    "tagline": "We do great things.",
+                    "template": "Modern",
+                    "primary_color": "#FF3B30",
+                    "blocks": [
+                        {
+                            "type": "hero",
+                            "headline": "Welcome",
+                            "subheadline": bio
+                        }
+                    ]
+                }).to_string()
+            }
+        };
+
+        let draft_id = format!("wsd-{}", uuid::Uuid::new_v4());
+
+        // Use sqlx to save to website_drafts
+        let query = "INSERT INTO website_drafts (id, organization_id, bio, site_data, status) VALUES ($1, $2, $3, $4, 'DRAFT')";
+
+        let db_res: Result<(), String> = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query(query)
+                    .bind(&draft_id)
+                    .bind(&org_id)
+                    .bind(&bio)
+                    .bind(serde_json::from_str::<serde_json::Value>(&site_definition_json).unwrap_or_else(|_| serde_json::json!({})))
+                    .execute(&self.db.pool)
+                    .await.map(|_| ()).map_err(|e| e.to_string())
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                 sqlx::query(query)
+                    .bind(&draft_id)
+                    .bind(&org_id)
+                    .bind(&bio)
+                    .bind(&site_definition_json) // Sqlite jsonb uses string
+                    .execute(sqlite_pool)
+                    .await.map(|_| ()).map_err(|e| e.to_string())
+            }
+        };
+
+        match db_res {
+            Ok(_) => {
+                Ok(Response::new(ohc::orchestration::GenerateSiteDraftResponse {
+                    success: true,
+                    site_definition_json,
+                    error_message: "".to_string(),
+                }))
+            },
+            Err(e) => {
+                Ok(Response::new(ohc::orchestration::GenerateSiteDraftResponse {
+                    success: false,
+                    site_definition_json: "".to_string(),
+                    error_message: format!("Failed to save draft: {}", e),
+                }))
+            }
+        }
+    }
+
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {

@@ -253,6 +253,18 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc GenerateSiteDraft(GenerateSiteDraftRequest) returns (GenerateSiteDraftResponse);
+}
+
+message GenerateSiteDraftRequest {
+  string organization_id = 1;
+  string instant_bio = 2;
+}
+
+message GenerateSiteDraftResponse {
+  bool success = 1;
+  string site_definition_json = 2;
+  string error_message = 3;
 }
 
 message StartOnboardingRequest {
