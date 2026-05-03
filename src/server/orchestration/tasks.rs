@@ -93,8 +93,9 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT id, dependencies FROM shared_tasks_decomposition
-                    WHERE status = 'PENDING'
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
@@ -131,6 +132,7 @@ impl TaskDecompositionService {
                         }
                     }
                     if !is_ready {
+                        tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
                 }
@@ -177,8 +179,14 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT id, dependencies FROM shared_tasks_decomposition
-                    WHERE status = 'PENDING'
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
+                    )
                     LIMIT 1
                     "#
                 )
@@ -212,6 +220,7 @@ impl TaskDecompositionService {
                         }
                     }
                     if !is_ready {
+                        tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
                 }
