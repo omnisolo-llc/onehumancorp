@@ -51,6 +51,9 @@ export component SetupWizard inherits Window {
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI helpers...\nBuilding website...";
     in-out property <bool> launch_success: false;
+
+    // Animation state
+    property <float> pulse_scale: 1.0;
     in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
     callback launch(string, string, string, string, string, string, string, string, string);
@@ -90,6 +93,14 @@ export component SetupWizard inherits Window {
     toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    Timer {
+        interval: 1000ms;
+        running: step == 9 && !launching;
+        triggered => {
+            pulse_scale = (pulse_scale == 1.0) ? 0.8 : 1.0;
+        }
+    }
 
     VerticalBox {
         spacing: 20px;
@@ -168,38 +179,74 @@ export component SetupWizard inherits Window {
                     Text { text: "Raw Config Settings"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                     LineEdit { placeholder-text: "{}"; height: 44px; }
                 }
-                spacing: 16px;
+                spacing: 20px;
                 Text { text: "What kind of business are you building?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🛒 Online Store"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Online Store"); } }
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: center;
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🛒"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Online Store"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Online Store"); } }
+                    }
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🔧"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Service Business"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Service Business"); } }
+                    }
                 }
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🔧 Service Business"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Service Business"); } }
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: center;
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🍔"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Food & Drink"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Restaurant / Food"); } }
+                    }
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🎨"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Creative"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Creative / Portfolio"); } }
+                    }
                 }
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🍔 Restaurant / Food"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Restaurant / Food"); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🎨 Creative / Portfolio"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Creative / Portfolio"); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🏪 Local Business"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Local Business"); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "✨ Other"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { select_business_type("Other"); } }
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: center;
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "🏪"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Local Shop"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Local Business"); } }
+                    }
+                    GlassCard {
+                        width: 160px;
+                        height: 100px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "✨"; font-size: 32px; horizontal-alignment: center; }
+                            Text { text: "Other"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
+                        }
+                        TouchArea { clicked => { select_business_type("Other"); } }
+                    }
                 }
             }
 
@@ -641,7 +688,10 @@ export component SetupWizard inherits Window {
                 width: 200px;
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                animate background { duration: 1000ms; }
+
+                opacity: pulse_scale;
+                animate opacity { duration: 500ms; easing: ease-in-out; }
+
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;

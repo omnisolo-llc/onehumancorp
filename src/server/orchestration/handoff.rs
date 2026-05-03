@@ -1,5 +1,6 @@
 use crate::ohc::orchestration::SyncStateHandoff;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use crate::ohc::orchestration::TeammateMeshEvent;
 use std::sync::Arc;
 use prost::Message;
 use crate::db::{DB, DbStore};
@@ -18,6 +19,7 @@ impl HandoffManager {
     pub async fn start_listener(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let db = self.db.clone();
         let is_cloud = self.is_cloud;
+        let transport_clone = self.transport.clone();
 
         let handler = Box::new(move |msg: MeshMessage| {
             if let Ok(handoff) = SyncStateHandoff::decode(&msg.payload[..]) {
@@ -27,34 +29,37 @@ impl HandoffManager {
                     return;
                 }
 
-                // Intentionally removed PII logging
-
-                // Durable Storage serialization
                 let db_clone = db.clone();
+                let transport = transport_clone.clone();
+
                 tokio::spawn(async move {
-                    match &db_clone.store {
-                        DbStore::Postgres => {
-                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
-                                .bind(&handoff.state_id)
-                                .bind(&handoff.tenant_id)
-                                .bind(&handoff.serialized_state)
-                                .execute(&db_clone.pool)
-                                .await
-                            {
-                                eprintln!("Failed to save state handoff to Postgres: error={}", e);
+                    let lock_key = format!("handoff:{}:{}", handoff.tenant_id, handoff.state_id);
+                    if let Ok(true) = transport.acquire_lock(&lock_key, "handoff_manager", 60).await {
+                        match &db_clone.store {
+                            DbStore::Postgres => {
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                                    .bind(&handoff.state_id)
+                                    .bind(&handoff.tenant_id)
+                                    .bind(&handoff.serialized_state)
+                                    .execute(&db_clone.pool)
+                                    .await
+                                {
+                                    eprintln!("Failed to save state handoff to Postgres: error={}", e);
+                                }
+                            }
+                            DbStore::Sqlite(sqlite_pool) => {
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
+                                    .bind(&handoff.state_id)
+                                    .bind(&handoff.tenant_id)
+                                    .bind(&handoff.serialized_state)
+                                    .execute(sqlite_pool)
+                                    .await
+                                {
+                                    eprintln!("Failed to save state handoff to Sqlite: error={}", e);
+                                }
                             }
                         }
-                        DbStore::Sqlite(sqlite_pool) => {
-                            if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
-                                .bind(&handoff.state_id)
-                                .bind(&handoff.tenant_id)
-                                .bind(&handoff.serialized_state)
-                                .execute(sqlite_pool)
-                                .await
-                            {
-                                eprintln!("Failed to save state handoff to Sqlite: error={}", e);
-                            }
-                        }
+                        let _ = transport.release_lock(&lock_key, "handoff_manager").await;
                     }
                 });
             }
@@ -75,8 +80,10 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        let msg = MeshMessage {
-            topic: "mesh:coordination:handoff".to_string(),
+        let msg = TeammateMeshEvent {
+            agent_id: "handoff".to_string(),
+            action: "mesh:coordination:handoff".to_string(),
+            status: "ok".to_string(),
             payload: buf,
         };
 
@@ -143,8 +150,10 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        let msg = MeshMessage {
-            topic: "mesh:coordination:handoff".to_string(),
+        let msg = TeammateMeshEvent {
+            agent_id: "handoff".to_string(),
+            action: "mesh:coordination:handoff".to_string(),
+            status: "ok".to_string(),
             payload: buf,
         };
 
@@ -173,8 +182,10 @@ mod tests {
         let mut buf2 = Vec::new();
         handoff2.encode(&mut buf2).unwrap();
 
-        let msg2 = MeshMessage {
-            topic: "mesh:coordination:handoff".to_string(),
+        let msg2 = TeammateMeshEvent {
+            agent_id: "handoff".to_string(),
+            action: "mesh:coordination:handoff".to_string(),
+            status: "ok".to_string(),
             payload: buf2,
         };
 

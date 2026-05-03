@@ -234,7 +234,7 @@ impl AgentServiceImpl {
         }
     }
 
-    async fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
+    async fn build_run_config(&self, req: &RunTaskRequest, department: &str, llm: &Arc<dyn LlmClient>) -> AgentRunConfig {
         let model = if req.model.is_empty() {
             self.cfg.model.clone()
         } else {
@@ -243,7 +243,12 @@ impl AgentServiceImpl {
 
         let memories = if let Some(store) = &self.memory {
             let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-            store.semantic_search(&org_id, &[], 5).await.map(|records| {
+            let embedding = if !req.task.is_empty() {
+                llm.generate_embedding(&req.task).await.unwrap_or_default()
+            } else {
+                vec![]
+            };
+            store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
                 records.into_iter().map(|r| crate::memory::MemoryEntry {
                     memory_id: r.id,
                     context: r.content,
@@ -334,7 +339,7 @@ impl AgentServiceImpl {
         let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
-        let run_cfg = self.build_run_config(&req, &req.department).await;
+        let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
         
         let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
@@ -372,7 +377,7 @@ impl AgentService for AgentServiceImpl {
 
         let task_req = req.into_inner();
         let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req, &task_req.department).await;
+        let run_cfg = self.build_run_config(&task_req, &task_req.department, &llm).await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
@@ -716,7 +721,9 @@ pub async fn start_builtin_agent(
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
                                     let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                        topic: "agent_events".to_string(),
+                                        agent_id: "agent".to_string(),
+                                        action: "agent_events".to_string(),
+                                        status: "ok".to_string(),
                                         payload: buf,
                                     }).await;
                                 }
