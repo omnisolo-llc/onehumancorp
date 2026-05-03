@@ -682,7 +682,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let response = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
-                            let link = format!("ohc://join?ref={}", referral.referral_code);
+                            let link = format!("ohc://join?ref={}&utm_source=standalone_desktop&utm_medium=team_share&inviter={}", referral.referral_code, referral.user_id);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle.upgrade() {
                                     ui.set_my_referral_link(link.into());
