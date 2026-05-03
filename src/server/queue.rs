@@ -12,7 +12,6 @@ use sqlx::Row;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job {
     pub id: String,
-    pub tenant_id: String,
     pub parent_task_id: String,
     pub agent_role: String,
     pub payload: String,
@@ -29,8 +28,8 @@ pub struct Job {
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
-    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;
+    async fn complete(&self, job_id: &str) -> Result<(), String>;
+    async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String>;
 }
 
 pub struct MemoryTaskQueue {
@@ -63,11 +62,8 @@ impl TaskQueue for MemoryTaskQueue {
         Ok(None)
     }
 
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
         if let Some(mut job) = self.jobs.get_mut(job_id) {
-            if job.tenant_id != tenant_id {
-                return Err("tenant mismatch".to_string());
-            }
             job.status = "COMPLETED".to_string();
             job.updated_at = Utc::now();
             Ok(())
@@ -76,11 +72,8 @@ impl TaskQueue for MemoryTaskQueue {
         }
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
+    async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String> {
         if let Some(mut job) = self.jobs.get_mut(job_id) {
-            if job.tenant_id != tenant_id {
-                return Err("tenant mismatch".to_string());
-            }
             job.status = "FAILED".to_string();
             job.payload = format!("{} (Reason: {})", job.payload, reason);
             job.updated_at = Utc::now();
@@ -113,11 +106,7 @@ impl TaskQueue for PostgresTaskQueue {
         
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
         
-        let org_id = if job.tenant_id.is_empty() {
-            payload_map["organization_id"].as_str().unwrap_or("").to_string()
-        } else {
-            job.tenant_id.clone()
-        };
+        let org_id = payload_map["organization_id"].as_str().unwrap_or("").to_string();
         
         sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
@@ -143,7 +132,6 @@ impl TaskQueue for PostgresTaskQueue {
             
         if let Some(row) = row {
             let id: String = row.get("id");
-            let organization_id: String = row.get("organization_id");
             let parent_task_id: String = row.get("parent_task_id");
             let payload: String = row.get("payload");
             let status: String = row.get("status");
@@ -151,7 +139,6 @@ impl TaskQueue for PostgresTaskQueue {
             
             let mut j = Job {
                 id,
-                tenant_id: organization_id,
                 parent_task_id,
                 agent_role: String::new(),
                 payload: payload.clone(),
@@ -183,10 +170,9 @@ impl TaskQueue for PostgresTaskQueue {
         }
     }
 
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -194,11 +180,10 @@ impl TaskQueue for PostgresTaskQueue {
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = payload || $2 WHERE id = $1 AND organization_id = $3")
+    async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String> {
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = payload || $2 WHERE id = $1")
             .bind(job_id)
             .bind(format!(" (Error: {})", reason))
-            .bind(tenant_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -235,11 +220,11 @@ impl Worker {
                             match self.handler.handle(job.clone()).await {
                                 Ok(_) => {
                                     println!("Worker successfully processed job: {}", job.id);
-                                    let _ = self.queue.complete(&job.id, &job.tenant_id).await;
+                                    let _ = self.queue.complete(&job.id).await;
                                 }
                                 Err(e) => {
                                     println!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
+                                    let _ = self.queue.fail(&job.id, &e).await;
                                 }
                             }
                         }
@@ -610,7 +595,6 @@ impl SqliteTaskQueue {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS local_queue_jobs (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
                 task_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 payload BLOB,
@@ -626,9 +610,8 @@ impl TaskQueue for SqliteTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         // Here job.payload is a String but in the SQLite table it's BLOB, 
         // we can store it as text since SQLite handles it loosely or cast it.
-        sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO local_queue_jobs (id, task_id, role, payload) VALUES (?, ?, ?, ?)")
             .bind(job.id)
-            .bind(job.tenant_id)
             .bind(job.parent_task_id)
             .bind(job.agent_role)
             .bind(job.payload.as_bytes())
@@ -647,7 +630,7 @@ impl TaskQueue for SqliteTaskQueue {
 
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, tenant_id, task_id, role, payload, status FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1",
+            "SELECT id, task_id, role, payload, status FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1",
             role_placeholders
         );
 
@@ -661,14 +644,12 @@ impl TaskQueue for SqliteTaskQueue {
         if let Some(row) = row {
             use sqlx::Row;
             let id: String = row.get("id");
-            let tenant_id: String = row.get("tenant_id");
             let task_id: String = row.get("task_id");
             let role: String = row.get("role");
             let payload: Vec<u8> = row.get("payload");
             
-            sqlx::query("UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = ? AND tenant_id = ?")
+            sqlx::query("UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = ?")
                 .bind(&id)
-                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -677,7 +658,6 @@ impl TaskQueue for SqliteTaskQueue {
 
             Ok(Some(Job {
                 id,
-                tenant_id,
                 parent_task_id: task_id,
                 agent_role: role,
                 payload: String::from_utf8(payload).unwrap_or_default(),
@@ -694,20 +674,18 @@ impl TaskQueue for SqliteTaskQueue {
         }
     }
 
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'COMPLETED' WHERE id = ? AND tenant_id = ?")
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
+        sqlx::query("UPDATE local_queue_jobs SET status = 'COMPLETED' WHERE id = ?")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'FAILED' WHERE id = ? AND tenant_id = ?")
+    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+        sqlx::query("UPDATE local_queue_jobs SET status = 'FAILED' WHERE id = ?")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -771,12 +749,12 @@ impl TaskQueue for RedisTaskQueue {
         Ok(None)
     }
 
-    async fn complete(&self, _job_id: &str, _tenant_id: &str) -> Result<(), String> {
+    async fn complete(&self, _job_id: &str) -> Result<(), String> {
         // In this simple Redis list implementation, dequeue removes the item
         Ok(())
     }
 
-    async fn fail(&self, _job_id: &str, _tenant_id: &str, _reason: &str) -> Result<(), String> {
+    async fn fail(&self, _job_id: &str, _reason: &str) -> Result<(), String> {
         // In a real implementation we would move it to a failure queue
         Ok(())
     }
@@ -824,10 +802,17 @@ mod tests {
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        let _ = conn.execute("RESET app.current_tenant").await;
+                        Ok(true)
+                    })
+                })
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                         Ok(true)
                     })
                 })
@@ -878,10 +863,17 @@ mod tests {
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        let _ = conn.execute("RESET app.current_tenant").await;
+                        Ok(true)
+                    })
+                })
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
+                        conn.execute("SELECT set_config('app.current_tenant', 'system', false)").await?;
                         Ok(true)
                     })
                 })

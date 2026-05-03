@@ -252,6 +252,9 @@ impl Store {
     }
 
     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+        if org_id == "system" {
+            return Err("invalid credentials".to_string());
+        }
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
@@ -283,6 +286,9 @@ impl Store {
     }
 
     pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+        if org_id == "system" {
+            return None;
+        }
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
         
@@ -966,7 +972,7 @@ mod isolation_tests {
     use super::*;
 
     #[test]
-    fn test_auth_tenant_isolation_sys_org() {
+    fn test_auth_tenant_isolation_system_org() {
         let s = Store::new();
         // Create user in a specific organization
         let org_user = s.create_user(
@@ -983,11 +989,11 @@ mod isolation_tests {
         // Querying with empty org_id should succeed (admin context)
         assert!(s.get_user(&org_user.id, "").is_some());
 
-        // Querying with "sys" should fail because "sys" is no longer a bypass
-        assert!(s.get_user(&org_user.id, "sys").is_none());
+        // Querying with "system" should fail because "system" is no longer a bypass
+        assert!(s.get_user(&org_user.id, "system").is_none());
 
         // Similarly, test authentication
         assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
-        assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
+        assert!(s.authenticate("tenant_user", "pass123", "system").is_err());
     }
 }
