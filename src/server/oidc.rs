@@ -176,7 +176,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     Ok(Claims {
         sub: {
             let sub = raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-            if sub.is_empty() { return Err("missing sub in OIDC token".to_string()); }
+            if sub.trim().is_empty() { return Err("missing or empty sub in OIDC token".to_string()); }
             sub
         },
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
@@ -188,7 +188,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
         jti: {
             let jti = raw.get("jti").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-            if jti.is_empty() { return Err("missing jti in OIDC token".to_string()); }
+            if jti.trim().is_empty() { return Err("missing or empty jti in OIDC token".to_string()); }
             jti
         },
     })
