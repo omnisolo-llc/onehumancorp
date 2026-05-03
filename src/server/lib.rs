@@ -1080,7 +1080,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     from_agent: "system-scheduler".to_string(),
                     to_agent: task.agent_id.clone(),
                     r#type: "task".to_string(),
-                    content: format!("Scheduled Task triggered: {}. Payload: {}", task.name, task.payload),
+                    content: format!("Scheduled Task triggered: {}.", task.name),
                     occurred_at_unix: Utc::now().timestamp(),
                     meeting_id: String::new(),
                 };
