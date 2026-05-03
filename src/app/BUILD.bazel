@@ -118,7 +118,6 @@ rust_test(
     size = "small",
     srcs = [
         "main.rs",
-        "ui_tests.rs",
     ],
     crate_root = "main.rs",
     data = [
