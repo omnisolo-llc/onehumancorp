@@ -1,0 +1,259 @@
+use super::StateManager;
+use crate::tasks::SharedTask;
+use crate::db::{DB, DbStore};
+use async_trait::async_trait;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use sqlx::Row;
+use chrono::Utc;
+
+pub struct StandaloneStateManager {
+    db: Arc<DB>,
+    lock: Mutex<()>,
+}
+
+impl StandaloneStateManager {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            lock: Mutex::new(()),
+        }
+    }
+}
+
+#[async_trait]
+impl StateManager for StandaloneStateManager {
+    async fn transition_state(
+        &self,
+        task_id: &str,
+        tenant_id: &str,
+        from_state: &str,
+        to_state: &str,
+        agent_id: Option<&str>,
+        reason: Option<&str>,
+    ) -> Result<(), String> {
+        let _guard = self.lock.lock().await;
+
+        let sqlite_pool = match &self.db.store {
+            DbStore::Sqlite(pool) => pool,
+            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+        };
+
+        let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+        // 1. Verify current state
+        let row = sqlx::query(
+            "SELECT status, dependencies, tenant_id FROM swarm_tasks WHERE id = ?"
+        )
+        .bind(task_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let row = match row {
+            Some(r) => r,
+            None => return Err(format!("Task {} not found", task_id)),
+        };
+
+        let current_state: String = row.get("status");
+
+        if current_state != from_state {
+            return Err(format!(
+                "Task {} is in state '{}', expected '{}'",
+                task_id, current_state, from_state
+            ));
+        }
+
+        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+
+        // DAG validation
+        if to_state == "EXECUTING" {
+            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
+            for dep_id in dependencies {
+                let dep_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM swarm_tasks WHERE id = ?"
+                )
+                .bind(&dep_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if dep_status.as_deref() != Some("COMPLETED") {
+                    return Err(format!("Dependency {} is not COMPLETED", dep_id));
+                }
+            }
+        }
+
+        // 2. Update state
+        let now = Utc::now();
+        sqlx::query(
+            "UPDATE swarm_tasks SET status = ?, assigned_agent_id = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(to_state)
+        .bind(agent_id)
+        .bind(now.to_rfc3339())
+        .bind(task_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // 3. Record transition
+        let trans_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            r#"
+            INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
+            VALUES (?, ?, ?, 'swarm_task', ?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(trans_id)
+        .bind(&tenant_id)
+        .bind(task_id)
+        .bind(from_state)
+        .bind(to_state)
+        .bind(agent_id)
+        .bind(reason)
+        .bind(now.to_rfc3339())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
+        let _guard = self.lock.lock().await;
+
+        let sqlite_pool = match &self.db.store {
+            DbStore::Sqlite(pool) => pool,
+            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+        };
+
+        let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+        let rows = sqlx::query(
+            r#"
+            SELECT t.*
+            FROM swarm_tasks t
+            WHERE t.status = 'PENDING'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM json_each(t.dependencies) as dep_id
+                  JOIN swarm_tasks dep ON dep.id = dep_id.value
+                  WHERE dep.status != 'COMPLETED'
+              )
+            LIMIT ?
+            "#
+        )
+        .bind(limit)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut tasks = Vec::new();
+        let mut task_ids = Vec::new();
+
+        for row in rows {
+            let id: String = row.get("id");
+            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
+
+            // Check dependencies again explicitly in Rust just to be perfectly safe
+            let mut all_completed = true;
+            for dep_id in &dependencies {
+                let dep_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM swarm_tasks WHERE id = ?"
+                )
+                .bind(dep_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if dep_status.as_deref() != Some("COMPLETED") {
+                    all_completed = false;
+                    break;
+                }
+            }
+
+            if all_completed {
+                let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+                task_ids.push((id.clone(), tenant_id.clone()));
+
+                let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
+                let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&Utc);
+
+                let t = SharedTask {
+                    id: id.clone(),
+                    organization_id: tenant_id,
+                    mission_id: row.get("mission_id"),
+                    parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
+                    dependencies,
+                    title: row.get("title"),
+                    description: row.try_get("description").unwrap_or_default(),
+                    assigned_agent_id: row.try_get("assigned_agent_id").unwrap_or_default(),
+                    status: row.get("status"),
+                    priority: row.try_get("priority").unwrap_or_else(|_| "P2".to_string()),
+                    payload: payload_str,
+                    locked_until: None,
+                    ultraplan_phase: None,
+                    deliberation_log: None,
+                    depth: None,
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: None,
+                    approval_status: None,
+                    proposed_content: None,
+                };
+                tasks.push(t);
+                if tasks.len() as i64 >= limit {
+                    break;
+                }
+            }
+        }
+
+        // Update status to IN_PROGRESS so it's not picked up by others
+        if !task_ids.is_empty() {
+            let now = Utc::now();
+            let now_rfc = now.to_rfc3339();
+            for (id_str, tenant_id) in task_ids {
+                sqlx::query(
+                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?"
+                )
+                .bind(&now_rfc)
+                .bind(&id_str)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
+                    VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'IN_PROGRESS', ?)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(&tenant_id)
+                .bind(&id_str)
+                .bind(&now_rfc)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        // Update the returned tasks statuses to match what we committed
+        for t in &mut tasks {
+            t.status = "IN_PROGRESS".to_string();
+        }
+
+        Ok(tasks)
+    }
+}
