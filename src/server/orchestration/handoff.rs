@@ -41,7 +41,7 @@ impl HandoffManager {
                                 .execute(&db_clone.pool)
                                 .await
                             {
-                                eprintln!("Failed to save state handoff to Postgres: {}", e);
+                                eprintln!("Failed to save state handoff to Postgres: error={}", e);
                             }
                         }
                         DbStore::Sqlite(sqlite_pool) => {
@@ -52,7 +52,7 @@ impl HandoffManager {
                                 .execute(sqlite_pool)
                                 .await
                             {
-                                eprintln!("Failed to save state handoff to Sqlite: {}", e);
+                                eprintln!("Failed to save state handoff to Sqlite: error={}", e);
                             }
                         }
                     }
@@ -96,7 +96,8 @@ mod tests {
     async fn test_handoff_manager() {
         let transport = Arc::new(MemoryTransport::new());
         // For testing we will use a dummy Postgres pool, it doesn't need to connect if we don't await execution
-        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Postgres });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Postgres });
 
         let manager = HandoffManager::new(transport, db, false);
 
@@ -124,7 +125,8 @@ mod tests {
             .await
             .unwrap();
 
-        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
         let manager = HandoffManager::new(transport.clone(), db.clone(), true);
 

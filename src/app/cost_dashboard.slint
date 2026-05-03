@@ -12,7 +12,7 @@ export struct UiAgentCost {
 export component CostDashboard inherits Window {
     preferred-width: 500px;
     min-width: 375px;
-    preferred-height: 600px;
+    height: 800px;
     title: "Cost & Token Usage";
 
     in-out property <string> total_spend: "$0.00";
@@ -32,7 +32,8 @@ export component CostDashboard inherits Window {
         }
 
         // Summary Cards
-        if (root.width <= 768px) : VerticalBox {
+        VerticalBox {
+            visible: root.width <= 768px;
             spacing: 16px;
 
             GlassCard {
@@ -59,7 +60,8 @@ export component CostDashboard inherits Window {
             }
         }
 
-        if (root.width > 768px) : HorizontalBox {
+        HorizontalBox {
+            visible: root.width > 768px;
             spacing: 16px;
 
             GlassCard {

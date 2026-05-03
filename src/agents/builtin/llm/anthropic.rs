@@ -60,6 +60,8 @@ struct AnthropicContent {
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    is_error: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     cache_control: Option<AnthropicCacheControl>,
 }
 
@@ -134,10 +136,10 @@ impl LlmClient for AnthropicClient {
 
             // Tool results
             for tr in &m.tool_results {
-                let text = if !tr.error.is_empty() {
-                    format!("Error: {}", tr.error)
+                let (text, is_error) = if !tr.error.is_empty() {
+                    (format!("Error: {}", tr.error), Some(true))
                 } else {
-                    tr.content.clone()
+                    (tr.content.clone(), None)
                 };
                 content_blocks.push(AnthropicContent {
                     r#type: "tool_result".to_string(),
@@ -147,6 +149,7 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: Some(tr.tool_call_id.clone()),
                     content: Some(Value::String(text)),
+                    is_error,
                     cache_control: None,
                 });
             }
@@ -161,6 +164,7 @@ impl LlmClient for AnthropicClient {
                     input: Some(tc.arguments.clone()),
                     tool_use_id: None,
                     content: None,
+                    is_error: None,
                     cache_control: None,
                 });
             }
@@ -175,6 +179,7 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: None,
                     content: None,
+                    is_error: None,
                     cache_control: None,
                 });
             }
@@ -188,6 +193,7 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: None,
                     content: None,
+                    is_error: None,
                     cache_control: None,
                 });
             }

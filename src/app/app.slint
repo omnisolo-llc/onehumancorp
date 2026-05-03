@@ -1,3 +1,4 @@
+export { TooltipRegistry } from "./tooltip_registry.slint";
 export { ApiDocs } from "./api_docs.slint";
 export { VideoTutorials } from "./video_tutorials.slint";
 export { AiHelpChat } from "./ai_help_chat.slint";
@@ -68,6 +69,8 @@ export component AgentStatusIndicatorWindow inherits Window {
     title: "Agent Status Indicator Test";
     
     in-out property <bool> is_active <=> asi.is_active;
+    in-out property <string> status_text <=> asi.status_text;
+    in-out property <string> status_color <=> asi.status_color;
 
     asi := AgentStatusIndicator {}
 }
