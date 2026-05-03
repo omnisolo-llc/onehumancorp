@@ -38,34 +38,44 @@ impl SipDB {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
         
-        // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
-            .bind(stuck_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 3. Remove COMPLETED, or very old FAILED missions
-        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        Ok(())
+        let exec_future = async {
+            // 1. Mark stagnant PENDING missions as STUCK after 1 hour
+            sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                .bind(stuck_threshold)
+                .bind(&self.org_id)
+                .execute(&self.pool)
+                .await?;
+
+            // 1b. Immediately requeue STUCK missions
+            sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+                .bind(&self.org_id)
+                .execute(&self.pool)
+                .await?;
+
+            // 2. Mark missions as FAILED if they exceed the absolute age threshold
+            sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                .bind(fail_threshold)
+                .bind(&self.org_id)
+                .execute(&self.pool)
+                .await?;
+
+            // 3. Remove COMPLETED, or very old FAILED missions
+            // SQLite does not support WITH cte AS (...) DELETE ...
+            // We use a simpler query:
+            sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)")
+                .bind(fail_threshold)
+                .bind(&self.org_id)
+                .execute(&self.pool)
+                .await?;
+
+            Ok::<(), sqlx::Error>(())
+        };
+
+        match tokio::time::timeout(std::time::Duration::from_millis(1500), exec_future).await {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(sqlx::Error::PoolTimedOut), // Map timeout to a proper sqlx::Error
+        }
     }
 
 

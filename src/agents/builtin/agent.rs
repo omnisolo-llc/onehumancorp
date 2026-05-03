@@ -383,6 +383,10 @@ impl Agent {
             let resp = match self.llm.chat(req).await {
                 Ok(r) => r,
                 Err(e) => {
+                    let err_msg = e.to_string().to_lowercase();
+                    if err_msg.contains("timeout") || err_msg.contains("connection refused") || err_msg.contains("503") || err_msg.contains("unavailable") {
+                        return Err(e.into());
+                    }
                     let err = format!("LLM error: {}", e);
                     on_event(AgentEvent::TaskError { error: err.clone() });
                     return Err(err.into());

@@ -477,9 +477,46 @@ impl AgentService for AgentServiceImpl {
                 let _ = tx_clone.try_send(Ok(pb));
             };
 
-            let result = agent_clone
-                .run(&run_cfg, &task, &mut on_event)
-                .await;
+            let mut result = Err(Box::<dyn std::error::Error + Send + Sync>::from("Execution failed"));
+            let mut retries = 0;
+            let max_retries = 3;
+
+            while retries < max_retries {
+                let run_future = agent_clone.run(&run_cfg, &task, &mut on_event);
+                match tokio::time::timeout(std::time::Duration::from_secs(60), run_future).await {
+                    Ok(Ok(res)) => {
+                        result = Ok(res);
+                        break;
+                    }
+                    Ok(Err(e)) => {
+                        let err_msg = e.to_string().to_lowercase();
+                        if err_msg.contains("timeout") || err_msg.contains("connection refused") || err_msg.contains("503") || err_msg.contains("unavailable") {
+                            retries += 1;
+                            if retries >= max_retries {
+                                let err_str = "LLM API unavailable. Agent entering PAUSED state.".to_string();
+                                on_event(AgentEvent::TaskError { error: err_str.clone() });
+                                result = Err(Box::<dyn std::error::Error + Send + Sync>::from(err_str));
+                                break;
+                            }
+                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            continue;
+                        }
+                        result = Err(e);
+                        break;
+                    }
+                    Err(_) => {
+                        // Execution Timeout
+                        retries += 1;
+                        if retries >= max_retries {
+                            let err_str = "Execution timed out after 60 seconds across 3 attempts".to_string();
+                            on_event(AgentEvent::TaskError { error: err_str.clone() });
+                            result = Err(Box::<dyn std::error::Error + Send + Sync>::from(err_str));
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            }
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
