@@ -3,8 +3,6 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
-    width: 400px;
-    height: 600px;
     title: "One Human Corp - Login";
 
     in-out property <bool> loading: false;
@@ -24,92 +22,97 @@ export component Login inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
+    HorizontalBox {
         alignment: center;
-        spacing: 20px;
-        padding: 32px;
 
-        GlassCard {
-            VerticalBox {
-                spacing: 16px;
-                padding: 24px;
+        VerticalBox {
+            alignment: center;
+            max-width: 400px;
+            spacing: 20px;
+            padding: 32px;
 
-                Text {
-                    text: "✨";
-                    font-size: 64px;
-                    horizontal-alignment: center;
-                    color: #a855f7;
-                }
+            GlassCard {
+                VerticalBox {
+                    spacing: 16px;
+                    padding: 24px;
 
-                Text {
-                    text: "One Human Corp";
-                    font-size: 28px;
-                    font-weight: 700;
-                    horizontal-alignment: center;
-                    color: white;
-                    font-family: "Outfit";
-                }
+                    Text {
+                        text: "✨";
+                        font-size: 64px;
+                        horizontal-alignment: center;
+                        color: #a855f7;
+                    }
 
-                Text {
-                    text: "Sign in to manage your business";
-                    font-size: 14px;
-                    horizontal-alignment: center;
-                    color: #a8b2c1;
-                    font-family: "Inter";
-                }
+                    Text {
+                        text: "One Human Corp";
+                        font-size: 28px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        color: white;
+                        font-family: "Outfit";
+                    }
 
-                LineEdit {
-                    placeholder-text: "Email or Username";
-                    text <=> username;
-                }
+                    Text {
+                        text: "Sign in to manage your business";
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                        color: #a8b2c1;
+                        font-family: "Inter";
+                    }
 
-                PasswordInput {
-                    placeholder-text: "Password";
-                    text <=> password;
-                }
+                    LineEdit {
+                        placeholder-text: "Email or Username";
+                        text <=> username;
+                    }
 
-                if (show_verification) : VerticalBox {
-                    spacing: 8px;
-                    alignment: center;
-                    Text { text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
+                    PasswordInput {
+                        placeholder-text: "Password";
+                        text <=> password;
+                    }
+
+                    if (show_verification) : VerticalBox {
+                        spacing: 8px;
+                        alignment: center;
+                        Text { text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
+                        Button {
+                            text: "Resend Verification Email";
+                            clicked => { resend_verification(username); }
+                        }
+                    }
+
+                    if (error_message != "") : Text {
+                        text: error_message;
+                        color: #ef4444;
+                        horizontal-alignment: center;
+                        font-family: "Inter";
+                    }
+
                     Button {
-                        text: "Resend Verification Email";
-                        clicked => { resend_verification(username); }
+                        text: is_sign_up ? "Sign Up" : "Sign In";
+                        clicked => { login(username, password); }
                     }
-                }
 
-                if (error_message != "") : Text {
-                    text: error_message;
-                    color: #ef4444;
-                    horizontal-alignment: center;
-                    font-family: "Inter";
-                }
-
-                Button {
-                    text: is_sign_up ? "Sign Up" : "Sign In";
-                    clicked => { login(username, password); }
-                }
-
-                Button {
-                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
-                    clicked => {
-                        is_sign_up = !is_sign_up;
+                    Button {
+                        text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                        clicked => {
+                            is_sign_up = !is_sign_up;
+                        }
                     }
-                }
 
-                HorizontalBox {
-                    alignment: center;
-                    Text { text: "OR"; color: #9ca3af; font-weight: 700; }
-                }
+                    HorizontalBox {
+                        alignment: center;
+                        Text { text: "OR"; color: #9ca3af; font-weight: 700; }
+                    }
 
-                Button {
-                    text: "Continue with Google/Apple";
-                    clicked => { oauth_login("SSO"); }
-                }
-                
-                Button {
-                    text: "⚙ App Settings";
-                    clicked => { open_settings(); }
+                    Button {
+                        text: "Continue with Google/Apple";
+                        clicked => { oauth_login("SSO"); }
+                    }
+
+                    Button {
+                        text: "⚙ App Settings";
+                        clicked => { open_settings(); }
+                    }
                 }
             }
         }
