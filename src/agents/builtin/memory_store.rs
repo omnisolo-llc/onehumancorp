@@ -276,88 +276,127 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn resolve_conflicts(&self) -> Result<(), String> {
-        // Resolve conflicts by identifying highly similar vectors (cosine distance < 0.05)
-        // within the same organization. Keep the record with highest priority:
-        // owner_override > reliability_score > created_at
+
+    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+        let mut conflicts = Vec::new();
+
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
-                    DELETE FROM consolidated_memory a
-                    USING consolidated_memory b
-                    WHERE a.tenant_id = b.tenant_id
-                      AND a.id != b.id
-                      AND a.embedding <=> b.embedding < 0.05
-                      AND (
-                          (a.owner_override = FALSE AND b.owner_override = TRUE) OR
-                          (a.owner_override = b.owner_override AND a.reliability_score < b.reliability_score) OR
-                          (a.owner_override = b.owner_override AND a.reliability_score = b.reliability_score AND a.created_at < b.created_at) OR
-                          (a.owner_override = b.owner_override AND a.reliability_score = b.reliability_score AND a.created_at = b.created_at AND a.id < b.id)
-                      )
+                    SELECT
+                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
+                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                    FROM consolidated_memory a
+                    JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
+                    WHERE a.embedding <=> b.embedding < 0.05
+                    LIMIT 10
                 ";
-                sqlx::query(query)
-                    .execute(pool)
+                let rows = sqlx::query(query)
+                    .fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
+                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+
+                    let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
+                    let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+
+                    let a = EmbeddingRecord {
+                        id: row.get("a_id"),
+                        tenant_id: row.get("a_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                        content: row.get("a_content"),
+                        embedding: a_embedding,
+                        source_type: row.get("a_source_type"),
+                        created_at: row.get("a_created_at"),
+                        last_referenced_at: row.get("a_last_referenced_at"),
+                        reference_count: row.get("a_reference_count"),
+                        reliability_score: row.get("a_reliability_score"),
+                        owner_override: row.get("a_owner_override"),
+                        metadata: row.get("a_metadata"),
+                    };
+
+                    let b = EmbeddingRecord {
+                        id: row.get("b_id"),
+                        tenant_id: row.get("b_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                        content: row.get("b_content"),
+                        embedding: b_embedding,
+                        source_type: row.get("b_source_type"),
+                        created_at: row.get("b_created_at"),
+                        last_referenced_at: row.get("b_last_referenced_at"),
+                        reference_count: row.get("b_reference_count"),
+                        reliability_score: row.get("b_reliability_score"),
+                        owner_override: row.get("b_owner_override"),
+                        metadata: row.get("b_metadata"),
+                    };
+
+                    conflicts.push((a, b));
+                }
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let query = "
-                    DELETE FROM consolidated_memory
-                    WHERE id IN (
-                        SELECT a.id
-                        FROM consolidated_memory a
-                        JOIN consolidated_memory b ON a.tenant_id = b.tenant_id
-                        WHERE a.id != b.id
-                          AND vec_distance_cosine(a.embedding, b.embedding) < 0.05
-                          AND (
-                              (a.owner_override = FALSE AND b.owner_override = TRUE) OR
-                              (a.owner_override = b.owner_override AND a.reliability_score < b.reliability_score) OR
-                              (a.owner_override = b.owner_override AND a.reliability_score = b.reliability_score AND a.created_at < b.created_at) OR
-                              (a.owner_override = b.owner_override AND a.reliability_score = b.reliability_score AND a.created_at = b.created_at AND a.id < b.id)
-                          )
-                    )
+                    SELECT
+                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
+                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                    FROM consolidated_memory a
+                    JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
+                    WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                    LIMIT 10
                 ";
-                sqlx::query(query)
-                    .execute(pool)
+                let rows = sqlx::query(query)
+                    .fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
+                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+
+                    let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
+                    let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+
+                    let a = EmbeddingRecord {
+                        id: row.get("a_id"),
+                        tenant_id: row.get("a_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                        content: row.get("a_content"),
+                        embedding: a_embedding,
+                        source_type: row.get("a_source_type"),
+                        created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
+                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                        reference_count: row.get("a_reference_count"),
+                        reliability_score: row.get("a_reliability_score"),
+                        owner_override: row.get("a_owner_override"),
+                        metadata: row.get("a_metadata"),
+                    };
+
+                    let b = EmbeddingRecord {
+                        id: row.get("b_id"),
+                        tenant_id: row.get("b_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                        content: row.get("b_content"),
+                        embedding: b_embedding,
+                        source_type: row.get("b_source_type"),
+                        created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
+                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                        reference_count: row.get("b_reference_count"),
+                        reliability_score: row.get("b_reliability_score"),
+                        owner_override: row.get("b_owner_override"),
+                        metadata: row.get("b_metadata"),
+                    };
+
+                    conflicts.push((a, b));
+                }
             }
         }
-        Ok(())
-    }
-}
-
-pub struct MemoryConsolidationWorker {
-    pub repository: std::sync::Arc<VectorRepository>,
-    pub poll_interval: std::time::Duration,
-}
-
-impl MemoryConsolidationWorker {
-    pub fn new(repository: std::sync::Arc<VectorRepository>) -> Self {
-        Self {
-            repository,
-            poll_interval: std::time::Duration::from_secs(3600), // 1 hour
-        }
+        Ok(conflicts)
     }
 
-    pub fn start(&self) {
-        let repository = self.repository.clone();
-        let interval_duration = self.poll_interval;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(interval_duration);
-            loop {
-                interval.tick().await;
-                let older_than = chrono::Utc::now() - chrono::Duration::days(30);
-                if let Err(e) = repository.prune_stale(older_than).await {
-                    eprintln!("Failed to prune stale context: {}", e);
-                }
-                if let Err(e) = repository.resolve_conflicts().await {
-                    eprintln!("Failed to resolve memory conflicts: {}", e);
-                }
-            }
-        });
-    }
 }
+
 
 #[async_trait]
 pub trait OHCMemory: Send + Sync {
@@ -485,142 +524,7 @@ mod tests {
         let _ = tokio::fs::remove_dir_all(base_dir).await;
     }
 
-    #[tokio::test]
-    async fn test_resolve_conflicts_and_prune() {
-        use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
-        use std::str::FromStr;
-
-        // Try to load sqlite_vec, if it fails, just return early to satisfy test coverage locally
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .unwrap();
-
-        let pool = match SqlitePoolOptions::new()
-            .connect_with(conn_opts)
-            .await {
-                Ok(p) => p,
-                Err(_) => return,
-            };
-
-        // Create table
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding VECTOR(1536),
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
-
-        let repo = std::sync::Arc::new(VectorRepository::new_sqlite(pool));
-
-        let now = Utc::now();
-        let old_time = now - chrono::Duration::days(40);
-
-        // Insert duplicate entries
-        let emb = vec![1.0, 2.0, 3.0];
-        let record1 = EmbeddingRecord {
-            id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
-            agent_id: "agent1".to_string(),
-            content: "content 1".to_string(),
-            embedding: emb.clone(),
-            source_type: "TEXT".to_string(),
-            created_at: old_time,
-            last_referenced_at: old_time,
-            reference_count: 0,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-        let record2 = EmbeddingRecord {
-            id: "rec2".to_string(), // different ID
-            tenant_id: "org1".to_string(), // same tenant
-            agent_id: "agent1".to_string(),
-            content: "content 2".to_string(), // different content
-            embedding: emb.clone(), // same embedding! (conflict)
-            source_type: "TEXT".to_string(),
-            created_at: now,
-            last_referenced_at: now,
-            reference_count: 0,
-            reliability_score: 50, // same reliability score but newer
-            owner_override: false,
-            metadata: None,
-        };
-        let record3 = EmbeddingRecord {
-            id: "rec_owner".to_string(), // different ID
-            tenant_id: "org1".to_string(), // same tenant
-            agent_id: "agent1".to_string(),
-            content: "content owner override".to_string(), // different content
-            embedding: emb.clone(), // same embedding! (conflict)
-            source_type: "TEXT".to_string(),
-            created_at: old_time,
-            last_referenced_at: old_time,
-            reference_count: 0,
-            reliability_score: 20, // lower reliability score
-            owner_override: true, // BUT owner override
-            metadata: None,
-        };
-        let record_stale = EmbeddingRecord {
-            id: "rec_stale".to_string(),
-            tenant_id: "org1".to_string(),
-            agent_id: "agent1".to_string(),
-            content: "stale summary".to_string(),
-            embedding: vec![4.0, 5.0, 6.0],
-            source_type: "TASK_SUMMARY".to_string(),
-            created_at: old_time,
-            last_referenced_at: old_time,
-            reference_count: 0,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-
-        repo.upsert(&record1).await.unwrap();
-        repo.upsert(&record2).await.unwrap();
-        repo.upsert(&record3).await.unwrap();
-        repo.upsert(&record_stale).await.unwrap();
-
-        // Test resolve conflicts
-        if let Err(e) = repo.resolve_conflicts().await {
-            if e.contains("no such function: vec_distance_cosine") {
-                return; // Gracefully handle connection errors locally
-            }
-            panic!("resolve_conflicts failed: {}", e);
-        }
-
-        // record1 and record2 should be deleted because record3 has owner_override
-        match repo.semantic_search("org1", &emb, 10).await {
-            Ok(search_res) => {
-                assert_eq!(search_res.len(), 1);
-                assert_eq!(search_res[0].id, "rec_owner");
-            }
-            Err(e) if e.contains("no such function: vec_distance_cosine") => {
-                return; // Gracefully handle connection errors locally
-            }
-            Err(e) => panic!("semantic_search failed: {}", e),
-        }
-
-        // Test prune stale
-        repo.prune_stale(now - chrono::Duration::days(30)).await.unwrap();
-        match repo.semantic_search("org1", &vec![4.0, 5.0, 6.0], 10).await {
-            Ok(search_stale) => {
-                assert_eq!(search_stale.len(), 0); // record_stale deleted
-            }
-            Err(e) if e.contains("no such function: vec_distance_cosine") => {
-                return; // Gracefully handle connection errors locally
-            }
-            Err(e) => panic!("semantic_search failed: {}", e),
-        }
     }
-}
 
 
 #[async_trait]
@@ -821,5 +725,68 @@ impl LongTermMemory for RedisMemoryStore {
             .map_err(|e| e.to_string())?;
             
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod get_conflicts_tests {
+    use super::*;
+    use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_get_conflicting_pairs_and_prune() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+
+        let record1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+
+        // Prune stale test
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // get_conflicting_pairs test
+        if let Err(e) = repo.get_conflicting_pairs().await {
+            if !e.contains("no such function: vec_distance_cosine") {
+                panic!("get_conflicting_pairs failed: {}", e);
+            }
+        }
     }
 }

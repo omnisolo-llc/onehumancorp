@@ -1,4 +1,4 @@
-use ohc_builtin_agent::{
+use ohc_mono::{
     auth::auth_mode_from_env,
     proto::agent_service_server::{AgentServiceServer, AgentService},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
@@ -93,9 +93,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
     
-    match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
+    match ohc_mono::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
-            ohc_builtin_agent::start_builtin_agent(transport, svc_for_redis).await;
+            ohc_mono::start_builtin_agent(transport, svc_for_redis).await;
         }
         Err(e) => {
             tracing::error!("Failed to create mesh transport: {}", e);
