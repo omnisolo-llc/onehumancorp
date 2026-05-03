@@ -2,3 +2,4 @@ pub mod tasks;
 pub mod orchestration_test;
 pub mod handoff;
 pub mod state;
+pub mod mesh;
