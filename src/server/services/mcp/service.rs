@@ -1,8 +1,6 @@
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::mcp_service_server::McpService;
-use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
-use crate::tools::hybridfsmcp::factory::create_fs_provider;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 
@@ -14,13 +12,8 @@ pub struct MyMcpService {
 
 impl MyMcpService {
     pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
-        let mut dynamic_tools = Vec::new();
-        let fs_provider = create_fs_provider(None);
-        let fs_server = HybridFSMcpServer::new(fs_provider);
-        dynamic_tools.extend(fs_server.get_tools());
-
         MyMcpService {
-            dynamic_tools: RwLock::new(dynamic_tools),
+            dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
         }
@@ -192,12 +185,6 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             _ => {
-                let tenant_id = req.spiffe_id.split('/').nth(3).map(|s| s.to_string());
-                let fs_provider = create_fs_provider(tenant_id);
-                let fs_server = HybridFSMcpServer::new(fs_provider);
-                if fs_server.get_tools().iter().any(|t| t.id == req.tool_id) {
-                    return fs_server.invoke_tool(&req).await.map(Response::new);
-                }
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
             }
         }

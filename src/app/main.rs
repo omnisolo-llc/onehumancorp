@@ -962,9 +962,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
-                let my_plan_handle_clone = my_plan_handle.clone();
+                let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
-                    if let Some(ui) = my_plan_handle_clone.upgrade() {
+                    if let Some(ui) = my_plan_handle_clone_billing.upgrade() {
                         let _ = ui.show();
                     }
                 });

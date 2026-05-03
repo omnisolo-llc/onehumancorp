@@ -1,6 +1,6 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::AgentServiceServer,
+    proto::agent_service_server::{AgentServiceServer, AgentService},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
