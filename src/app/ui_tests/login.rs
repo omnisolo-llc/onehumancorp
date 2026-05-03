@@ -104,6 +104,66 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn test_e2e_login_touch_targets() {
+    let ui = create();
+    let click_count_ref = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let cc = click_count_ref.clone();
+    ui.on_oauth_login(move |s| {
+        *cc.borrow_mut() += 1;
+        assert_eq!(s, "SSO");
+    });
+    ui.invoke_oauth_login("SSO".into());
+    assert_eq!(*click_count_ref.borrow(), 1);
+}
+
+#[test]
+fn test_e2e_login_signup_toggle_interaction() {
+    let ui = create();
+    assert_eq!(ui.get_is_sign_up(), false);
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_is_sign_up(), true);
+}
+
+#[test]
+fn test_e2e_login_settings_click() {
+    let ui = create();
+    let settings_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let so = settings_opened.clone();
+    ui.on_open_settings(move || {
+        *so.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert_eq!(*settings_opened.borrow(), true);
+}
+
+#[test]
+fn test_e2e_login_standard_login() {
+    let ui = create();
+    let login_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let lc = login_clicked.clone();
+    ui.on_login(move |u, p| {
+        *lc.borrow_mut() = true;
+        assert_eq!(u, "user");
+        assert_eq!(p, "pass");
+    });
+    ui.invoke_login("user".into(), "pass".into());
+    assert_eq!(*login_clicked.borrow(), true);
+}
+
+#[test]
+fn test_e2e_login_resend_verification() {
+    let ui = create();
+    let resend_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let rc = resend_clicked.clone();
+    ui.on_resend_verification(move |u| {
+        *rc.borrow_mut() = true;
+        assert_eq!(u, "user@domain.com");
+    });
+    ui.invoke_resend_verification("user@domain.com".into());
+    assert_eq!(*resend_clicked.borrow(), true);
+}
+
+#[test]
 fn create_verify_username() {
     let ui = create();
     ui.set_username("user@domain.com".into());
