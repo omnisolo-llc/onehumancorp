@@ -12,11 +12,9 @@ export component PromptTuning inherits Window {
     title: "Tune Agent";
 
     in-out property <int> step: 0;
-    in-out property <string> tone: "Friendly & Warm";
+    in-out property <string> tone: "Friendly";
     in-out property <bool> is_advanced: false;
     in-out property <bool> show_toast: false;
-    in-out property <string> new_ex_q;
-    in-out property <string> new_ex_a;
     
     in-out property <bool> focus_only_business: false;
     in-out property <bool> focus_avoid_competitors: false;
@@ -61,21 +59,15 @@ export component PromptTuning inherits Window {
                     spacing: 10px;
                     GlassCard {
                         height: 50px;
-                        background: tone == "Friendly & Warm" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly & Warm"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Friendly & Warm"; } }
+                        background: tone == "Formal" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "Formal"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Formal"; } }
                     }
                     GlassCard {
                         height: 50px;
-                        background: tone == "Professional" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Professional"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Professional"; } }
-                    }
-                    GlassCard {
-                        height: 50px;
-                        background: tone == "Energetic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "Energetic"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Energetic"; } }
+                        background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "Friendly"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Friendly"; } }
                     }
                     GlassCard {
                         height: 50px;
@@ -95,19 +87,19 @@ export component PromptTuning inherits Window {
                 GlassCard {
                     height: 40px;
                     background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Only about my products"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_only_business = !focus_only_business; } }
                 }
                 GlassCard {
                     height: 40px;
                     background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitor mentions"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
                 }
                 GlassCard {
                     height: 40px;
                     background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in [language]"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
                 }
             }
@@ -116,14 +108,6 @@ export component PromptTuning inherits Window {
             if (step == 2) : VerticalBox {
                 spacing: 10px;
                 Text { text: "Example interactions"; color: #1e293b; }
-                LineEdit {
-                    placeholder-text: "Question (e.g., Do you offer refunds?)";
-                    text <=> new_ex_q;
-                }
-                LineEdit {
-                    placeholder-text: "Answer (e.g., Yes, within 30 days.)";
-                    text <=> new_ex_a;
-                }
                 Button { 
                     text: "Add Example"; 
                     clicked => { add_example(); }
