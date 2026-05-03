@@ -917,94 +917,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();
 
-                if let Ok(business_share_ui) = app::BusinessShare::new() {
-                    let business_share_handle = business_share_ui.as_weak();
+                let business_share_ui = app::BusinessShare::new().unwrap();
+                let business_share_handle = business_share_ui.as_weak();
 
-                    business_share_ui.on_copy_link({
-                        let bs_handle_clone_for_copy = business_share_handle.clone();
-                        move || {
-                            if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
-                                let link = ui.get_share_link();
+                business_share_ui.on_copy_link({
+                    let bs_handle_clone_for_copy = business_share_handle.clone();
+                    move || {
+                        if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
+                            let link = ui.get_share_link();
 
-                                CLIPBOARD.with(|cb| {
-                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                        if let Err(e) = ctx.set_contents(link.to_string()) {
-                                            println!("Failed to copy to clipboard: {:?}", e);
-                                        } else {
-                                            println!("Shareable Store Link copied to clipboard: {}", link);
-                                        }
+                            CLIPBOARD.with(|cb| {
+                                if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                    if let Err(e) = ctx.set_contents(link.to_string()) {
+                                        println!("Failed to copy to clipboard: {:?}", e);
                                     } else {
-                                        println!("Clipboard not initialized, failed to copy store link");
+                                        println!("Shareable Store Link copied to clipboard: {}", link);
                                     }
-                                });
-                            }
+                                } else {
+                                    println!("Clipboard not initialized, failed to copy store link");
+                                }
+                            });
                         }
-                    });
+                    }
+                });
 
-                    let bs_handle_ig = business_share_handle.clone();
-                    business_share_ui.on_share_to_instagram(move || {
-                        if let Some(ui) = bs_handle_ig.upgrade() {
-                            let link = ui.get_share_link();
-                            let ig_url = format!("https://www.instagram.com/?url={}", link);
-                            open_url(&ig_url);
-                        }
-                    });
-                    let bs_handle_x = business_share_handle.clone();
-                    business_share_ui.on_share_to_x(move || {
-                        if let Some(ui) = bs_handle_x.upgrade() {
-                            let link = ui.get_share_link();
-                            let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
-                            open_url(&x_url);
-                        }
-                    });
-                    let bs_handle_wa = business_share_handle.clone();
-                    business_share_ui.on_share_to_whatsapp(move || {
-                        if let Some(ui) = bs_handle_wa.upgrade() {
-                            let link = ui.get_share_link();
-                            let wa_url = format!("https://wa.me/?text={}", link);
-                            open_url(&wa_url);
-                        }
-                    });
-                    let bs_handle_clone = business_share_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = bs_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
+                let bs_handle_ig = business_share_handle.clone();
+                business_share_ui.on_share_to_instagram(move || {
+                    if let Some(ui) = bs_handle_ig.upgrade() {
+                        let link = ui.get_share_link();
+                        let ig_url = format!("https://www.instagram.com/?url={}", link);
+                        open_url(&ig_url);
+                    }
+                });
+                let bs_handle_x = business_share_handle.clone();
+                business_share_ui.on_share_to_x(move || {
+                    if let Some(ui) = bs_handle_x.upgrade() {
+                        let link = ui.get_share_link();
+                        let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
+                        open_url(&x_url);
+                    }
+                });
+                let bs_handle_wa = business_share_handle.clone();
+                business_share_ui.on_share_to_whatsapp(move || {
+                    if let Some(ui) = bs_handle_wa.upgrade() {
+                        let link = ui.get_share_link();
+                        let wa_url = format!("https://wa.me/?text={}", link);
+                        open_url(&wa_url);
+                    }
+                });
+                let bs_handle_clone = business_share_handle.clone();
+                let ref_handle_clone_for_open = referrals_handle.clone();
+                dashboard.on_action_open_referrals(move || {
+                    if let Some(ui) = ref_handle_clone_for_open.upgrade() {
+                        ui.invoke_refresh();
+                        let _ = ui.show();
+                    }
+                });
+                dashboard.on_action_share_store(move || {
+                    *share_store_called_clone.borrow_mut() = true;
+                    if let Some(ui) = bs_handle_clone.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
 
-                    let business_share_close_clone = business_share_handle.clone();
-                    business_share_ui.on_close(move || {
-                        if let Some(ui) = business_share_close_clone.upgrade() {
-                            let _ = ui.hide();
-                        }
-                    });
+                let business_share_close_clone = business_share_handle.clone();
+                business_share_ui.on_close(move || {
+                    if let Some(ui) = business_share_close_clone.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
 
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
-                } else {
-                    let referrals_handle_clone = referrals_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = referrals_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                }
+                // Keep strong reference alive indefinitely on the main thread via Box::leak
+                Box::leak(Box::new(business_share_ui));
 
                 let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
