@@ -67,3 +67,58 @@ pub fn minify_json_prompt(data: &str) -> String {
     }
     data.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compress_decompress_lossless() {
+        let original = "Hello World! This is a test string to be compressed and decompressed.";
+        let compressed = compress_lossless(original).unwrap();
+        assert!(compressed.starts_with(COMPRESSION_PREFIX));
+        assert_ne!(original, compressed);
+
+        let decompressed = decompress_lossless(&compressed).unwrap();
+        assert_eq!(original, decompressed);
+    }
+
+    #[test]
+    fn test_decompress_uncompressed() {
+        let data = "Not compressed data";
+        let decompressed = decompress_lossless(data).unwrap();
+        assert_eq!(data, decompressed);
+    }
+
+    #[test]
+    fn test_reduce_tokens() {
+        let data = "The quick brown fox jumps over a lazy dog";
+        let reduced = reduce_tokens(data);
+        assert_eq!(reduced, "quick brown fox jumps over lazy dog");
+    }
+
+    #[test]
+    fn test_truncate_by_word_count() {
+        let data = "One two three four five six";
+        assert_eq!(truncate_by_word_count(data, 3), "One two three");
+        assert_eq!(truncate_by_word_count(data, 0), "");
+        assert_eq!(truncate_by_word_count(data, 10), data);
+    }
+
+    #[test]
+    fn test_minify_json_prompt() {
+        let json = r#"
+        {
+            "key": "value",
+            "nested": {
+                "inner": 42
+            }
+        }
+        "#;
+        let minified = minify_json_prompt(json);
+        assert_eq!(minified, r#"{"key":"value","nested":{"inner":42}}"#);
+
+        let not_json = "just a string";
+        assert_eq!(minify_json_prompt(not_json), not_json);
+    }
+}
