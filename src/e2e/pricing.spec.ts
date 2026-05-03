@@ -205,6 +205,6 @@ test.describe('My Plan Page', () => {
     await detailsBtn.click();
 
     // Assert Cost Dashboard appears
-    await expect(page.locator('text=/Cost & AI Usage/i').first()).toBeVisible();
+    await expect(page.locator('text=/Cost & Token Usage/i').first()).toBeVisible();
   });
 });

@@ -68,14 +68,8 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
-        );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
+        let agents = self.hub.get_agents();
+        let meetings = self.hub.get_meetings();
         let summary = self.hub.tracker().summary("system");
         
         let mut total_msgs = 0;
