@@ -895,6 +895,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                let gb_handle_for_dashboard = grow_business_handle.clone();
+                dashboard.on_action_grow_business(move || {
+                    if let Some(ui) = gb_handle_for_dashboard.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
@@ -903,6 +911,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    let agents_ui = app::Agents::new()?;
+    let agent_hire_ui = app::AgentHire::new()?;
+    let fix_agent_ui = app::FixAgent::new()?;
+
+    let agent_hire_handle = agent_hire_ui.as_weak();
+    agents_ui.on_hire_agent(move || {
+        if let Some(ui) = agent_hire_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let fix_agent_handle = fix_agent_ui.as_weak();
+    agents_ui.on_fix_agent(move |_id| {
+        if let Some(ui) = fix_agent_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    Box::leak(Box::new(agents_ui));
+    Box::leak(Box::new(agent_hire_ui));
+    Box::leak(Box::new(fix_agent_ui));
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
     let welcome_checklist_handle = welcome_checklist_ui.as_weak();
@@ -2447,6 +2477,17 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let grow_business_opened_clone = grow_business_opened.clone();
+
+        dashboard_ui.on_action_grow_business(move || {
+            *grow_business_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_grow_business();
+        assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+
         let ui = app::GrowBusiness::new().unwrap();
 
         let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2473,6 +2514,72 @@ mod docs_tests {
 
         assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
         assert!(*execute_success.borrow());
+    }
+
+    #[test]
+    fn test_e2e_agent_hire_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Here we simulate the dashboard launching the Agents view
+        let agents_ui = app::Agents::new().unwrap();
+        let agent_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let agent_hire_opened_clone = agent_hire_opened.clone();
+
+        agents_ui.on_hire_agent(move || {
+            *agent_hire_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_hire_agent();
+        assert!(*agent_hire_opened.borrow(), "Agent Hire should be opened from Agents screen");
+
+        let ui = app::AgentHire::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+        ui.set_selected_role("SOFTWARE_ENGINEER".into());
+        assert_eq!(ui.get_next_enabled(), true);
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Here we simulate the dashboard launching the Agents view
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
     }
 
     #[test]
