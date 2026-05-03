@@ -60,6 +60,7 @@ protoc-gen-prost = { workspace = true }
 protoc-gen-tonic = { workspace = true }
 prost-types = { workspace = true }
 tempfile = "3.27.0"
+js-sys = "0.3.82"
 
 [build-dependencies]
 tonic-build = "0.12"

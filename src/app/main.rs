@@ -15,6 +15,8 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -23,8 +25,13 @@ pub mod app {
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(window) = web_sys::window() {
-            let _ = window.open_with_url_and_target(url, "_blank");
+        let url_js = wasm_bindgen::JsValue::from_str(url);
+        let target_js = wasm_bindgen::JsValue::from_str("_blank");
+        let window_js = js_sys::global();
+        if let Ok(open_func) = js_sys::Reflect::get(&window_js, &wasm_bindgen::JsValue::from_str("open")) {
+            if let Some(open_func_js) = open_func.dyn_ref::<js_sys::Function>() {
+                let _ = open_func_js.call2(&window_js, &url_js, &target_js);
+            }
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
