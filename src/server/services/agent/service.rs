@@ -23,24 +23,19 @@ impl MyAgentManagerService {
     async fn get_snapshot(&self) -> DashboardSnapshot {
         let hub_clone1 = self.hub.clone();
         let hub_clone2 = self.hub.clone();
-        let cost_auditor = self.hub.get_cost_auditor();
 
-        let (agents, meetings, costs) = tokio::join!(
+        let (agents, meetings) = tokio::join!(
             tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
-            tokio::task::spawn_blocking(move || {
-                Summary {
-                    total_cost_usd: cost_auditor.get_total_cost(),
-                    total_tokens: cost_auditor.get_total_tokens(),
-                }
-            })
+            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
         );
         let agents = agents.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
         let meetings = meetings.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let costs = costs.unwrap_or_else(|_| Summary {
-            total_cost_usd: 0.0,
-            total_tokens: 0,
-        });
+
+        let cost_auditor = self.hub.get_cost_auditor();
+        let costs = Summary {
+            total_cost_usd: cost_auditor.get_total_cost(),
+            total_tokens: cost_auditor.get_total_tokens(),
+        };
 
         let mut status_map = std::collections::HashMap::new();
         for a in agents.iter() {

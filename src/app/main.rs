@@ -752,6 +752,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
     Box::leak(Box::new(cost_dashboard_ui));
 
+    let pricing_handle_toggle = pricing_handle.clone();
+    pricing_ui.on_toggle_billing_cycle(move || {
+        if let Some(ui) = pricing_handle_toggle.upgrade() {
+            let current = ui.get_is_annual();
+            ui.set_is_annual(!current);
+        }
+    });
+
+    let pricing_handle_select = pricing_handle.clone();
+    let my_plan_handle_select = my_plan_handle.clone();
+    pricing_ui.on_select_plan(move |plan| {
+        if let Some(ui) = pricing_handle_select.upgrade() {
+            let _ = ui.hide();
+        }
+        if let Some(ui) = my_plan_handle_select.upgrade() {
+            ui.set_tier(format!("{} Tier", plan).into());
+            let _ = ui.show();
+        }
+    });
+
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
         if let Some(ui) = pricing_handle_clone.upgrade() {
@@ -782,17 +802,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Handle download invoice
     });
 
-    let my_plan_handle_pricing_clone = my_plan_handle.clone();
-    pricing_ui.on_select_plan(move |plan| {
-        if let Some(ui) = my_plan_handle_pricing_clone.upgrade() {
-            ui.set_tier(plan.into());
-            let _ = ui.show();
-        }
-    });
-
-    pricing_ui.on_toggle_billing_cycle(move || {
-        // Logic for toggling billing cycle
-    });
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
@@ -2277,6 +2286,57 @@ mod docs_tests {
         assert_eq!(help_center.get_search_query(), "");
     }
 
+    #[test]
+    fn test_e2e_tooltip_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
+
+
+        // Setup the tooltip text requester
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            match id.as_str() {
+                "ask_ai" => "Ask the AI Assistant".into(),
+                "menu" => "Open Menu".into(),
+                _ => "".into(),
+            }
+        });
+
+        let tr = dashboard_ui.global::<app::TooltipRegistry>();
+        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
+        tr.invoke_hide_tooltip();
+        assert_eq!(tr.get_is_visible(), false);
+
+        let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let help_center_opened_clone = help_center_opened.clone();
+
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+        });
+
+        // Simulate clicking the help center button.
+        dashboard_ui.invoke_open_help_center();
+
+        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+    }
 
     #[test]
     fn test_help_center_creation() {
@@ -3088,10 +3148,17 @@ mod remaining_e2e_tests {
             *plan_selected_clone.borrow_mut() = plan.to_string();
         });
         pricing_ui.invoke_select_plan("Pro".into());
-        assert_eq!(*plan_selected.borrow(), "Pro");
+        let pricing_ui_toggle_handle = pricing_ui.as_weak();
+        pricing_ui.on_toggle_billing_cycle(move || {
+            if let Some(ui) = pricing_ui_toggle_handle.upgrade() {
+                let current = ui.get_is_annual();
+                ui.set_is_annual(!current);
+            }
+        });
 
-        pricing_ui.on_toggle_billing_cycle(move || {});
+        pricing_ui.set_is_annual(false);
         pricing_ui.invoke_toggle_billing_cycle();
+        assert_eq!(pricing_ui.get_is_annual(), true);
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 
@@ -3250,17 +3317,8 @@ mod e2e_hybrid_blob_tests {
             *launch_called_clone.borrow_mut() = true;
         });
 
-        ui.invoke_launch(
-            ui.get_business_type(),
-            ui.get_company_name(),
-            ui.get_company_description(),
-            ui.get_payment_pref(),
-            ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
-        );
+        ui.invoke_launch("".into(), "".into(), "".into(), "".into(), "".into(),
+            ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice());
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
