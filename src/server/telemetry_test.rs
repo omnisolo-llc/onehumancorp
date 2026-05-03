@@ -52,10 +52,13 @@ mod tests {
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        let pool = match sqlx::PgPool::connect_lazy(&db_url) {
+            Ok(p) => p,
+            Err(_) => return,
         };
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
+            return;
+        }
 
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
@@ -78,10 +81,13 @@ mod tests {
     #[tokio::test]
     async fn test_sqlite_metrics() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        let pool = match sqlx::PgPool::connect_lazy(&db_url) {
+            Ok(p) => p,
+            Err(_) => return,
         };
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
+            return;
+        }
 
         let res = crate::telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
         assert!(res.is_ok());

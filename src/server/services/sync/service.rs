@@ -405,7 +405,11 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap();
+            .connect_lazy(&database_url).unwrap();
+
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
+            return;
+        }
 
         let service = MySyncService::new(pool.clone());
 

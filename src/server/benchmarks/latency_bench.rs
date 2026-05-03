@@ -182,7 +182,14 @@ mod tests {
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
+        if db_url == "dummy" {
+            return;
+        }
+        if let Ok(pool) = sqlx::PgPool::connect_lazy(&db_url) {
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
+                return;
+            }
+        } else {
             return;
         }
         bench_dashboard_snapshot().await;
