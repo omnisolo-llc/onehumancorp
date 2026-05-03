@@ -87,19 +87,26 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for _ in 0..iterations {
-        let start = Instant::now();
-
         let hub1 = hub.clone();
         let hub2 = hub.clone();
 
         let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            async {
+                let start = Instant::now();
+                let res = tokio::task::spawn_blocking(move || hub1.get_agents()).await;
+                (res, start.elapsed())
+            },
+            async {
+                let start = Instant::now();
+                let res = tokio::task::spawn_blocking(move || hub2.get_meetings()).await;
+                (res, start.elapsed())
+            }
         );
-        let _ = agents_res.unwrap();
-        let _ = meetings_res.unwrap();
+        let _ = agents_res.0.unwrap();
+        let _ = meetings_res.0.unwrap();
 
-        fetch_times.push(start.elapsed().as_micros());
+        let max_time = std::cmp::max(agents_res.1, meetings_res.1);
+        fetch_times.push(max_time.as_micros());
     }
 
     fetch_times.sort();

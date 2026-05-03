@@ -619,9 +619,8 @@ impl Hub {
     }
 
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
-        let start = std::time::Instant::now();
-
         let ping_future = async {
+            let start = std::time::Instant::now();
             match sqlx::query("SELECT 1").execute(&self.pool).await {
                 Ok(_) => start.elapsed().as_millis() as u64,
                 Err(_) => 0,
