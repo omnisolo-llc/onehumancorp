@@ -51,6 +51,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub enable_acon_context_strategy: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -83,6 +84,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            enable_acon_context_strategy: false,
         }
     }
 }
@@ -289,6 +291,81 @@ impl Agent {
             });
 
             let mut final_messages = messages.clone();
+
+            // ACON Research Metric: Context Window Strategy
+
+
+            // Prioritize reasoning traces over raw tool outputs by truncating historical tool results.
+
+
+            // This yields significant token reduction while preserving accuracy and the agent's thought process.
+
+
+            if cfg.enable_acon_context_strategy && final_messages.len() > 3 {
+
+
+                let previous_turn_idx = final_messages.len() - 2; // Usually the assistant's previous message/tool calls
+
+
+
+
+
+                for (i, m) in final_messages.iter_mut().enumerate() {
+
+
+                    // Only truncate messages that are not from the very recent turns
+
+
+                    if i < previous_turn_idx {
+
+
+                        if m.role == Role::Tool {
+
+
+                            for tr in &mut m.tool_results {
+
+
+                                // Keep error messages intact
+
+
+                                if tr.error.is_empty() {
+
+
+                                    let original_len = tr.content.len();
+
+
+                                    if original_len > 200 {
+                            let mut truncate_idx = 200;
+                            while truncate_idx > 0 && !tr.content.is_char_boundary(truncate_idx) {
+                                truncate_idx -= 1;
+                            }
+                            tr.content.truncate(truncate_idx);
+
+
+                                        tr.content.push_str(&format!("... [ACON: Observation truncated. Original size: {} bytes. Reasoning trace preserved in adjacent assistant messages.]", original_len));
+
+
+                                    }
+
+
+                                }
+
+
+                            }
+
+
+                        }
+
+
+                    }
+
+
+                }
+
+
+            }
+
+
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
@@ -2162,5 +2239,256 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+
+    #[tokio::test]
+    async fn test_acon_context_strategy() {
+        // We will simulate an LLM that returns a stop immediately, and verify that it received the truncated message
+        struct AconMockLlm {
+            call_count: Mutex<usize>,
+            captured_messages: Mutex<Vec<Message>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for AconMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                let mut caps = self.captured_messages.lock().await;
+                *caps = req.messages.clone();
+
+                Ok(ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let mock_llm = Arc::new(AconMockLlm {
+            call_count: Mutex::new(0),
+            captured_messages: Mutex::new(Vec::new()),
+        });
+
+        let dummy_tool = Tool {
+            name: "dummy_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let mut agent = Agent::new(mock_llm.clone() as Arc<dyn LlmClient>, vec![dummy_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_acon_context_strategy = true;
+
+        // Force inject messages to simulate a history
+        // The last two turns should NOT be truncated (current turn & previous tool calls)
+        let large_content = "x".repeat(1000);
+        let history = vec![
+            Message::user("Turn 1"), // i=0
+            Message { // i=1 (historical, should be truncated)
+                role: Role::Tool,
+                content: "Reasoning trace 1".to_string(), // content is preserved
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "id_1".to_string(),
+                    content: large_content.clone(), // will be truncated
+                    error: "".to_string(),
+                }],
+            },
+            Message::user("Turn 2"), // i=2 (historical, but no tool results)
+            Message { // i=3 (historical, should be truncated)
+                role: Role::Tool,
+                content: "Reasoning trace 2".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "id_2".to_string(),
+                    content: large_content.clone(), // will be truncated
+                    error: "".to_string(),
+                }],
+            },
+            Message::user("Turn 3"), // i=4 (previous turn, should NOT be truncated)
+            Message { // i=5 (previous turn tool, should NOT be truncated)
+                role: Role::Tool,
+                content: "Reasoning trace 3".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "id_3".to_string(),
+                    content: large_content.clone(), // NOT truncated because it's recent
+                    error: "".to_string(),
+                }],
+            },
+        ];
+
+        // Hacky way to inject state via checkpointer or file, but we can just use the memory store mock or modify the agent initialization.
+        // Actually, let's just make `messages` accessible or create a custom `run` wrapper.
+        // Since we can't easily inject messages without a checkpointer, let's just mock the checkpointer.
+
+        struct AconCheckpointer {
+            messages: Vec<Message>,
+        }
+        #[async_trait::async_trait]
+        impl crate::checkpointer::CheckpointSaver for AconCheckpointer {
+            async fn get_checkpoint(&self, _t: &str, _c: &str) -> Result<Option<crate::checkpointer::Checkpoint>, String> { Ok(None) }
+            async fn put_checkpoint(&self, _c: crate::checkpointer::Checkpoint) -> Result<(), String> { Ok(()) }
+            async fn list_checkpoints(&self, _t: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
+                Ok(vec![crate::checkpointer::Checkpoint {
+                    thread_id: "t".to_string(),
+                    checkpoint_id: "c".to_string(),
+                    parent_id: None,
+                    data: serde_json::to_value(&self.messages).unwrap(),
+                    metadata: serde_json::Value::Null,
+                    created_at: chrono::Utc::now(),
+                }])
+            }
+        }
+
+        agent = agent.with_checkpointer(Arc::new(AconCheckpointer { messages: history }));
+        cfg.thread_id = Some("test_thread".to_string());
+        cfg.enable_state_checkpointing = true;
+        cfg.model = "test-model".to_string();
+
+        let mut events = vec![];
+        let _ = agent.run(&cfg, "Ignored task because history is loaded", &mut |e| events.push(e)).await;
+
+        let caps = mock_llm.captured_messages.lock().await;
+
+        // Assertions
+        assert_eq!(caps.len(), 6, "Expected 6 messages in the payload");
+
+        // Message i=1 should be truncated
+        let m1 = &caps[1];
+        assert_eq!(m1.content, "Reasoning trace 1", "Reasoning trace must be preserved");
+        let tr1 = &m1.tool_results[0];
+        assert!(tr1.content.len() < 500, "Historical tool result should be truncated");
+        assert!(tr1.content.contains("[ACON: Observation truncated"));
+
+        // Message i=3 should be truncated
+        let m3 = &caps[3];
+        assert_eq!(m3.content, "Reasoning trace 2");
+        let tr3 = &m3.tool_results[0];
+        assert!(tr3.content.len() < 500, "Historical tool result should be truncated");
+        assert!(tr3.content.contains("[ACON: Observation truncated"));
+
+        // Message i=5 should NOT be truncated (it's the most recent turn's context)
+        let m5 = &caps[5];
+        assert_eq!(m5.content, "Reasoning trace 3");
+        let tr5 = &m5.tool_results[0];
+        assert_eq!(tr5.content.len(), 1000, "Recent tool result should NOT be truncated");
+        assert!(!tr5.content.contains("[ACON:"));
+    }
+
+    #[tokio::test]
+    async fn test_acon_context_strategy_utf8() {
+        // We will simulate an LLM that returns a stop immediately, and verify that it received the truncated message safely
+        struct AconMockLlm {
+            captured_messages: Mutex<Vec<Message>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for AconMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut caps = self.captured_messages.lock().await;
+                *caps = req.messages.clone();
+
+                Ok(ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let mock_llm = Arc::new(AconMockLlm {
+            captured_messages: Mutex::new(Vec::new()),
+        });
+
+        let dummy_tool = Tool {
+            name: "dummy_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let mut agent = Agent::new(mock_llm.clone() as Arc<dyn LlmClient>, vec![dummy_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_acon_context_strategy = true;
+
+        // Force inject messages to simulate a history
+        // Create a string where the 200th byte is inside a multibyte char
+        let mut large_content = "a".repeat(199);
+        large_content.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 202 bytes.
+        large_content.push_str(&"x".repeat(1000));
+
+        let history = vec![
+            Message::user("Turn 1"), // i=0
+            Message { // i=1 (historical, should be truncated safely)
+                role: Role::Tool,
+                content: "Reasoning trace 1".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "id_1".to_string(),
+                    content: large_content, // will be truncated
+                    error: "".to_string(),
+                }],
+            },
+            Message::user("Turn 2"), // i=2
+            Message { // i=3 (previous turn, should NOT be truncated)
+                role: Role::Tool,
+                content: "Reasoning trace 2".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "id_2".to_string(),
+                    content: "Short result".to_string(),
+                    error: "".to_string(),
+                }],
+            },
+        ];
+
+        struct AconCheckpointer {
+            messages: Vec<Message>,
+        }
+        #[async_trait::async_trait]
+        impl crate::checkpointer::CheckpointSaver for AconCheckpointer {
+            async fn get_checkpoint(&self, _t: &str, _c: &str) -> Result<Option<crate::checkpointer::Checkpoint>, String> { Ok(None) }
+            async fn put_checkpoint(&self, _c: crate::checkpointer::Checkpoint) -> Result<(), String> { Ok(()) }
+            async fn list_checkpoints(&self, _t: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
+                Ok(vec![crate::checkpointer::Checkpoint {
+                    thread_id: "t".to_string(),
+                    checkpoint_id: "c".to_string(),
+                    parent_id: None,
+                    data: serde_json::to_value(&self.messages).unwrap(),
+                    metadata: serde_json::Value::Null,
+                    created_at: chrono::Utc::now(),
+                }])
+            }
+        }
+
+        agent = agent.with_checkpointer(Arc::new(AconCheckpointer { messages: history }));
+        cfg.thread_id = Some("test_thread".to_string());
+        cfg.enable_state_checkpointing = true;
+        cfg.model = "test-model".to_string();
+
+        let mut events = vec![];
+        let _ = agent.run(&cfg, "Ignored task because history is loaded", &mut |e| events.push(e)).await;
+
+        let caps = mock_llm.captured_messages.lock().await;
+
+        // Assertions
+        assert_eq!(caps.len(), 4, "Expected 4 messages in the payload");
+
+        // Message i=1 should be truncated SAFELY
+        let m1 = &caps[1];
+        let tr1 = &m1.tool_results[0];
+        assert!(tr1.content.contains("[ACON: Observation truncated"));
+        // The safe truncation should stop at 199 (before the '€' char)
+        // Length of "a".repeat(199) is 199. Then the "[ACON...]" suffix is added.
+        assert!(tr1.content.starts_with(&"a".repeat(199)));
+        assert!(!tr1.content.contains("€"));
     }
 }
