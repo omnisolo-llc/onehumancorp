@@ -45,6 +45,7 @@ rust_library(
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
+        "telemetry.rs",
         "legacy_mesh.rs",
         "lib.rs",
         "memory_store.rs",
