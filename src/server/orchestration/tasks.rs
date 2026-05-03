@@ -334,7 +334,10 @@ impl TaskDecompositionService {
             status: row.get("status"),
             priority: row.get("priority"),
             payload,
-            locked_until: None,
+            locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
             ultraplan_phase: row.get("ultraplan_phase"),
             deliberation_log,
             depth: row.get("depth"),
@@ -344,6 +347,110 @@ impl TaskDecompositionService {
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
+    }
+
+
+
+    pub async fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE id = $1"
+                )
+                .bind(task_id)
+                .fetch_one(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let dt_created: chrono::DateTime<chrono::Utc> = row.get("created_at");
+                let dt_updated: chrono::DateTime<chrono::Utc> = row.get("updated_at");
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: row.get("mission_id"),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies: {
+                        let val: serde_json::Value = row.get("dependencies");
+                        serde_json::from_value(val).unwrap_or_default()
+                    },
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: row.get("priority"),
+                    payload: {
+                        let val: serde_json::Value = row.get("payload");
+                        serde_json::to_string(&val).unwrap_or_else(|_| "{}".to_string())
+                    },
+                    locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: {
+                        let val: serde_json::Value = row.get("deliberation_log");
+                        Some(serde_json::to_string(&val).unwrap_or_else(|_| "[]".to_string()))
+                    },
+                    depth: row.get("depth"),
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: row.get("action_risk"),
+                    approval_status: row.get("approval_status"),
+                    proposed_content: row.get("proposed_content"),
+                })
+            },
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT * FROM shared_tasks_decomposition WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let created_str: String = row.get("created_at");
+                let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                    .unwrap_or_else(|_| Utc::now());
+
+                let updated_str: String = row.get("updated_at");
+                let dt_updated = chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
+                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&chrono::Utc)))
+                    .unwrap_or_else(|_| Utc::now());
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: row.get("mission_id"),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies: {
+                        let val: String = row.get("dependencies");
+                        serde_json::from_str(&val).unwrap_or_default()
+                    },
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: row.get("priority"),
+                    payload: row.get("payload"),
+                    locked_until: {
+                        let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
+                        locked
+                    },
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: row.get("deliberation_log"),
+                    depth: row.get("depth"),
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: row.get("action_risk"),
+                    approval_status: row.get("approval_status"),
+                    proposed_content: row.get("proposed_content"),
+                })
+            }
+        }
     }
 
 
