@@ -3685,8 +3685,17 @@ mod e2e_hybrid_blob_tests {
             *launch_called_clone.borrow_mut() = true;
         });
 
-        ui.invoke_launch("".into(), "".into(), "".into(), "".into(), "".into(),
-            ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice());
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
