@@ -930,6 +930,17 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+
+    async fn instant_build(
+        &self,
+        request: Request<crate::ohc::orchestration::InstantBuildRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::InstantBuildResponse>, Status> {
+        let req = request.into_inner();
+        match self.onboarding_agent.extract_instant_metadata(&req.bio).await {
+            Ok(resp) => Ok(Response::new(resp)),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 }
 
 #[tokio::main]

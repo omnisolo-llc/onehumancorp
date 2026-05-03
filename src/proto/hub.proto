@@ -253,6 +253,18 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc InstantBuild(InstantBuildRequest) returns (InstantBuildResponse);
+}
+
+message InstantBuildRequest {
+  string bio = 1;
+}
+
+message InstantBuildResponse {
+  string company_name = 1;
+  string business_type = 2;
+  string admin_email = 3;
+  string payment_pref = 4;
 }
 
 message StartOnboardingRequest {

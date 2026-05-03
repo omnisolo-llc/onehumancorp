@@ -1707,7 +1707,7 @@ mod docs_tests {
 
                 u.set_admin_email("ai@test.com".into());
                 u.set_payment_pref("online".into());
-                u.set_step(9);
+                u.set_step(6);
             }
         });
 

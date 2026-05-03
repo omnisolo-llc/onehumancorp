@@ -5,9 +5,69 @@ pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
 }
 
+use crate::ohc::orchestration::InstantBuildResponse;
+use ohc_builtin_agent::types::{ChatRequest, Message};
+use ohc_builtin_agent::llm::LlmClient;
+
 impl OnboardingAgent {
     pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
         OnboardingAgent { db }
+    }
+
+    pub async fn extract_instant_metadata(&self, bio: &str) -> Result<InstantBuildResponse, String> {
+        let llm_provider = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "gemini".to_string());
+
+        let client: Box<dyn LlmClient> = match llm_provider.as_str() {
+            "gemini" => {
+                let api_key = std::env::var("GEMINI_API_KEY").map_err(|_| "GEMINI_API_KEY must be set".to_string())?;
+                Box::new(ohc_builtin_agent::llm::gemini::GeminiClient::new(api_key))
+            },
+            "openai" => {
+                let api_key = std::env::var("OPENAI_API_KEY").map_err(|_| "OPENAI_API_KEY must be set".to_string())?;
+                Box::new(ohc_builtin_agent::llm::openai::OpenAIClient::new(api_key))
+            },
+            _ => return Err(format!("Unsupported LLM provider: {}", llm_provider)),
+        };
+
+        let system_prompt = "You are 'The Advisor', an AI assistant helping small business owners set up their storefronts. \
+        Extract the following information from the user's bio paragraph: \
+        1. 'company_name': The name of the business. Guess a name if not explicitly stated (e.g., \"Maya's Cakes\" from \"I bake cakes\"). \
+        2. 'business_type': The type of business. Choose from 'Online Store', 'Service Business', 'Restaurant / Food', or provide a generic type. \
+        3. 'admin_email': An email address for the admin, derived from the bio. If not provided, make up a placeholder like 'admin@<company-name>.com'. \
+        4. 'payment_pref': A payment preference, e.g., 'online', 'in-person'. Default to 'online'. \
+        Respond ONLY with a valid JSON object containing exactly these four keys. Do not include markdown formatting or extra text.";
+
+        let req = ChatRequest {
+            model: std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gemini-1.5-pro-latest".to_string()),
+            system: system_prompt.to_string(),
+            messages: vec![Message::user(bio)],
+            tools: vec![],
+            max_tokens: 1024,
+            temperature: 0.1,
+        };
+
+        let resp = client.chat(req).await.map_err(|e| format!("LLM chat failed: {}", e))?;
+        let content = resp.message.content.trim().trim_start_matches("```json").trim_end_matches("```").trim();
+
+        match serde_json::from_str::<serde_json::Value>(content) {
+            Ok(json) => {
+                Ok(InstantBuildResponse {
+                    company_name: json.get("company_name").and_then(|v| v.as_str()).unwrap_or("AI Generated Store").to_string(),
+                    business_type: json.get("business_type").and_then(|v| v.as_str()).unwrap_or("Online Store").to_string(),
+                    admin_email: json.get("admin_email").and_then(|v| v.as_str()).unwrap_or("admin@ai-generated.test").to_string(),
+                    payment_pref: json.get("payment_pref").and_then(|v| v.as_str()).unwrap_or("online").to_string(),
+                })
+            }
+            Err(_) => {
+                // Fallback parsing failed
+                Ok(InstantBuildResponse {
+                    company_name: "AI Generated Store".to_string(),
+                    business_type: "Online Store".to_string(),
+                    admin_email: "admin@ai-generated.test".to_string(),
+                    payment_pref: "online".to_string(),
+                })
+            }
+        }
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
