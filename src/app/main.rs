@@ -59,6 +59,45 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+
+#[cfg(not(target_arch = "wasm32"))]
+fn init_dashboard(dashboard: &app::Dashboard) {
+    let dashboard_handle = dashboard.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let req = ohc::orchestration::EventStreamRequest { topic: "dashboard_stream".into() };
+            if let Ok(resp) = client.stream_mesh_events(tonic::Request::new(req)).await {
+                let mut stream = resp.into_inner();
+                let mut msgs = vec![];
+                while let Ok(Some(event)) = stream.message().await {
+                    let text = String::from_utf8_lossy(&event.payload).to_string();
+                    msgs.push(app::UiMeshMessage {
+                        id: event.event_id.into(),
+                        content: text.into(),
+                    });
+                    if msgs.len() > 10 { msgs.remove(0); }
+                    let msgs_clone = msgs.clone();
+                    let handle = dashboard_handle.clone();
+                    if handle.upgrade().is_none() {
+                        break; // exit task if dashboard is closed
+                    }
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = handle.upgrade() {
+                            let model = slint::ModelRc::new(slint::VecModel::from(msgs_clone));
+                            ui.set_mesh_messages(model.into());
+                        }
+                    });
+                }
+            }
+        }
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+fn init_dashboard(_dashboard: &app::Dashboard) {
+    // stub for wasm
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -142,6 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -171,6 +211,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }
@@ -703,6 +744,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -716,6 +758,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -804,6 +847,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 let dashboard_handle = dashboard.as_weak();
                 let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -981,6 +1025,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 // In a real flow, this might jump to a specific product adding UI
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -995,6 +1040,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 // Similarly, jump to integrations or marketing
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
@@ -1022,6 +1068,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                init_dashboard(&dashboard);
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -3048,22 +3095,6 @@ mod remaining_e2e_tests {
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-
-        // Populate mock agent activity messages
-        let mock_messages = vec![
-            app::UiMeshMessage {
-                id: "msg-1".into(),
-                content: "✅ Your Support Agent replied to 3 customers".into(),
-            },
-            app::UiMeshMessage {
-                id: "msg-2".into(),
-                content: "📦 Order Manager updated stock for 12 items".into(),
-            }
-        ];
-
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
-        dashboard_ui.set_mesh_messages(messages_model.into());
     }
 
     #[test]
