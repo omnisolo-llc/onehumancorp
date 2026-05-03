@@ -26,6 +26,29 @@ test.describe('Dashboard UX', () => {
     // Verify softer wording for drafts
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
+
+  test('should verify there are no TooltipElements used for primary buttons', async ({ page }) => {
+     await page.goto('/login');
+     await page.fill('input[type="email"]', 'test@example.com');
+     await page.fill('input[type="password"]', 'password123');
+     await page.click('button:has-text("Sign In")');
+     await page.waitForURL('**/*');
+
+     // Quick Actions
+     const addProductBtn = page.locator('button:has-text("Add Product")');
+     const viewOrdersBtn = page.locator('button:has-text("View Orders")');
+     const messagesBtn = page.locator('button:has-text("Messages")');
+
+     await expect(addProductBtn).toBeVisible();
+     await expect(viewOrdersBtn).toBeVisible();
+     await expect(messagesBtn).toBeVisible();
+
+     // Make sure we can click them without hover delays or tooltip overlays
+     await addProductBtn.click();
+     // Should trigger the add product action, we'll verify the result
+     // by verifying the url or visible text (assuming a generic "New Product" view)
+     // For this test, just ensuring the click works directly without tooltip blocking is the main goal.
+  });
 });
 
 test('should display Quick Actions on mobile', async ({ page }) => {

@@ -2362,7 +2362,7 @@ mod docs_tests {
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
     }
 
     #[test]
