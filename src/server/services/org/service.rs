@@ -68,18 +68,13 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let hub_clone1 = self.hub.clone();
-        let hub_clone2 = self.hub.clone();
-        let hub_clone3 = self.hub.clone();
+        let agents_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() });
+        let meetings_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() });
+        let summary_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.tracker().summary("system") });
 
-        let (agents, meetings, summary) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() }),
-            tokio::task::spawn_blocking(move || { hub_clone3.tracker().summary("system") })
-        );
-        let agents = agents.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let meetings = meetings.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let summary = summary.unwrap_or_else(|_| Default::default());
+        let agents = agents_task.await.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let meetings = meetings_task.await.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let summary = summary_task.await.unwrap_or_else(|_| Default::default());
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;

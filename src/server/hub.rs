@@ -128,8 +128,7 @@ impl Hub {
     }
 
     pub fn get_agents(&self) -> Arc<Vec<Agent>> {
-        {
-            let cache = self.agent_cache.read().unwrap();
+        if let Ok(cache) = self.agent_cache.read() {
             if let Some(agents) = &*cache {
                 return Arc::clone(agents);
             }
@@ -148,10 +147,13 @@ impl Hub {
         }
 
         let agents = self.agents.read().unwrap();
-        let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
-        agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+        let arc = {
+            let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
+            agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+            Arc::new(agents_vec)
+        };
+        drop(agents);
 
-        let arc = Arc::new(agents_vec);
         *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
 
         if let Some(client) = &self.redis_client {
@@ -283,8 +285,7 @@ impl Hub {
     }
 
     pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
-        {
-            let cache = self.meetings_cache.read().unwrap();
+        if let Ok(cache) = self.meetings_cache.read() {
             if let Some(meetings) = &*cache {
                 return Arc::clone(meetings);
             }
@@ -303,9 +304,12 @@ impl Hub {
         }
 
         let meetings = self.meetings.read().unwrap();
-        let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
+        let arc = {
+            let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
+            Arc::new(meetings_vec)
+        };
+        drop(meetings);
 
-        let arc = Arc::new(meetings_vec);
         *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
 
         if let Some(client) = &self.redis_client {

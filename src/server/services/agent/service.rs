@@ -21,15 +21,11 @@ impl MyAgentManagerService {
     }
 
     async fn get_snapshot(&self) -> DashboardSnapshot {
-        let hub_clone1 = self.hub.clone();
-        let hub_clone2 = self.hub.clone();
+        let agents_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() });
+        let meetings_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() });
 
-        let (agents, meetings) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub_clone1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub_clone2.get_meetings() })
-        );
-        let agents = agents.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
-        let meetings = meetings.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let agents = agents_task.await.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let meetings = meetings_task.await.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
 
         let cost_auditor = self.hub.get_cost_auditor();
         let costs = Summary {
@@ -200,15 +196,12 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let hub_clone1 = self.hub.clone();
-        let hub_clone2 = self.hub.clone();
 
-        let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub_clone1.get_agents()),
-            tokio::task::spawn_blocking(move || hub_clone2.get_meetings())
-        );
-        let agents = agents_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let agents_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_agents() });
+        let meetings_task = tokio::task::spawn_blocking({ let hub_clone = self.hub.clone(); move || hub_clone.get_meetings() });
+
+        let agents = agents_task.await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let meetings = meetings_task.await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let mut msg_count = 0;
         for m in meetings.iter() {
