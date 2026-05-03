@@ -962,7 +962,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     content TEXT NOT NULL,
                     embedding VECTOR(1536),
                     source_type TEXT NOT NULL,
-                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    reference_count INTEGER DEFAULT 0,
+                    reliability_score INTEGER DEFAULT 50,
+                    owner_override BOOLEAN DEFAULT FALSE,
+                    metadata TEXT
                 );"
             )
             .execute(pool)
@@ -1104,3 +1109,4 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+pub mod tools;

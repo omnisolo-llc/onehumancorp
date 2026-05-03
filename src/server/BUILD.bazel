@@ -86,6 +86,7 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "@crates//:tempfile",
         "//src/proto:hub_tonic",
         "//src/proto:agent_service_tonic",
         "//src/proto:organization_prost",
