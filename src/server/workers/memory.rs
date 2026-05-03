@@ -26,10 +26,10 @@ impl MemoryConsolidationWorker {
                 interval.tick().await;
                 let older_than = chrono::Utc::now() - chrono::Duration::days(180);
                 if let Err(e) = repository.prune_stale(older_than).await {
-                    eprintln!("Failed to prune stale context: {}", e);
+                    tracing::info!("Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = Self::resolve_conflicts(&repository).await {
-                    eprintln!("Failed to resolve memory conflicts: {}", e);
+                    tracing::info!("Failed to resolve memory conflicts: {}", e);
                 }
             }
         });
@@ -52,7 +52,7 @@ impl MemoryConsolidationWorker {
             let summary = match llm_client.reason(&prompt).await {
                 Ok(res) => res,
                 Err(e) => {
-                    eprintln!("Failed to synthesize memories: {}", e);
+                    tracing::info!("Failed to synthesize memories: {}", e);
                     continue;
                 }
             };
@@ -60,7 +60,7 @@ impl MemoryConsolidationWorker {
             let embedding = match llm_client.generate_embedding(&summary).await {
                 Ok(emb) => emb,
                 Err(e) => {
-                    eprintln!("Failed to generate embedding for merged summary: {}", e);
+                    tracing::info!("Failed to generate embedding for merged summary: {}", e);
                     continue;
                 }
             };
@@ -82,7 +82,7 @@ impl MemoryConsolidationWorker {
             };
 
             if let Err(e) = repository.upsert(&merged_record).await {
-                eprintln!("Failed to insert merged memory: {}", e);
+                tracing::info!("Failed to insert merged memory: {}", e);
                 continue;
             }
 

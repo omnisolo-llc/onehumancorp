@@ -1,0 +1,12 @@
+---
+issue_category: "cleanup"
+title: "Hybrid Agentic OS Signal Hygiene and Health Guardianship"
+description: "Completed cleanup of noisy logs, implemented health-check probes for hybrid-mode switching and local-to-cloud mission sync, and sanitized the agent_missions queue."
+design_tokens:
+  backdrop_filter: "blur(15px) saturate(200%)"
+  font_family: "Outfit, Inter"
+findings:
+  - Pruned redundant and noisy println/eprintln calls from workers and services.
+  - Added new probes to the hub check_health function for better visibility into sync states.
+  - Prioritized stuck missions in the sync queue by adding an ORDER BY clause.
+  - Removed unused artifact src/server/queue.rs.orig.
