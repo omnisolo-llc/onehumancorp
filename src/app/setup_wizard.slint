@@ -54,6 +54,10 @@ export component SetupWizard inherits Window {
     callback copy_link(string);
     callback generate_instant_preview();
 
+    callback go_to_add_products();
+    callback go_to_connect_instagram();
+    callback go_to_share_link();
+
     callback next_step();
     callback select_business_type(string);
     callback toggle_sell_physical();
@@ -507,17 +511,32 @@ export component SetupWizard inherits Window {
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_add_products(); }
+                                Text { text: "Add 3 more products"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_connect_instagram(); }
+                                Text { text: "Connect Instagram"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                         HorizontalBox {
                             spacing: 10px;
                             Text { text: "○"; color: white; font-size: 16px; }
-                            Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                            TouchArea {
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.go_to_share_link(); }
+                                Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; font-size: 16px; }
+                            }
                         }
                     }
                 }
@@ -559,6 +578,14 @@ export component SetupWizard inherits Window {
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice);
                 } }
+            }
+
+            if (step == 9 && launch_success) : GlassCard {
+                width: 240px;
+                height: 54px;
+                background: rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = 10; } }
             }
 
             if (step == 10) : GlassCard {
