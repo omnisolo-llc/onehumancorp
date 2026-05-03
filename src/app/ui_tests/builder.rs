@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilder::new().unwrap() }
 
