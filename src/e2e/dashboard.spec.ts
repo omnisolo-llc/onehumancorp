@@ -71,10 +71,6 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 
-  test('should display agent actions today section', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('text=Helper Actions Today')).toBeVisible();
-  });
 
   test('should show my team section', async ({ page }) => {
     await page.goto('/');
@@ -126,10 +122,6 @@ test.describe('Dashboard Core', () => {
     await expect(editBtn).toBeVisible();
   });
 
-  test('should display agent actions today', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('text=Helper Actions Today')).toBeVisible();
-  });
 });
 
 test.describe('Dashboard Mobile', () => {

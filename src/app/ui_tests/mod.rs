@@ -26,8 +26,6 @@ pub mod landing;
 pub mod share;
 pub mod checklist;
 pub mod indicators;
-pub mod velocity;
-pub mod observability;
 pub mod help;
 pub mod docs;
 pub mod tutorials;

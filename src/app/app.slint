@@ -6,8 +6,8 @@ export { InteractiveWalkthrough } from "./interactive_walkthrough.slint";
 export { ReleaseNotes } from "./release_notes.slint";
 export { HelpCenter } from "./help_center.slint";
 import { Button, VerticalBox } from "std-widgets.slint";
-import { SwarmObservability, UiMeshMessage } from "./swarm_observability.slint";
-import { SwarmVelocity } from "./swarm_velocity.slint";
+
+
 import { AgentStatusIndicator } from "./agent_status_indicator.slint";
 export { FixAgent, Upgrade, Billing } from "./ongoing_management.slint";
 export { Settings } from "./settings.slint";
@@ -42,27 +42,6 @@ export { TaskList, UiTask } from "./task_list.slint";
 export { BusinessShare } from "./business_share.slint";
 export { UpgradePrompt } from "./upgrade_prompt.slint";
 
-export component SwarmVelocityWindow inherits Window {
-    width: 500px;
-    height: 200px;
-    title: "Task Speed";
-    
-    in-out property <string> completion_rate <=> sv.completion_rate;
-    in-out property <string> avg_latency <=> sv.avg_latency;
-    in-out property <string> active_threads <=> sv.active_threads;
-
-    sv := SwarmVelocity {}
-}
-
-export component SwarmObservabilityWindow inherits Window {
-    width: 500px;
-    height: 350px;
-    title: "Agent Actions Today";
-    
-    in-out property <[UiMeshMessage]> messages <=> so.messages;
-
-    so := SwarmObservability {}
-}
 
 export component AgentStatusIndicatorWindow inherits Window {
     width: 100px;

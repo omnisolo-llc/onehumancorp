@@ -3204,58 +3204,7 @@ mod remaining_e2e_tests {
     }
 
     #[test]
-    fn test_e2e_swarm_observability_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "Login should be successful");
-
-        // Navigate to Dashboard
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-
-        // Populate mock agent activity messages
-        let mock_messages = vec![
-            app::UiMeshMessage {
-                id: "msg-1".into(),
-                content: "✅ Your Support Agent replied to 3 customers".into(),
-            },
-            app::UiMeshMessage {
-                id: "msg-2".into(),
-                content: "📦 Order Manager updated stock for 12 items".into(),
-            }
-        ];
-
-        let messages_model = slint::ModelRc::new(slint::VecModel::from(mock_messages));
-        dashboard_ui.set_mesh_messages(messages_model.into());
-    }
-
-    #[test]
     fn test_e2e_business_share_and_milestones_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
