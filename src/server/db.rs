@@ -73,6 +73,34 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
+            if let Some(path_str) = path_str_opt {
+                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    if !db_path.exists() {
+                        if let Err(e) = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .mode(0o600)
+                            .open(&db_path)
+                        {
+                            eprintln!("Failed to securely create SQLite DB file: {}", e);
+                            return Err(e.into());
+                        }
+                    } else {
+                        use std::os::unix::fs::PermissionsExt;
+                        let metadata = std::fs::metadata(&db_path)?;
+                        let mut perms = metadata.permissions();
+                        perms.set_mode(0o600);
+                        if let Err(e) = std::fs::set_permissions(&db_path, perms) {
+                            eprintln!("Failed to set 0600 permissions on existing SQLite DB file: {}", e);
+                            return Err(e.into());
+                        }
+                    }
+                }
+            }
+
             // SQLCipher support for standalone mode encryption
             if database_url.contains("cipher=sqlcipher") {
                 if let Some(key) = database_url.split("key=").nth(1) {
@@ -98,13 +126,6 @@ impl DB {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
-                        Ok(true)
-                    })
-                })
                 .connect(&database_url)
                 .await?;
 
@@ -419,13 +440,6 @@ mod autodream_db_tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
-                    Ok(true)
-                })
-            })
             .connect_lazy(database_url)
             .unwrap();
 
@@ -447,13 +461,6 @@ mod autodream_db_tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'system'").await?;
-                    Ok(true)
-                })
-            })
             .connect_lazy(database_url)
             .unwrap();
         // Just checking configuration parses ok for multitenancy logic
