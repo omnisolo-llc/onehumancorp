@@ -77,3 +77,42 @@ async fn test_hybrid_fs_mcp_server() {
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["content"], "from server");
 }
+
+#[tokio::test]
+async fn test_local_fs_provider_path_traversal() {
+    let dir = tempdir().unwrap();
+    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+
+    // Should fail with permission denied on traversal
+    let res = provider.read_file("../test.txt").await;
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+
+    let res2 = provider.read_file("/etc/passwd").await;
+    assert!(res2.is_err());
+    assert_eq!(res2.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+
+    let res3 = provider.write_file("../test2.txt", b"hack").await;
+    assert!(res3.is_err());
+    assert_eq!(res3.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+}
+
+#[tokio::test]
+async fn test_cloud_fs_provider_path_traversal() {
+    let dir = tempdir().unwrap();
+    let tenant_id = "tenant-123".to_string();
+    let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
+
+    // Should fail with permission denied on traversal
+    let res = provider.read_file("../test.txt").await;
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+
+    let res2 = provider.read_file("/etc/passwd").await;
+    assert!(res2.is_err());
+    assert_eq!(res2.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+
+    let res3 = provider.write_file("../test2.txt", b"hack").await;
+    assert!(res3.is_err());
+    assert_eq!(res3.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+}
