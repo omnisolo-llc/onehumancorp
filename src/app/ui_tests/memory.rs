@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::SwarmMemory { crate::ui_tests::init(); app::SwarmMemory::new().unwrap() }
 
