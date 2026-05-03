@@ -6,6 +6,13 @@ export component Diagnostics inherits Window {
     title: "Diagnostics Dashboard";
 
     callback run_diagnostics();
+    in-out property <string> db_status: "Connected";
+    in-out property <string> cache_status: "Connected";
+    in-out property <string> ai_status: "Connected";
+    in-out property <string> execution_mode: "STANDALONE";
+    in-out property <string> cloud_connectivity: "CONNECTED";
+    in-out property <string> mesh_status: "ACTIVE";
+    in-out property <int> stuck_missions: 0;
 
     background: #f8fafc;
 

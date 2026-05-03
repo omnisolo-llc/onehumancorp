@@ -13,7 +13,7 @@ actions:
           - "*"
     steps:
       - run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
+          # xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
             --config=buildbuddy \
             --test_output=errors \

@@ -5,6 +5,8 @@ export component VideoTutorials inherits Window {
     height: 800px;
     title: "Video Tutorials";
     background: #f8fafc;
+    in-out property <string> selected_video_title: "";
+    in-out property <bool> is_playing: false;
 
     VerticalBox {
         padding: 16px;
