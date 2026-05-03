@@ -114,7 +114,9 @@ mod tests {
 
         // Test sending a message from client to server (publish)
         let test_msg = MeshMessage {
-            topic: "test_chan".to_string(),
+            agent_id: "test".to_string(),
+            action: "test_chan".to_string(),
+            status: "ok".to_string(),
             payload: b"ws_test".to_vec(),
         };
         let mut buf = Vec::new();
@@ -125,8 +127,10 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
-        let srv_msg = MeshMessage {
-            topic: "test_chan".to_string(),
+        let srv_msg = crate::ohc::orchestration::TeammateMeshEvent {
+            agent_id: "test".to_string(),
+            action: "test_chan".to_string(),
+            status: "ok".to_string(),
             payload: b"srv_test".to_vec(),
         };
         transport_clone.publish("test_chan", srv_msg.clone()).await.unwrap();
@@ -138,7 +142,7 @@ mod tests {
                     let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
                     let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
                     if received_mesh_msg.payload == b"srv_test" {
-                        assert_eq!(received_mesh_msg.topic, "test_chan");
+                        assert_eq!(received_mesh_msg.action, "test_chan");
                         found = true;
                         break;
                     }

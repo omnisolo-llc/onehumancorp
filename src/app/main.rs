@@ -962,9 +962,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
-                let my_plan_handle_clone = my_plan_handle.clone();
+                let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
-                    if let Some(ui) = my_plan_handle_clone.upgrade() {
+                    if let Some(ui) = my_plan_handle_clone_billing.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -2394,7 +2394,7 @@ mod docs_tests {
         let publish_success_clone = publish_success.clone();
 
         ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "E-commerce");
+            assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
             assert_eq!(product, "My Custom Product");
             assert_eq!(price, "19.99");
@@ -2427,7 +2427,7 @@ mod docs_tests {
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_template("E-commerce".into());
+        ui.set_selected_template("Modern".into());
         ui.set_step(1);
 
         ui.set_primary_color("#34C759".into());
@@ -2441,7 +2441,7 @@ mod docs_tests {
         ui.set_domain_choice("custom".into());
         ui.set_step(4);
 
-        assert_eq!(ui.get_selected_template(), "E-commerce");
+        assert_eq!(ui.get_selected_template(), "Modern");
         assert_eq!(ui.get_primary_color(), "#34C759");
         assert_eq!(ui.get_product_name(), "My Custom Product");
         assert_eq!(ui.get_domain_choice(), "custom");
@@ -3592,7 +3592,7 @@ mod e2e_hybrid_blob_tests {
 
         // When publish is called, it simulates the backend writing a blob and responding.
         builder_ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "E-commerce");
+            assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
             assert_eq!(product, "My Custom Product");
             assert_eq!(price, "19.99");
@@ -3606,7 +3606,7 @@ mod e2e_hybrid_blob_tests {
 
         builder_ui.set_step(4); // Advance to the publish step
         builder_ui.invoke_publish_site(
-            "E-commerce".into(),
+            "Modern".into(),
             "#34C759".into(),
             "My Custom Product".into(),
             "19.99".into(),
@@ -3645,7 +3645,7 @@ mod e2e_hybrid_blob_tests {
         // Proceed through steps
         // This is a minimal simulated flow just to set and test the values
         // Normally you'd call invoke_next_step multiple times
-        ui.set_website_template("Modern Glass".into());
+        ui.set_website_template("Modern".into());
         ui.set_product_name("Vegan Chocolate Cake".into());
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
@@ -3657,7 +3657,7 @@ mod e2e_hybrid_blob_tests {
         let launch_called_clone = launch_called.clone();
 
         ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-            assert_eq!(website_template, "Modern Glass");
+            assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
             assert_eq!(domain_choice, "custom");
