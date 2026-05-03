@@ -3619,6 +3619,25 @@ mod e2e_hybrid_blob_tests {
 }
 
     #[test]
+    fn test_stat_card_properties() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::StatCardWindow::new().unwrap();
+        ui.set_label("Test Label".into());
+        ui.set_value("123".into());
+        assert_eq!(ui.get_label(), "Test Label");
+        assert_eq!(ui.get_value(), "123");
+    }
+
+    #[test]
+    fn test_dashboard_loading_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+        assert!(!ui.get_is_loading());
+        ui.set_is_loading(true);
+        assert!(ui.get_is_loading());
+    }
+
+    #[test]
     fn test_e2e_onboarding_wizard_data_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

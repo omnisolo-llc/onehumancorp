@@ -9,7 +9,7 @@ export struct UiAgentProvider {
 export component AgentHire inherits Window {
     width: 600px;
     height: 700px;
-    title: "Hire New Agent";
+    title: "Hire New Helper";
 
     in-out property <int> step: 0;
     in-out property <string> selected_role: "";
@@ -31,12 +31,12 @@ export component AgentHire inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Hire New Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
 
         // Step 0: Role
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Step 1 — Select Agent Role"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Step 1 — Select Helper Role"; font-size: 18px; font-weight: 700; color: #1e293b; }
             
             HorizontalBox {
                 spacing: 10px;
@@ -63,9 +63,9 @@ export component AgentHire inherits Window {
         // Step 2: Details
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "Step 3 — Agent Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Step 3 — Helper Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
             LineEdit {
-                placeholder-text: "Agent Name";
+                placeholder-text: "Helper Name";
                 text <=> agent_name;
             }
         }
@@ -73,7 +73,7 @@ export component AgentHire inherits Window {
         // Step 3: Topology
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Step 4 — Sub-agent Topology"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Step 4 — Sub-helper Topology"; font-size: 18px; font-weight: 700; color: #1e293b; }
             Text { text: "[ Topology visualization placeholder ]"; color: #64748b; horizontal-alignment: center; }
         }
 
@@ -128,7 +128,7 @@ export component AgentHire inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 6 ? "Deploy Agent" : "Next";
+                text: step == 6 ? "Deploy Helper" : "Next";
                 enabled: next_enabled;
                 clicked => {
                     if (step < 6) {

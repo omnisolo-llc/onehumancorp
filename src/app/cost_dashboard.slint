@@ -13,7 +13,7 @@ export component CostDashboard inherits Window {
     preferred-width: 500px;
     min-width: 375px;
     height: 800px;
-    title: "Cost & Token Usage";
+    title: "Cost & AI Usage";
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";
@@ -26,7 +26,7 @@ export component CostDashboard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Cost & Token Usage"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Cost & AI Usage"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             Button { text: "Refresh"; height: 44px; }
         }
@@ -54,7 +54,7 @@ export component CostDashboard inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Tokens"; color: #94a3b8; }
+                    Text { text: "Total AI Usage"; color: #94a3b8; }
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
@@ -84,13 +84,13 @@ export component CostDashboard inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Tokens"; color: #94a3b8; }
+                    Text { text: "Total AI Usage"; color: #94a3b8; }
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
 
-        Text { text: "Usage per Agent"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Text { text: "Usage per Helper"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
 
         GlassCard {
             border-color: #e2e8f0;
