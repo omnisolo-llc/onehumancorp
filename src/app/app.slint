@@ -45,7 +45,7 @@ export { UpgradePrompt } from "./upgrade_prompt.slint";
 export component SwarmVelocityWindow inherits Window {
     width: 500px;
     height: 200px;
-    title: "Task Speed";
+    title: "Swarm Velocity Test";
     
     in-out property <string> completion_rate <=> sv.completion_rate;
     in-out property <string> avg_latency <=> sv.avg_latency;
@@ -57,7 +57,7 @@ export component SwarmVelocityWindow inherits Window {
 export component SwarmObservabilityWindow inherits Window {
     width: 500px;
     height: 350px;
-    title: "Agent Actions Today";
+    title: "Swarm Observability Test";
     
     in-out property <[UiMeshMessage]> messages <=> so.messages;
 
