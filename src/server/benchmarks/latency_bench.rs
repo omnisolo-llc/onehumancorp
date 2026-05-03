@@ -73,7 +73,8 @@ pub async fn bench_dashboard_snapshot() {
     let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
 
     let iterations = 100;
-    let mut fetch_times = Vec::new();
+    let mut agents_fetch_times = Vec::new();
+    let mut meetings_fetch_times = Vec::new();
 
     for i in 0..50 {
         hub.register_agent(crate::ohc::orchestration::Agent {
@@ -87,23 +88,30 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for _ in 0..iterations {
-        let start = Instant::now();
-
         let hub1 = hub.clone();
         let hub2 = hub.clone();
 
-        let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        let (agents_time, meetings_time) = tokio::join!(
+            async {
+                let start = Instant::now();
+                let _ = tokio::task::spawn_blocking(move || hub1.get_agents()).await.unwrap();
+                start.elapsed().as_micros()
+            },
+            async {
+                let start = Instant::now();
+                let _ = tokio::task::spawn_blocking(move || hub2.get_meetings()).await.unwrap();
+                start.elapsed().as_micros()
+            }
         );
-        let _ = agents_res.unwrap();
-        let _ = meetings_res.unwrap();
 
-        fetch_times.push(start.elapsed().as_micros());
+        agents_fetch_times.push(agents_time);
+        meetings_fetch_times.push(meetings_time);
     }
 
-    fetch_times.sort();
-    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    agents_fetch_times.sort();
+    meetings_fetch_times.sort();
+    println!("Agents Fetch: p50: {} us, p95: {} us, p99: {} us", agents_fetch_times[iterations / 2], agents_fetch_times[(iterations as f32 * 0.95) as usize], agents_fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!("Meetings Fetch: p50: {} us, p95: {} us, p99: {} us", meetings_fetch_times[iterations / 2], meetings_fetch_times[(iterations as f32 * 0.95) as usize], meetings_fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)
