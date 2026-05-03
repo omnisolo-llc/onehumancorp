@@ -41,7 +41,6 @@ export component Dashboard inherits Window {
     callback open_interactive_walkthrough();
     callback open_video_tutorials();
     callback open_release_notes();
-    callback open_api_docs();
     callback approve_task(string);
     callback open_billing();
 
@@ -79,7 +78,6 @@ export component Dashboard inherits Window {
                 spacing: 8px;
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "API Docs"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
@@ -120,12 +118,13 @@ export component Dashboard inherits Window {
 
             if (root.width > 768px) : HorizontalBox {
                 spacing: 16px;
+                padding: 0;
 
                 GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -142,7 +141,7 @@ export component Dashboard inherits Window {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -159,12 +158,13 @@ export component Dashboard inherits Window {
 
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
+                padding: 0;
 
                 GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -181,7 +181,7 @@ export component Dashboard inherits Window {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -198,12 +198,13 @@ export component Dashboard inherits Window {
 
             if (root.width > 768px) : HorizontalBox {
                 spacing: 16px;
+                padding: 0;
 
                 GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -220,7 +221,7 @@ export component Dashboard inherits Window {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -237,12 +238,13 @@ export component Dashboard inherits Window {
 
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
+                padding: 0;
 
                 GlassCard {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -259,7 +261,7 @@ export component Dashboard inherits Window {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
-                    width: 100%;
+                    horizontal-stretch: 1;
                     min-height: 88px;
 
                     TouchArea {
@@ -334,7 +336,7 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        Text { text: "My Helpers"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;
