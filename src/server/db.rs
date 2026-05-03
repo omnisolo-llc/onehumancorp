@@ -83,6 +83,22 @@ impl DB {
                         embedding BLOB,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id TEXT,
+                        priority TEXT NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        parent_plan_id TEXT,
+                        dependencies TEXT NOT NULL DEFAULT '[]',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        auto_dreamed BOOLEAN DEFAULT 0,
+                        locked_until DATETIME
+                    );
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
@@ -123,14 +139,19 @@ impl DB {
                         raw_content TEXT NOT NULL,
                         summary_embedding BLOB
                     );
-                    CREATE TABLE IF NOT EXISTS autodream_memories (
+                    CREATE TABLE IF NOT EXISTS consolidated_memory (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
-                        agent_id TEXT NOT NULL,
-                        task_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        agent_id TEXT,
                         content TEXT NOT NULL,
                         embedding BLOB,
-                        source_type TEXT NOT NULL
+                        source_type TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_referenced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        reference_count INTEGER DEFAULT 0,
+                        reliability_score INTEGER DEFAULT 50,
+                        owner_override BOOLEAN DEFAULT FALSE,
+                        metadata TEXT
                     );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
@@ -199,6 +220,18 @@ impl DB {
             result.push((id, org_id, payload, "shared_tasks".to_string()));
         }
 
+        // Fetch from shared_tasks_decomposition
+        let decomposition_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks_decomposition WHERE status = 'DONE' AND auto_dreamed = FALSE LIMIT 25")
+            .fetch_all(&self.pool)
+            .await?;
+
+        for row in decomposition_rows {
+            let id: String = row.get("id");
+            let org_id: String = row.get("organization_id");
+            let payload: String = row.get("payload");
+            result.push((id, org_id, payload, "shared_tasks_decomposition".to_string()));
+        }
+
         // Fetch from swarm_tasks
         // Note: swarm_tasks doesn't have organization_id natively in the schema provided earlier
         let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
@@ -233,18 +266,17 @@ pub async fn insert_autodream_memory(
         id: &str,
         org_id: &str,
         agent_id: &str,
-        task_id: &str,
+        _task_id: &str,
         content: &str,
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
@@ -252,11 +284,10 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
@@ -272,6 +303,8 @@ pub async fn insert_autodream_memory(
         let query = if table == "swarm_tasks" {
             // swarm_tasks uses UUID primary key
             "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+        } else if table == "shared_tasks_decomposition" {
+            "UPDATE shared_tasks_decomposition SET auto_dreamed = TRUE WHERE id = $1"
         } else {
             "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
         };
