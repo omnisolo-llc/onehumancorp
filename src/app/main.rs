@@ -2219,6 +2219,15 @@ mod docs_tests {
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| {
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2280,6 +2289,15 @@ mod docs_tests {
     #[test]
     fn test_e2e_tooltip_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| {
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
