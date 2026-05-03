@@ -5,12 +5,12 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct AutoDreamSyncRecord {
     pub id: String,
-    pub organization_id: Option<String>,
+    pub tenant_id: Option<String>,
     pub agent_id: Option<String>,
-    pub task_id: Option<String>,
+    pub entity_id: Option<String>,
     pub content: String,
     pub embedding: Option<String>,
-    pub source_type: Option<String>,
+    pub entity_type: Option<String>,
     pub topic: Option<String>,
     pub sync_status: Option<String>,
     pub last_sync_at: Option<DateTime<Utc>>,
@@ -40,12 +40,12 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             r#"
             SELECT
                 id::text as id,
-                organization_id,
+                tenant_id,
                 agent_id,
-                task_id,
+                entity_id,
                 content,
                 embedding::text as embedding,
-                source_type,
+                entity_type,
                 topic,
                 sync_status,
                 last_sync_at
@@ -62,12 +62,12 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
         for row in rows {
             records.push(AutoDreamSyncRecord {
                 id: row.try_get("id").unwrap_or_default(),
-                organization_id: row.try_get("organization_id").unwrap_or_default(),
+                tenant_id: row.try_get("tenant_id").unwrap_or_default(),
                 agent_id: row.try_get("agent_id").unwrap_or_default(),
-                task_id: row.try_get("task_id").unwrap_or_default(),
+                entity_id: row.try_get("entity_id").unwrap_or_default(),
                 content: row.try_get("content").unwrap_or_default(),
                 embedding: row.try_get("embedding").unwrap_or_default(),
-                source_type: row.try_get("source_type").unwrap_or_default(),
+                entity_type: row.try_get("entity_type").unwrap_or_default(),
                 topic: row.try_get("topic").unwrap_or_default(),
                 sync_status: row.try_get("sync_status").unwrap_or_default(),
                 last_sync_at: row.try_get("last_sync_at").unwrap_or_default(),
@@ -85,27 +85,27 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             sqlx::query(
                 r#"
                 INSERT INTO autodream_memories
-                (id, organization_id, agent_id, task_id, content, embedding, source_type, topic, sync_status, last_sync_at)
+                (id, tenant_id, agent_id, entity_id, content, embedding, entity_type, topic, sync_status, last_sync_at)
                 VALUES ($1::uuid, $2, $3, $4, $5, $6::vector, $7, $8, 'synced', $9)
                 ON CONFLICT (id) DO UPDATE SET
-                    organization_id = EXCLUDED.organization_id,
+                    tenant_id = EXCLUDED.tenant_id,
                     agent_id = EXCLUDED.agent_id,
-                    task_id = EXCLUDED.task_id,
+                    entity_id = EXCLUDED.entity_id,
                     content = EXCLUDED.content,
                     embedding = EXCLUDED.embedding,
-                    source_type = EXCLUDED.source_type,
+                    entity_type = EXCLUDED.entity_type,
                     topic = EXCLUDED.topic,
                     sync_status = 'synced',
                     last_sync_at = EXCLUDED.last_sync_at
                 "#
             )
             .bind(id)
-            .bind(record.organization_id)
+            .bind(record.tenant_id)
             .bind(record.agent_id)
-            .bind(record.task_id)
+            .bind(record.entity_id)
             .bind(record.content)
             .bind(record.embedding.unwrap_or_else(|| "[0]".to_string()))
-            .bind(record.source_type)
+            .bind(record.entity_type)
             .bind(record.topic.unwrap_or_default())
             .bind(record.last_sync_at.unwrap_or_else(Utc::now))
             .execute(&mut *tx)
@@ -165,12 +165,12 @@ mod tests {
 
         let record = AutoDreamSyncRecord {
             id: uuid::Uuid::new_v4().to_string(),
-            organization_id: Some("org_1".to_string()),
+            tenant_id: Some("org_1".to_string()),
             agent_id: Some("agent_1".to_string()),
-            task_id: Some("task_1".to_string()),
+            entity_id: Some("task_1".to_string()),
             content: "test content".to_string(),
             embedding: Some("[0.1, 0.2]".to_string()),
-            source_type: Some("test_source".to_string()),
+            entity_type: Some("test_source".to_string()),
             topic: Some("test_topic".to_string()),
             sync_status: Some("pending".to_string()),
             last_sync_at: Some(Utc::now()),
