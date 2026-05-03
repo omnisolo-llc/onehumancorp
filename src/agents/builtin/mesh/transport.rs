@@ -17,8 +17,8 @@ pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
-    async fn acquire_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
-    async fn release_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str) -> Result<(), String>;
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
@@ -70,8 +70,7 @@ impl MeshTransport for MemoryTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let resource_key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let now = std::time::Instant::now();
 
         // Remove expired locks
@@ -86,7 +85,7 @@ impl MeshTransport for MemoryTransport {
 
         let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
         use dashmap::mapref::entry::Entry;
-        match self.locks.entry(resource_key) {
+        match self.locks.entry(resource.to_string()) {
             Entry::Vacant(e) => {
                 e.insert((owner.to_string(), expires_at));
                 Ok(true)
@@ -97,9 +96,8 @@ impl MeshTransport for MemoryTransport {
         }
     }
 
-    async fn release_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str) -> Result<(), String> {
-        let resource_key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
-        self.locks.remove_if(&resource_key, |_, (lock_owner, _)| lock_owner == owner);
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.locks.remove_if(resource, |_, (lock_owner, _)| lock_owner == owner);
         Ok(())
     }
 
@@ -247,8 +245,7 @@ impl MeshTransport for IpcTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let resource_key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         // Cleanup expired locks
         let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= datetime('now')")
             .execute(&self.pool)
@@ -258,7 +255,7 @@ impl MeshTransport for IpcTransport {
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
              ON CONFLICT(resource) DO NOTHING"
         )
-        .bind(resource_key)
+        .bind(resource)
         .bind(owner)
         .bind(format!("+{} seconds", ttl_seconds))
         .execute(&self.pool)
@@ -270,10 +267,9 @@ impl MeshTransport for IpcTransport {
         }
     }
 
-    async fn release_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str) -> Result<(), String> {
-        let resource_key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         sqlx::query("DELETE FROM mesh_locks WHERE resource = ? AND owner = ?")
-            .bind(resource_key)
+            .bind(resource)
             .bind(owner)
             .execute(&self.pool)
             .await
@@ -377,10 +373,10 @@ impl MeshTransport for RedisTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+        let key = format!("ohc:lock:{}", resource);
         let result: bool = redis::cmd("SET")
             .arg(&key)
             .arg(owner)
@@ -394,10 +390,10 @@ impl MeshTransport for RedisTransport {
         Ok(result)
     }
 
-    async fn release_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, owner: &str) -> Result<(), String> {
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
 
-        let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+        let key = format!("ohc:lock:{}", resource);
 
         // Use a Lua script to ensure we only delete the lock if we own it
         let script = redis::Script::new(
@@ -542,15 +538,15 @@ mod tests {
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
 
-        let acquired = transport.acquire_lock("tenant_test", "test_type", "ipc_resource", "agent_1", 1).await.unwrap();
+        let acquired = transport.acquire_lock("ipc_resource", "agent_1", 1).await.unwrap();
         assert!(acquired);
 
-        let acquired_again = transport.acquire_lock("tenant_test", "test_type", "ipc_resource", "agent_2", 1).await.unwrap();
+        let acquired_again = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
         assert!(!acquired_again);
 
-        transport.release_lock("tenant_test", "test_type", "ipc_resource", "agent_1").await.unwrap();
+        transport.release_lock("ipc_resource", "agent_1").await.unwrap();
 
-        let acquired_after_release = transport.acquire_lock("tenant_test", "test_type", "ipc_resource", "agent_2", 1).await.unwrap();
+        let acquired_after_release = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
         assert!(acquired_after_release);
     }
 
@@ -606,18 +602,18 @@ mod tests {
         let transport = MemoryTransport::new();
 
         // Test lock acquisition
-        let acquired = transport.acquire_lock("tenant_test", "test_type", "my_resource", "agent_1", 10).await.unwrap();
+        let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
         assert!(acquired);
 
         // Test mutual exclusion
-        let acquired_again = transport.acquire_lock("tenant_test", "test_type", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_again = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
         assert!(!acquired_again);
 
         // Test lock release
-        transport.release_lock("tenant_test", "test_type", "my_resource", "agent_1").await.unwrap();
+        transport.release_lock("my_resource", "agent_1").await.unwrap();
 
         // Test lock acquisition after release
-        let acquired_after_release = transport.acquire_lock("tenant_test", "test_type", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_after_release = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
         assert!(acquired_after_release);
     }
 
@@ -626,14 +622,14 @@ mod tests {
         let transport = MemoryTransport::new();
 
         // Acquire lock with short TTL (1 second)
-        let acquired = transport.acquire_lock("tenant_test", "test_type", "expiring_resource", "agent_1", 1).await.unwrap();
+        let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
         assert!(acquired);
 
         // Sleep for 2 seconds to let lock expire
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
         // Second agent should be able to acquire lock now
-        let acquired_after_expiration = transport.acquire_lock("tenant_test", "test_type", "expiring_resource", "agent_2", 10).await.unwrap();
+        let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
         assert!(acquired_after_expiration);
     }
 
