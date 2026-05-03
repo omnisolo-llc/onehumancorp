@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 import { Referrals } from "referrals.slint";
 
 export struct UiUser {
@@ -17,6 +18,7 @@ export component UserManagement inherits Window {
 
     in property <[UiUser]> users;
     callback delete_user(string);
+    callback invite_user();
 
     background: #f8fafc;
 
@@ -27,7 +29,15 @@ export component UserManagement inherits Window {
         HorizontalBox {
             Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Invite User"; }
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    Text { text: "Referral Program"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Share OHC with a friend, both get 1 month free Pro."; color: #64748b; font-size: 14px; }
+                    Button { text: "Invite User"; clicked => { invite_user(); } }
+                }
+            }
         }
 
         VerticalBox {
