@@ -676,13 +676,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
-                            user_id: "current_user".to_string(), // In production, use actual user_id
+                            user_id: "user_dash".to_string(), // In production, use actual user_id
                             referral_code: "".to_string(),
                         };
                         let response = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
-                            let link = format!("ohc://join?ref={}", referral.referral_code);
+                            let link = format!("ohc://join?ref={}&utm_source=standalone_desktop&utm_medium=team_share&inviter={}", referral.referral_code, "user_dash");
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle.upgrade() {
                                     ui.set_my_referral_link(link.into());
@@ -1398,7 +1398,7 @@ mod growth_e2e_tests {
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            assert_eq!(link, "ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT");
             *link_shared_clone.borrow_mut() = true;
         });
 
@@ -1448,10 +1448,10 @@ mod growth_e2e_tests {
         let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_copied_clone = link_copied.clone();
         ui.on_share_link(move |link| {
-            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            assert_eq!(link, "ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT");
             *link_copied_clone.borrow_mut() = true;
         });
-        ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
+        ui.invoke_share_link("ohc://join?ref=DEFAULT&utm_source=standalone_desktop&utm_medium=team_share&inviter=DEFAULT".into());
         assert!(*link_copied.borrow(), "Share link callback should be invoked");
     }
 }
