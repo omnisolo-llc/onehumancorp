@@ -120,3 +120,15 @@ fn create_verify_tasks_in_progress_count() {
     ui.set_tasks_in_progress_count(33);
     assert_eq!(ui.get_tasks_in_progress_count(), 33);
 }
+
+#[test]
+fn dash_open_billing_flow() {
+    let ui = create();
+    let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let billing_opened_clone = billing_opened.clone();
+    ui.on_open_billing(move || {
+        *billing_opened_clone.borrow_mut() = true;
+    });
+    ui.invoke_open_billing();
+    assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+}
