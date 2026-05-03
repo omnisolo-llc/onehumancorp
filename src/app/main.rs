@@ -1035,11 +1035,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = chat_handle.upgrade() {
                             let input = ui.get_user_input();
                             println!("User asked AI Help: {}", input);
+
+                            use slint::Model;
+                            let mut msgs = ui.get_messages().iter().collect::<Vec<_>>();
+                            msgs.push(app::UiHelpChatMessage {
+                                id: format!("msg-{}", msgs.len()).into(),
+                                author_name: "Me".into(),
+                                body: input.clone(),
+                                is_me: true,
+                            });
+                            ui.set_messages(slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs))));
+
                             ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
+                            ui.set_is_typing(true);
+
+                            let handle_clone = chat_handle.clone();
+                            slint::Timer::single_shot(std::time::Duration::from_millis(500), move || {
+                                if let Some(ui2) = handle_clone.upgrade() {
+                                    use slint::Model;
+                                    ui2.set_is_typing(false);
+                                    let mut msgs2 = ui2.get_messages().iter().collect::<Vec<_>>();
+
+                                    let lowercase_input = input.to_lowercase();
+                                    let body = if lowercase_input.contains("agent") {
+                                        "To set up agents, go to the Agents section in the menu. There you can hire and configure different helpers like the Salesperson or the Ambassador."
+                                    } else {
+                                        "I can help with that. Could you provide more details about what you need?"
+                                    };
+
+                                    msgs2.push(app::UiHelpChatMessage {
+                                        id: format!("msg-{}", msgs2.len()).into(),
+                                        author_name: "AI Assistant".into(),
+                                        body: format!("{}\n\nRead the full article →", body).into(),
+                                        is_me: false,
+                                    });
+                                    ui2.set_messages(slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs2))));
+                                }
+                            });
                         }
                     }
                 });
+
+                ai_chat_ui.on_clear_chat({
+                    let chat_handle = ai_chat_handle.clone();
+                    move || {
+                        if let Some(ui) = chat_handle.upgrade() {
+                            ui.set_messages(slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(Vec::new()))));
+                        }
+                    }
+                });
+
                 Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {

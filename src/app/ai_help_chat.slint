@@ -1,13 +1,24 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct UiHelpChatMessage {
+    id: string,
+    author_name: string,
+    body: string,
+    is_me: bool,
+}
+
 export component AiHelpChat inherits Window {
     width: 600px;
     height: 800px;
     title: "AI Help Assistant";
     background: white;
 
+    in property <[UiHelpChatMessage]> messages;
     in-out property <string> user_input: "";
+    in-out property <bool> is_typing: false;
+    in-out property <[string]> suggestions: ["How do I set up agents?", "What is AutoDream?"];
     callback send_message();
+    callback clear_chat();
 
     VerticalBox {
         padding: 16px;
@@ -27,11 +38,72 @@ export component AiHelpChat inherits Window {
         }
 
         ScrollView {
-            // Chat history would go here
+            VerticalBox {
+                spacing: 12px;
+                alignment: start;
+
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_me ? end : start;
+                    if (msg.is_me) : Rectangle {} // Spacer
+                    Rectangle {
+                        background: msg.is_me ? #e0f2fe : #f8fafc;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 12px;
+                        width: 280px;
+
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 4px;
+                            Text {
+                                text: msg.author_name;
+                                font-weight: 700;
+                                color: msg.is_me ? #0369a1 : #0f172a;
+                                horizontal-alignment: msg.is_me ? right : left;
+                            }
+                            Text { text: msg.body; color: #334155; wrap: word-wrap; }
+                        }
+                    }
+                    if (!msg.is_me) : Rectangle {} // Spacer
+                }
+
+                if (is_typing) : HorizontalBox {
+                    alignment: start;
+                    Rectangle {
+                        background: #f8fafc;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 12px;
+                        width: 120px;
+                        height: 40px;
+                        Text {
+                            text: "AI is typing...";
+                            color: #64748b;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (suggestions.length > 0) : HorizontalBox {
+            spacing: 8px;
+            for suggestion in suggestions : Button {
+                text: suggestion;
+                clicked => {
+                    user_input = suggestion;
+                    send_message();
+                }
+            }
         }
 
         HorizontalBox {
             spacing: 8px;
+            Button {
+                text: "Clear";
+                clicked => { clear_chat(); }
+            }
             LineEdit {
                 placeholder-text: "Type your question here...";
                 text <=> user_input;
