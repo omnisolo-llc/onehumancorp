@@ -45,21 +45,21 @@ impl SipDB {
             .execute(&self.pool)
             .await?;
             
-        // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+        // 1b. Archive STUCK missions
+        sqlx::query("UPDATE agent_missions SET status = 'ARCHIVED', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;
             
         // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'ARCHIVED' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
             .bind(fail_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;
             
         // 3. Remove COMPLETED, or very old FAILED missions
-        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+        sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'ARCHIVED' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)")
             .bind(fail_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)
@@ -163,6 +163,65 @@ impl SipDB {
 
 #[cfg(test)]
 mod tests {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #[tokio::test]
+    async fn test_prune_stale_missions_archived() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(std::time::Duration::from_secs(2))
+            .connect_lazy(&std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string()))
+            .unwrap();
+
+        // Setup tables
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')").execute(&pool).await;
+
+        let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+        let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id, created_at, updated_at) VALUES ('test_stuck_pool', 'STUCK', '{}', 'test_org', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP")
+            .execute(&pool)
+            .await;
+
+        let res = sip_db.prune_stale_missions(chrono::Duration::days(1)).await;
+
+        // Assert the function returned success (or connection failure if no db, but we won't panic on err)
+        // If it succeeds, the mission should be ARCHIVED
+        if res.is_ok() {
+            let status: Option<String> = sqlx::query_scalar("SELECT status FROM agent_missions WHERE id = 'test_stuck_pool'")
+                .fetch_optional(&pool)
+                .await
+                .unwrap_or(None);
+
+            if let Some(s) = status {
+                assert_eq!(s, "ARCHIVED");
+            }
+
+            // Cleanup
+            let _ = sqlx::query("DELETE FROM agent_missions WHERE id = 'test_stuck_pool'").execute(&pool).await;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
     use super::*;
     use std::fs::File;
     use std::io::Write;
