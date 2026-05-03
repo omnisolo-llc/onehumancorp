@@ -87,8 +87,12 @@ fn load() -> Result<AppConfig, config::ConfigError> {
     Ok(cfg)
 }
 
-#[cfg(feature = "standalone")]
 fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
+    let is_standalone = cfg.standalone || std::env::var("STANDALONE_MODE").is_ok();
+    if !is_standalone {
+        return cfg;
+    }
+
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
             eprintln!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
@@ -133,11 +137,6 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
-    cfg
-}
-
-#[cfg(not(feature = "standalone"))]
-fn standalone_enforce(cfg: AppConfig) -> AppConfig {
     cfg
 }
 
