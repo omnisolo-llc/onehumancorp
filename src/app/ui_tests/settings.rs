@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::Settings { crate::ui_tests::init(); app::Settings::new().unwrap() }
 
