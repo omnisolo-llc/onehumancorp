@@ -1868,7 +1868,7 @@ mod docs_tests {
 
         ui.invoke_generate_instant_preview();
 
-        assert_eq!(ui.get_step(), 6);
+        assert_eq!(ui.get_step(), 9);
         assert_eq!(ui.get_company_name(), "AI Store");
         assert_eq!(ui.get_business_type(), "Online Store");
 
