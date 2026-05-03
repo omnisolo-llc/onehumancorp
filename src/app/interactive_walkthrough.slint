@@ -2,8 +2,9 @@ import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component InteractiveWalkthrough inherits Window {
-    width: 600px;
-    height: 800px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 800px;
     background: transparent;
     always-on-top: true;
 

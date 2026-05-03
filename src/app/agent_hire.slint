@@ -7,8 +7,9 @@ export struct UiAgentProvider {
 }
 
 export component AgentHire inherits Window {
-    width: 600px;
-    height: 700px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 700px;
     title: "Hire New Helper";
 
     in-out property <int> step: 0;

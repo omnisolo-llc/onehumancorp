@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
 export component GrowBusiness inherits Window {
-    width: 500px;
-    height: 500px;
+    preferred-width: 500px;
+    min-width: 375px;
+    preferred-height: 500px;
     title: "Grow My Business";
 
     in-out property <int> step: 0;

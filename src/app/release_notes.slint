@@ -1,8 +1,9 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export component ReleaseNotes inherits Window {
-    width: 600px;
-    height: 800px;
+    preferred-width: 600px;
+    min-width: 375px;
+    preferred-height: 800px;
     title: "What's New";
     background: #f8fafc;
     in-out property <string> current_version: "v0.3.4";
