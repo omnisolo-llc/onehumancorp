@@ -173,7 +173,7 @@ rust_test(
         "welcome_checklist.slint",
     ],
     edition = "2024",
-    tags = ["exclusive"],
+    tags = [],
     env = {
         "SLINT_BACKEND": "software",
         "RUST_TEST_THREADS": "1",

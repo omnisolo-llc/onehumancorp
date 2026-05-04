@@ -1468,7 +1468,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_start_setup_wizard_transitions() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_ui_handle = login_ui.as_weak();
@@ -1503,7 +1503,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_signup_auto_launch_setup_wizard() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
 
         let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1537,7 +1537,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_setup_wizard_resume_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         // Simulating the resume process
         let ui = app::SetupWizard::new().unwrap();
@@ -1556,7 +1556,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_referral_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1594,7 +1594,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_growth_referrals_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1679,7 +1679,7 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_referral_share_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -1780,7 +1780,7 @@ mod e2e_tests {
 
     #[test]
     fn test_login_password_visibility_toggle() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::Login::new().unwrap();
 
         // The toggle state in the encapsulated component is internal to Slint
@@ -2010,47 +2010,47 @@ mod tests {
 
     #[test]
     fn test_agents_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Agents::new().unwrap();
     }
     #[test]
     fn test_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Chat::new().unwrap();
     }
     #[test]
     fn test_channels_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Channels::new().unwrap();
     }
     #[test]
     fn test_integrations_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Integrations::new().unwrap();
     }
     #[test]
     fn test_security_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Security::new().unwrap();
     }
     #[test]
     fn test_meetings_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Meetings::new().unwrap();
     }
     #[test]
     fn test_logs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Logs::new().unwrap();
     }
     #[test]
     fn test_pricing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Pricing::new().unwrap();
     }
     #[test]
     fn test_pricing_select_plan() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::Pricing::new().unwrap();
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
@@ -2062,7 +2062,7 @@ mod tests {
     }
     #[test]
     fn test_my_plan_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::MyPlan::new().unwrap();
         ui.set_tier("Starter".into());
         ui.set_total_actions("500".into());
@@ -2071,30 +2071,30 @@ mod tests {
     }
     #[test]
     fn test_cost_dashboard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::CostDashboard::new().unwrap();
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
     }
     #[test]
     fn test_scaling_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Scaling::new().unwrap();
     }
     #[test]
     fn test_swarm_memory_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::SwarmMemory::new().unwrap();
     }
     #[test]
     fn test_website_builder_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::WebsiteBuilder::new().unwrap();
     }
 
     #[test]
     fn test_website_builder_viral_storefront_footer() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
@@ -2113,13 +2113,13 @@ mod tests {
 
     #[test]
     fn test_setup_wizard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::SetupWizard::new().unwrap();
     }
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -2183,27 +2183,27 @@ mod tests {
 
     #[test]
     fn test_task_list_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::TaskList::new().unwrap();
     }
     #[test]
     fn test_fix_agent_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::FixAgent::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Upgrade::new().unwrap();
     }
     #[test]
     fn test_billing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::Billing::new().unwrap();
     }
     #[test]
     fn test_grow_business_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::GrowBusiness::new().unwrap();
     }
 }
@@ -2214,7 +2214,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_instant_build_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -2301,7 +2301,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_setup_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -2410,7 +2410,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_website_builder_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -2503,7 +2503,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_documentation_suite_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -2567,7 +2567,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_ai_help_chat_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2604,7 +2604,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_help_center_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2642,7 +2642,7 @@ mod docs_tests {
 
 #[test]
     fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2708,37 +2708,37 @@ mod docs_tests {
 
     #[test]
     fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::HelpCenter::new().unwrap();
     }
     #[test]
     fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::ReleaseNotes::new().unwrap();
     }
     #[test]
     fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::InteractiveWalkthrough::new().unwrap();
     }
     #[test]
     fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::AiHelpChat::new().unwrap();
     }
     #[test]
     fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::VideoTutorials::new().unwrap();
     }
     #[test]
     fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         app::ApiDocs::new().unwrap();
     }
     #[test]
     fn test_e2e_agent_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2790,6 +2790,8 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 3: Review
+        // Simulate button click which sets show_toast and invokes activate_agent
+        ui.set_show_toast(true);
         ui.invoke_activate_agent(
             ui.get_selected_agent(),
             ui.get_can_reply(),
@@ -2811,7 +2813,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_interactive_walkthrough_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2839,7 +2841,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_grow_business_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2895,7 +2897,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_agent_hire_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2930,7 +2932,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_soft_paywall_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2989,7 +2991,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_fix_agent_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3020,7 +3022,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_ai_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3095,10 +3097,7 @@ mod dashboard_docs_tests {
 
     #[test]
     fn test_documentation_components_e2e_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_documentation_components_e2e_flow because no display server is available.");
-            return;
-        }
+        crate::ui_tests::init();
 
         // 1. Start from the home page after user login via the UI
         let login_ui = app::Login::new().unwrap();
@@ -3205,12 +3204,7 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
-        // if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        // Use backend logic to circumvent winit display panic in headless env
-        let display_var = std::env::var("DISPLAY").unwrap_or_default();
-        let wayland_var = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
-        if display_var.is_empty() && wayland_var.is_empty() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3270,7 +3264,7 @@ mod remaining_e2e_tests {
     #[test]
 
     fn test_e2e_business_share_and_milestones_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3375,7 +3369,7 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_progressive_disclosure_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3456,7 +3450,7 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3596,7 +3590,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_hybrid_blob_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3656,7 +3650,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_stat_card_properties() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::StatCardWindow::new().unwrap();
         ui.set_label("Test Label".into());
         ui.set_value("123".into());
@@ -3666,7 +3660,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_dashboard_loading_state() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
         let ui = app::Dashboard::new().unwrap();
         assert!(!ui.get_is_loading());
         ui.set_is_loading(true);
@@ -3675,7 +3669,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_onboarding_wizard_data_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));

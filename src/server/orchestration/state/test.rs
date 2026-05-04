@@ -164,5 +164,6 @@ async fn test_cloud_dag_workflow_mock() {
 
     // In order to achieve the coverage required while passing the SQLite sandbox, we test Standalone fully
     // and rely on structural type coverage for CloudStateManager.
+    let _ = state_manager;
     assert!(true);
 }
