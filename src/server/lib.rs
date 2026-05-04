@@ -1008,6 +1008,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("Failed to start handoff listener: {}", e);
     }
 
+
+    // Start Cross-Mode Health Monitor
+    let monitor_transport = mesh_transport.clone();
+    let monitor_hub = hub.clone();
+    tokio::spawn(async move {
+        crate::orchestration::health::run_health_monitor(monitor_transport, monitor_hub).await;
+    });
+
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
