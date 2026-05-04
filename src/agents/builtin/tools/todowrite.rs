@@ -132,3 +132,7 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
         execute: Arc::new(TodoReadExecutor { todos }),
     }
 }
+
+#[cfg(test)]
+#[path = "todowrite_test.rs"]
+mod todowrite_test;
