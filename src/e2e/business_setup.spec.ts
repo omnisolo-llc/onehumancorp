@@ -13,6 +13,13 @@ test.describe('Business Setup Wizard', () => {
     await expect(page.locator('text=Welcome')).toBeVisible();
   });
 
+  test('should display the Setup Wizard hero animation elements', async ({ page }) => {
+    await expect(page.locator('text=Your business,\nlive in minutes.')).toBeVisible();
+    await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
+    await expect(page.locator('text=Guided Setup →')).toBeVisible();
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+  });
+
   test('should display welcome message', async ({ page }) => {
     await expect(page.locator('text=/welcome|get started|Your business, live in minutes/i')).toBeVisible();
   });
@@ -267,6 +274,47 @@ test.describe('Business Setup Wizard', () => {
 
     // Verify exit state by clicking to Dashboard
     await dashboardLink.click();
+  });
+
+  test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
+    await expect(page.locator('text=Your business,\nlive in minutes.')).toBeVisible();
+    await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
+    await expect(page.locator('text=Guided Setup →')).toBeVisible();
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+
+    await page.click('text=Guided Setup →');
+    await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
+    await page.click('text=🛒 Online Store');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Give your business a name')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company Hero');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=What do you sell?')).toBeVisible();
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Create your account')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
+    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Choose a Template')).toBeVisible();
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Add your first product or service')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
+    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Choose a Domain')).toBeVisible();
   });
 });
 

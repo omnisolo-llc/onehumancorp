@@ -81,3 +81,4 @@ pub fn init() {
     }
 }
 pub mod login_settings;
+pub mod setup_wizard_hero_test;
