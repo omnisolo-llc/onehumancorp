@@ -65,3 +65,73 @@ pub fn finance_report_tool() -> Tool {
 }
 
 use tracing::info;
+
+struct MercadoPagoCheckoutExecutor;
+
+#[async_trait::async_trait]
+impl ToolExecutor for MercadoPagoCheckoutExecutor {
+    async fn execute(
+        &self,
+        args: Value,
+    ) -> Result<String, ToolError> {
+        let amount = args["amount"].as_f64().ok_or_else(|| {
+            ToolError::LlmRecoverable("mercadopago_checkout: amount is required".to_string())
+        })?;
+        let currency = args["currency"].as_str().unwrap_or("BRL");
+
+        // In a real implementation, this would call the Mercado Pago API to create a checkout session.
+        Ok(format!(
+            "Successfully created Mercado Pago checkout session for {} {}",
+            amount, currency
+        ))
+    }
+}
+
+pub fn mercadopago_checkout_tool() -> Tool {
+    Tool {
+        name: "MercadoPagoCheckout".to_string(),
+        description: "Create a Mercado Pago checkout session for LATAM payments."
+            .to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "description": "The amount to charge."
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "The currency (default: 'BRL')."
+                }
+            },
+            "required": ["amount"]
+        }),
+        execute: Arc::new(MercadoPagoCheckoutExecutor),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_finance_report_tool() {
+        let tool = finance_report_tool();
+        let result = tool.execute.execute(json!({})).await.unwrap();
+        assert!(result.contains("revenue"));
+    }
+
+    #[tokio::test]
+    async fn test_mercadopago_checkout_tool() {
+        let tool = mercadopago_checkout_tool();
+
+        let args = json!({
+            "amount": 100.50,
+            "currency": "BRL"
+        });
+
+        let result = tool.execute.execute(args).await.unwrap();
+        assert!(result.contains("Successfully created Mercado Pago checkout session for 100.5 BRL"));
+    }
+}

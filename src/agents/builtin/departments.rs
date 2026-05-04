@@ -43,7 +43,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get"],
+            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "calcom_booking", "shippo_label", "zoom_meeting"],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -55,7 +55,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
+            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility", "resend_email"],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {
@@ -77,7 +77,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list"],
+            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "chatwoot_reply", "twilio_sms"],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
@@ -89,7 +89,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
                 - Provides tax-ready financial summaries (income statements, expense tracking)",
-            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
+            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report", "mercadopago_checkout"],
             confidence_threshold: 0.95,
         },
         Department::Legal => DepartmentConfig {

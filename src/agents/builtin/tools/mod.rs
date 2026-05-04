@@ -7,6 +7,12 @@ pub mod bash;
 pub mod read;
 pub mod write;
 pub mod edit;
+pub mod calcom;
+pub mod chatwoot;
+pub mod resend;
+pub mod shippo;
+pub mod twilio;
+pub mod zoom;
 pub mod glob;
 pub mod grep;
 pub mod webfetch;
@@ -106,12 +112,19 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
+        finance::mercadopago_checkout_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone()),
         generative_visibility::generative_visibility_tool(),
+        calcom::calcom_booking_tool(),
+        chatwoot::chatwoot_reply_tool(),
+        resend::resend_email_tool(),
+        shippo::shippo_label_tool(),
+        twilio::twilio_sms_tool(),
+        zoom::zoom_meeting_tool(),
     ];
 
     if let Some(accessor) = memory_accessor {
