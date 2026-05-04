@@ -714,11 +714,42 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
-    async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        Ok(vec![])
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut results = Vec::new();
+
+        if !self.topics_dir.exists() {
+            return Ok(results);
+        }
+
+        let mut dir = tokio::fs::read_dir(&self.topics_dir).await.map_err(|e| e.to_string())?;
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            if content.to_lowercase().contains(&query.to_lowercase()) {
+                results.push(content);
+                if results.len() >= limit {
+                    break;
+                }
+            }
+        }
+
+        Ok(results)
     }
 
-    async fn store(&self, _content: &str, _tags: Vec<String>) -> Result<(), String> {
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
+        let mut existing_index = self.get_lightweight_index().await?;
+
+        let truncated_content = if content.len() > 150 {
+            format!("{}...", &content[..147])
+        } else {
+            content.to_string()
+        };
+
+        let tags_str = if tags.is_empty() { String::new() } else { format!(" [{}]", tags.join(", ")) };
+        let new_entry = format!("- {}{}\n", truncated_content.replace('\n', " "), tags_str);
+
+        existing_index.push_str(&new_entry);
+        self.update_index(&existing_index).await?;
+
         Ok(())
     }
 
@@ -866,5 +897,44 @@ mod get_conflicts_tests {
         // get_conflicting_pairs test
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
         assert!(conflicts.is_empty(), "Should have no conflicts");
+    }
+}
+
+#[cfg(test)]
+mod anthropic_memory_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_anthropic_3tier_memory_store_retrieve_and_store() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = Anthropic3TierMemoryStore::new(temp_dir.path()).unwrap();
+
+        // Initially index is empty
+        let index = store.get_lightweight_index().await.unwrap();
+        assert_eq!(index, "");
+
+        // Test storing multiple items
+        store.store("User explicitly requested to use glassmorphism across all UI components.", vec!["ui".to_string(), "design".to_string()]).await.unwrap();
+        store.store("The PostgreSQL deployment requires enabling row-level security for multi-tenancy.", vec![]).await.unwrap();
+
+        let index2 = store.get_lightweight_index().await.unwrap();
+        assert!(index2.contains("glassmorphism"));
+        assert!(index2.contains("[ui, design]"));
+        assert!(index2.contains("row-level security"));
+
+        // Add a mock topic file to test retrieve
+        store.write_topic("Database Architecture", "The database architecture relies heavily on PostgreSQL with row-level security enabled for multi-tenancy isolation. This is critical for data separation.").await.unwrap();
+        store.write_topic("Frontend Style", "Use flutter and glassmorphism. It should look modern.").await.unwrap();
+
+        let results = store.retrieve("postgresql", 5).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].to_lowercase().contains("postgresql"));
+
+        let results2 = store.retrieve("glassmorphism", 5).await.unwrap();
+        assert_eq!(results2.len(), 1);
+        assert!(results2[0].to_lowercase().contains("flutter"));
+
+        let results3 = store.retrieve("nonexistent", 5).await.unwrap();
+        assert_eq!(results3.len(), 0);
     }
 }
