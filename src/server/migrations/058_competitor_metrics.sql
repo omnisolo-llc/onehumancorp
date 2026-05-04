@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS competitor_metrics (
 );
 
 ALTER TABLE competitor_metrics ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_competitor_metrics ON competitor_metrics USING (tenant_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+CREATE POLICY tenant_isolation_competitor_metrics ON competitor_metrics USING (tenant_id = current_setting('app.current_tenant', true));
