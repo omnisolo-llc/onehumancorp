@@ -25,6 +25,26 @@ export component Login inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
+    Rectangle {
+        width: 44px;
+        height: 44px;
+        x: parent.width - 54px;
+        y: 10px;
+        background: transparent;
+
+        TouchArea {
+            clicked => { open_settings(); }
+        }
+
+        Text {
+            text: "⚙";
+            font-size: 24px;
+            color: #a8b2c1;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
     VerticalBox {
         alignment: center;
         spacing: 20px;
@@ -111,12 +131,6 @@ export component Login inherits Window {
                     height: 44px;
                     text: "Continue with Google/Apple";
                     clicked => { oauth_login("SSO"); }
-                }
-                
-                Button {
-                    height: 44px;
-                    text: "⚙ App Settings";
-                    clicked => { open_settings(); }
                 }
             }
         }
