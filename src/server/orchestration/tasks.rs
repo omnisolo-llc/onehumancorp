@@ -1,9 +1,13 @@
 use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
+use opentelemetry::metrics::Counter;
+use once_cell::sync::Lazy;
 use crate::tasks::SharedTask;
 use chrono::Utc;
 use crate::autodream::AutoDreamWorker;
+
+static TASKS_CLAIMED_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| opentelemetry::global::meter("ohc.orchestration.tasks").u64_counter("tasks.claimed").build());
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -123,22 +127,16 @@ impl TaskDecompositionService {
 
                 // DAG Dependency check
                 if !deps.is_empty() {
-                    let mut is_ready = true;
-                    for dep in deps {
-                        let dep_status: Option<String> = sqlx::query_scalar(
-                            "SELECT status FROM shared_tasks_decomposition WHERE id = $1"
-                        )
-                        .bind(&dep)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    let expected_count = deps.len() as i64;
+                    let completed_count: i64 = sqlx::query_scalar(
+                        "SELECT count(*) FROM shared_tasks_decomposition WHERE id = ANY($1) AND status = 'COMPLETED'"
+                    )
+                    .bind(&deps)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-                        if dep_status != Some("COMPLETED".to_string()) {
-                            is_ready = false;
-                            break;
-                        }
-                    }
-                    if !is_ready {
+                    if completed_count != expected_count {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
@@ -179,9 +177,7 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
-                let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
-                let claimed_counter = meter.u64_counter("tasks.claimed").build();
-                claimed_counter.add(1, &[]);
+                TASKS_CLAIMED_COUNTER.add(1, &[]);
 
                 if let Ok(payload_bytes) = serde_json::to_vec(&task) {
                     let _ = self.mesh.publish("task.assigned", payload_bytes).await;
@@ -221,22 +217,21 @@ impl TaskDecompositionService {
                 let deps: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
 
                 if !deps.is_empty() {
-                    let mut is_ready = true;
-                    for dep in deps {
-                        let dep_status: Option<String> = sqlx::query_scalar(
-                            "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
-                        )
-                        .bind(&dep)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    let expected_count = deps.len() as i64;
+                    let placeholders = deps.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                    let query = format!(
+                        "SELECT count(*) FROM shared_tasks_decomposition WHERE id IN ({}) AND status = 'COMPLETED'",
+                        placeholders
+                    );
 
-                        if dep_status != Some("COMPLETED".to_string()) {
-                            is_ready = false;
-                            break;
-                        }
+                    let mut q = sqlx::query_scalar::<_, i64>(&query);
+                    for dep in &deps {
+                        q = q.bind(dep);
                     }
-                    if !is_ready {
+
+                    let completed_count = q.fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                    if completed_count != expected_count {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Ok(None);
                     }
@@ -275,9 +270,7 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
-                let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
-                let claimed_counter = meter.u64_counter("tasks.claimed").build();
-                claimed_counter.add(1, &[]);
+                TASKS_CLAIMED_COUNTER.add(1, &[]);
 
                 if let Ok(payload_bytes) = serde_json::to_vec(&task) {
                     let _ = self.mesh.publish("task.assigned", payload_bytes).await;
