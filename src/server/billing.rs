@@ -44,6 +44,26 @@ impl Tracker {
         }
     }
 
+    pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.check_product_quota(tenant_id).await
+        } else {
+            Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
+        }
+    }
+
+    pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.record_product_added(tenant_id).await
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.record_action(tenant_id, agent_id).await
@@ -53,6 +73,26 @@ impl Tracker {
                 soft_limit_reached: false,
                 user_message: None,
             })
+        }
+    }
+
+    pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.check_agent_quota(tenant_id).await
+        } else {
+            Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
+        }
+    }
+
+    pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.record_agent_added(tenant_id).await
+        } else {
+            Ok(())
         }
     }
 
