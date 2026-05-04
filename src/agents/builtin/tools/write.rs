@@ -34,6 +34,37 @@ impl ToolExecutor for WriteExecutor {
             .await
             .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
+        // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
+        if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
+            let mut cmd = tokio::process::Command::new("rustc");
+            // Check only the specific file to avoid whole-workspace errors when other files are broken
+            cmd.arg("--emit=metadata").arg("--edition=2021").arg(&actual_path);
+
+            // Note: In Bazel/Cargo projects, `rustc` alone may miss external crate dependencies
+            // and fail with `E0432`. However, it catches pure syntax errors and basic type errors
+            // within the file itself without requiring a full `cargo check` of a potentially broken tree.
+            // We ignore errors related to missing external crates (E0432, E0463) as they are false positives
+            // when running `rustc` outside the build system.
+            if let Ok(output) = cmd.output().await {
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
+
+Compiler Output:
+{}
+
+Please fix the errors and try again.",
+                            path, stderr
+                        )));
+                    }
+                }
+            }
+        }
+
+
+
         Ok(format!("File written: {}", path))
     }
 }
@@ -58,5 +89,76 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["path", "content"]
         }),
         execute: Arc::new(WriteExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_write_tool_basic() {
+        let dir = tempdir().unwrap();
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({
+            "path": "test.txt",
+            "content": "hello world"
+        });
+
+        let result = executor.execute(args).await.unwrap();
+        assert_eq!(result, "File written: test.txt");
+
+        let content = fs::read_to_string(dir.path().join("test.txt")).await.unwrap();
+        assert_eq!(content, "hello world");
+    }
+
+    #[tokio::test]
+    async fn test_write_tool_missing_args() {
+        let executor = WriteExecutor { working_dir: None };
+
+        let args = json!({ "path": "test.txt" });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+
+        let args2 = json!({ "content": "test" });
+        let result2 = executor.execute(args2).await;
+        assert!(result2.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_write_tool_rust_verification_success() {
+        let dir = tempdir().unwrap();
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({
+            "path": "test.rs",
+            "content": "fn main() { println!(\"Hello\"); }"
+        });
+
+        // Should succeed and pass verification
+        let result = executor.execute(args).await.unwrap();
+        assert_eq!(result, "File written: test.rs");
+    }
+
+    #[tokio::test]
+    async fn test_write_tool_rust_verification_failure() {
+        let dir = tempdir().unwrap();
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({
+            "path": "test.rs",
+            "content": "fn main() { let x = ; }"
+        });
+
+        // Should fail verification due to syntax error
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
     }
 }
