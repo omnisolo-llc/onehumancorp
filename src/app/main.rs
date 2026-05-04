@@ -828,6 +828,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_handle = pricing_ui.as_weak();
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+
+    let cost_dashboard_handle_fetch = cost_dashboard_ui.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(resp) = client.get_dashboard_snapshot(req).await {
+                let snapshot = resp.into_inner();
+                if let Some(costs) = snapshot.costs {
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
+                            ui.set_total_spend(format!("${:.2}", costs.total_cost_usd).into());
+                            ui.set_total_tokens(format!("{}", costs.total_tokens).into());
+
+                            let ui_agent_costs: Vec<app::UiAgentCost> = costs.agent_costs.into_iter().map(|ac| {
+                                app::UiAgentCost {
+                                    name: ac.name.into(),
+                                    cost: format!("${:.2}", ac.cost_usd).into(),
+                                    roi: format!("{:.1}%", ac.roi).into(),
+                                    efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    pct: ac.pct,
+                                }
+                            }).collect();
+
+                            ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
+                        }
+                    }).unwrap();
+                }
+            }
+        }
+    });
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
     Box::leak(Box::new(cost_dashboard_ui));
 

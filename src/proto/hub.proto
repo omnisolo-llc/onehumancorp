@@ -1167,6 +1167,15 @@ message StatusCount {
 message Summary {
   double total_cost_usd = 1;
   int64 total_tokens = 2;
+  repeated AgentCostSummary agent_costs = 3;
+}
+
+message AgentCostSummary {
+  string name = 1;
+  double cost_usd = 2;
+  double roi = 3;
+  double efficiency = 4;
+  float pct = 5;
 }
 
 message DashboardSnapshot {
@@ -1289,6 +1298,7 @@ service AgentManagerService {
   rpc ImportSkill(ImportSkillRequest) returns (SkillPack);
   
   rpc GetSnapshots(EmptyRequest) returns (SnapshotsResponse);
+  rpc GetDashboardSnapshot(EmptyRequest) returns (DashboardSnapshot);
   rpc CreateSnapshot(CreateSnapshotRequest) returns (OrgSnapshot);
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns (DashboardSnapshot);
 }
