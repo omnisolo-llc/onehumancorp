@@ -20,6 +20,7 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[allow(dead_code)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -842,11 +843,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pricing_handle_select = pricing_handle.clone();
     let my_plan_handle_select = my_plan_handle.clone();
     pricing_ui.on_select_plan(move |plan| {
+        // Mock Stripe API call to create checkout session
+        println!("Stripe API: Creating checkout session for plan: {}", plan);
         if let Some(ui) = pricing_handle_select.upgrade() {
             let _ = ui.hide();
         }
         if let Some(ui) = my_plan_handle_select.upgrade() {
             ui.set_tier(format!("{} Tier", plan).into());
+            ui.set_plan_status("Active".into());
             let _ = ui.show();
         }
     });
@@ -869,16 +873,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Handle view history (e.g. open an invoice history modal or trigger backend flow)
     });
 
+    let my_plan_ui_handle_cancel = my_plan_ui.as_weak();
     my_plan_ui.on_cancel_subscription(move || {
-        // Handle cancel subscription (e.g. Stripe API call)
+        // Mock Stripe API call to cancel subscription
+        println!("Stripe API: Canceling subscription...");
+        if let Some(ui) = my_plan_ui_handle_cancel.upgrade() {
+            ui.set_plan_status("Canceled".into());
+        }
     });
 
     my_plan_ui.on_update_payment(move || {
-        // Handle update payment method
+        // Mock Stripe API call to update payment method
+        println!("Stripe API: Opening customer portal to update payment method...");
+        #[allow(dead_code)]
+        fn open_url(url: &str) {
+            let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+        }
+        open_url("https://billing.stripe.com/p/session/test_payment_update");
     });
 
     my_plan_ui.on_download_invoice(move || {
-        // Handle download invoice
+        // Mock Stripe API call to download invoice
+        println!("Stripe API: Downloading invoice...");
+        #[allow(dead_code)]
+        fn open_url(url: &str) {
+            let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+        }
+        open_url("https://pay.stripe.com/invoice/acct_test/pdf");
     });
 
 
@@ -1326,7 +1347,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),

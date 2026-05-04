@@ -227,7 +227,6 @@ impl Agent {
 
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
-        let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut messages: Vec<Message> = Vec::new();
         let mut last_checkpoint_id: Option<String> = None;
@@ -401,39 +400,8 @@ impl Agent {
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
-            // Cost estimation logic based on model (roughly mapping common API pricing as USD per 1M tokens)
-            let mut input_cost_per_m = 0.0;
-            let mut output_cost_per_m = 0.0;
-
-            let m = cfg.model.to_lowercase();
-            if m.contains("gpt-4o") && !m.contains("mini") {
-                input_cost_per_m = 5.0;
-                output_cost_per_m = 15.0;
-            } else if m.contains("gpt-4-turbo") {
-                input_cost_per_m = 10.0;
-                output_cost_per_m = 30.0;
-            } else if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") {
-                input_cost_per_m = 0.15;
-                output_cost_per_m = 0.60;
-            } else if m.contains("gemini-1.5-pro") {
-                input_cost_per_m = 3.5;
-                output_cost_per_m = 10.5;
-            } else if m.contains("gemini-1.5-flash") {
-                input_cost_per_m = 0.075;
-                output_cost_per_m = 0.30;
-            } else if m.contains("claude-3-5-sonnet") {
-                input_cost_per_m = 3.0;
-                output_cost_per_m = 15.0;
-            } else if m.contains("claude-3-haiku") {
-                input_cost_per_m = 0.25;
-                output_cost_per_m = 1.25;
-            }
-
-            if input_cost_per_m > 0.0 || output_cost_per_m > 0.0 {
-                let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
-                                (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
-            }
+            // Cost calculation is delegated to the server (hub/auditor) via the `ohc_agent_token_usage_total` telemetry.
+            // Only raw token usage is emitted here to prevent hardcoding model prices in the agent crate.
 
             let stop_reason = resp.stop_reason.as_str();
 

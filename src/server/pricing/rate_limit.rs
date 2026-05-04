@@ -100,6 +100,20 @@ impl RedisRateLimiter {
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
         let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
 
+        // Quota check enforcement
+        if let Some(storage_limit) = tier.storage_limit_mb() {
+            let storage_used: Option<u32> = conn.get(format!("tenant:{}:storage_used_mb", tenant_id)).await.ok();
+            if let Some(used) = storage_used {
+                if used >= storage_limit {
+                    return Ok(RateLimitStatus {
+                        is_allowed: false, // Hard limit for storage
+                        soft_limit_reached: true,
+                        user_message: Some(format!("Storage limit of {} MB reached. Please upgrade your plan.", storage_limit)),
+                    });
+                }
+            }
+        }
+
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
                 return Ok(RateLimitStatus {

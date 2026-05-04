@@ -30,8 +30,16 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, _customer_id: &str) -> Result<String, String> {
-        Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+    pub async fn create_checkout_session(&self, price_id: &str, _customer_id: &str, amount_cents: i64) -> Result<String, String> {
+        // Transaction Fee Optimization
+        // For transactions > $500 (50000 cents), prefer ACH to minimize percentage-based credit card fees.
+        let mut payment_method_types = vec!["card".to_string()];
+        if amount_cents > 50000 {
+            payment_method_types.push("us_bank_account".to_string());
+        }
+
+        // Mock response
+        Ok(format!("https://checkout.stripe.com/c/pay/cs_test_... (Methods: {:?})", payment_method_types))
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
