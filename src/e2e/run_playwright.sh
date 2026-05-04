@@ -8,9 +8,9 @@ ROOT="${SRCDIR}"
 
 # The server binary is at //src/server:server
 # When using Bazel runfiles, it's at TEST_SRCDIR/TEST_WORKSPACE/bazel-bin/src/server/server
-SERVER_BIN="${SRCDIR}/bazel-bin/src/server/server"
+SERVER_BIN="${SRCDIR}/src/server/server"
 
-if [[ ! -f "${SERVER_BIN}" ]]; then
+if [[ ! -e "${SERVER_BIN}" && ! -L "${SERVER_BIN}" ]]; then
     echo "error: server binary not found at ${SERVER_BIN}"
     exit 1
 fi
