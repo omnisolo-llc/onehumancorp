@@ -91,12 +91,12 @@ fn load() -> Result<AppConfig, config::ConfigError> {
 fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
-            eprintln!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+            tracing::warn!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
         }
     }
     if let Some(redis_url) = &cfg.redis_url {
         if !redis_url.is_empty() {
-            eprintln!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
+            tracing::warn!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
         }
     }
 
@@ -127,7 +127,7 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
             .mode(0o600)
             .open(db_path)
         {
-            eprintln!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+            tracing::error!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
         }
     }
     cfg.standalone = true;

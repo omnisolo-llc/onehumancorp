@@ -54,7 +54,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: error={}", e);
+                    tracing::error!("failed to upsert mission from sync daemon: error={}", e);
                 }
             }
         }
@@ -141,7 +141,7 @@ impl SyncService for MySyncService {
                     .execute(&mut *tx)
                     .await
                 {
-                    eprintln!("failed to upsert agent_missions via PowerSync: {}", e);
+                    tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
                 }
             }
         }
@@ -178,7 +178,7 @@ impl SyncService for MySyncService {
         .await {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("failed to fetch pending agent_missions for pull: {}", e);
+                tracing::error!("failed to fetch pending agent_missions for pull: {}", e);
                 return Err(Status::internal("database error"));
             }
         };
@@ -278,7 +278,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert CRDT delta: error={}", e);
+                    tracing::error!("failed to upsert CRDT delta: error={}", e);
                 }
             }
         }
@@ -341,7 +341,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to enqueue escalation job: error={}", e);
+                    tracing::error!("failed to enqueue escalation job: error={}", e);
                 }
             }
         }

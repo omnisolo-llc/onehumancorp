@@ -627,11 +627,13 @@ impl Hub {
                 Err(_) => 0,
             }
         };
-        let backlog_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
+        let pending_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
+        let stuck_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'").fetch_one(&self.pool);
 
-        let (db_ping, backlog_res) = tokio::join!(ping_future, backlog_future);
+        let (db_ping, pending_res, stuck_res) = tokio::join!(ping_future, pending_future, stuck_future);
 
-        let mission_sync_backlog = backlog_res.unwrap_or(0);
+        let mission_sync_backlog = pending_res.unwrap_or(0);
+        let stuck_missions_count = stuck_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -642,6 +644,8 @@ impl Hub {
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
+        let hybrid_mode_switching_healthy = mesh_active || mode == "standalone";
+        let local_to_cloud_mission_sync_healthy = stuck_missions_count == 0;
 
         Ok(serde_json::json!({
             "mode": mode,
@@ -649,6 +653,9 @@ impl Hub {
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
+            "hybrid_mode_switching_healthy": hybrid_mode_switching_healthy,
+            "local_to_cloud_mission_sync_healthy": local_to_cloud_mission_sync_healthy,
+            "stuck_missions_count": stuck_missions_count,
             "mission_sync_backlog": mission_sync_backlog,
         }))
     }
@@ -809,5 +816,8 @@ mod tests {
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("mission_sync_backlog").is_some());
+        assert!(health.get("hybrid_mode_switching_healthy").is_some());
+        assert!(health.get("local_to_cloud_mission_sync_healthy").is_some());
+        assert!(health.get("stuck_missions_count").is_some());
     }
 }

@@ -45,8 +45,9 @@ impl SipDB {
             .execute(&self.pool)
             .await?;
             
-        // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+
+        // 1b. Prioritize and sanitize STUCK missions by setting them to BURSTING and requeuing them
+        sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;

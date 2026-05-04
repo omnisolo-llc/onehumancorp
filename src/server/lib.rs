@@ -1005,7 +1005,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
-        eprintln!("Failed to start handoff listener: {}", e);
+        tracing::error!("Failed to start handoff listener: {}", e);
     }
 
     // Start Builtin Agent
@@ -1039,7 +1039,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         println!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
-            eprintln!("Mesh server error: {}", e);
+            tracing::error!("Mesh server error: {}", e);
         }
     });
 
@@ -1074,10 +1074,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    eprintln!("failed to push pending missions: {}", e);
+                    tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    eprintln!("failed to pull mission updates: {}", e);
+                    tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
         });
