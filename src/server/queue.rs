@@ -403,7 +403,10 @@ impl QueueManager {
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+
+        let query_str = "UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at";
+
+        let row = sqlx::query(query_str)
             .bind(worker_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -413,6 +416,14 @@ impl QueueManager {
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let latency = (Utc::now() - created_at).num_milliseconds() as f32 / 1000.0;
+
+            let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" { "standalone" } else { "cloud" };
+
+            let pool_clone = self.pool.clone();
+            tokio::spawn(async move { let _ = crate::telemetry::record_sub_agent_queue_latency(&pool_clone, latency, mode).await; });
+
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
                 organization_id: row.get("organization_id"),
@@ -469,6 +480,9 @@ impl QueueManager {
                                     }
                                     Err(e) => {
                                         println!("Job handler failed: {}, error: {}", job.id, e);
+                                        let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" { "standalone" } else { "cloud" };
+                                        let pool_clone = self.pool.clone();
+                                        tokio::spawn(async move { let _ = crate::telemetry::record_sub_agent_spawn_error(&pool_clone, mode).await; });
                                         let _ = self.mark_failed(&job.id, &e, &job.organization_id).await;
                                     }
                                 }
@@ -478,6 +492,11 @@ impl QueueManager {
                             }
                             Err(e) => {
                                 println!("Failed to poll queue: {}", e);
+                                let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" { "standalone" } else { "cloud" };
+                                let pool_clone = self.pool.clone();
+                                if e.to_string().contains("database is locked") || e.to_string().contains("could not obtain lock") || e.to_string().contains("timeout") {
+                                    tokio::spawn(async move { let _ = crate::telemetry::record_sub_agent_lock_contention(&pool_clone, mode).await; });
+                                }
                                 break;
                             }
                         }

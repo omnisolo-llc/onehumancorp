@@ -44,6 +44,18 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
+pub async fn record_sub_agent_queue_latency(pool: &PgPool, duration_sec: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sub_agent_queue_latency_seconds", "histogram", duration_sec, serde_json::json!({ "mode": mode })).await
+}
+
+pub async fn record_sub_agent_spawn_error(pool: &PgPool, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sub_agent_spawn_errors_total", "counter", 1.0, serde_json::json!({ "mode": mode })).await
+}
+
+pub async fn record_sub_agent_lock_contention(pool: &PgPool, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sub_agent_lock_contention_total", "counter", 1.0, serde_json::json!({ "mode": mode })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

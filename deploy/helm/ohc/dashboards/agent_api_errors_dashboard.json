@@ -1,0 +1,69 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">AGENT API ERRORS</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Agent-specific API Error Analysis</p>\n</div>"
+      },
+      "transparent": true
+    },
+    {
+      "title": "Total API Errors",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 3 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum by (api, role) (rate(ohc_agent_api_errors_total[1m]))",
+          "legendFormat": "{{api}} - {{role}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Errors by Agent ID",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 3 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (rate(ohc_agent_api_errors_total[1m]))",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["agent", "api", "errors"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Agent API Errors",
+  "uid": "glassmorphism_agent_api_errors",
+  "version": 1
+}
