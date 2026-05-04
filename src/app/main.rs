@@ -1078,9 +1078,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             app::UiAgentCost {
                                 name: ac.agent_id.into(),
                                 cost: format!("${:.2}", ac.cost_usd).into(),
-                                roi: "0.0%".into(), // roi and efficiency need more backend data
-                                efficiency: "0.0 tok/$".into(),
-                                pct: 0.0,
+                                roi: format!("{:.1}%", ac.roi).into(),
+                                efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                pct: ac.pct,
                             }
                         }).collect();
 
