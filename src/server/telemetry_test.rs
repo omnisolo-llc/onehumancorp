@@ -168,10 +168,6 @@ mod tests {
                         }
                     }
                 }
-
-                if checked_files > 10 {
-                    break;
-                }
             }
         }
 
