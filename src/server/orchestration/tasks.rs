@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
 use chrono::Utc;
-use crate::autodream::AutoDreamWorker;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,

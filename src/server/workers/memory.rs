@@ -1,7 +1,5 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-use crate::minimax::LocalLLMClient;
-use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 pub struct MemoryConsolidationWorker {
@@ -91,8 +89,8 @@ mod tests {
             content: "dummy".to_string(),
             embedding: vec![],
             source_type: "dummy".to_string(),
-            created_at: Utc::now() + chrono::Duration::seconds(time_offset),
-            last_referenced_at: Utc::now(),
+            created_at: chrono::Utc::now() + chrono::Duration::seconds(time_offset),
+            last_referenced_at: chrono::Utc::now(),
             reference_count: 0,
             reliability_score: rel_score,
             owner_override: override_val,
