@@ -1,3 +1,4 @@
+{{- if .Values.pushgateway.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,10 +18,11 @@ spec:
       containers:
       - name: pushgateway
         image: prom/pushgateway:latest
+        args:
+        - "--log.level=info"
+        - "--log.format=json"
         ports:
-        env:
-        - name: LOG_LEVEL
-          value: "info"
         - containerPort: 9091
         resources:
           {{- toYaml .Values.pushgateway.resources | nindent 12 }}
+{{- end }}

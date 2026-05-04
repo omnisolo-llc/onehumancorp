@@ -20,6 +20,8 @@ spec:
           ports:
             - containerPort: {{ .Values.powersync.service.targetPort }}
           env:
+            - name: LOG_FORMAT
+              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: PS_PORT
