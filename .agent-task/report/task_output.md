@@ -1,60 +1,61 @@
 # 🔍 Scout: Tool Integration Research Q2
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
+## [Social Media] Meta Graph API Integration
+**Title**: Integrate Meta Graph API for Unified Social Media Inbox
 **Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
 **Research Report**:
-- **Tool**: Manychat
+- **Tool**: Meta Graph API
 - **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
+- **Advantages**: Adheres to 'Radical Simplicity' by keeping the user entirely within the OHC platform. Eliminates the need for users to learn or pay for a third-party tool like Manychat. Provides direct native access to Instagram, Messenger, and WhatsApp messages.
+- **Risks**: Requires building and maintaining robust webhook handlers and rate-limit management. The app must undergo Meta's app review process, which can be stringent and time-consuming.
+- **Pricing**: Free for standard usage levels. No per-contact monthly fees for the business owner.
+- **Compatibility**: Cloud (via webhooks/OAuth).
 **Design Doc**:
 - User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+- User authenticates with Facebook/Instagram via OAuth directly within OHC.
+- OHC registers webhooks to receive new DMs via Meta Graph API.
+- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via the API.
+- The user sees a unified "Customer Inbox" on their phone showing the conversation history natively inside OHC.
+**Implementation Prompt**: Implement an OAuth flow to connect a user's Meta account via Meta Graph API. Create a webhook endpoint that receives incoming messages from Messenger, Instagram, and WhatsApp, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
 **Priority**: P0
 **Estimated Scope**: Large
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
+## [Calendar] Google Calendar API Integration
+**Title**: Native OHC Booking via Google Calendar API
 **Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
 **Research Report**:
-- **Tool**: Calendly
+- **Tool**: Google Calendar API
 - **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
+- **Advantages**: Aligns with 'Radical Simplicity' by providing a native, seamless booking experience without sending users to a third-party site like Calendly. Fully integrated with OHC's internal dashboards and agent triggers.
+- **Risks**: Implementing complex calendar logic (e.g., timezone conversions, recurring events, conflict resolution) natively is error-prone and requires significant engineering effort.
+- **Pricing**: Free tier within Google Cloud API limits. No SaaS subscription fees for the user.
+- **Compatibility**: Cloud (OAuth).
 **Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+- User goes to Sales dashboard and connects their Google Calendar via OAuth.
+- User sets up event types and availability natively in OHC.
+- OHC checks Google Calendar API for conflicts in real-time and displays available slots on the user's public storefront.
+- When a customer clicks to book, they do it directly in the OHC native widget.
+- Upon successful booking, OHC pushes the event to Google Calendar.
+**Implementation Prompt**: Create a native scheduling engine in OHC powered by the Google Calendar API. Implement OAuth for calendar connection, real-time availability checking, and a native booking widget for public profiles that syncs booked events back to Google Calendar.
 **Priority**: P1
 **Estimated Scope**: Medium
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
+## [Email Marketing] Native Email via SendGrid/SES
+**Title**: Native Customer Re-engagement via SendGrid/SES
 **Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
 **Research Report**:
-- **Tool**: Mailchimp
+- **Tool**: Native Email Marketing via SendGrid or AWS SES
 - **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+- **Advantages**: Provides a radically simple, "invisible" infrastructure approach. Users don't have to learn a separate platform like Mailchimp or deal with syncing contact lists. OHC retains full control of the data and user experience.
+- **Risks**: Managing email deliverability, bounce rates, and anti-spam compliance (CAN-SPAM/GDPR) natively requires dedicated infrastructure monitoring.
+- **Pricing**: Infrastructure cost based on volume (e.g., fractions of a cent per email). No external SaaS tiers for the business owner.
+- **Compatibility**: Cloud (API).
 **Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
+- When a customer buys something, they are automatically added to the native OHC customer directory with tags (e.g., "Bought: Cake").
 - The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
+- The user approves the AI-generated email, and OHC triggers SendGrid/SES to send it.
+- The user sees open rates and clicks natively in the OHC Marketing dashboard.
+**Implementation Prompt**: Build a native email marketing system in OHC using SendGrid or AWS SES as the delivery backbone. Automatically segment customers based on purchase history and allow the AI Marketing agent to draft and send campaigns natively, displaying analytics within OHC.
 **Priority**: P1
 **Estimated Scope**: Medium
 
