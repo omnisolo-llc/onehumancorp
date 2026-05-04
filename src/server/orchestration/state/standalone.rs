@@ -3,7 +3,7 @@ use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+
 use sqlx::Row;
 use chrono::Utc;
 
@@ -56,7 +56,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
