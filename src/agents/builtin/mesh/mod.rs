@@ -11,6 +11,18 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+
+    async fn ping(&self) -> Result<(), String>;
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct TeammateMeshClient {
@@ -52,6 +64,61 @@ impl TeammateMesh for TeammateMeshClient {
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:coordination", handler).await
     }
+
+    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.transport.publish("mesh:state:handoff", Message {
+            agent_id: "agent".to_string(),
+            action: "mesh:state:handoff".to_string(),
+            status: "ok".to_string(),
+            payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        }).await
+    }
+
+    async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.transport.subscribe("mesh:state:handoff", handler).await
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.transport.release_lock(resource, owner).await
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.transport.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.transport.get_active_agents().await
+    }
+
+    async fn ping(&self) -> Result<(), String> {
+        self.publish_with_ack("mesh:health:ping", b"ping".to_vec()).await
+    }
+
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let transport_clone = self.transport.clone();
+
+        self.transport.subscribe("mesh:health:ping", Box::new(move |msg: Message| {
+            let msg_id = msg.msg_id.clone();
+            let ack_topic = format!("mesh:ack:{}", msg_id);
+
+            let t_clone = transport_clone.clone();
+            tokio::spawn(async move {
+                let _ = t_clone.publish(&ack_topic, Message {
+                    agent_id: "health_responder".to_string(),
+                    action: ack_topic.clone(),
+                    status: "ok".to_string(),
+                    payload: b"pong".to_vec(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                }).await;
+            });
+        })).await
+    }
+
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         let msg_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("mesh:ack:{}", msg_id);
@@ -167,5 +234,72 @@ mod tests {
         sleep(Duration::from_millis(50)).await;
 
         assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_acquire_lock() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport);
+
+        let acquired = mesh.acquire_lock("test_resource", "agent_1", 10).await.unwrap();
+        assert!(acquired);
+
+        let acquired_again = mesh.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        assert!(!acquired_again);
+
+        mesh.release_lock("test_resource", "agent_1").await.unwrap();
+
+        let acquired_after_release = mesh.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        assert!(acquired_after_release);
+    }
+
+    #[tokio::test]
+    async fn test_mesh_register_presence() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport);
+
+        mesh.register_presence("agent_1", "online", 10).await.unwrap();
+        mesh.register_presence("agent_2", "busy", 10).await.unwrap();
+
+        let mut agents = mesh.get_active_agents().await.unwrap();
+        agents.sort();
+
+        assert_eq!(agents.len(), 2);
+        assert_eq!(agents[0], ("agent_1".to_string(), "online".to_string()));
+        assert_eq!(agents[1], ("agent_2".to_string(), "busy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_mesh_ping_pong() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport);
+
+        let _cancel_responder = mesh.start_health_responder().await.unwrap();
+
+        // Give the responder a moment to subscribe
+        sleep(Duration::from_millis(50)).await;
+
+        let result = mesh.ping().await;
+        assert!(result.is_ok(), "Ping should receive an ack successfully");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_state_handoff() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport);
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = mesh.subscribe_state_handoff(Box::new(move |msg| {
+            if msg.payload == b"state_data" {
+                received_clone.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        mesh.publish_state_handoff(b"state_data".to_vec()).await.unwrap();
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst), "Should receive state handoff message");
     }
 }
