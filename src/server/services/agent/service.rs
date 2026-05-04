@@ -76,6 +76,11 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<HireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
         let req = request.into_inner();
         if req.name.is_empty() || req.role.is_empty() {
             return Err(Status::invalid_argument("name and role are required"));
@@ -86,7 +91,7 @@ impl AgentManagerService for MyAgentManagerService {
             id,
             name: req.name,
             role: req.role,
-            organization_id: "system".to_string(),
+            organization_id: org_id,
             status: "IDLE".to_string(),
             provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
@@ -214,6 +219,11 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
@@ -239,7 +249,7 @@ impl AgentManagerService for MyAgentManagerService {
         let snap = OrgSnapshot {
             id: format!("snap-{}", now.timestamp()),
             label,
-            org_id: "system".to_string(),
+            org_id,
             org_name: "System".to_string(),
             domain: "default".to_string(),
             agent_count: agents.len() as i32,
