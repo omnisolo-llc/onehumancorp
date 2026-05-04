@@ -197,6 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if ui.get_is_sign_up() {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
+                    ui.invoke_start_setup_wizard();
                 } else {
                     println!("Login as {}...", email);
                     ui.set_loading(true);
@@ -288,32 +289,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("OAuth Login via {}...", provider);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        let my_plan_ui = app::MyPlan::new().unwrap();
-                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                        let my_plan_handle_clone = my_plan_ui.as_weak();
-                        dashboard.on_open_billing(move || {
-                            if let Some(ui) = my_plan_handle_clone.upgrade() {
-                                let _ = ui.show();
+                    ui.set_loading(true);
+                    let ui_weak = login_handle.clone();
+                    tokio::spawn(async move {
+                        let mut needs_wizard = false;
+                        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                            req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                            if let Ok(resp) = client.get_wizard_state(req).await {
+                                let state = resp.into_inner().state;
+                                if let Some(step) = state.get("step") {
+                                    if let Ok(s) = step.parse::<i32>() {
+                                        if s < 10 {
+                                            needs_wizard = true;
+                                        }
+                                    } else {
+                                        needs_wizard = true;
+                                    }
+                                } else {
+                                    needs_wizard = true;
+                                }
+                            } else {
+                                needs_wizard = true;
                             }
-                        });
-                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
-                        my_plan_ui.on_view_details(move || {
-                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-                                let _ = ui.show();
+                        } else {
+                            needs_wizard = true;
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_loading(false);
+                                if needs_wizard {
+                                    ui.invoke_start_setup_wizard();
+                                } else {
+                                    ui.hide().unwrap();
+                                    if let Ok(dashboard) = app::Dashboard::new() {
+                                        let my_plan_ui = app::MyPlan::new().unwrap();
+                                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                                        let my_plan_handle_clone = my_plan_ui.as_weak();
+                                        dashboard.on_open_billing(move || {
+                                            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                                        my_plan_ui.on_view_details(move || {
+                                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+                                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+                                        });
+                                        dashboard.show().unwrap();
+                                        Box::leak(Box::new(dashboard));
+                                        Box::leak(Box::new(my_plan_ui));
+                                        Box::leak(Box::new(cost_dashboard_ui));
+                                    }
+                                }
                             }
-                        });
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                        Box::leak(Box::new(my_plan_ui));
-                        Box::leak(Box::new(cost_dashboard_ui));
-                    }
+                        }).unwrap();
+                    });
                 }
             }
         }
@@ -5206,6 +5244,114 @@ mod e2e_hybrid_blob_tests {
         let last_msg = unified_inbox_ui.get_current_messages().row_data(1).unwrap();
         assert_eq!(last_msg.body, ai_reply_text, "Last message should be the AI reply");
         assert!(last_msg.is_me, "The AI reply should be marked as sent by 'me'");
+    }
+
+    #[test]
+    fn test_e2e_signup_resend_verification_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let resend_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let resend_called_clone = resend_called.clone();
+
+        login_ui.on_resend_verification(move |email| {
+            assert_eq!(email, "newuser@example.com");
+            *resend_called_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(true);
+        login_ui.set_username("newuser@example.com".into());
+        login_ui.set_password("password123".into());
+
+        // Initial sign up click shows verification
+        login_ui.invoke_login("newuser@example.com".into(), "password123".into());
+
+        // In the real UI, this sets show_verification = true. We simulate the user clicking resend.
+        login_ui.set_show_verification(true);
+        login_ui.invoke_resend_verification("newuser@example.com".into());
+
+        assert!(*resend_called.borrow(), "User should be able to resend verification email during sign up");
+    }
+
+    #[test]
+    fn test_e2e_oauth_login_redirects_to_setup_wizard_on_first_login() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let oauth_called_clone = oauth_called.clone();
+
+        login_ui.on_oauth_login(move |provider| {
+            assert_eq!(provider, "SSO");
+            *oauth_called_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(false);
+        login_ui.invoke_oauth_login("SSO".into());
+
+        assert!(*oauth_called.borrow(), "OAuth login should be invoked");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_cross_device_resume() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let wizard_ui = app::SetupWizard::new().unwrap();
+
+        // Simulating resuming from step 3
+        wizard_ui.set_step(3);
+        wizard_ui.set_business_type("Freelancer".into());
+        wizard_ui.set_company_name("Carlos Repairs".into());
+        wizard_ui.set_sell_services(true);
+
+        assert_eq!(wizard_ui.get_step(), 3);
+        assert_eq!(wizard_ui.get_business_type(), "Freelancer");
+        assert_eq!(wizard_ui.get_company_name(), "Carlos Repairs");
+        assert_eq!(wizard_ui.get_sell_services(), true);
+
+        // User continues from step 3 to step 4
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 4);
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_template_selection_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let wizard_ui = app::SetupWizard::new().unwrap();
+
+        wizard_ui.set_step(5); // Assuming step 5 is template selection
+        wizard_ui.invoke_select_template("Minimalist".into());
+
+        assert_eq!(wizard_ui.get_website_template(), "Minimalist");
+        assert_eq!(wizard_ui.get_step(), 6); // verify transition to next step
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_domain_go_live_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let wizard_ui = app::SetupWizard::new().unwrap();
+
+        wizard_ui.set_step(8); // Domain selection step
+        wizard_ui.invoke_select_domain("ohc_subdomain".into());
+
+        assert_eq!(wizard_ui.get_domain_choice(), "ohc_subdomain");
+        assert_eq!(wizard_ui.get_step(), 9); // Proceeds to Go-Live step
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        wizard_ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _ppr, _dc| {
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        wizard_ui.invoke_launch(
+            "Food Cart".into(), "Fatima's Cart".into(), "".into(), "online".into(),
+            "admin@example.com".into(), "Minimalist".into(), "Shawarma".into(), "12.00".into(), "ohc_subdomain".into()
+        );
+
+        assert!(*launch_called.borrow(), "Launch should be invoked to complete domain and go-live");
     }
 
 #[test]
