@@ -1,9 +1,8 @@
-use sqlx::{postgres::PgPoolOptions, Row};
-use std::env;
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::{postgres::PgPoolOptions, Row};
+    use std::env;
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {

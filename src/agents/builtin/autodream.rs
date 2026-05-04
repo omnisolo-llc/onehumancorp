@@ -2,7 +2,7 @@
 pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
-use tracing::{info, debug, error};
+use tracing::{info, debug};
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
