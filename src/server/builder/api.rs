@@ -28,6 +28,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
 }
 
 #[derive(Serialize)]
+#[derive(serde::Deserialize)]
 pub struct SiteResponse {
     pub id: Uuid,
     pub domain: Option<String>,
@@ -73,6 +74,7 @@ async fn create_site(
 }
 
 #[derive(Serialize)]
+#[derive(serde::Deserialize)]
 pub struct PageResponse {
     pub id: Uuid,
     pub path: String,
@@ -127,6 +129,7 @@ async fn create_page(
 }
 
 #[derive(Serialize)]
+#[derive(serde::Deserialize)]
 pub struct BlockResponse {
     pub id: Uuid,
     pub block_type: String,
