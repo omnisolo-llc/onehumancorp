@@ -64,7 +64,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let pg_pool = match pool_res {
         Ok(p) => p,
-        Err(e) => {
+        Err(_e) => {
 
             return;
         }
@@ -116,6 +116,31 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 
     let mut join_handles = Vec::new();
 
+    // CHAOS ENGINEERING: Introduce background stress into the system dynamically.
+    let mut chaos_tasks = Vec::new();
+    for i in 0..20 {
+        let q = queue.clone();
+        let name = name.to_string();
+        let run_id = run_id.clone();
+        chaos_tasks.push(tokio::spawn(async move {
+            let job = Job {
+                id: format!("chaos_job_{}_{}_{}", name, run_id, i),
+                tenant_id: "chaos_tenant".to_string(),
+                parent_task_id: format!("chaos_parent_{}_{}_{}", name, run_id, i),
+                agent_role: "test_agent".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            let _ = q.enqueue(job).await;
+        }));
+    }
+
     for i in 0..iterations {
         let q = queue.clone();
         let name = name.to_string();
@@ -153,6 +178,11 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
         let (enq, deq) = handle.await.unwrap();
         enqueue_times.push(enq);
         dequeue_times.push(deq);
+    }
+
+    // Clean up chaos tasks
+    for task in chaos_tasks {
+        let _ = task.await;
     }
 
     enqueue_times.sort();

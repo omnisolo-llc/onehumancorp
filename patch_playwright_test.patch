@@ -1,0 +1,15 @@
+--- src/e2e/playwright_test.sh
++++ src/e2e/playwright_test.sh
+@@ -19,10 +19,10 @@
+ cd "$workspace_root"
+
+ export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
+-mkdir -p "$HOME"
++#mkdir -p "$HOME"
+
+ # Ensure playwright browsers are installed (shared cache)
+ export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/tmp/ohc-playwright-browsers}"
+-mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
++#mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
+
+ # Install chromium if not cached

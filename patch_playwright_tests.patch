@@ -1,0 +1,17 @@
+--- src/e2e/playwright_tests.bzl
++++ src/e2e/playwright_tests.bzl
+@@ -34,7 +34,7 @@
+                 "e2e",
+                 "no-remote-exec",
+                 "requires-docker",
+-                "manual",
++                "local",
+             ],
+         )
+         targets.append(":" + name)
+@@ -42,5 +42,4 @@
+     native.test_suite(
+         name = "playwright",
+         tests = targets,
+-        tags = ["manual"],
+     )
