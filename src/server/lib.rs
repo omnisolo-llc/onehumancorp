@@ -1108,11 +1108,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
+        std::sync::Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(client))
+    } else {
+        panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
+    };
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
-
+        .route_layer(axum::middleware::from_fn_with_state(
+            rate_limiter,
+            crate::utils::tier_middleware::tier_middleware,
+        ))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();

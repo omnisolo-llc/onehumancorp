@@ -244,6 +244,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let _ = ui.show();
                                             }
                                         });
+                                        let my_plan_handle_clone2 = my_plan_ui.as_weak();
+                                        dashboard.on_action_failed(move |msg| {
+                                            if msg.contains("Tier limit reached") {
+                                                if let Some(ui) = my_plan_handle_clone2.upgrade() {
+                                                    ui.set_upgrade_prompt_message(msg.into());
+                                                    let _ = ui.show();
+                                                }
+                                            }
+                                        });
                                         let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
                                         my_plan_ui.on_view_details(move || {
                                             if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
@@ -1170,6 +1179,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         if used >= 10 { // Free tier limit
                                             ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
                                             ui.set_show_upgrade_prompt(true);
+                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block

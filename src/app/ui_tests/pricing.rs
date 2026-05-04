@@ -82,3 +82,40 @@ fn create_c_verify_total_spend() {
     ui.set_total_spend("N/A".into());
     assert_eq!(ui.get_total_spend(), "N/A");
 }
+
+#[test]
+fn test_upgrade_prompt_visibility_when_empty() {
+    let ui = create_m();
+    ui.set_upgrade_prompt_message("".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "");
+}
+
+#[test]
+fn test_upgrade_prompt_visibility_storage_limit() {
+    let ui = create_m();
+    ui.set_upgrade_prompt_message("Storage limit exceeded (500MB). Upgrade to Starter.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Storage limit exceeded (500MB). Upgrade to Starter.");
+}
+
+#[test]
+fn test_upgrade_prompt_visibility_agent_limit() {
+    let ui = create_m();
+    ui.set_upgrade_prompt_message("Agent limit exceeded (1 max). Upgrade to Pro.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Agent limit exceeded (1 max). Upgrade to Pro.");
+}
+
+#[test]
+fn test_upgrade_prompt_visibility_action_limit() {
+    let ui = create_m();
+    ui.set_upgrade_prompt_message("Monthly action limit reached (100). Upgrade to Starter.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Monthly action limit reached (100). Upgrade to Starter.");
+}
+
+#[test]
+fn test_upgrade_prompt_visibility_clears() {
+    let ui = create_m();
+    ui.set_upgrade_prompt_message("Some error".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Some error");
+    ui.set_upgrade_prompt_message("".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "");
+}
