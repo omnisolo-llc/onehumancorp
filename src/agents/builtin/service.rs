@@ -475,8 +475,8 @@ impl AgentService for AgentServiceImpl {
                         ..Default::default()
                     },
                     AgentEvent::UserInterventionRequired { error } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        error: format!("USER INTERVENTION REQUIRED: {}", error),
+                        r#type: EventType::UserInterventionRequired as i32,
+                        error,
                         ..Default::default()
                     },
                 };
