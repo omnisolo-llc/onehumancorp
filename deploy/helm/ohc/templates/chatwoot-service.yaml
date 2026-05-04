@@ -9,4 +9,5 @@ spec:
   ports:
     - port: {{ .Values.chatwoot.service.port }}
       targetPort: {{ .Values.chatwoot.service.port }}
+      name: http
 {{- end }}
