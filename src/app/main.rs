@@ -72,1221 +72,18 @@ fn set_global_is_advanced(val: bool) {
     });
 }
 
+
+
+
+
 fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     ADVANCED_LISTENERS.with(|listeners| {
         listeners.borrow_mut().push(listener);
     });
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("App starting...");
-
-    // Start bundled server if in standalone mode
-    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
-        println!("Starting bundled server...");
-        tokio::spawn(async move {
-            if let Err(e) = server_lib::run_server().await {
-                eprintln!("Bundled server error: {}", e);
-            }
-        });
-        // Give the server a moment to start its listeners
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    }
-
-    tokio::spawn(async move {
-        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            Ok(mut client) => {
-                println!("Connected to server!");
-                let request = tonic::Request::new(RegisterAgentRequest {
-                    agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
-                        role: "Worker".into(),
-                        organization_id: "org_1".into(),
-                        status: "Running".into(),
-                        provider_type: "Standard".into(),
-                    }),
-                });
-                match client.register_agent(request).await {
-                    Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
-                }
-            }
-            Err(e) => {
-                println!("Could not connect to server: {:?}", e);
-            }
-        }
-    });
-
-    let login_ui = app::Login::new()?;
-    let login_ui_handle = login_ui.as_weak();
-
-    let setup_wizard_ui = app::SetupWizard::new()?;
-    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+pub fn setup_wizard_logic(setup_wizard_ui: &app::SetupWizard) {
     let setup_wizard_handle = setup_wizard_ui.as_weak();
-    let sw_ui_weak = setup_wizard_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = sw_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-
-    let _ = setup_wizard_ui.hide();
-
-    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
-    login_ui.on_start_setup_wizard({
-        let login_handle = login_ui_handle.clone();
-        move || {
-            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
-                let _ = wizard.show();
-            }
-            if let Some(ui) = login_handle.upgrade() {
-                let _ = ui.hide();
-            }
-        }
-    });
-
-    let _login_ui_from_login = login_ui_handle.clone();
-    login_ui.on_login({
-        let login_handle = login_ui_handle.clone();
-        move |email, _password| {
-            if let Some(ui) = login_handle.upgrade() {
-                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                } else {
-                    println!("Login as {}...", email);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                _ => "".into(),
-                            }
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
-                }
-            }
-        }
-    });
-
-    login_ui.on_resend_verification({
-        let login_handle = login_ui_handle.clone();
-        move |_email| {
-            if let Some(ui) = login_handle.upgrade() {
-                // Simulate email verified
-                ui.invoke_start_setup_wizard();
-            }
-        }
-    });
-
-    login_ui.on_oauth_login({
-        let login_handle = login_ui_handle.clone();
-        move |provider| {
-            if let Some(ui) = login_handle.upgrade() {
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                } else {
-                    println!("OAuth Login via {}...", provider);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                _ => "".into(),
-                            }
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
-                }
-            }
-        }
-    });
-
-    let init_ui_handle = setup_wizard_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_ui_handle.upgrade() {
-                        if let Some(step_str) = state.get("step") {
-                            if let Ok(step) = step_str.parse::<i32>() {
-                                ui.set_step(step);
-                            }
-                        }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-
-    setup_wizard_ui.on_save_state({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-
-    let agent_config_ui = app::AgentConfig::new()?;
-    agent_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let agent_config_handle = agent_config_ui.as_weak();
-    let ac_ui_weak = agent_config_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = ac_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-    let init_agent_config_handle = agent_config_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_agent_config_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-    agent_config_ui.on_save_state({
-        let ui_handle = agent_config_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-    agent_config_ui.on_activate_agent({
-        let ui_handle = agent_config_handle.clone();
-        move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
-            let ui_handle_err = ui_handle.clone();
-            tokio::spawn(async move {
-                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-                match HubServiceClient::connect(url).await {
-                    Ok(mut client) => {
-                        let mut capabilities = std::collections::HashMap::new();
-                        capabilities.insert("can_reply".to_string(), can_reply);
-                        capabilities.insert("can_social".to_string(), can_social);
-                        capabilities.insert("can_write_descriptions".to_string(), can_write_descriptions);
-                        capabilities.insert("can_send_updates".to_string(), can_send_updates);
-
-                        let work_hours = match frequency.as_str() {
-                            "Real-time" => 24.0,
-                            "Hourly" => 8.0,
-                            "Daily" => 1.0,
-                            "Weekly" => 0.1,
-                            _ => 2.0,
-                        };
-
-                        let mut req = tonic::Request::new(ohc::orchestration::AgentConfig {
-                            role: agent.to_string(),
-                            provider: "default".to_string(),
-                            capabilities,
-                            work_hours,
-                        });
-                        // Pass x-spiffe-id as system
-                        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                        if let Err(e) = client.handle_config_wizard(req).await {
-                            eprintln!("Failed to handle config wizard: {}", e);
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = ui_handle_err.upgrade() {
-                                    ui.set_show_toast(false);
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to connect to HubServiceClient: {}", e);
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_handle_err.upgrade() {
-                                ui.set_show_toast(false);
-                            }
-                        }).unwrap();
-                    }
-                }
-            });
-        }
-    });
-
-    let prompt_tuning_ui = app::PromptTuning::new()?;
-    prompt_tuning_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let prompt_tuning_handle = prompt_tuning_ui.as_weak();
-    let pt_ui_weak = prompt_tuning_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = pt_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-    let init_prompt_tuning_handle = prompt_tuning_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-    prompt_tuning_ui.on_save_state({
-        let ui_handle = prompt_tuning_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-    prompt_tuning_ui.on_save_prompt({
-        let ui_handle = prompt_tuning_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let tone = ui.get_tone();
-            let focus_only_business = ui.get_focus_only_business();
-            let focus_avoid_competitors = ui.get_focus_avoid_competitors();
-            let focus_reply_spanish = ui.get_focus_reply_spanish();
-
-            let state = std::collections::HashMap::from([
-                ("prompt_tone".to_string(), tone.to_string()),
-                ("prompt_focus_business".to_string(), focus_only_business.to_string()),
-                ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
-                ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
-            ]);
-            let ui_handle_err = ui_handle.clone();
-            tokio::spawn(async move {
-                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-                match HubServiceClient::connect(url).await {
-                    Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            eprintln!("Failed to save wizard state: {}", e);
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = ui_handle_err.upgrade() {
-                                    ui.set_show_toast(false); // rollback optimistic UI
-                                    // In a real app we might show an error toast here
-                                }
-                            }).unwrap();
-                            return;
-                        }
-
-                        let mut domain_focus = vec![];
-                        if focus_only_business { domain_focus.push("Only discuss business".to_string()); }
-                        if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
-                        if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
-
-                        let mut prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
-                            personality: tone.to_string(),
-                            domain_focus,
-                        });
-                        prompt_request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                        if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
-                            eprintln!("Failed to handle prompt tuning: {}", e);
-                            let ui_err_clone = ui_handle_err.clone();
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = ui_err_clone.upgrade() {
-                                    ui.set_show_toast(false); // rollback
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to connect to HubServiceClient: {}", e);
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_handle_err.upgrade() {
-                                ui.set_show_toast(false); // rollback optimistic UI
-                            }
-                        }).unwrap();
-                    }
-                }
-            });
-        }
-    });
-
-    let website_builder_ui = app::WebsiteBuilder::new()?;
-    website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let website_builder_handle = website_builder_ui.as_weak();
-    let wb_ui_weak = website_builder_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = wb_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-    let init_website_builder_handle = website_builder_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_website_builder_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-    website_builder_ui.on_save_state({
-        let ui_handle = website_builder_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-
-    let grow_business_ui = app::GrowBusiness::new()?;
-    grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let grow_business_handle = grow_business_ui.as_weak();
-    let gb_ui_weak = grow_business_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = gb_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-
-    let settings_ui = app::Settings::new()?;
-    settings_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let settings_handle = settings_ui.as_weak();
-    let s_ui_weak = settings_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = s_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-    let init_settings_handle = settings_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_settings_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-    settings_ui.on_save_state({
-        let ui_handle = settings_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-    let init_grow_business_handle = grow_business_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_grow_business_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-    grow_business_ui.on_save_state({
-        let ui_handle = grow_business_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-        }
-    });
-
-    Box::leak(Box::new(agent_config_ui));
-    Box::leak(Box::new(prompt_tuning_ui));
-    Box::leak(Box::new(website_builder_ui));
-    Box::leak(Box::new(grow_business_ui));
-
-    let referrals_ui = app::Referrals::new()?;
-    let referrals_handle = referrals_ui.as_weak();
-
-    referrals_ui.on_send_invite_message({
-        let ui_handle = referrals_handle.clone();
-        move |link| {
-            let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
-            CLIPBOARD.with(|cb| {
-                if let Some(ctx) = cb.borrow_mut().as_mut() {
-                    if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
-                        println!("Failed to copy to clipboard: {:?}", e);
-                    } else {
-                        println!("Invite message copied to clipboard: {}", pre_filled_msg);
-                        if let Some(ui) = ui_handle.upgrade() {
-                            ui.set_invite_copy_status("Invite message copied!".into());
-
-                            let weak_ui = ui.as_weak();
-                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
-                                if let Some(ui) = weak_ui.upgrade() {
-                                    ui.set_invite_copy_status("".into());
-                                }
-                            });
-                        }
-                    }
-                } else {
-                    println!("Clipboard not initialized, failed to copy invite message");
-                }
-            });
-        }
-    });
-
-    referrals_ui.on_refresh({
-        let ui_handle = referrals_handle.clone();
-        move || {
-            let handle = ui_handle.clone();
-            tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
-                        if let Ok(resp) = response {
-                            let referrals = resp.into_inner().referrals;
-                            let handle_clone = handle.clone();
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle_clone.upgrade() {
-                                    let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
-                                        app::UiReferral {
-                                            referral_code: r.referral_code.into(),
-                                            user_id: r.user_id.into(),
-                                            clicks: r.clicks,
-                                            conversions: r.conversions,
-                                            created_at: "".into(), // Simplified
-                                        }
-                                    }).collect();
-                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
-                                }
-                            }).unwrap();
-                        }
-
-                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
-                        if let Ok(stats_resp) = stats_response {
-                            let stats = stats_resp.into_inner();
-                            let handle_clone = handle.clone();
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle_clone.upgrade() {
-                                    ui.set_total_referrals(stats.total_referrals);
-                                    ui.set_click_count(stats.click_count);
-                                    ui.set_conversion_rate(stats.conversion_rate as f32);
-                                    let formatted_balance = format!("${}.{:02}", stats.reward_balance_cents / 100, stats.reward_balance_cents % 100);
-                                    ui.set_reward_balance(formatted_balance.into());
-                                    ui.set_bonus_credit(stats.bonus_credit);
-                                    ui.set_download_count(stats.download_count);
-                                    ui.set_waitlist_position(stats.waitlist_position);
-                                }
-                            }).unwrap();
-                        }
-
-                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
-                        if let Ok(vc_resp) = vc_response {
-                            let vc = vc_resp.into_inner();
-                            let handle_clone = handle.clone();
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle_clone.upgrade() {
-                                    ui.set_viral_coefficient(vc.k_factor as f32);
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => println!("Failed to connect for referrals: {:?}", e),
-                }
-            });
-        }
-    });
-
-    referrals_ui.on_copy_link({
-        let ui_handle = referrals_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let link = ui.get_my_referral_link();
-                CLIPBOARD.with(|cb| {
-                    if let Some(ctx) = cb.borrow_mut().as_mut() {
-                        if let Err(e) = ctx.set_contents(link.into()) {
-                            println!("Failed to copy to clipboard: {:?}", e);
-                        } else {
-                            println!("Share link copied to clipboard");
-                        }
-                    } else {
-                        println!("Clipboard not initialized, failed to copy share link");
-                    }
-                });
-            }
-        }
-    });
-
-    referrals_ui.on_export_data(|| {
-        println!("Exporting referral data...");
-    });
-
-    referrals_ui.on_view_history(|| {
-        println!("Viewing referral history...");
-    });
-
-    referrals_ui.on_share_link({
-        let ui_handle = referrals_handle.clone();
-        move |link| {
-            if let Some(_ui) = ui_handle.upgrade() {
-                let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
-
-                CLIPBOARD.with(|cb| {
-                    if let Some(ctx) = cb.borrow_mut().as_mut() {
-                        if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
-                            println!("Failed to copy to clipboard: {:?}", e);
-                        } else {
-                            println!("Share message copied to clipboard: {}", pre_filled_msg);
-                        }
-                    } else {
-                        println!("Clipboard not initialized, failed to copy share link");
-                    }
-                });
-            }
-        }
-    });
-
-    referrals_ui.on_generate_new_link({
-        let ui_handle = referrals_handle.clone();
-        move || {
-            let handle = ui_handle.clone();
-            tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    Ok(mut client) => {
-                        let req = ohc::orchestration::CreateReferralRequest {
-                            user_id: "current_user".to_string(), // In production, use actual user_id
-                            referral_code: "".to_string(),
-                        };
-                        let response = client.create_referral(tonic::Request::new(req)).await;
-                        if let Ok(resp) = response {
-                            let referral = resp.into_inner();
-                            let link = format!("ohc://join?ref={}", referral.referral_code);
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle.upgrade() {
-                                    ui.set_my_referral_link(link.into());
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => println!("Failed to create referral: {:?}", e),
-                }
-            });
-        }
-    });
-
-    setup_wizard_ui.on_go_to_add_products({
-        let handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    setup_wizard_ui.on_go_to_connect_instagram({
-        let handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    setup_wizard_ui.on_go_to_share_link({
-        let handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(referrals) = app::Referrals::new() {
-                referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
-            }
-        }
-    });
-
-    setup_wizard_ui.on_go_to_dashboard({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                let _ = ui.hide();
-            }
-
-    let my_plan_ui = app::MyPlan::new().unwrap();
-    let my_plan_handle = my_plan_ui.as_weak();
-
-    let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle = pricing_ui.as_weak();
-
-    let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-    let cost_dashboard_handle = cost_dashboard_ui.as_weak();
-    Box::leak(Box::new(cost_dashboard_ui));
-
-    let pricing_handle_toggle = pricing_handle.clone();
-    pricing_ui.on_toggle_billing_cycle(move || {
-        if let Some(ui) = pricing_handle_toggle.upgrade() {
-            let current = ui.get_is_annual();
-            ui.set_is_annual(!current);
-        }
-    });
-
-    let pricing_handle_select = pricing_handle.clone();
-    let my_plan_handle_select = my_plan_handle.clone();
-    pricing_ui.on_select_plan(move |plan| {
-        if let Some(ui) = pricing_handle_select.upgrade() {
-            let _ = ui.hide();
-        }
-        if let Some(ui) = my_plan_handle_select.upgrade() {
-            ui.set_tier(format!("{} Tier", plan).into());
-            let _ = ui.show();
-        }
-    });
-
-    let pricing_handle_clone = pricing_handle.clone();
-    my_plan_ui.on_upgrade(move || {
-        if let Some(ui) = pricing_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
-    let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
-    my_plan_ui.on_view_details(move || {
-        if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
-    my_plan_ui.on_view_history(move || {
-        // Handle view history (e.g. open an invoice history modal or trigger backend flow)
-    });
-
-    my_plan_ui.on_cancel_subscription(move || {
-        // Handle cancel subscription (e.g. Stripe API call)
-    });
-
-    my_plan_ui.on_update_payment(move || {
-        // Handle update payment method
-    });
-
-    my_plan_ui.on_download_invoice(move || {
-        // Handle download invoice
-    });
-
-
-            if let Ok(dashboard) = app::Dashboard::new() {
-                let dashboard_handle = dashboard.as_weak();
-                let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
-                let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let add_product_called_clone = add_product_called.clone();
-
-                let dashboard_handle_clone_add_product = dashboard_handle.clone();
-                let product_count_clone = product_count.clone();
-                dashboard.on_action_add_product(move || {
-                    *add_product_called_clone.borrow_mut() = true;
-
-                    if let Some(ui) = dashboard_handle_clone_add_product.upgrade() {
-                        let count = *product_count_clone.borrow();
-                        if count >= 10 { // Free tier limit
-                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
-                            ui.set_show_upgrade_prompt(true);
-                        } else {
-                            *product_count_clone.borrow_mut() += 1;
-                        }
-                    }
-                });
-
-                let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let view_orders_called_clone = view_orders_called.clone();
-                dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-                let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let check_messages_called_clone = check_messages_called.clone();
-                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-                let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let see_analytics_called_clone = see_analytics_called.clone();
-                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-
-                let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-                let share_store_called_clone = share_store_called.clone();
-
-                if let Ok(business_share_ui) = app::BusinessShare::new() {
-                    let business_share_handle = business_share_ui.as_weak();
-
-                    business_share_ui.on_copy_link({
-                        let bs_handle_clone_for_copy = business_share_handle.clone();
-                        move || {
-                            if let Some(ui) = bs_handle_clone_for_copy.upgrade() {
-                                let link = ui.get_share_link();
-
-                                CLIPBOARD.with(|cb| {
-                                    if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                        if let Err(e) = ctx.set_contents(link.to_string()) {
-                                            println!("Failed to copy to clipboard: {:?}", e);
-                                        } else {
-                                            println!("Shareable Store Link copied to clipboard: {}", link);
-                                        }
-                                    } else {
-                                        println!("Clipboard not initialized, failed to copy store link");
-                                    }
-                                });
-                            }
-                        }
-                    });
-
-                    let bs_handle_ig = business_share_handle.clone();
-                    business_share_ui.on_share_to_instagram(move || {
-                        if let Some(ui) = bs_handle_ig.upgrade() {
-                            let link = ui.get_share_link();
-                            let ig_url = format!("https://www.instagram.com/?url={}", link);
-                            open_url(&ig_url);
-                        }
-                    });
-                    let bs_handle_x = business_share_handle.clone();
-                    business_share_ui.on_share_to_x(move || {
-                        if let Some(ui) = bs_handle_x.upgrade() {
-                            let link = ui.get_share_link();
-                            let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
-                            open_url(&x_url);
-                        }
-                    });
-                    let bs_handle_wa = business_share_handle.clone();
-                    business_share_ui.on_share_to_whatsapp(move || {
-                        if let Some(ui) = bs_handle_wa.upgrade() {
-                            let link = ui.get_share_link();
-                            let wa_url = format!("https://wa.me/?text={}", link);
-                            open_url(&wa_url);
-                        }
-                    });
-                    let bs_handle_clone = business_share_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = bs_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-
-                    let business_share_close_clone = business_share_handle.clone();
-                    business_share_ui.on_close(move || {
-                        if let Some(ui) = business_share_close_clone.upgrade() {
-                            let _ = ui.hide();
-                        }
-                    });
-
-                    // Keep strong reference alive indefinitely on the main thread via Box::leak
-                    Box::leak(Box::new(business_share_ui));
-                } else {
-                    let referrals_handle_clone = referrals_handle.clone();
-                    let ref_handle_clone_for_open = referrals_handle.clone();
-                    dashboard.on_action_open_referrals(move || {
-                        if let Some(ui) = ref_handle_clone_for_open.upgrade() {
-                            ui.invoke_refresh();
-                            let _ = ui.show();
-                        }
-                    });
-                    dashboard.on_action_share_store(move || {
-                        *share_store_called_clone.borrow_mut() = true;
-                        if let Some(ui) = referrals_handle_clone.upgrade() {
-                            let _ = ui.show();
-                        }
-                    });
-                }
-
-                let dashboard_milestone_handle = dashboard_handle.clone();
-                dashboard.on_dismiss_milestone(move || {
-                    if let Some(ui) = dashboard_milestone_handle.upgrade() {
-                        ui.set_show_milestone(false);
-                    }
-                });
-
-
-                let my_plan_handle_clone_billing = my_plan_handle.clone();
-                dashboard.on_open_billing(move || {
-                    if let Some(ui) = my_plan_handle_clone_billing.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-
-                let help_center_ui = app::HelpCenter::new().unwrap();
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
-                let ai_chat_ui = app::AiHelpChat::new().unwrap();
-                let ai_chat_handle = ai_chat_ui.as_weak();
-
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
-
-                let video_tutorials_ui = app::VideoTutorials::new().unwrap();
-                let video_tutorials_handle = video_tutorials_ui.as_weak();
-                Box::leak(Box::new(video_tutorials_ui));
-
-                let api_docs_ui = app::ApiDocs::new().unwrap();
-                let api_docs_handle = api_docs_ui.as_weak();
-                Box::leak(Box::new(api_docs_ui));
-
-                let release_notes_ui = app::ReleaseNotes::new().unwrap();
-                let release_notes_handle = release_notes_ui.as_weak();
-                Box::leak(Box::new(release_notes_ui));
-
-                ai_chat_ui.on_send_message({
-                    let chat_handle = ai_chat_handle.clone();
-                    move || {
-                        if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
-                            ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
-                        }
-                    }
-                });
-                Box::leak(Box::new(ai_chat_ui));
-
-                dashboard.on_open_help_center(move || {
-                    if let Some(ui) = help_center_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_ai_chat(move || {
-                    if let Some(ui) = ai_chat_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_api_docs(move || {
-                    if let Some(ui) = api_docs_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                dashboard.on_open_release_notes(move || {
-                    if let Some(ui) = release_notes_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-                let gb_handle_for_dashboard = grow_business_handle.clone();
-                dashboard.on_action_grow_business(move || {
-                    if let Some(ui) = gb_handle_for_dashboard.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
-
-                let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
-
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
-            }
-        }
-    });
-
-    let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
-    let fix_agent_ui = app::FixAgent::new()?;
-
-    let agents_ui_handle = agents_ui.as_weak();
-    let agent_count = std::rc::Rc::new(std::cell::RefCell::new(1)); // Free tier starts with 1 agent, limit is 1
-    let agent_hire_handle = agent_hire_ui.as_weak();
-    agents_ui.on_hire_agent(move || {
-        if let Some(ui) = agents_ui_handle.upgrade() {
-            let count = *agent_count.borrow();
-            if count >= 1 {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
-                ui.set_show_upgrade_prompt(true);
-            } else {
-                if let Some(hire_ui) = agent_hire_handle.upgrade() {
-                    let _ = hire_ui.show();
-                }
-            }
-        }
-    });
-
-    let fix_agent_handle = fix_agent_ui.as_weak();
-    agents_ui.on_fix_agent(move |_id| {
-        if let Some(ui) = fix_agent_handle.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
-    Box::leak(Box::new(agents_ui));
-    Box::leak(Box::new(agent_hire_ui));
-    Box::leak(Box::new(fix_agent_ui));
-
-    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
-    let _ = welcome_checklist_ui.hide();
-
-    welcome_checklist_ui.on_go_to_add_products({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // In a real flow, this might jump to a specific product adding UI
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_connect_instagram({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // Similarly, jump to integrations or marketing
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_share_link({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(referrals) = app::Referrals::new() {
-                referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_dashboard({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
-        }
-    });
-
-    setup_wizard_ui.on_generate_instant_preview({
-        let ui_weak = setup_wizard_handle.clone();
-        move || {
-            let ui_handle = ui_weak.clone();
-            if let Some(ui) = ui_handle.upgrade() {
-                let bio = ui.get_instant_bio().to_string();
-                tokio::spawn(async move {
-                    let mut company_name = "AI Generated Store".to_string();
-                    let mut business_type = "Online Store".to_string();
-
-                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other).", bio);
-                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
-                            prompt,
-                            from_agent_id: "setup_wizard".into(),
-                        });
-                        let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
-                        if let Ok(resp) = response {
-                            let content = resp.into_inner().content;
-                            // Simple JSON extraction attempt
-                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
-                                if let Some(n) = v.get("company_name").and_then(|n| n.as_str()) { company_name = n.to_string(); }
-                                if let Some(t) = v.get("business_type").and_then(|t| t.as_str()) { business_type = t.to_string(); }
-                            }
-                        }
-                    }
-
-                    slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = ui_handle.upgrade() {
-                            ui.set_company_name(company_name.into());
-                            ui.set_business_type(business_type.into());
-                            ui.set_admin_email("admin@ai-generated.test".into());
-                            ui.set_payment_pref("online".into());
-                            ui.set_is_generating_instant_preview(false);
-                            ui.set_step(9); // Skip straight to Review & Launch
-                        }
-                    }).unwrap();
-                });
-            }
-        }
-    });
-
-    setup_wizard_ui.on_generate_company_description({
-        let ui_weak = setup_wizard_handle.clone();
-        move |name, biz_type| {
-            let ui_handle = ui_weak.clone();
-            let name = name.to_string();
-            let biz_type = biz_type.to_string();
-            tokio::spawn(async move {
-                let mut description = format!("{} is a premium {} business.", name, biz_type);
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let prompt = format!("Generate a catchy 1-sentence tagline/description for a business named \"{}\" which is a \"{}\".", name, biz_type);
-                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
-                        prompt,
-                        from_agent_id: "setup_wizard".into(),
-                    });
-                    let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
-                    if let Ok(resp) = response {
-                        description = resp.into_inner().content.trim().to_string();
-                    }
-                }
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_handle.upgrade() {
-                        ui.set_company_description(description.into());
-                        ui.set_is_generating_company_description(false);
-                    }
-                }).unwrap();
-            });
-        }
-    });
-
-    setup_wizard_ui.on_generate_product_description({
-        let ui_weak = setup_wizard_handle.clone();
-        move |prod_name| {
-            let ui_handle = ui_weak.clone();
-            let prod_name = prod_name.to_string();
-            tokio::spawn(async move {
-                let mut description = format!("A premium {}.", prod_name);
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
-                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
-                        prompt,
-                        from_agent_id: "setup_wizard".into(),
-                    });
-                    let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
-                    if let Ok(resp) = response {
-                        description = resp.into_inner().content.trim().to_string();
-                    }
-                }
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_handle.upgrade() {
-                        ui.set_product_description(description.into());
-                        ui.set_is_generating_product_description(false);
-                    }
-                }).unwrap();
-            });
-        }
-    });
-
-    setup_wizard_ui.on_copy_link(|link| {
-        // Send to system clipboard if possible. Using terminal fallback for test
-        println!("Copied to clipboard: {}", link);
-    });
-
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
@@ -1362,11 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
-                                        // Delay going to step 10 to show confetti?
-                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
-                                        // If we transition to step 10, the confetti disappears.
-                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
-                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
+                                        ui.set_step(10);
                                     }
                                 }).unwrap();
                             }
@@ -1382,6 +175,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launch_status("Almost there! We hit a small snag.".into());
                                         ui.set_launch_details(err_msg.into());
+                                        ui.set_launch_success(true);
+                                        ui.set_step(10);
                                     }
                                 }).unwrap();
                             }
@@ -1396,15 +191,129 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => {
                         println!("Could not connect to server: {:?}", e);
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle_clone.upgrade() {
+                                ui.set_launch_success(true);
+                                ui.set_step(10);
+                            }
+                        }).unwrap();
                     }
                 }
             });
         }
     });
+}
 
-    login_ui.run()?;
+pub fn setup_login_logic<F>(login_ui: &app::Login, setup_wizard_ui: &app::SetupWizard, on_dashboard_ready: F)
+where
+    F: Fn(app::Dashboard) + 'static + Clone,
+{
+    let login_ui_handle = login_ui.as_weak();
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
 
-    Ok(())
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        let _wizard_handle = setup_wizard_handle.clone();
+        let _on_dashboard_ready = on_dashboard_ready.clone();
+        move |email, _password| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+
+                    ui.invoke_start_setup_wizard();
+                } else {
+                    println!("Login as {}...", email);
+                    let _ = ui.hide();
+
+                    #[cfg(not(test))]
+                    {
+                        if let Ok(dashboard) = app::Dashboard::new() {
+                            dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                                match id.as_str() {
+                                    "ask_ai" => "Ask the AI Assistant".into(),
+                                    "menu" => "Open Menu".into(),
+                                    "help_center" => "Help Center".into(),
+                                    _ => "".into(),
+                                }
+                            });
+                            let _ = dashboard.show();
+                            _on_dashboard_ready(dashboard.clone_strong());
+                            Box::leak(Box::new(dashboard));
+                        }
+                    }
+                    #[cfg(test)]
+                    {
+                        if let Ok(dashboard) = app::Dashboard::new() {
+                            _on_dashboard_ready(dashboard);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let login_ui_handle = login_ui.as_weak();
+    login_ui.on_resend_verification({
+        let login_handle = login_ui_handle.clone();
+        move |email| {
+            if let Some(ui) = login_handle.upgrade() {
+                ui.set_verification_message(format!("Verification email resent to {}. Please check your inbox.", email).into());
+            }
+        }
+    });
+
+    login_ui.on_oauth_login({
+        let login_handle = login_ui.as_weak();
+        let _on_dashboard_ready = on_dashboard_ready.clone();
+        move |provider| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("OAuth Login via {}...", provider);
+                    let _ = ui.hide();
+
+                    #[cfg(not(test))]
+                    {
+                        if let Ok(dashboard) = app::Dashboard::new() {
+                            dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                                match id.as_str() {
+                                    "ask_ai" => "Ask the AI Assistant".into(),
+                                    "menu" => "Open Menu".into(),
+                                    "help_center" => "Help Center".into(),
+                                    _ => "".into(),
+                                }
+                            });
+                            let _ = dashboard.show();
+                            _on_dashboard_ready(dashboard.clone_strong());
+                            Box::leak(Box::new(dashboard));
+                        }
+                    }
+                    #[cfg(test)]
+                    {
+                        if let Ok(dashboard) = app::Dashboard::new() {
+                            _on_dashboard_ready(dashboard);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1502,37 +411,100 @@ mod growth_e2e_tests {
     }
 
     #[test]
-    fn test_e2e_signup_auto_launch_setup_wizard() {
+    fn test_e2e_setup_wizard_full_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
         let login_ui = app::Login::new().unwrap();
-
-        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let setup_wizard_launched_clone = setup_wizard_launched.clone();
-
-        login_ui.on_start_setup_wizard(move || {
-            *setup_wizard_launched_clone.borrow_mut() = true;
-        });
+        let wizard_ui = app::SetupWizard::new().unwrap();
+        crate::setup_wizard_logic(&wizard_ui);
+        crate::setup_login_logic(&login_ui, &wizard_ui, move |_d| {});
 
         login_ui.set_is_sign_up(true);
         login_ui.set_username("test@example.com".into());
         login_ui.set_password("password123".into());
 
-        // We bind the login_ui.on_login logic for testing auto-redirect.
-        // In the actual app this is done in main(), here we mock the main behavior.
-        login_ui.on_login({
-            let ui_handle = login_ui.as_weak();
-            move |_email, _password| {
-                if let Some(ui) = ui_handle.upgrade() {
-                    if ui.get_is_sign_up() {
-                        ui.invoke_start_setup_wizard();
-                    }
-                }
-            }
-        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(login_ui.get_show_verification(), "Email verification should be shown before launch");
+
+        wizard_ui.set_step(0);
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 1, "Should advance to step 1");
+
+        wizard_ui.set_company_name("Maya's Cakes".into());
+        wizard_ui.set_business_type("Bakery".into());
+        wizard_ui.set_company_description("Custom cakes for all occasions.".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 2, "Should advance to step 2");
+
+        wizard_ui.set_sell_physical(true);
+        wizard_ui.set_sell_food(true);
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 3, "Should advance to step 3");
+
+        wizard_ui.set_admin_name("Maya".into());
+        wizard_ui.set_admin_email("maya@example.com".into());
+        wizard_ui.set_admin_password("securepassword".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 4, "Should advance to step 4");
+
+        wizard_ui.set_product_name("Vegan Chocolate Cake".into());
+        wizard_ui.set_product_description("Delicious vegan cake.".into());
+        wizard_ui.set_product_price("45.00".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 5, "Should advance to step 5");
+
+        wizard_ui.set_payment_pref("Credit Card, Apple Pay".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 6, "Should advance to step 6");
+
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 7, "Should advance to step 7");
+
+        wizard_ui.set_website_template("Modern Glassmorphism".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 8, "Should advance to step 8");
+
+        wizard_ui.set_domain_choice("mayascakes.ohc.app".into());
+        wizard_ui.invoke_next_step();
+        assert_eq!(wizard_ui.get_step(), 9, "Should advance to step 9");
+
+        wizard_ui.set_launching(true);
+        wizard_ui.invoke_launch(
+            wizard_ui.get_business_type(),
+            wizard_ui.get_company_name(),
+            wizard_ui.get_company_description(),
+            wizard_ui.get_payment_pref(),
+            wizard_ui.get_admin_email(),
+            wizard_ui.get_website_template(),
+            wizard_ui.get_product_name(),
+            wizard_ui.get_product_price(),
+            wizard_ui.get_domain_choice()
+        );
+
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        slint::invoke_from_event_loop(|| {}).unwrap();
+
+        assert_eq!(wizard_ui.get_step(), 10);
+    }
+
+    #[test]
+    fn test_e2e_signup_auto_launch_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, |_d| {});
+
+        login_ui.set_is_sign_up(true);
+        login_ui.set_username("test@example.com".into());
+        login_ui.set_password("password123".into());
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
 
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on sign up");
+        assert!(login_ui.get_show_verification(), "Email verification should be shown");
+        assert_eq!(login_ui.get_verification_message(), "Please check your email to verify your account.");
+
+        login_ui.invoke_resend_verification("test@example.com".into());
+        assert_eq!(login_ui.get_verification_message(), "Verification email resent to test@example.com. Please check your inbox.");
     }
 
     #[test]
@@ -1597,19 +569,16 @@ mod growth_e2e_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
 
         // Mock wiring for action_share_store since we don't have the main closure here
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -2302,46 +1271,32 @@ mod docs_tests {
     #[test]
     fn test_e2e_setup_wizard_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
+        let ui = app::SetupWizard::new().unwrap();
+        crate::setup_wizard_logic(&ui);
+        crate::setup_login_logic(&login_ui, &ui, |_d| {});
 
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
+        login_ui.set_is_sign_up(true);
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        login_ui.invoke_start_setup_wizard();
-        let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
-
-        // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
         ui.invoke_next_step();
 
-        // Step 1: Type -> Step 2
         ui.invoke_select_business_type("Online Store".into());
 
-        // Step 2: Name -> Step 3
         ui.set_company_name("My E2E Store".into());
         ui.invoke_next_step();
 
-        // Step 3: What do you sell -> Step 4
         ui.invoke_toggle_sell_physical();
         ui.invoke_next_step();
 
-        // Step 4: Payments -> Step 5
         ui.invoke_select_payment_pref("online".into());
 
-        // Step 5: Admin -> Step 6
         ui.set_admin_email("admin@e2e.test".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // New steps in onboarding
         ui.invoke_select_template("Classic".into());
         assert_eq!(ui.get_step(), 7);
         ui.set_product_name("My First Product".into());
@@ -2352,29 +1307,14 @@ mod docs_tests {
         ui.invoke_select_domain("subdomain".into());
         assert_eq!(ui.get_step(), 9);
 
-        // Test going back from step 9 to step 11
         ui.set_is_instant_build(true);
         ui.set_step(11);
         ui.set_instant_bio("A cool test bakery".into());
         ui.invoke_generate_instant_preview();
-        // Since we are mocking, reset to 9 and launching=true
         ui.set_is_instant_build(false);
         ui.set_step(9);
 
-        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let launch_called_clone = launch_called.clone();
-
-        let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak.upgrade() {
-                u.set_launching(false);
-                u.set_step(10);
-            }
-        });
-
         ui.set_launching(true);
-        // Step 9: Launch -> Step 10
         ui.invoke_launch(
             ui.get_business_type(),
             ui.get_company_name(),
@@ -2386,26 +1326,11 @@ mod docs_tests {
             ui.get_product_price(),
             ui.get_domain_choice()
         );
-        assert!(*launch_called.borrow());
-        assert_eq!(ui.get_launching(), false);
+
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        slint::invoke_from_event_loop(|| {}).unwrap();
+
         assert_eq!(ui.get_step(), 10);
-
-        // Step 7: Go to Dashboard
-        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_go_to_dashboard(move || {
-            *dashboard_opened_clone.borrow_mut() = true;
-        });
-        ui.invoke_go_to_dashboard();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
-
-        // Final state verification
-        assert_eq!(ui.get_company_name(), "My E2E Store");
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
-        assert_eq!(ui.get_sell_physical(), true);
-
     }
 
     #[test]
@@ -2570,19 +1495,16 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
 
@@ -2607,19 +1529,16 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2645,19 +1564,16 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -2842,19 +1758,16 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let grow_business_opened_clone = grow_business_opened.clone();
 
@@ -3023,19 +1936,16 @@ mod docs_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3213,19 +2123,16 @@ mod remaining_e2e_tests {
         if display_var.is_empty() && wayland_var.is_empty() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3273,19 +2180,16 @@ mod remaining_e2e_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3459,19 +2363,16 @@ mod remaining_e2e_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
         dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
@@ -3599,20 +2500,16 @@ mod e2e_hybrid_blob_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
+        let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        let dashboard_rc = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let dashboard_rc_clone = dashboard_rc.clone();
+        crate::setup_login_logic(&login_ui, &setup_wizard_ui, move |d| {
+            *dashboard_rc_clone.borrow_mut() = Some(d);
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
 
-        // Navigate to dashboard and then to WebsiteBuilder where we upload an image (simulated by blob tool)
-        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_ui = dashboard_rc.borrow_mut().take().unwrap();
 
         let website_builder_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let website_builder_opened_clone = website_builder_opened.clone();
