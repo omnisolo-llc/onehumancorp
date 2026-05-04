@@ -1340,10 +1340,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -1367,10 +1367,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -3853,3 +3853,131 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_step_navigation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_select_business_type("Retail".into());
+        assert_eq!(ui.get_step(), 2);
+        assert_eq!(ui.get_business_type(), "Retail");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_selling_categories() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        assert_eq!(ui.get_sell_physical(), false);
+        assert_eq!(ui.get_sell_digital(), false);
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_toggle_sell_digital();
+        assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_sell_digital(), true);
+    }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_instant_preview() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        let preview_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let preview_called_clone = preview_called.clone();
+        ui.on_generate_instant_preview(move || {
+            *preview_called_clone.borrow_mut() = true;
+        });
+
+        ui.set_step(11);
+        ui.set_instant_bio("A lovely bakery".into());
+        ui.invoke_generate_instant_preview();
+        assert!(*preview_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_domain_selection() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.invoke_select_domain("custom.domain.com".into());
+        assert_eq!(ui.get_domain_choice(), "custom.domain.com");
+        assert_eq!(ui.get_step(), 1);
+    }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_welcome_checklist() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(10);
+
+        let dash_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dash_called_clone = dash_called.clone();
+        ui.on_go_to_dashboard(move || {
+            *dash_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_go_to_dashboard();
+        assert!(*dash_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_onboarding_wizard_toggle_advanced() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |_, _| { *login_successful_clone.borrow_mut() = true; });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+}
