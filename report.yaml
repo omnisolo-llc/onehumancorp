@@ -1,4 +1,9 @@
-issue_category: refactor
-debt_report: |
-  Cleaned up compiler warnings regarding unused variables in `src/app/main.rs` (by prefixing them with an underscore).
-  Removed an unused import (`ToolIntegration`) from `src/agents/scout/tests.rs`.
+issue_category: "feature"
+status: "resolved"
+details:
+  - "Implemented TierService to enforce tiered rate limits across the platform."
+  - "Added Stripe webhook handler inside TierService to sync SaaS tier assignments from billing events."
+  - "Added database migration 063_saas_tiers.sql enforcing tier constraints (Free, Starter, Pro, Business)."
+  - "Configured graceful degradation frontend soft paywall integration via UpgradePrompt."
+  - "Passed all Rust unit and integration tests successfully."
+  - "Passed all E2E Playwright tests validating the viral storefront and tiered architecture flows."
