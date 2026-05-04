@@ -2,3 +2,7 @@ issue_category: refactor
 debt_report: |
   Cleaned up compiler warnings regarding unused variables in `src/app/main.rs` (by prefixing them with an underscore).
   Removed an unused import (`ToolIntegration`) from `src/agents/scout/tests.rs`.
+  Fixed unused variable `_embedded_counter` in `src/agents/builtin/autodream.rs`.
+  Removed unnecessary `mut` keyword from `payload` in `src/agents/builtin/llm/openai.rs`.
+  Conditionally imported `FromStr` in `src/app/action_queue.rs`.
+  Fixed padding layout element warning in `src/app/unified_inbox.slint`.
