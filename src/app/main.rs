@@ -1112,14 +1112,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         open_url(&x_url);
                     }
                 });
-                let bs_handle_wa = business_share_handle.clone();
-                business_share_ui.on_share_to_whatsapp(move || {
-                    if let Some(ui) = bs_handle_wa.upgrade() {
-                        let link = ui.get_share_link();
-                        let wa_url = format!("https://wa.me/?text={}", link);
-                        open_url(&wa_url);
-                    }
-                });
                 let bs_handle_clone = business_share_handle.clone();
                 let ref_handle_clone_for_open = referrals_handle.clone();
                 dashboard.on_action_open_referrals(move || {
@@ -1610,7 +1602,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -1651,10 +1643,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
+            let reqwebsite_template = website_template.to_string();
             let req_first_product_name = product_name.to_string();
             let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let reqdomain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1668,10 +1660,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: req_website_template,
+                            website_template: reqwebsite_template,
                             first_product_name: req_first_product_name,
                             first_product_price: req_first_product_price,
-                            domain_choice: req_domain_choice,
+                            domain_choice: reqdomain_choice,
                         });
 
                         match client.start_onboarding(onboarding_request).await {
@@ -3907,9 +3899,6 @@ mod remaining_e2e_tests {
         let share_to_x_called_clone = share_to_x_called.clone();
         business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
 
-        let share_to_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_to_wa_called_clone = share_to_wa_called.clone();
-        business_share_ui.on_share_to_whatsapp(move || { *share_to_wa_called_clone.borrow_mut() = true; });
 
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
@@ -3934,8 +3923,6 @@ mod remaining_e2e_tests {
         business_share_ui.invoke_share_to_x();
         assert!(*share_to_x_called.borrow());
 
-        business_share_ui.invoke_share_to_whatsapp();
-        assert!(*share_to_wa_called.borrow(), "Share to WhatsApp should be called");
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
