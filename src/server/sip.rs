@@ -45,7 +45,10 @@ impl SipDB {
             .execute(&self.pool)
             .await?;
             
-        // 1b. Immediately requeue STUCK missions
+        // 1b. Immediately requeue STUCK missions to PENDING to attempt exponential backoff
+        // A full exponential backoff implementation requires schema additions. Here we requeue STUCK
+        // missions that were moved to STUCK during this iteration, bumping updated_at so they
+        // aren't instantly marked as STUCK again next tick.
         sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
             .bind(&self.org_id)
             .execute(&self.pool)
