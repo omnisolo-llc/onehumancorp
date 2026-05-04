@@ -161,6 +161,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login as {}...", email);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.set_show_daily_summary(true);
+                        dashboard.set_daily_summary_text("You had 8 orders this week. Vegan cake requests doubled. Consider adding a vegan chocolate option!".into());
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -206,6 +208,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        dashboard.set_show_daily_summary(true);
+                        dashboard.set_daily_summary_text("You had 8 orders this week. Vegan cake requests doubled. Consider adding a vegan chocolate option!".into());
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
                             match id.as_str() {
                                 "ask_ai" => "Ask the AI Assistant".into(),
@@ -1214,6 +1218,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.set_show_daily_summary(true);
+                dashboard.set_daily_summary_text("You had 8 orders this week. Vegan cake requests doubled. Consider adding a vegan chocolate option!".into());
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1489,6 +1495,12 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(ui) = login_handle.upgrade() {
                 let _ = ui.hide();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.set_show_daily_summary(true);
+                dashboard.set_daily_summary_text("You had 8 orders this week. Vegan cake requests doubled. Consider adding a vegan chocolate option!".into());
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
             }
         }
     });
@@ -3440,6 +3452,12 @@ mod remaining_e2e_tests {
 
         dashboard_ui.invoke_dismiss_milestone();
         assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+
+        assert!(!dashboard_ui.get_show_daily_summary());
+        dashboard_ui.set_show_daily_summary(true);
+        dashboard_ui.set_daily_summary_text("Summary test".into());
+        assert!(dashboard_ui.get_show_daily_summary());
+        assert_eq!(dashboard_ui.get_daily_summary_text(), "Summary test");
 
         dashboard_ui.invoke_action_share_store();
         assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
