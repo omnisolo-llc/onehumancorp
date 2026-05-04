@@ -15,6 +15,10 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+thread_local! {
+    pub static TEST_MOCK_AI_RESPONSE: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+}
+
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -75,6 +79,70 @@ fn set_global_is_advanced(val: bool) {
 fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     ADVANCED_LISTENERS.with(|listeners| {
         listeners.borrow_mut().push(listener);
+    });
+}
+
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn configure_chat_ui(chat_ui: &app::Chat) {
+    use slint::Model;
+
+    let chat_ui_handle = chat_ui.as_weak();
+    chat_ui.on_request_ai_draft(move || {
+        if let Some(ui) = chat_ui_handle.upgrade() {
+            ui.set_is_drafting(true);
+
+            let messages = ui.get_messages();
+            let mut conversation_history = String::new();
+            for i in 0..messages.row_count() {
+                if let Some(msg) = messages.row_data(i) {
+                    conversation_history.push_str(&format!("{}: {}\n", msg.author_name, msg.body));
+                }
+            }
+            let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "tenant_123".to_string());
+            let ui_weak = ui.as_weak();
+
+            #[cfg(test)]
+            {
+                let mut mock_response = None;
+                crate::TEST_MOCK_AI_RESPONSE.with(|m| {
+                    if let Some(val) = &*m.borrow() {
+                        mock_response = Some(val.clone());
+                    }
+                });
+                if let Some(draft_text) = mock_response {
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui_local) = ui_weak.upgrade() {
+                            ui_local.set_new_message(draft_text.into());
+                            ui_local.set_is_drafting(false);
+                        }
+                    }).unwrap();
+                    return;
+                }
+            }
+
+            #[cfg(not(test))]
+            tokio::spawn(async move {
+                let mut draft_text = "Error: Unable to connect to AI Service.".to_string();
+                if let Ok(mut client) = ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = format!("Tenant: {}\nDraft a helpful, context-aware reply to the customer based on this conversation history:\n{}", tenant_id, conversation_history);
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "customer_success_agent".into(),
+                    });
+                    if let Ok(resp) = client.reason(request).await {
+                        draft_text = resp.into_inner().content.trim().to_string();
+                    }
+                }
+
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui_local) = ui_weak.upgrade() {
+                        ui_local.set_new_message(draft_text.into());
+                        ui_local.set_is_drafting(false);
+                    }
+                }).unwrap();
+            });
+        }
     });
 }
 
@@ -909,7 +977,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
                 let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let check_messages_called_clone = check_messages_called.clone();
-                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+                let chat_ui = app::Chat::new().unwrap();
+                #[cfg(not(target_arch = "wasm32"))]
+                crate::configure_chat_ui(&chat_ui);
+                dashboard.on_action_check_messages({
+                    let chat_ui_weak = chat_ui.as_weak();
+                    move || {
+                        *check_messages_called_clone.borrow_mut() = true;
+                        if let Some(c) = chat_ui_weak.upgrade() {
+                            let _ = c.show();
+                        }
+                    }
+                });
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
@@ -2643,6 +2722,59 @@ mod docs_tests {
         ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+    }
+
+    #[tokio::test]
+    async fn test_e2e_ai_draft_flow() {
+        use slint::Model;
+
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let chat_ui = app::Chat::new().unwrap();
+
+                let msgs = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiChatMessage {
+                id: "1".into(),
+                author_name: "Customer".into(),
+                body: "Do you have vegan options?".into(),
+                is_me: false,
+            }
+        ]));
+        chat_ui.set_messages(msgs.into());
+
+        crate::configure_chat_ui(&chat_ui);
+
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_check_messages();
+        assert!(*check_messages_called.borrow(), "Dashboard should trigger check messages");
+
+        crate::TEST_MOCK_AI_RESPONSE.with(|m| *m.borrow_mut() = Some("Hello! We do offer vegan options. Let me know what you need.".to_string()));
+        chat_ui.invoke_request_ai_draft();
+
+        // Wait for event loop processing
+        slint::platform::update_timers_and_animations();
+
+        assert_eq!(chat_ui.get_new_message(), "Hello! We do offer vegan options. Let me know what you need.");
+        assert_eq!(chat_ui.get_is_drafting(), false);
     }
 
     #[test]
