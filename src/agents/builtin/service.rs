@@ -105,17 +105,7 @@ async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Op
         combined.push_str(content);
     }
 
-    if combined.len() > 32768 {
-        // We must truncate from the start of the string, keeping the end.
-        let overflow = combined.len() - 32768;
-        let mut start_idx = overflow;
-        while start_idx < combined.len() && !combined.is_char_boundary(start_idx) {
-            start_idx += 1;
-        }
-        // Return the rightmost 32KB
-        combined = combined[start_idx..].to_string();
-    }
-
+    // Truncation is handled by PromptStack::assemble
     combined
 }
 

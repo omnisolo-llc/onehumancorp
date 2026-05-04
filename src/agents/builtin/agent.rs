@@ -92,6 +92,84 @@ impl Default for AgentRunConfig {
     }
 }
 
+/// Priority-ordered prompt sections.
+/// OpenAI Codex Mechanic: 1. Server System -> 2. Tools -> 3. Developer -> 4. User -> 5. History.
+pub struct PromptStack {
+    pub server_system_message: String,
+    pub tool_definitions: Vec<ToolDefinition>,
+    pub developer_instructions: String,
+    pub user_instructions: String,
+}
+
+impl PromptStack {
+    pub fn new() -> Self {
+        Self {
+            server_system_message: String::new(),
+            tool_definitions: Vec::new(),
+            developer_instructions: String::new(),
+            user_instructions: String::new(),
+        }
+    }
+
+    pub fn assemble(&self) -> String {
+        let mut sections = Vec::new();
+        if !self.server_system_message.is_empty() {
+            sections.push(self.server_system_message.clone());
+        }
+
+        if !self.tool_definitions.is_empty() {
+            let mut tools_str = String::from("[Tool Definitions]\n");
+            for td in &self.tool_definitions {
+                tools_str.push_str(&format!("Tool: {}\n", td.name));
+                tools_str.push_str(&format!("Description: {}\n", td.description));
+                tools_str.push_str(&format!("Parameters: {}\n", td.parameters));
+            }
+            sections.push(tools_str.trim_end().to_string());
+        }
+
+        if !self.developer_instructions.is_empty() {
+            sections.push(format!("[Developer Instructions]\n{}", self.developer_instructions));
+        }
+
+        if !self.user_instructions.is_empty() {
+            // Mechanic: Capped at 32 KiB. Truncate from the start to preserve specific (leaf) instructions.
+            let mut user_instr = self.user_instructions.clone();
+            if user_instr.len() > 32768 {
+                let overflow = user_instr.len() - 32768;
+                let mut start_idx = overflow;
+                while start_idx < user_instr.len() && !user_instr.is_char_boundary(start_idx) {
+                    start_idx += 1;
+                }
+                user_instr = user_instr[start_idx..].to_string();
+            }
+            sections.push(format!("[User Instructions]\n{}", user_instr));
+        }
+
+        sections.join("\n\n")
+    }
+
+    /// Generates a high-signal reminder for "Lost in the Middle" prevention.
+    pub fn generate_reminder(&self) -> String {
+        let mut reminder = String::new();
+        if !self.developer_instructions.is_empty() {
+            reminder.push_str(&format!("[System Reminder: {}]\n", self.developer_instructions));
+        }
+        if !self.user_instructions.is_empty() {
+            let mut summary = self.user_instructions.clone();
+            if summary.len() > 1000 {
+                let mut end_idx = 1000;
+                while end_idx > 0 && !summary.is_char_boundary(end_idx) {
+                    end_idx -= 1;
+                }
+                summary.truncate(end_idx);
+                summary.push_str("...");
+            }
+            reminder.push_str(&format!("[System Reminder: Remember your core objective: {}]", summary));
+        }
+        reminder.trim().to_string()
+    }
+}
+
 /// Progress metrics for a running agent task.
 #[derive(Default)]
 pub struct AgentProgress {
@@ -117,53 +195,27 @@ impl AgentProgress {
     }
 }
 
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
-    let mut end_idx = 32768;
-    if cfg.user_instructions.len() > 32768 {
-        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
-            end_idx -= 1;
-        }
-    } else {
-        end_idx = cfg.user_instructions.len();
-    }
-    let user_instr = &cfg.user_instructions[..end_idx];
+pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool], active_tools: Option<&std::collections::HashSet<String>>) -> String {
+    let mut stack = PromptStack::new();
+    stack.server_system_message = cfg.server_system_message.clone();
+    stack.developer_instructions = cfg.developer_instructions.clone();
+    stack.user_instructions = cfg.user_instructions.clone();
 
-    let mut combined_system = String::new();
-    if !cfg.server_system_message.is_empty() {
-        combined_system.push_str(&cfg.server_system_message);
-    }
-
-    // Format tools into [Tool Definitions]
-    if !tools.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
+    for t in tools {
+        if !cfg.enable_lazy_tool_loading
+            || t.name == "ToolSearch"
+            || t.name == "LazyLoadTools"
+            || active_tools.map(|at| at.contains(&t.name)).unwrap_or(false)
+        {
+            stack.tool_definitions.push(ToolDefinition {
+                name: t.name.clone(),
+                description: t.description.clone(),
+                parameters: t.parameters.clone(),
+            });
         }
-        combined_system.push_str("[Tool Definitions]\n");
-        for tool in tools {
-            combined_system.push_str(&format!("Tool: {}\n", tool.name));
-            combined_system.push_str(&format!("Description: {}\n", tool.description));
-            combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
-        }
-        // Remove trailing newline
-        combined_system.pop();
     }
 
-    if !cfg.developer_instructions.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
-        }
-        combined_system.push_str("[Developer Instructions]\n");
-        combined_system.push_str(&cfg.developer_instructions);
-    }
-
-    if !user_instr.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
-        }
-        combined_system.push_str("[User Instructions]\n");
-        combined_system.push_str(user_instr);
-    }
-    combined_system
+    stack.assemble()
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -278,17 +330,25 @@ impl Agent {
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
+        let mut stack = PromptStack::new();
+        stack.server_system_message = cfg.server_system_message.clone();
+        stack.developer_instructions = cfg.developer_instructions.clone();
+        stack.user_instructions = cfg.user_instructions.clone();
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self.memory_store {
             match store.retrieve(initial_message, 5).await {
                 Ok(memories) => {
                     if !memories.is_empty() {
-                        combined_system.push_str("\n\n[Long-Term Memory Context]\n");
+                        let mut mem_context = String::from("[Long-Term Memory Context]\n");
                         for mem in memories {
-                            combined_system.push_str(&format!("- {}\n", mem));
+                            mem_context.push_str(&format!("- {}\n", mem));
                         }
+                        // Memory is lower priority than User Instructions,
+                        // so we append it to server_system_message for now or add a new field if needed.
+                        // Actually, let's keep it in server_system_message to ensure it's at the top.
+                        stack.server_system_message.push_str("\n\n");
+                        stack.server_system_message.push_str(&mem_context);
                     }
                 }
                 Err(e) => {
@@ -299,9 +359,9 @@ impl Agent {
             // 3-Tier Memory Mechanic: Lightweight Index
             if let Ok(index_content) = store.get_lightweight_index().await {
                 if !index_content.trim().is_empty() {
-                    combined_system.push_str("\n\n[Lightweight Memory Index]\n");
-                    combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
-                    combined_system.push_str(&index_content);
+                    stack.server_system_message.push_str("\n\n[Lightweight Memory Index]\n");
+                    stack.server_system_message.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    stack.server_system_message.push_str(&index_content);
                 }
             }
         }
@@ -333,52 +393,45 @@ impl Agent {
                 }
             }
 
-            // Prompt Construction Mechanic: "Lost in the Middle" Prevention
-            // High-signal context at the very beginning and very end.
-            if cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
-                }
-                if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = cfg.user_instructions.len();
-                    }
-                    let summary = &cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
+            let mut current_active_tools = std::collections::HashSet::new();
+            if cfg.enable_lazy_tool_loading {
+                current_active_tools = active_tools.read().await.clone();
             }
 
             let mut req_tools = Vec::new();
+            stack.tool_definitions.clear();
             for t in &session_tools {
                 if !cfg.enable_lazy_tool_loading
                     || t.name == "ToolSearch"
                     || t.name == "LazyLoadTools"
-                    || active_tools.read().await.contains(&t.name)
+                    || current_active_tools.contains(&t.name)
                 {
-                    req_tools.push(ToolDefinition {
+                    let td = ToolDefinition {
                         name: t.name.clone(),
                         description: t.description.clone(),
                         parameters: t.parameters.clone(),
-                    });
+                    };
+                    stack.tool_definitions.push(td.clone());
+                    req_tools.push(td);
                 }
+            }
+
+            let combined_system = stack.assemble();
+
+            // Prompt Construction Mechanic: "Lost in the Middle" Prevention
+            // High-signal context at the very beginning and very end.
+            if cfg.enable_lost_in_the_middle_prevention {
+                let reminder = stack.generate_reminder();
+                if !reminder.is_empty() && final_messages.len() > 3 {
+                    final_messages.push(Message::user(format!("[System Reminder to combat 'Lost in the Middle' effect]:\n{}", reminder)));
+                }
+            } else if !cfg.developer_instructions.is_empty() {
+                final_messages.push(Message::user(format!("[System Reminder]: {}", cfg.developer_instructions)));
             }
 
             let req = ChatRequest {
                 model: cfg.model.clone(),
-                system: combined_system.clone(),
+                system: combined_system,
                 messages: final_messages,
                 tools: req_tools,
                 max_tokens: cfg.max_tokens,
@@ -1954,7 +2007,7 @@ mod tests {
             execute: std::sync::Arc::new(MockToolExecutor),
         };
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[tool], None);
 
         let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
@@ -1968,7 +2021,7 @@ mod tests {
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[], None);
         assert_eq!(
             prompt,
             "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -1982,7 +2035,7 @@ mod tests {
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[], None);
         assert_eq!(
             prompt,
             "Server System Message\n\n[User Instructions]\nUser Instructions"
@@ -1992,11 +2045,60 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2, &[]);
+        let prompt2 = build_hierarchical_system_prompt(&cfg2, &[], None);
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
         );
+    }
+
+    #[test]
+    fn test_prompt_stack_priority_and_truncation() {
+        let mut stack = PromptStack::new();
+        stack.server_system_message = "SERVER".to_string();
+        stack.developer_instructions = "DEVELOPER".to_string();
+        stack.user_instructions = "A".repeat(32768) + "LEAF"; // Exceed 32KiB
+
+        stack.tool_definitions.push(ToolDefinition {
+            name: "tool1".to_string(),
+            description: "desc1".to_string(),
+            parameters: serde_json::json!({}),
+        });
+
+        let assembled = stack.assemble();
+
+        // Check Priority
+        let server_pos = assembled.find("SERVER").unwrap();
+        let tool_pos = assembled.find("[Tool Definitions]").unwrap();
+        let dev_pos = assembled.find("[Developer Instructions]").unwrap();
+        let user_pos = assembled.find("[User Instructions]").unwrap();
+
+        assert!(server_pos < tool_pos);
+        assert!(tool_pos < dev_pos);
+        assert!(dev_pos < user_pos);
+
+        // Check Truncation (should preserve the end/leaf)
+        assert!(assembled.contains("LEAF"));
+        let user_section = assembled.split("[User Instructions]\n").last().unwrap();
+        assert_eq!(user_section.len(), 32768);
+        assert!(user_section.ends_with("LEAF"));
+    }
+
+    #[test]
+    fn test_prompt_stack_reminder_generation() {
+        let mut stack = PromptStack::new();
+        stack.developer_instructions = "DEV_RULES".to_string();
+        stack.user_instructions = "USER_GOAL".to_string();
+
+        let reminder = stack.generate_reminder();
+        assert!(reminder.contains("[System Reminder: DEV_RULES]"));
+        assert!(reminder.contains("[System Reminder: Remember your core objective: USER_GOAL]"));
+
+        // Test truncation in reminder
+        stack.user_instructions = "G".repeat(2000);
+        let long_reminder = stack.generate_reminder();
+        assert!(long_reminder.contains("..."));
+        assert!(long_reminder.len() < 1200);
     }
 
     #[test]
@@ -2010,7 +2112,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[], None);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
@@ -2025,7 +2127,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = build_hierarchical_system_prompt(&cfg, &[], None);
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
@@ -2421,8 +2523,9 @@ mod tests {
         let last_msg = req.messages.last().unwrap();
 
         assert_eq!(last_msg.role, Role::User);
+        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect]"));
         assert!(last_msg.content.contains("[System Reminder: Developer instructions here.]"));
-        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
+        assert!(last_msg.content.contains("[System Reminder: Remember your core objective: Super long user instructions that span many many words.]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
