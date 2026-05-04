@@ -55,7 +55,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate"],
+            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {
