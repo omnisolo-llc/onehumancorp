@@ -346,7 +346,7 @@ impl AgentServiceImpl {
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, run_cfg.thread_id.clone());
         let agent = Arc::new(Agent::new(llm, tools));
         
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
@@ -391,7 +391,7 @@ impl AgentService for AgentServiceImpl {
             None
         } else { None };
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor);
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, run_cfg.thread_id.clone());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -546,7 +546,7 @@ impl AgentService for AgentServiceImpl {
                 state_scratchpad_path: None,
                 enable_git_state_checkpointing: false,
                 workspace_path: None,
-                thread_id: None,
+                thread_id: if sub_req.source_thread_id.is_empty() { None } else { Some(sub_req.source_thread_id.clone()) },
                 resume_from_checkpoint_id: None,
             };
 
@@ -555,7 +555,7 @@ impl AgentService for AgentServiceImpl {
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None);
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, run_cfg.thread_id.clone());
             let agent = Agent::new(llm, tools);
 
             let mut no_op = |_: AgentEvent| {};
