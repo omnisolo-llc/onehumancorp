@@ -11,6 +11,7 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String>;
 }
 
 pub struct TeammateMeshClient {
@@ -96,6 +97,9 @@ impl TeammateMesh for TeammateMeshClient {
         }
     }
 
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String> {
+        self.transport.acknowledge(message_id).await
+    }
 }
 
 pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn TeammateMesh>, String> {

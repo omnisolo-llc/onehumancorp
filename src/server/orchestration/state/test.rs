@@ -35,6 +35,9 @@ impl TeammateMesh for MockMesh {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String> {
+        self.transport.acknowledge(message_id).await
+    }
 }
 
 async fn setup_db() -> Arc<DB> {

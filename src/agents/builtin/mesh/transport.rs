@@ -16,6 +16,7 @@ pub trait MeshTransport: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String>;
 }
 
 pub struct MemoryTransport {
@@ -119,6 +120,18 @@ impl MeshTransport for MemoryTransport {
             .collect();
 
         Ok(agents)
+    }
+
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String> {
+        let ack_topic = format!("mesh:ack:{}", message_id);
+        let ack_msg = Message {
+            agent_id: "sys".to_string(),
+            action: ack_topic.clone(),
+            status: "ok".to_string(),
+            payload: vec![],
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        self.publish(&ack_topic, ack_msg).await
     }
 }
 
@@ -327,6 +340,23 @@ impl MeshTransport for IpcTransport {
             Err(e) => Err(e.to_string()),
         }
     }
+
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String> {
+        let _ = sqlx::query("DELETE FROM mesh_messages WHERE msg_id = ?")
+            .bind(message_id)
+            .execute(&self.pool)
+            .await;
+
+        let ack_topic = format!("mesh:ack:{}", message_id);
+        let ack_msg = Message {
+            agent_id: "sys".to_string(),
+            action: ack_topic.clone(),
+            status: "ok".to_string(),
+            payload: vec![],
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        self.publish(&ack_topic, ack_msg).await
+    }
 }
 
 pub struct RedisTransport {
@@ -449,6 +479,18 @@ impl MeshTransport for RedisTransport {
             }
         }
         Ok(active)
+    }
+
+    async fn acknowledge(&self, message_id: &str) -> Result<(), String> {
+        let ack_topic = format!("mesh:ack:{}", message_id);
+        let ack_msg = Message {
+            agent_id: "sys".to_string(),
+            action: ack_topic.clone(),
+            status: "ok".to_string(),
+            payload: vec![],
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        self.publish(&ack_topic, ack_msg).await
     }
 }
 
