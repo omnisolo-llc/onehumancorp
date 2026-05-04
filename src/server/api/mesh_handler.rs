@@ -16,11 +16,15 @@ pub struct ConnectQuery {
 }
 
 pub async fn mesh_ws_handler(
+    axum::Extension(claims): axum::Extension<crate::auth::Claims>,
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+    if claims.organization_id.is_none() {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    }
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel)).into_response()
 }
 
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
@@ -95,6 +99,17 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
+            .layer(axum::Extension(crate::auth::Claims {
+                sub: "test".to_string(),
+                username: "test".to_string(),
+                email: "test@test.com".to_string(),
+                roles: vec![],
+                organization_id: Some("org-1".to_string()),
+                session_id: None,
+                iat: 0,
+                exp: 0,
+                jti: "test".to_string(),
+            }))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

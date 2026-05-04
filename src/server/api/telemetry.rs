@@ -12,8 +12,12 @@ pub struct MetricBatchItem {
 }
 
 pub async fn sync_telemetry_handler(
+    axum::Extension(claims): axum::Extension<crate::auth::Claims>,
     Json(batch): Json<Vec<MetricBatchItem>>,
 ) -> impl IntoResponse {
+    if claims.organization_id.is_none() {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     println!("Received telemetry batch with {} items", batch.len());
 
     for item in batch {
@@ -22,5 +26,5 @@ pub async fn sync_telemetry_handler(
         println!("Ingesting metric: {} = {} at {}", item.metric_name, item.value, item.timestamp);
     }
 
-    StatusCode::OK
+    StatusCode::OK.into_response()
 }

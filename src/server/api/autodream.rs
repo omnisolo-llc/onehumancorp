@@ -37,13 +37,19 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
     let worker_query = worker.clone();
 
     Router::new()
-        .route("/sync", post(move || async move {
+        .route("/sync", post(move |axum::Extension(claims): axum::Extension<crate::auth::Claims>| async move {
+            if claims.organization_id.is_none() {
+                return (axum::http::StatusCode::UNAUTHORIZED, "Missing organization_id".to_string()).into_response();
+            }
             match worker_sync.consolidate_epoch().await {
                 Ok(_) => Json(SyncResponse { status: "success".to_string() }).into_response(),
                 Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
             }
         }))
-        .route("/query", get(move |Query(params): Query<QueryRequest>| async move {
+        .route("/query", get(move |axum::Extension(claims): axum::Extension<crate::auth::Claims>, Query(params): Query<QueryRequest>| async move {
+            if claims.organization_id.is_none() {
+                return (axum::http::StatusCode::UNAUTHORIZED, "Missing organization_id".to_string()).into_response();
+            }
             if params.text.is_empty() {
                 return (axum::http::StatusCode::BAD_REQUEST, "query_text is required".to_string()).into_response();
             }
@@ -96,6 +102,16 @@ mod tests {
         let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = Arc::new(AutoDreamWorker::new(db));
 
-        let _app: Router<()> = router(worker);
+        let _app: Router<()> = router(worker).layer(axum::Extension(crate::auth::Claims {
+            sub: "test".to_string(),
+            username: "test".to_string(),
+            email: "test@test.com".to_string(),
+            roles: vec![],
+            organization_id: Some("org-1".to_string()),
+            session_id: None,
+            iat: 0,
+            exp: 0,
+            jti: "test".to_string(),
+        }));
     }
 }
