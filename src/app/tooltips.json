@@ -9,5 +9,6 @@
   "share": "Share your store link with others.",
   "add_product": "Add a new product to your store.",
   "view_orders": "View and manage your recent orders.",
-  "messages": "Check your customer messages."
+  "messages": "Check your customer messages.",
+  "api_docs": "Advanced: View our API documentation."
 }
