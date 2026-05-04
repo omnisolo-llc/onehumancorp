@@ -18,6 +18,7 @@ export component Settings inherits Window {
     callback run_doctor();
     callback trigger_hybrid_sync();
     callback save_state();
+    callback sign_out();
 
     background: #f8fafc;
 
@@ -146,6 +147,7 @@ export component Settings inherits Window {
 
         Button {
             text: "Sign Out";
+            clicked => { sign_out(); }
         }
     }
 }

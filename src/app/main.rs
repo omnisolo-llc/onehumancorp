@@ -639,6 +639,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
+    let login_ui_from_settings = login_ui_handle.clone();
+    let settings_ui_from_login = settings_handle.clone();
+
+    login_ui.on_open_settings({
+        let s_handle = settings_ui_from_login.clone();
+        let l_handle = login_ui_handle.clone();
+        move || {
+            if let Some(ui) = s_handle.upgrade() {
+                let _ = ui.show();
+            }
+            if let Some(ui) = l_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    settings_ui.on_sign_out({
+        let s_handle = settings_ui_from_login.clone();
+        let l_handle = login_ui_from_settings.clone();
+        move || {
+            if let Some(ui) = l_handle.upgrade() {
+                let _ = ui.show();
+            }
+            if let Some(ui) = s_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
     let init_grow_business_handle = grow_business_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {

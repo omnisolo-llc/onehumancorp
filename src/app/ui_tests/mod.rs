@@ -79,3 +79,4 @@ pub fn init() {
         let _ = slint::platform::set_platform(Box::new(HeadlessPlatform));
     }
 }
+pub mod login_settings;
