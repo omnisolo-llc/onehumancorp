@@ -15,7 +15,7 @@ struct RedisLockGuard {
 impl RedisLockGuard {
     async fn acquire(client: Option<&redis::Client>, key: String) -> Result<Self, String> {
         if let Some(c) = client {
-            let mut conn = c.get_async_connection().await.map_err(|e| format!("Failed to connect to Redis: {}", e))?;
+            let mut conn = c.get_multiplexed_async_connection().await.map_err(|e| format!("Failed to connect to Redis: {}", e))?;
             let acquired: redis::RedisResult<Option<String>> = redis::cmd("SET")
                 .arg(&key)
                 .arg("locked")
@@ -44,7 +44,7 @@ impl Drop for RedisLockGuard {
         if let Some(client) = self.client.take() {
             let key = self.key.clone();
             tokio::spawn(async move {
-                if let Ok(mut conn) = client.get_async_connection().await {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                     let _: redis::RedisResult<()> = conn.del(&key).await;
                 }
             });
