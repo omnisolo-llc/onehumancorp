@@ -104,14 +104,29 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "teammate" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let mut req = SubAgentRequest::default();
+            req.task = task.to_string();
+            // Explicitly do not pass parent context, ensuring teammate isolation.
+            req.parent_context_json = "".to_string();
+
+            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+
+            // Dispatch in the background so the parent agent is not blocked
+            tokio::spawn(async move {
+                let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr));
+                if let Ok(c) = channel {
+                    if let Ok(conn) = c.connect().await {
+                        let mut client = AgentServiceClient::new(conn);
+                        let _ = client.dispatch_to_sub_agent(req).await;
+                    }
+                }
+            });
+
+            Ok(format!("[Subagent (Teammate)] Successfully dispatched parallel task: '{}'. Task ID: {}. The teammate is working independently in a separate context.", task, task_id))
         } else {
-            // For teammate, we return the demonstration message for now as it isn't fully implemented in Rust yet.
-            let summary = match mode {
-                "teammate" => format!("[Subagent (Teammate)] Completed task: {}. Summary: I successfully worked in parallel and updated the required systems.", task),
-                _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
-            };
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            Ok(summary)
+            Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)))
         }
     }
 }
@@ -178,6 +193,22 @@ mod tests {
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_subagent_teammate_mode() {
+        let executor = SubagentExecutor;
+        let args = json!({
+            "task": "do parallel work",
+            "mode": "teammate"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        let summary = result.unwrap();
+        assert!(summary.starts_with("[Subagent (Teammate)] Successfully dispatched parallel task: 'do parallel work'"));
+        assert!(summary.contains("Task ID:"));
+        assert!(summary.contains("The teammate is working independently in a separate context."));
     }
 
     // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
