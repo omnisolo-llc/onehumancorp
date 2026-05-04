@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 
