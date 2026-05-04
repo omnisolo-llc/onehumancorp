@@ -251,7 +251,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
                                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                                         });
                                         dashboard.show().unwrap();
@@ -304,7 +305,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
@@ -1460,6 +1462,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
                 Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
 
+                let help_center_ui = app::HelpCenter::new().unwrap();
+                let help_center_handle = help_center_ui.as_weak();
+                Box::leak(Box::new(help_center_ui));
+
+
+                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                Box::leak(Box::new(interactive_walkthrough_ui));
+
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
                 Box::leak(Box::new(video_tutorials_ui));
@@ -1490,6 +1501,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
 
                 dashboard.on_open_kairos_orchestration_walkthrough(move || {
                     if let Some(ui) = kairos_orchestration_walkthrough_handle.upgrade() {
@@ -3440,7 +3452,8 @@ mod docs_tests {
 
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
         });
 
