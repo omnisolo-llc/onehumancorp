@@ -39,6 +39,12 @@ impl TelemetrySyncDaemon {
     }
 
     async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if self.cloud_url.is_empty() {
+            return Ok(());
+        }
+        if self.cloud_url.is_empty() {
+            return Ok(());
+        }
         let rows = query(
             "SELECT id, metric_name, metric_type, value, labels_json, timestamp
              FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100"
