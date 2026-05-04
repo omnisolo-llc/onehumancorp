@@ -1040,6 +1040,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             )
             .execute(pool)
             .await;
+
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS onboarding_state (
+                    tenant_id TEXT NOT NULL,
+                    organization_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    current_step INTEGER NOT NULL DEFAULT 0,
+                    state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (tenant_id, organization_id)
+                );"
+            )
+            .execute(pool)
+            .await;
         }
 
         let db_path = "ohc-standalone.db";
