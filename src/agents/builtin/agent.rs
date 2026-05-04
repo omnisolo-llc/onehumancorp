@@ -457,6 +457,12 @@ impl Agent {
                     cfg.max_task_tokens,
                     global_turn_tokens,
                 );
+
+                if decision.action == BudgetAction::Stop {
+                    let err_msg = format!("Terminal condition reached: token budget exhausted ({} / {}).", global_turn_tokens, cfg.max_task_tokens);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(ToolError::Fatal(err_msg).into());
+                }
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
                     if !resp.message.content.is_empty() {
@@ -2425,5 +2431,43 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+
+#[tokio::test]
+    async fn test_token_budget_exhaustion_termination() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("I have written some code."),
+                    usage: Usage { input_tokens: 50, output_tokens: 200 },
+                    stop_reason: "length".to_string(), // LLM stopped due to length
+                }
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_task_tokens = 150; // set budget lower than output tokens so it stops
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("token budget exhausted"));
+
+        // Also ensure an AgentEvent::TaskError was emitted
+        let mut found_task_error = false;
+        for e in events {
+            if let AgentEvent::TaskError { error } = e {
+                if error.contains("token budget exhausted") {
+                    found_task_error = true;
+                    break;
+                }
+            }
+        }
+        assert!(found_task_error);
     }
 }
