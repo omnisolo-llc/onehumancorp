@@ -3,11 +3,14 @@ use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
+use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
+use crate::tools::hybridfsmcp::factory;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
+    hybrid_fs_server: Arc<HybridFSMcpServer>,
 }
 
 impl MyMcpService {
@@ -16,6 +19,7 @@ impl MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
+            hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
         }
     }
 }
@@ -56,9 +60,11 @@ impl McpService for MyMcpService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<McpToolsResponse>, Status> {
-        let tools = self.dynamic_tools.read().unwrap();
+        let mut tools = self.dynamic_tools.read().unwrap().clone();
+        let hybrid_fs_tools = self.hybrid_fs_server.get_tools();
+        tools.extend(hybrid_fs_tools);
         Ok(Response::new(McpToolsResponse {
-            tools: tools.clone(),
+            tools,
         }))
     }
 
@@ -183,6 +189,12 @@ impl McpService for MyMcpService {
             "sync_config_to_cloud" => {
                 let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+            }
+            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
+                match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
             }
             _ => {
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))

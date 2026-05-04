@@ -51,29 +51,29 @@ async fn test_hybrid_fs_mcp_server() {
     let server = HybridFSMcpServer::new(provider);
 
     let tools = server.get_tools();
-    assert_eq!(tools.len(), 3);
+    assert_eq!(tools.len(), 4);
 
     // Test fs_write_file tool
     let req = McpInvokeRequest {
-        tool_id: "fs_write_file".to_string(),
+        tool_id: "fs_hybrid_write".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":"server_test.txt","content":"from server"}"#.to_string(),
         agent_id: "agent-1".to_string(),
         spiffe_id: "spiffe-1".to_string(),
     };
-    let resp = server.invoke_tool(&req).await.unwrap();
+    let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["status"], "success");
 
     // Test fs_read_file tool
     let req = McpInvokeRequest {
-        tool_id: "fs_read_file".to_string(),
+        tool_id: "fs_hybrid_read".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":"server_test.txt"}"#.to_string(),
         agent_id: "agent-1".to_string(),
         spiffe_id: "spiffe-1".to_string(),
     };
-    let resp = server.invoke_tool(&req).await.unwrap();
+    let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["content"], "from server");
 }
