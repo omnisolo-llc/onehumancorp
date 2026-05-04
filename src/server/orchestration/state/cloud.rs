@@ -103,17 +103,25 @@ impl CloudStateManager {
         if to_state == "EXECUTING" {
             let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
-            for dep_id in dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = $1::uuid"
+
+            if !dependencies.is_empty() {
+                // Parse UUIDs carefully, return an error if a dependency id is invalid
+                let mut dep_uuids = Vec::with_capacity(dependencies.len());
+                for dep in &dependencies {
+                    let parsed = uuid::Uuid::parse_str(dep).map_err(|_| format!("Invalid dependency UUID: {}", dep))?;
+                    dep_uuids.push(parsed);
+                }
+
+                let completed_count: i64 = sqlx::query_scalar(
+                    "SELECT count(*) FROM swarm_tasks WHERE id = ANY($1) AND status = 'COMPLETED'"
                 )
-                .bind(&dep_id)
-                .fetch_optional(&mut *tx)
+                .bind(&dep_uuids)
+                .fetch_one(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if dep_status.as_deref() != Some("COMPLETED") {
-                    return Err(format!("Dependency {} is not COMPLETED", dep_id));
+                if completed_count as usize != dep_uuids.len() {
+                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dep_uuids.len()));
                 }
             }
         }
