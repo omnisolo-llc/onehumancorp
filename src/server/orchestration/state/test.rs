@@ -26,6 +26,9 @@ impl TeammateMesh for MockMesh {
     async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         Ok(())
     }
+    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
     async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         Ok(Box::new(|| {}))
     }
