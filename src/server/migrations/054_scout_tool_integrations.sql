@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS tool_integrations (
 
 -- Apply RLS based on the standard tenant isolation protocol
 ALTER TABLE tool_integrations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_tool_integrations ON tool_integrations USING (tenant_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
+CREATE POLICY tenant_isolation_tool_integrations ON tool_integrations USING (tenant_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = '');

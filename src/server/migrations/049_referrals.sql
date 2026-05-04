@@ -15,4 +15,4 @@ ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 -- Checking memory: "ohc.current_organization_id"
 -- I'll use both patterns to be safe if they coexist, but following db.rs strictly for current_tenant.
 CREATE POLICY referrals_isolation_policy ON referrals
-USING (organization_id = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+USING (organization_id = current_setting('app.current_tenant', true));
