@@ -1,4 +1,4 @@
-use std::sync::Arc;
+
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
@@ -77,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_memory_bus_pub_sub() {
         let bus = MemoryBus::new();
-        let received = Arc::new(AtomicBool::new(false));
+        let received = std::sync::Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
         
         let handler = Box::new(move |msg: Message| {
