@@ -115,7 +115,7 @@ impl AutoDreamWorker {
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
 
-        for (id, org_id, payload, table) in tasks {
+        for (id, org_id, payload, table, source_mission_id) in tasks {
             let client = crate::minimax::LocalLLMClient::new();
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
 {}", payload);
@@ -138,7 +138,7 @@ impl AutoDreamWorker {
             let source_type = format!("TASK_{}", table.to_uppercase());
             
             // Insert into the proper KAIROS autodream_memories table
-            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type, &source_mission_id).await?;
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             println!("AutoDream: ingested completed task {} from {}", id, table);

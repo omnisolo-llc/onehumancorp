@@ -291,32 +291,59 @@ impl DB {
         Ok(())
     }
 
-    pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
+    pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String, String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
-        // Fetch from shared_tasks
-        let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
-            .fetch_all(&self.pool)
-            .await?;
+        if self.is_sqlite() {
+            // SQLite fallback without SKIP LOCKED
+            let shared_rows = sqlx::query("SELECT id, organization_id, payload, COALESCE(parent_plan_id, id) as source_mission_id FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
+                .fetch_all(&self.pool)
+                .await?;
 
-        for row in shared_rows {
-            let id: String = row.get("id");
-            let org_id: String = row.get("organization_id");
-            let payload: String = row.get("payload");
-            result.push((id, org_id, payload, "shared_tasks".to_string()));
-        }
+            for row in shared_rows {
+                let id: String = row.get("id");
+                let org_id: String = row.get("organization_id");
+                let payload: String = row.get("payload");
+                let source_mission_id: String = row.get("source_mission_id");
+                result.push((id, org_id, payload, "shared_tasks".to_string(), source_mission_id));
+            }
 
-        // Fetch from swarm_tasks
-        // Note: swarm_tasks doesn't have organization_id natively in the schema provided earlier
-        let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
-            .fetch_all(&self.pool)
-            .await?;
+            let swarm_rows = sqlx::query("SELECT id, payload, COALESCE(mission_id, id) as mission_id FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25")
+                .fetch_all(&self.pool)
+                .await?;
 
-        for row in swarm_rows {
-            let id: String = row.get("id");
-            let org_id: String = "system".to_string(); // Fallback organization_id
-            let payload: String = row.get("payload");
-            result.push((id, org_id, payload, "swarm_tasks".to_string()));
+            for row in swarm_rows {
+                let id: String = row.get("id");
+                let org_id: String = "system".to_string(); // Fallback organization_id
+                let payload: String = row.get("payload");
+                let source_mission_id: String = row.get("mission_id");
+                result.push((id, org_id, payload, "swarm_tasks".to_string(), source_mission_id));
+            }
+        } else {
+            // PostgreSQL with SKIP LOCKED
+            let shared_rows = sqlx::query("SELECT id, organization_id, payload::text, COALESCE(parent_plan_id, id::text) as source_mission_id FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED")
+                .fetch_all(&self.pool)
+                .await?;
+
+            for row in shared_rows {
+                let id: String = row.get("id");
+                let org_id: String = row.get("organization_id");
+                let payload: String = row.get("payload");
+                let source_mission_id: String = row.get("source_mission_id");
+                result.push((id, org_id, payload, "shared_tasks".to_string(), source_mission_id));
+            }
+
+            let swarm_rows = sqlx::query("SELECT id::text, payload::text, COALESCE(mission_id, id::text) as mission_id FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED")
+                .fetch_all(&self.pool)
+                .await?;
+
+            for row in swarm_rows {
+                let id: String = row.get("id");
+                let org_id: String = "system".to_string(); // Fallback organization_id
+                let payload: String = row.get("payload");
+                let source_mission_id: String = row.get("mission_id");
+                result.push((id, org_id, payload, "swarm_tasks".to_string(), source_mission_id));
+            }
         }
 
         Ok(result)
@@ -344,10 +371,11 @@ pub async fn insert_autodream_memory(
         content: &str,
         embedding: &str,
         source_type: &str,
+        source_mission_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type, source_mission_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -355,11 +383,12 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(sqlite_pool)
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type, source_mission_id) VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -367,6 +396,7 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(&self.pool)
                     .await?;
             }
