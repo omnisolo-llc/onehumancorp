@@ -215,6 +215,63 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS tenants (
+                        tenant_id TEXT PRIMARY KEY,
+                        owner_id TEXT,
+                        business_name TEXT,
+                        tier TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS customers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        email TEXT,
+                        phone TEXT,
+                        name TEXT,
+                        preferences TEXT DEFAULT '{}'
+                    );
+                    CREATE TABLE IF NOT EXISTS orders (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        customer_id TEXT,
+                        total_amount REAL,
+                        status TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS order_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        order_id TEXT,
+                        product_id TEXT,
+                        quantity INTEGER,
+                        price REAL
+                    );
+                    CREATE TABLE IF NOT EXISTS bookings (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        customer_id TEXT,
+                        service_id TEXT,
+                        start_time TEXT,
+                        end_time TEXT,
+                        status TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS products (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        organization_id TEXT,
+                        name TEXT,
+                        description TEXT,
+                        price_cents INTEGER,
+                        currency TEXT,
+                        fulfillment_strategy TEXT,
+                        metadata TEXT DEFAULT '{}',
+                        type TEXT,
+                        title TEXT,
+                        price REAL,
+                        inventory_count INTEGER,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
@@ -223,7 +280,10 @@ impl DB {
                         summary_embedding BLOB,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        tenant_id TEXT,
+                        department TEXT,
+                        interaction_data TEXT DEFAULT '{}'
                     );
                     CREATE TABLE IF NOT EXISTS autodream_memories (
                         id TEXT PRIMARY KEY,

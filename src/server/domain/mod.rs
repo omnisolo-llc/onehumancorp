@@ -5,3 +5,5 @@ pub mod compute;
 pub mod federation;
 pub mod organization;
 pub mod sre;
+
+pub mod unified_tenant_test;
