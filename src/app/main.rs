@@ -2891,6 +2891,36 @@ mod docs_tests {
 
         assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
         assert!(*execute_success.borrow());
+
+        let execute_share_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let execute_share_success_clone = execute_share_success.clone();
+        ui.on_execute(move |strategy| {
+            if strategy == "Share Business" {
+                *execute_share_success_clone.borrow_mut() = true;
+            }
+        });
+        ui.invoke_execute("Share Business".into());
+        assert!(*execute_share_success.borrow(), "Share Business should execute");
+
+        // Verify BusinessShare Component
+        let business_share_ui = app::BusinessShare::new().unwrap();
+        let copy_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let c_clone = copy_success.clone();
+        business_share_ui.on_copy_link(move || { *c_clone.borrow_mut() = true; });
+        business_share_ui.invoke_copy_link();
+        assert!(*copy_success.borrow(), "Copy link should be invocable");
+
+        let insta_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let i_clone = insta_success.clone();
+        business_share_ui.on_share_to_instagram(move || { *i_clone.borrow_mut() = true; });
+        business_share_ui.invoke_share_to_instagram();
+        assert!(*insta_success.borrow(), "Share to IG should be invocable");
+
+        let close_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let close_clone = close_success.clone();
+        business_share_ui.on_close(move || { *close_clone.borrow_mut() = true; });
+        business_share_ui.invoke_close();
+        assert!(*close_success.borrow(), "Close should be invocable");
     }
 
     #[test]
