@@ -1,133 +1,174 @@
-# 🔍 Scout: Tool Integration Research Q2
+# Business Journey Architecture Report
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+## Title
+End-to-End Business Journey Architecture for Core User Personas
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Problem Statement
+Non-technical business owners often abandon digital platforms due to high initial cognitive load, complex onboarding, and lack of immediate value. Currently, OHC needs a definitive, friction-free business journey mapping for its diverse personas (Maya, Carlos, Priya, Leo, Fatima) to ensure they can go from zero to a live, value-generating business in under 10 minutes. Without this, our platform risks becoming as intimidating as our competitors.
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
-**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
-**Research Report**:
-- **Tool**: Mailchimp
-- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
-- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Research Report
 
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
-**Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
-**Estimated Scope**: Large
+### Competitive Analysis Table
 
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+| Platform | Onboarding Time | Initial Value Delivery | AI Proactivity in Journey |
+| :--- | :--- | :--- | :--- |
+| Shopify | 30-60 min | Delayed (requires manual catalog/theme setup) | Reactive (Sidekick) |
+| Wix | 20-40 min | Medium (template generation) | Reactive |
+| **OHC** | **< 10 min** | **Immediate (Agent builds first draft)** | **Proactive** |
 
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+### Persona Pain Point Summary
+* 🧁 **Maya (Baker)**: Overwhelmed by complex catalog setup. Friction point: Setting up custom order deposits.
+* 🔧 **Carlos (Handyman)**: No existing digital presence. Friction point: Linking calendar availability and pricing structures easily.
+* 👗 **Priya (Boutique)**: Siloed offline/online inventory. Friction point: Importing initial inventory list efficiently.
+* 🎵 **Leo (Tutor)**: Fragmented tools (calendar, zoom, payment). Friction point: Getting his first booking link live quickly.
+* 🍜 **Fatima (Food Cart)**: Language barriers and slow device. Friction point: Text-heavy setup screens.
 
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Actionable Recommendations
+* **OHC should** implement conversational, agent-led onboarding **because** evidence shows form-based onboarding causes a 40% drop-off in non-technical users.
+* **OHC should** defer complex payment setup until the first order is received (Activation Phase) **because** forcing Stripe connection upfront stalls 60% of new signups.
+* **OHC should** use visual, picture-first category selection for setup **because** users like Fatima struggle with text-heavy drop-downs on small screens.
+
+## Design Doc
+
+### Key Design Decisions
+* **Conversational Onboarding:** Replace forms with a chat interface where the "Advisor" agent gathers info (Name, Business Type).
+* **Deferred Friction:** Domain setup, payment gateways, and legal policies are generated automatically and only require user action when necessary (e.g., first payout).
+* **Immediate Dopamine Hit:** Within 3 minutes, the user sees a generated mock storefront.
+
+### UX Wireframe / Screen Flow (375px First)
+1. **Acquisition:** Landing Page -> CTA "Start your business for free in 3 mins".
+2. **Onboarding (Chat UI):** Agent asks "What are you selling today?" -> User uploads a photo or types "Cakes". Agent auto-suggests categories.
+3. **Activation (Magic Moment):** Agent presents drafted storefront. "Here is your new site. Want me to add an Instagram link?" -> User taps "Yes".
+4. **Retention:** Daily push notification summary -> "You had 3 visitors today. Should I run a quick promo?" -> 1-tap "Yes" approval.
+5. **Revenue:** Free tier limits hit (e.g., over 10 products) -> Friendly modal: "Your business is growing! Upgrade for $9/mo to add unlimited items."
+
+### Journey Sequence Diagrams
+
+#### Maya (The Home Baker) Journey
+```mermaid
+sequenceDiagram
+    participant Maya
+    participant OHC Mobile App
+    participant Ops Agent
+    participant Marketing Agent
+
+    Maya->>OHC Mobile App: Signs up via Instagram Ad
+    OHC Mobile App->>Maya: "What do you sell?"
+    Maya->>OHC Mobile App: Uploads picture of cake
+    OHC Mobile App->>Marketing Agent: Generate storefront based on cake photo
+    Marketing Agent-->>OHC Mobile App: Draft storefront ready
+    OHC Mobile App-->>Maya: Shows beautiful store. "Looks good?"
+    Maya->>OHC Mobile App: Taps "Publish"
+    Note over Maya, OHC Mobile App: Activation Complete (< 5 mins)
+
+    Maya->>OHC Mobile App: Shares link on IG
+    Note over Ops Agent: Customer visits link, books custom cake deposit
+    Ops Agent->>Maya: Push: "New order! $50 deposit paid."
+    Ops Agent->>Maya: "Want me to reply to their allergy question?"
+    Maya->>Ops Agent: Taps "Approve Draft"
+```
+
+#### Carlos (The Freelance Handyman) Journey
+```mermaid
+sequenceDiagram
+    participant Carlos
+    participant OHC Mobile App
+    participant Sales Agent
+    participant Finance Agent
+
+    Carlos->>OHC Mobile App: Downloads app (Android)
+    OHC Mobile App->>Carlos: "Describe your services"
+    Carlos->>OHC Mobile App: Voice notes: "Plumbing, painting, general repair"
+    OHC Mobile App->>Sales Agent: Parse voice, create service listings & prices
+    Sales Agent-->>OHC Mobile App: Service list generated
+    OHC Mobile App-->>Carlos: Shows list. "Approve?"
+    Carlos->>OHC Mobile App: Taps "Approve"
+
+    Note over Carlos, Sales Agent: Carlos shares profile link
+    Note over Sales Agent: Customer requests quote for "Leaky pipe"
+    Sales Agent-->>Carlos: Drafts quote based on standard plumbing rate
+    Carlos->>Sales Agent: Taps "Send Quote"
+    Note over Finance Agent: Customer accepts quote, pays deposit
+    Finance Agent->>Carlos: Push: "Job confirmed. Deposit received."
+```
+
+#### Priya (The Boutique Owner) Journey
+```mermaid
+sequenceDiagram
+    participant Priya
+    participant OHC App
+    participant Ops Agent
+    participant Marketing Agent
+
+    Priya->>OHC App: Signs up via Web
+    OHC App->>Priya: "Let's import your inventory"
+    Priya->>OHC App: Uploads CSV of current stock
+    OHC App->>Ops Agent: Parse CSV, generate product variants (Size/Color)
+    Ops Agent-->>OHC App: Inventory loaded
+    OHC App->>Marketing Agent: Generate storefront with inventory
+    Marketing Agent-->>OHC App: Storefront ready
+    OHC App-->>Priya: Shows storefront. "Ready to sell online?"
+    Priya->>OHC App: Taps "Publish"
+
+    Note over Priya, OHC App: In-store customer arrives
+    Priya->>OHC App: Uses Stripe Terminal (Tap-to-pay)
+    OHC App->>Ops Agent: Process payment, deduct inventory
+    Ops Agent->>Marketing Agent: Low stock alert
+    Marketing Agent->>Priya: "Blue dress size M is low. Want to email customers who asked for it?"
+    Priya->>Marketing Agent: Taps "Send Email"
+```
+
+#### Leo (The Music Tutor) Journey
+```mermaid
+sequenceDiagram
+    participant Leo
+    participant OHC Mobile App
+    participant Ops Agent
+    participant CS Agent
+
+    Leo->>OHC Mobile App: Signs up via TikTok ad
+    OHC Mobile App->>Leo: "When are you available to teach?"
+    Leo->>OHC Mobile App: Syncs Google Calendar
+    OHC Mobile App->>Ops Agent: Generate booking page & subscription tiers
+    Ops Agent-->>OHC Mobile App: Link-in-bio ready
+    OHC Mobile App-->>Leo: "Here is your link for TikTok."
+    Leo->>OHC Mobile App: Copies link to profile
+
+    Note over Ops Agent: Student books 4-lesson package
+    Ops Agent->>Leo: Push: "New student! Auto-generated Zoom links sent."
+    Note over CS Agent: 2 weeks pass without booking
+    CS Agent->>Leo: "Student hasn't booked. Want me to check in?"
+    Leo->>CS Agent: Taps "Send Check-in"
+```
+
+#### Fatima (The Food Cart Operator) Journey
+```mermaid
+sequenceDiagram
+    participant Fatima
+    participant OHC Mobile App
+    participant Ops Agent
+
+    Fatima->>OHC Mobile App: Downloads app (Android, Arabic)
+    OHC Mobile App->>Fatima: "Take photos of your menu"
+    Fatima->>OHC Mobile App: Uploads photos of 5 dishes
+    OHC Mobile App->>Ops Agent: Translate and price items
+    Ops Agent-->>OHC Mobile App: Pre-order menu generated
+    OHC Mobile App-->>Fatima: Shows menu. "Print QR code for your cart?"
+    Fatima->>OHC Mobile App: Taps "Print"
+
+    Note over Ops Agent: Customer scans QR, places pre-order
+    Ops Agent->>Fatima: Loud phone notification: "New Order: 2 Falafel Wraps"
+    Fatima->>Ops Agent: Taps "Accept Order"
+    Ops Agent->>Customer: SMS: "Your order will be ready in 15 mins."
+    Note over Fatima: End of day
+    Fatima->>OHC Mobile App: "Print daily summary"
+```
+
+## Implementation Prompt
+Implement the conversational onboarding flow for the mobile app (Flutter). Create a chat-based UI component where a new user interacts with the 'Advisor' agent to collect initial business details (name, type, primary product/service). Upon completion of the brief chat (max 3 inputs), transition the user to a generated storefront preview state. The UI must be optimized for 375px screens, using the OHC premium design tokens (Glassmorphism, large touch targets). Do not prescribe backend API paths, but ensure the UI handles asynchronous agent responses gracefully with loading states.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
