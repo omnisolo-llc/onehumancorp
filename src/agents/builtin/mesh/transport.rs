@@ -332,22 +332,19 @@ impl RedisTransport {
 impl MeshTransport for RedisTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
-        use base64::{Engine as _, engine::general_purpose::STANDARD};
 
         let mut conn = self.publish_conn.lock().await;
 
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
-        let payload_b64 = STANDARD.encode(&buf);
 
-        let _: () = conn.publish(topic, payload_b64).await.map_err(|e| e.to_string())?;
+        let _: () = conn.publish(topic, buf).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use prost::Message as ProstMessage;
         use futures_util::StreamExt;
-        use base64::{Engine as _, engine::general_purpose::STANDARD};
 
         let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
 
@@ -356,11 +353,9 @@ impl MeshTransport for RedisTransport {
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
-                if let Ok(payload_b64) = msg.get_payload::<String>() {
-                    if let Ok(buf) = STANDARD.decode(&payload_b64) {
-                        if let Ok(message) = Message::decode(&buf[..]) {
-                            handler(message);
-                        }
+                if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
+                    if let Ok(message) = Message::decode(&buf[..]) {
+                        handler(message);
                     }
                 }
             }
