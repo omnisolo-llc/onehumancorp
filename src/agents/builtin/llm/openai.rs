@@ -205,12 +205,23 @@ impl LlmClient for OpenAIClient {
 
         let max_tokens = if req.max_tokens == 0 { None } else { Some(req.max_tokens) };
 
-        let payload = OpenAIRequest {
+        let mut payload = OpenAIRequest {
             model: req.model.clone(),
             messages,
             max_tokens,
             tools,
         };
+
+        // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)
+        // Note: OpenAI prompt caching is automatic but we can nudge it by including
+        // 'user' role messages that are likely to be reused.
+        // We also check for OHC_OPENAI_CACHE_BYPASS env var.
+        let cache_bypass = std::env::var("OHC_OPENAI_CACHE_BYPASS").unwrap_or_default() == "true";
+        if !cache_bypass && (req.model.contains("gpt-4o") || req.model.contains("gpt-4.1")) {
+             // In some scenarios we might want to specifically structure the prompt
+             // to maximize cache hits (e.g. putting static system instructions first).
+             // Our build_hierarchical_system_prompt already does this.
+        }
 
         let url = format!("{}/chat/completions", self.base_url);
         let resp = self

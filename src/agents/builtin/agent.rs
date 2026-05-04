@@ -406,37 +406,34 @@ impl Agent {
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
-            // Cost estimation logic based on model (roughly mapping common API pricing as USD per 1M tokens)
-            let mut input_cost_per_m = 0.0;
-            let mut output_cost_per_m = 0.0;
+            // Unified Cost Calculation Mechanic
+            // Note: We use the local pricing calculator logic to avoid a direct
+            // dependency on server_lib which would cause a circular dependency.
+            let input_cost_per_m = match cfg.model.to_lowercase().as_str() {
+                m if m.contains("gpt-4o") && !m.contains("mini") => 5.0,
+                m if m.contains("gpt-4-turbo") => 10.0,
+                m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.15,
+                m if m.contains("gemini-1.5-pro") => 3.5,
+                m if m.contains("gemini-1.5-flash") => 0.075,
+                m if m.contains("claude-3-5-sonnet") => 3.0,
+                m if m.contains("claude-3-haiku") => 0.25,
+                _ => 3.0,
+            };
+            let output_cost_per_m = match cfg.model.to_lowercase().as_str() {
+                m if m.contains("gpt-4o") && !m.contains("mini") => 15.0,
+                m if m.contains("gpt-4-turbo") => 30.0,
+                m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.60,
+                m if m.contains("gemini-1.5-pro") => 10.5,
+                m if m.contains("gemini-1.5-flash") => 0.30,
+                m if m.contains("claude-3-5-sonnet") => 15.0,
+                m if m.contains("claude-3-haiku") => 1.25,
+                _ => 15.0,
+            };
 
-            let m = cfg.model.to_lowercase();
-            if m.contains("gpt-4o") && !m.contains("mini") {
-                input_cost_per_m = 5.0;
-                output_cost_per_m = 15.0;
-            } else if m.contains("gpt-4-turbo") {
-                input_cost_per_m = 10.0;
-                output_cost_per_m = 30.0;
-            } else if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") {
-                input_cost_per_m = 0.15;
-                output_cost_per_m = 0.60;
-            } else if m.contains("gemini-1.5-pro") {
-                input_cost_per_m = 3.5;
-                output_cost_per_m = 10.5;
-            } else if m.contains("gemini-1.5-flash") {
-                input_cost_per_m = 0.075;
-                output_cost_per_m = 0.30;
-            } else if m.contains("claude-3-5-sonnet") {
-                input_cost_per_m = 3.0;
-                output_cost_per_m = 15.0;
-            } else if m.contains("claude-3-haiku") {
-                input_cost_per_m = 0.25;
-                output_cost_per_m = 1.25;
-            }
+            let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
+                            (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
 
-            if input_cost_per_m > 0.0 || output_cost_per_m > 0.0 {
-                let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
-                                (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
+            if turn_cost > 0.0 {
                 cost_counter.add(turn_cost, &[model_label, agent_label]);
             }
 

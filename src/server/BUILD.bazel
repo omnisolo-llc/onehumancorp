@@ -17,6 +17,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_tonic",
+        "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
         "//src/proto:agent_service_tonic",
         "//src/proto:organization_prost",
@@ -89,6 +90,7 @@ rust_test(
     deps = [
         "@crates//:tempfile",
         "//src/proto:hub_tonic",
+        "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
         "//src/proto:agent_service_tonic",
         "//src/proto:organization_prost",

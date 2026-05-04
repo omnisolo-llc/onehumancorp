@@ -126,6 +126,7 @@ proto_library(
 proto_rust_library(
     name = "billing",
     proto = ":billing_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
 

@@ -107,6 +107,7 @@ rust_binary(
         "@crates//:tokio",
         "@crates//:tonic",
         "@crates//:sqlx",
+        "//src/proto:billing_tonic",
     ],
 )
 
@@ -204,6 +205,7 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tonic",
         "@crates//:sqlx",
+        "//src/proto:billing_tonic",
     ],
 )
 
