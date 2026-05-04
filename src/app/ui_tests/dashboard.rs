@@ -136,6 +136,15 @@ fn create_verify_todays_sales() {
 }
 
 #[test]
+fn create_verify_generative_score() {
+    let ui = create();
+    ui.set_generative_score("100".into());
+    assert_eq!(ui.get_generative_score(), "100");
+    ui.set_generative_score("0".into());
+    assert_eq!(ui.get_generative_score(), "0");
+}
+
+#[test]
 fn create_verify_milestone_message() {
     let ui = create();
     ui.set_milestone_message("First Order!".into());
