@@ -2,7 +2,7 @@ use std::sync::Arc;
 use crate::db::DB;
 use sqlx::Row;
 use serde_json::json;
-use crate::ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest};
+use crate::ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::metadata::MetadataValue;
@@ -24,6 +24,9 @@ impl PowerSyncOrchestrator {
                 interval.tick().await;
                 if let Err(e) = self.push_sync().await {
                     eprintln!("PowerSync push failed: {}", e);
+                }
+                if let Err(e) = self.pull_sync().await {
+                    eprintln!("PowerSync pull failed: {}", e);
                 }
             }
         });
@@ -101,6 +104,82 @@ impl PowerSyncOrchestrator {
                     .bind(id)
                     .execute(sqlite_pool)
                     .await;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn pull_sync(&self) -> Result<(), String> {
+        let sqlite_pool = match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => pool,
+            _ => return Ok(()), // Only runs in Standalone mode with SQLite
+        };
+
+        // Connect to gRPC client
+        let endpoint = if self.cloud_url.starts_with("http") {
+            self.cloud_url.clone()
+        } else {
+            format!("http://{}", self.cloud_url)
+        };
+
+        let channel = Channel::from_shared(endpoint).map_err(|e| e.to_string())?.connect().await.map_err(|e| e.to_string())?;
+
+        let mut client = SyncServiceClient::new(channel);
+
+        let mut req = Request::new(PowerSyncPullRequest {});
+
+        // Add internal auth using spiffe identity
+        let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
+        req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
+
+        let res = client.power_sync_pull(req).await.map_err(|e| e.to_string())?;
+
+        let payload = res.into_inner().payload;
+        if payload.is_empty() || payload == "[]" {
+            return Ok(());
+        }
+
+        let items: Vec<serde_json::Value> = serde_json::from_str(&payload).map_err(|e| e.to_string())?;
+
+        for item in items {
+            if item["table"].as_str() == Some("agent_missions") {
+                let id = item["id"].as_str().unwrap_or("");
+                let status = item["status"].as_str().unwrap_or("PENDING");
+                let payload_data = item["payload"].as_str().unwrap_or("");
+                let org_id = item["organization_id"].as_str().unwrap_or("system");
+                let updated_at_str = item["updated_at"].as_str().unwrap_or("");
+                let version = item["version"].as_i64().unwrap_or(1);
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO agent_missions (id, status, payload, organization_id, updated_at, _sync_status, version)
+                    VALUES (?, ?, ?, ?, ?, 'synced', ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = excluded.status,
+                        payload = excluded.payload,
+                        organization_id = excluded.organization_id,
+                        updated_at = excluded.updated_at,
+                        _sync_status = 'synced',
+                        version = excluded.version
+                    WHERE agent_missions.updated_at < excluded.updated_at
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(status)
+                    .bind(payload_data)
+                    .bind(org_id)
+                    .bind(updated_at_str)
+                    .bind(version)
+                    .execute(sqlite_pool)
+                    .await
+                {
+                    eprintln!("PowerSync pull failed to save to database: error={}", e);
+                }
             }
         }
 
