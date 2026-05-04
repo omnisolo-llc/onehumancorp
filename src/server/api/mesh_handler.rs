@@ -114,7 +114,7 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
-            .route("/mesh/broadcast", axum::routing::post(broadcast_handler))
+            .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
