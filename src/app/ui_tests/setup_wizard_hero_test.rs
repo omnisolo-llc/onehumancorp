@@ -1,6 +1,4 @@
 use crate::app;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 // Note: To conform with the "NO MOCKING OF NETWORK REQUESTS IN E2E TESTS" mandate
 // from the codebase constraints, this file is specifically testing isolated UI
