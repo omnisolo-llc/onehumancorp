@@ -241,6 +241,40 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst), "Should receive message published via CentrifugeNode");
     }
+    #[tokio::test]
+    async fn test_get_mesh_transport_sqlite_memory() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db_store = crate::db::DbStore::Sqlite(pool);
+
+        let mesh_res = super::get_mesh_transport(&db_store).await;
+        assert!(mesh_res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_get_mesh_transport_sqlite_file() {
+        if std::env::var("NATS_URL").is_ok() {
+            return;
+        }
+
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_mesh_ipc_file_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        std::fs::File::create(&db_path).unwrap();
+
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&db_url)
+            .await
+            .unwrap();
+
+        let db_store = crate::db::DbStore::Sqlite(pool);
+
+        let mesh_res = super::get_mesh_transport(&db_store).await;
+        assert!(mesh_res.is_ok());
+    }
 }
 
 
@@ -258,7 +292,24 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
-        crate::db::DbStore::Sqlite(_) => {
+        crate::db::DbStore::Sqlite(pool) => {
+            let connect_options = pool.connect_options();
+            let db_path = connect_options.get_filename();
+            let db_url = format!("sqlite://{}", db_path.to_string_lossy());
+
+            if !db_path.to_string_lossy().is_empty() && db_path.to_string_lossy() != ":memory:" {
+                match ohc_builtin_agent::mesh::transport::IpcTransport::new(&db_url).await {
+                    Ok(transport) => {
+                        let t_clone = transport.clone();
+                        tokio::spawn(async move { t_clone.start_worker().await; });
+                        return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+                    }
+                    Err(e) => {
+                        return Err(format!("Failed to initialize IpcTransport for Sqlite: {}", e));
+                    }
+                }
+            }
+
             let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
