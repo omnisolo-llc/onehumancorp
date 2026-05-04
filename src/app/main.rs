@@ -174,6 +174,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                                     if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                                     if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                                    if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
+                                    if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                                     if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
                                 }
                             }).unwrap();
@@ -340,6 +342,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
+                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
+                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
+                        if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
@@ -365,6 +376,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
+                ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
 
@@ -4981,4 +5001,43 @@ fn test_business_share_flow() {
 
     dashboard_ui.invoke_action_share_store();
     assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_data_flow_resume() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    login_ui.invoke_start_setup_wizard();
+    let ui = app::SetupWizard::new().unwrap();
+
+    ui.set_step(3);
+    ui.set_business_type("Online Store".into());
+    ui.set_company_name("My Resumed Store".into());
+    ui.set_sell_physical(true);
+    ui.set_website_template("Modern".into());
+    ui.set_product_name("My Product".into());
+    ui.set_product_price("10.0".into());
+    ui.set_domain_choice("custom".into());
+    ui.set_product_sku("SKU123".into());
+    ui.set_product_inventory("100".into());
+    ui.set_custom_dns_target("dns.target.local".into());
+    ui.set_product_description("Desc".into());
+    ui.set_instant_bio("Bio".into());
+    ui.set_is_advanced(true);
+
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 4);
 }
