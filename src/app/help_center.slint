@@ -7,8 +7,9 @@ export struct HelpArticle {
 }
 
 export component HelpCenter inherits Window {
-    width: 600px;
-    height: 800px;
+    preferred-width: 600px;
+    preferred-height: 800px;
+    min-width: 375px;
     title: "Help Center";
     background: #f8fafc;
 
@@ -26,36 +27,41 @@ export component HelpCenter inherits Window {
         { category: "Account & Billing", title: "How to change your subscription", description: "Find out how to upgrade or downgrade your plan and view past invoices." }
     ];
 
-    VerticalBox {
-        padding: 16px;
-        spacing: 16px;
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            max-width: 600px;
+            width: 100%;
+            padding: 16px;
+            spacing: 16px;
 
-        Text {
-            text: "How can we help?";
-            font-size: 24px;
-            font-weight: 700;
-            color: #0f172a;
-        }
+            Text {
+                text: "How can we help?";
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+            }
 
-        LineEdit {
-            placeholder-text: "Search help articles...";
-            text <=> search_query;
-        }
+            LineEdit {
+                placeholder-text: "Search help articles...";
+                text <=> search_query;
+            }
 
-        ScrollView {
-            VerticalBox {
-                spacing: 16px;
-
-                for article in articles : VerticalBox {
+            ScrollView {
+                VerticalBox {
                     spacing: 16px;
 
-                    Text { text: article.category; font-weight: 700; font-size: 18px; color: #334155; }
-                    Rectangle {
-                        background: white; border-radius: 8px;
-                        VerticalBox {
-                            padding: 12px;
-                            Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
-                            Text { text: article.description; color: #64748b; wrap: word-wrap; }
+                    for article in articles : VerticalBox {
+                        spacing: 16px;
+
+                        Text { text: article.category; font-weight: 700; font-size: 18px; color: #334155; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 12px;
+                                Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
+                                Text { text: article.description; color: #64748b; wrap: word-wrap; }
+                            }
                         }
                     }
                 }
