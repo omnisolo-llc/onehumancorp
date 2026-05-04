@@ -29,9 +29,9 @@ impl MyAgentManagerService {
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || hub3.get_cost_auditor())
         );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
-        let cost_auditor = cost_auditor_res.unwrap();
+        let agents = agents_res.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let meetings = meetings_res.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let cost_auditor = cost_auditor_res.unwrap_or_else(|_| std::sync::Arc::new(crate::billing::CostAuditor::new(crate::pricing::calculator::CostConfig::default())));
         let costs = Summary {
             total_cost_usd: cost_auditor.get_total_cost(),
             total_tokens: cost_auditor.get_total_tokens(),
@@ -200,8 +200,14 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
         let req = request.into_inner();
-        let agents = self.hub.get_agents();
-        let meetings = self.hub.get_meetings();
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        );
+        let agents = agents_res.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
+        let meetings = meetings_res.unwrap_or_else(|_| std::sync::Arc::new(vec![]));
 
         let mut msg_count = 0;
         for m in meetings.iter() {
