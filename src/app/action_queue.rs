@@ -101,13 +101,13 @@ impl ActionQueue {
         let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
 
         match crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(url).await {
-            Ok(mut client) => {
+            Ok(_client) => {
                 if action == "approve_draft" {
                     // Assume payload is JSON {"task_id": "..."}
                     let parsed: Result<serde_json::Value, _> = serde_json::from_str(payload);
                     if let Ok(json) = parsed {
                         if let Some(task_id) = json.get("task_id").and_then(|v| v.as_str()) {
-                            let request = tonic::Request::new(crate::ohc::orchestration::ApproveTaskRequest {
+                            let _request = tonic::Request::new(crate::ohc::orchestration::ApproveTaskRequest {
                                 task_id: task_id.to_string(),
                                 is_approved: true,
                             });
