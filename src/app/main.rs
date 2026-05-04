@@ -1220,6 +1220,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    welcome_checklist_ui.on_go_to_docs({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(api_docs) = app::ApiDocs::new() {
+                api_docs.show().unwrap();
+                Box::leak(Box::new(api_docs));
+            }
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_video({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(video_tutorials) = app::VideoTutorials::new() {
+                video_tutorials.show().unwrap();
+                Box::leak(Box::new(video_tutorials));
+            }
+        }
+    });
+
+    welcome_checklist_ui.on_go_to_support({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(help_center) = app::HelpCenter::new() {
+                help_center.show().unwrap();
+                Box::leak(Box::new(help_center));
+            }
+        }
+    });
+
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
