@@ -218,6 +218,58 @@ impl CostAuditor {
             false
         }
     }
+
+    pub fn get_summary_data(&self) -> CostSummaryData {
+        // Collect cloned copies while holding individual locks to avoid deadlocks.
+        let (agent_costs_cloned, agent_revenues_cloned, agent_output_tokens_cloned, total_cost_cloned) = {
+            let ac = self.agent_costs.lock().unwrap().clone();
+            let ar = self.agent_revenues.lock().unwrap().clone();
+            let aot = self.agent_output_tokens.lock().unwrap().clone();
+            let tc = *self.total_cost.lock().unwrap();
+            (ac, ar, aot, tc)
+        };
+
+        let mut agents = Vec::new();
+        for (agent_id, cost) in agent_costs_cloned.iter() {
+            let revenue = agent_revenues_cloned.get(agent_id).unwrap_or(&0.0);
+            let output_tokens = agent_output_tokens_cloned.get(agent_id).unwrap_or(&0);
+
+            let roi = self.calculate_roi(*cost, *revenue);
+            let efficiency = self.calculate_efficiency(*cost, *output_tokens);
+
+            agents.push(AgentCostData {
+                agent_id: agent_id.clone(),
+                cost: *cost,
+                roi,
+                efficiency,
+                output_tokens: *output_tokens,
+            });
+        }
+
+        let total_tokens = agent_output_tokens_cloned.values().sum();
+
+        CostSummaryData {
+            total_cost: total_cost_cloned,
+            total_tokens,
+            agents,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct CostSummaryData {
+    pub total_cost: f64,
+    pub total_tokens: i64,
+    pub agents: Vec<AgentCostData>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct AgentCostData {
+    pub agent_id: String,
+    pub cost: f64,
+    pub roi: f64,
+    pub efficiency: f64,
+    pub output_tokens: i64,
 }
 
 #[cfg(test)]

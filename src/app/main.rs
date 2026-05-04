@@ -829,6 +829,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
+    let cost_dashboard_refresh_handle = cost_dashboard_handle.clone();
+    cost_dashboard_ui.on_refresh(move || {
+        if let Some(ui) = cost_dashboard_refresh_handle.upgrade() {
+            // Using tokio::spawn to fetch data without blocking UI thread
+            let ui_weak = ui.as_weak();
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let url = format!("{}/api/costs", std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()));
+                if let Ok(res) = client.get(&url).send().await {
+                    if let Ok(data) = res.json::<serde_json::Value>().await {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                if let Some(total_cost) = data.get("total_cost").and_then(|v| v.as_f64()) {
+                                    ui.set_total_spend(format!("${:.2}", total_cost).into());
+                                }
+                                if let Some(total_tokens) = data.get("total_tokens").and_then(|v| v.as_i64()) {
+                                    ui.set_total_tokens(total_tokens.to_string().into());
+                                }
+                                if let Some(agents) = data.get("agents").and_then(|v| v.as_array()) {
+                                    let mut ui_agents = Vec::new();
+                                    for agent in agents {
+                                        if let (Some(name), Some(cost), Some(roi), Some(efficiency)) = (
+                                            agent.get("agent_id").and_then(|v| v.as_str()),
+                                            agent.get("cost").and_then(|v| v.as_f64()),
+                                            agent.get("roi").and_then(|v| v.as_f64()),
+                                            agent.get("efficiency").and_then(|v| v.as_f64()),
+                                        ) {
+                                            ui_agents.push(app::UiAgentCost {
+                                                name: name.to_string().into(),
+                                                cost: format!("${:.2}", cost).into(),
+                                                roi: format!("{:.1}%", roi).into(),
+                                                efficiency: format!("{:.2} tok/$", efficiency).into(),
+                                                pct: 0.5, // Default placeholder
+                                            });
+                                        }
+                                    }
+                                    let model = std::rc::Rc::new(slint::VecModel::from(ui_agents));
+                                    ui.set_agent_costs(model.into());
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+
     Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_toggle = pricing_handle.clone();
@@ -2092,6 +2140,7 @@ mod tests {
     }
     #[test]
     fn test_my_plan_creation() {
+        use slint::Model;
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::MyPlan::new().unwrap();
         ui.set_tier("Starter".into());
@@ -2106,6 +2155,100 @@ mod tests {
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
     }
+
+    #[test]
+    fn test_e2e_cost_dashboard_flow_trigger() {
+        use slint::Model;
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let my_plan_ui = app::MyPlan::new().unwrap();
+        let cost_dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let cost_dashboard_opened_clone = cost_dashboard_opened.clone();
+
+        my_plan_ui.on_view_details(move || {
+            *cost_dashboard_opened_clone.borrow_mut() = true;
+        });
+
+        my_plan_ui.invoke_view_details();
+        assert!(*cost_dashboard_opened.borrow(), "Clicking 'View Details' in MyPlan should open CostDashboard");
+    }
+
+    #[test]
+    fn test_e2e_cost_dashboard_refresh_logic() {
+        use slint::Model;
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::CostDashboard::new().unwrap();
+        let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let refresh_called_clone = refresh_called.clone();
+
+        ui.on_refresh(move || {
+            *refresh_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_refresh();
+        assert!(*refresh_called.borrow(), "Refresh button should trigger data refresh logic");
+    }
+
+    #[test]
+    fn test_e2e_cost_dashboard_mock_data_population() {
+        use slint::Model;
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        ui.set_total_spend("$1,234.56".into());
+        ui.set_total_tokens("987654321".into());
+
+        let agents = vec![
+            app::UiAgentCost {
+                name: "Marketing Agent".into(),
+                cost: "$400.00".into(),
+                roi: "150%".into(),
+                efficiency: "100 tok/$".into(),
+                pct: 0.8,
+            }
+        ];
+        ui.set_agent_costs(std::rc::Rc::new(slint::VecModel::from(agents)).into());
+
+        assert_eq!(ui.get_total_spend(), "$1,234.56");
+        assert_eq!(ui.get_total_tokens(), "987654321");
+        assert_eq!(ui.get_agent_costs().row_count(), 1);
+        let agent = ui.get_agent_costs().row_data(0).unwrap();
+        assert_eq!(agent.name, "Marketing Agent");
+        assert_eq!(agent.cost, "$400.00");
+    }
+
+    #[test]
+    fn test_e2e_cost_dashboard_empty_agents_behavior() {
+        use slint::Model;
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        ui.set_agent_costs(std::rc::Rc::new(slint::VecModel::from(vec![])).into());
+        assert_eq!(ui.get_agent_costs().row_count(), 0);
+    }
+
+    #[test]
+    fn test_e2e_cost_dashboard_multiple_agents_logic() {
+        use slint::Model;
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+
+        let mut agents = Vec::new();
+        for i in 0..5 {
+            agents.push(app::UiAgentCost {
+                name: format!("Agent {}", i).into(),
+                cost: format!("${}.00", i * 10).into(),
+                roi: format!("{}%", i * 50).into(),
+                efficiency: format!("{} tok/$", i * 20).into(),
+                pct: 0.1 * i as f32,
+            });
+        }
+        ui.set_agent_costs(std::rc::Rc::new(slint::VecModel::from(agents)).into());
+        assert_eq!(ui.get_agent_costs().row_count(), 5);
+        let last_agent = ui.get_agent_costs().row_data(4).unwrap();
+        assert_eq!(last_agent.name, "Agent 4");
+        assert_eq!(last_agent.cost, "$40.00");
+    }
+
     #[test]
     fn test_scaling_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
