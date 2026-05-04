@@ -33,6 +33,10 @@ export component Dashboard inherits Window {
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
 
+    in property <string> event_mesh_status: "Offline";
+    in property <int> nats_messages_published: 0;
+    in property <int> nats_messages_received: 0;
+
 
     in-out property <bool> show_milestone: false;
     in property <string> milestone_title: "";
@@ -149,6 +153,11 @@ export component Dashboard inherits Window {
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
+                    StatCard { label: "Event Mesh Status"; value: event_mesh_status; value_color: #22c55e; }
+                    StatCard { label: "Mesh Msg Throughput"; value: nats_messages_published + " / " + nats_messages_received; value_color: #3b82f6; }
+                }
+                HorizontalBox {
+                    spacing: 16px;
                     StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 }
@@ -162,6 +171,8 @@ export component Dashboard inherits Window {
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
+                StatCard { label: "Event Mesh Status"; value: event_mesh_status; value_color: #22c55e; }
+                StatCard { label: "Mesh Msg Throughput"; value: nats_messages_published + " / " + nats_messages_received; value_color: #3b82f6; }
                 StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
                 StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }

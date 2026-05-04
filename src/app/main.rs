@@ -177,6 +177,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 _ => "".into(),
                             }
                         });
+                        // Basic mock initialization for dashboard metrics
+                        dashboard.set_event_mesh_status("Connected".into());
+                        dashboard.set_nats_messages_published(0);
+                        dashboard.set_nats_messages_received(0);
+
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                     }

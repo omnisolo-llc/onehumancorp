@@ -120,3 +120,14 @@ fn create_verify_tasks_in_progress_count() {
     ui.set_tasks_in_progress_count(33);
     assert_eq!(ui.get_tasks_in_progress_count(), 33);
 }
+
+#[test]
+fn create_verify_event_mesh_status() {
+    let ui = create();
+    ui.set_event_mesh_status("Connected".into());
+    assert_eq!(ui.get_event_mesh_status(), "Connected");
+    ui.set_nats_messages_published(100);
+    assert_eq!(ui.get_nats_messages_published(), 100);
+    ui.set_nats_messages_received(200);
+    assert_eq!(ui.get_nats_messages_received(), 200);
+}
