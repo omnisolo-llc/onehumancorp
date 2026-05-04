@@ -5042,14 +5042,27 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
-    fn test_e2e_wizard_flow_step_4_template_selection() {
+    fn test_e2e_wizard_flow_step_5_admin_account() {
         crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(4);
+        ui.set_step(5);
+        ui.set_admin_name("John Doe".into());
+        ui.set_admin_email("john@example.com".into());
+        ui.set_admin_password("pass123".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_6_template_selection() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(6);
         ui.set_website_template("Dark Mode".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 5);
+        assert_eq!(ui.get_step(), 7);
     }
 
     #[test]
@@ -5065,28 +5078,69 @@ mod e2e_hybrid_blob_tests {
 
 
     #[test]
-    fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
+    fn test_e2e_wizard_flow_step_7_product_details_pricing_type() {
         crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
+        ui.set_step(7);
         ui.set_product_name("Custom Handyman Job".into());
         ui.set_price_type("request_quote".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 8);
         assert_eq!(ui.get_price_type(), "request_quote");
     }
 
     #[test]
-    fn test_e2e_wizard_flow_step_6_product_details() {
+    fn test_e2e_wizard_flow_step_7_product_details() {
         crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
+        ui.set_step(7);
         ui.set_product_name("Bread".into());
         ui.set_product_price("5.00".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 8);
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_8_domain_choice() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(8);
+        ui.invoke_select_domain("custom".into());
+        assert_eq!(ui.get_step(), 9);
+        assert_eq!(ui.get_domain_choice(), "custom");
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_9_review_launch() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(9);
+        ui.set_company_name("My Bakery".into());
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        ui.on_launch(move |_bt, cn, _cd, _pp, _ae, _wt, _pn, _pp2, _dc| {
+            assert_eq!(cn, "My Bakery");
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+        assert!(*launch_called.borrow(), "Launch callback should be triggered from step 9");
     }
 
     #[test]
