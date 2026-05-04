@@ -8,6 +8,9 @@ export component Login inherits Window {
     height: 600px;
     title: "OneHumanCorp - Login";
 
+    // Add a property to expose the card width constraint to unit tests
+    out property <length> login_card_width: min(root.width - 64px, 400px);
+
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
     in-out property <string> error_message: "";
@@ -25,10 +28,12 @@ export component Login inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
+    HorizontalLayout {
         alignment: center;
-        spacing: 20px;
-        padding: 32px;
+
+        VerticalLayout {
+            alignment: center;
+            width: root.login_card_width;
 
         GlassCard {
             VerticalBox {
@@ -119,6 +124,7 @@ export component Login inherits Window {
                     clicked => { open_settings(); }
                 }
             }
+        }
         }
     }
 }
