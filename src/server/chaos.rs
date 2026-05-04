@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 pub struct ChaosEngine {}
 
 impl ChaosEngine {
@@ -16,6 +14,8 @@ mod tests {
     use ohc_builtin_agent::legacy_mesh::DistributedLock;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
+    use std::time::Duration;
+
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
         let pool = PgPoolOptions::new()
