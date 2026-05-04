@@ -56,7 +56,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -95,7 +95,11 @@ impl StateManager for StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+
+        if tenant_id != "system" && tenant_id_db != "system" && tenant_id != tenant_id_db {
+            return Err(format!("Tenant isolation violation: Task {} belongs to {}, but transition requested by {}", task_id, tenant_id_db, tenant_id));
+        }
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -146,7 +150,7 @@ impl StateManager for StandaloneStateManager {
             "#
         )
         .bind(trans_id)
-        .bind(&tenant_id)
+        .bind(&tenant_id_db)
         .bind(task_id)
         .bind(from_state)
         .bind(to_state)

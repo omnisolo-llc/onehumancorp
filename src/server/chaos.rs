@@ -249,4 +249,65 @@ mod tests {
 
         assert_eq!(mission_status, "PENDING", "Missions should correctly persist as PENDING");
     }
+
+    #[tokio::test]
+    async fn test_tenant_isolation_cross_contamination() {
+        use crate::db::{DB, DbStore};
+        use crate::orchestration::state::standalone::StandaloneStateManager;
+        use crate::orchestration::state::StateManager;
+        use std::sync::Arc;
+
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect(&uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE swarm_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL DEFAULT 'system',
+                status TEXT NOT NULL,
+                dependencies TEXT NOT NULL DEFAULT '[]',
+                assigned_agent_id TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
+                agent_id TEXT,
+                reason TEXT,
+                occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, status) VALUES (?, 'tenant_a', 'PENDING')")
+            .bind(&task_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        let state_manager = StandaloneStateManager::new(db);
+
+        let result = state_manager.transition_state(
+            &task_id,
+            "tenant_b",
+            "PENDING",
+            "IN_PROGRESS",
+            None,
+            None
+        ).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("Tenant isolation violation"), "Unexpected error: {}", err_msg);
+    }
 }
