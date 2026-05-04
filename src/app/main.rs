@@ -660,6 +660,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     website_builder_ui.on_open_ohc_signup(|| {
+        open_url("https://onehumancorp.com/");
     });
 
     website_builder_ui.on_copy_to_clipboard(|_text| {
