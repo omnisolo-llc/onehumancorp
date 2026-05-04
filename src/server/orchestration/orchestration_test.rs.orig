@@ -7,10 +7,7 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
+    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
 
@@ -70,12 +67,12 @@ async fn test_task_decomposition_service() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until TIMESTAMP,
+                    locked_until DATETIME,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -87,7 +84,7 @@ async fn test_task_decomposition_service() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             )
@@ -98,7 +95,7 @@ async fn test_task_decomposition_service() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -158,10 +155,7 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
+    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
     match &db.store {
@@ -208,12 +202,12 @@ async fn test_task_decomposition_dag_blocked() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until TIMESTAMP,
+                    locked_until DATETIME,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -224,7 +218,7 @@ async fn test_task_decomposition_dag_blocked() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -286,10 +280,7 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
+    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
     match &db.store {
@@ -345,12 +336,12 @@ async fn test_task_decomposition_service_fail_task() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until TIMESTAMP,
+                    locked_until DATETIME,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -362,7 +353,7 @@ async fn test_task_decomposition_service_fail_task() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
@@ -370,7 +361,7 @@ async fn test_task_decomposition_service_fail_task() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
 
     let now = Utc::now();
     let main_task = SharedTask {
