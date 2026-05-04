@@ -1,3 +1,4 @@
+#[cfg(test)]
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;

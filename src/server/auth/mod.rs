@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
+#[cfg(test)]
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use tonic::{Request, Response, Status};
 
@@ -90,8 +91,9 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>, // key -> user_id
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
+    #[allow(dead_code)]
     secret: Vec<u8>,
-    oidc_cfg: RwLock<OIDCConfig>,
+    _oidc_cfg: RwLock<OIDCConfig>,
 }
 
 impl Store {
@@ -137,7 +139,7 @@ impl Store {
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
             secret,
-            oidc_cfg: RwLock::new(OIDCConfig {
+            _oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,
                 enabled,
