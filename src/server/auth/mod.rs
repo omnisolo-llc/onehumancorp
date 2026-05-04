@@ -421,6 +421,9 @@ impl Store {
                     if self.is_revoked(&data.claims.jti) {
                         return Err("token revoked".to_string());
                     }
+                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                        return Err("Invalid token claims".to_string());
+                    }
                     Ok(data.claims)
                 }
                 Err(_) => {
@@ -735,6 +738,49 @@ mod tests {
         let claims = s.validate_token(&token).await.unwrap();
         assert_eq!(claims.sub, u.id);
         assert_eq!(claims.username, "jwt-user");
+    }
+
+    #[tokio::test]
+    async fn test_jwt_empty_sub_jti() {
+        let s = Store::new();
+        let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
+        let token = s.issue_token(&u).unwrap();
+
+        let claims = s.validate_token(&token).await.unwrap();
+
+        // We need to manually construct an invalid token
+        let now = chrono::Utc::now();
+        let empty_sub_claims = Claims {
+            sub: "   ".to_string(),
+            username: u.username.clone(),
+            email: u.email.clone(),
+            roles: u.roles.clone(),
+            organization_id: u.organization_id.clone(),
+            session_id: None,
+            iat: now.timestamp(),
+            exp: (now + chrono::Duration::hours(24)).timestamp(),
+            jti: claims.jti.clone(),
+        };
+
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+        let empty_sub_token = jsonwebtoken::encode(&header, &empty_sub_claims, &jsonwebtoken::EncodingKey::from_secret(&s.secret)).unwrap();
+
+        assert!(s.validate_token(&empty_sub_token).await.is_err());
+
+        let empty_jti_claims = Claims {
+            sub: u.id.clone(),
+            username: u.username.clone(),
+            email: u.email.clone(),
+            roles: u.roles.clone(),
+            organization_id: u.organization_id.clone(),
+            session_id: None,
+            iat: now.timestamp(),
+            exp: (now + chrono::Duration::hours(24)).timestamp(),
+            jti: "   ".to_string(),
+        };
+        let empty_jti_token = jsonwebtoken::encode(&header, &empty_jti_claims, &jsonwebtoken::EncodingKey::from_secret(&s.secret)).unwrap();
+
+        assert!(s.validate_token(&empty_jti_token).await.is_err());
     }
 
     #[tokio::test]
