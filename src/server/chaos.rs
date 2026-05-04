@@ -1,4 +1,3 @@
-use std::time::Duration;
 
 pub struct ChaosEngine {}
 
@@ -10,6 +9,7 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
     use super::*;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
