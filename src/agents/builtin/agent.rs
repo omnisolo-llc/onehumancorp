@@ -17,6 +17,7 @@ pub enum AgentEvent {
     ToolCall { name: String, args_json: String, result: String, iteration: i32 },
     TaskComplete { content: String },
     TaskError { error: String },
+    UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
 }
@@ -639,7 +640,7 @@ impl Agent {
                     }
                     Err(ToolError::UserFixable(msg)) => {
                         let err = format!("User intervention required: {}", msg);
-                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
                     Err(ToolError::Fatal(msg)) => {
@@ -665,7 +666,7 @@ impl Agent {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("User intervention required: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
                         ToolError::Fatal(msg) => {
@@ -731,7 +732,7 @@ impl Agent {
                         }
                         Err(ToolError::UserFixable(msg)) => {
                             let err = format!("User intervention required: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::Fatal(msg)) => {
@@ -1694,7 +1695,7 @@ mod tests {
 
         let reqs = client_llm.requests.lock().await;
         let last_req = reqs.last().unwrap();
-        let last_msg = last_req.messages.last().unwrap();
+        let _last_msg = last_req.messages.last().unwrap();
         // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
@@ -1721,7 +1722,7 @@ mod tests {
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
-            if let AgentEvent::TaskError { error } = e {
+            if let AgentEvent::UserInterventionRequired { error } = e {
                 error.contains("User intervention required: please login to external service")
             } else {
                 false
