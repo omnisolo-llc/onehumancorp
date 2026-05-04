@@ -5,48 +5,42 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use sqlx::Row;
 use chrono::Utc;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 
-pub struct StandaloneStateManager {
-    db: Arc<DB>,
+struct StandaloneLockGuard {
+    transport: Arc<dyn MeshTransport>,
+    resource: String,
 }
 
-impl StandaloneStateManager {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
-    }
-}
-
-struct SqliteLockGuard<'a> {
-    pool: &'a sqlx::SqlitePool,
-    key: String,
-}
-
-impl<'a> SqliteLockGuard<'a> {
-    async fn acquire(pool: &'a sqlx::SqlitePool, key: String) -> Result<Self, String> {
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS local_advisory_locks (id TEXT PRIMARY KEY, locked_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-            .execute(pool)
-            .await;
-
-        let res = sqlx::query("INSERT INTO local_advisory_locks (id) VALUES (?)")
-            .bind(&key)
-            .execute(pool)
-            .await;
-
-        if res.is_ok() {
-            Ok(Self { pool, key })
+impl StandaloneLockGuard {
+    async fn acquire(transport: Arc<dyn MeshTransport>, resource: String) -> Result<Self, String> {
+        let acquired = transport.acquire_lock(&resource, "system", 30).await?;
+        if acquired {
+            Ok(Self { transport, resource })
         } else {
-            Err(format!("Task {} is currently locked via SQLite", key))
+            Err(format!("Task {} is currently locked via MeshTransport", resource))
         }
     }
 }
 
-impl<'a> Drop for SqliteLockGuard<'a> {
+impl Drop for StandaloneLockGuard {
     fn drop(&mut self) {
-        let key = self.key.clone();
-        let pool = self.pool.clone();
+        let transport = self.transport.clone();
+        let resource = self.resource.clone();
         tokio::spawn(async move {
-            let _ = sqlx::query("DELETE FROM local_advisory_locks WHERE id = ?").bind(key).execute(&pool).await;
+            let _ = transport.release_lock(&resource, "system").await;
         });
+    }
+}
+
+pub struct StandaloneStateManager {
+    db: Arc<DB>,
+    transport: Arc<dyn MeshTransport>,
+}
+
+impl StandaloneStateManager {
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
+        Self { db, transport }
     }
 }
 
@@ -67,7 +61,7 @@ impl StateManager for StandaloneStateManager {
         };
 
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
-        let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
+        let _lock_guard = StandaloneLockGuard::acquire(self.transport.clone(), lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -168,7 +162,7 @@ impl StateManager for StandaloneStateManager {
         };
 
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
+        let _lock_guard = StandaloneLockGuard::acquire(self.transport.clone(), lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
