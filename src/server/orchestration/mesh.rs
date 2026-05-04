@@ -245,6 +245,12 @@ mod tests {
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
+    if let Ok(nats_url) = std::env::var("NATS_URL") {
+        if let Ok(transport) = ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await {
+            return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+        }
+    }
+
     match db_store {
         crate::db::DbStore::Postgres => {
             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
