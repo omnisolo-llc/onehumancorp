@@ -7,7 +7,11 @@
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
 
 ## 2. Architecture & Components
-Establishes a centralized Vector Database (pgvector) that aggregates insights from all isolated LangGraph checkpointers. A continuous background process distills localized agent memories into globally accessible semantic embeddings, applying strict RBAC filters to ensure department silos are respected where necessary.
+Establishes a centralized Vector Database (pgvector for Cloud, sqlite-vec / Rust fallback for Standalone mode) that aggregates insights from all isolated LangGraph checkpointers. A continuous background process distills localized agent memories into globally accessible semantic embeddings.
+
+### Cloud vs. Standalone Modes
+- **Cloud Mode:** Utilizes PostgreSQL with `pgvector` for efficient, native semantic search using the `<=>` operator.
+- **Standalone Mode:** Uses SQLite with `sqlite-vec` if available. In pure Rust environments without C-extensions, a fallback Rust cosine distance calculator is used natively to process in-memory similarity metrics across limited bounds (e.g. `LIMIT 1000`).
 
 ## 3. Data Flow
 1. **Trigger:** The feature is invoked via Agent intent or a K8s event.
@@ -15,19 +19,12 @@ Establishes a centralized Vector Database (pgvector) that aggregates insights fr
 3. **Execution:** The action is securely completed with all operations logged immutably.
 4. **Result:** The system state is updated and the event is written to `events.jsonl`.
 
-## 4. API & Data Models
-```protobuf
-message SharedOrganizationalMemoryBankEvent {
-  string event_id = 1;
-  string agent_id = 2;
-  bytes payload = 3;
-}
-```
+## 4. Conflict Resolution & Pruning
+- **Conflict Resolution:** A background `MemoryConsolidationWorker` automatically detects redundant or conflicting memories via semantic similarity (< 0.05 distance limit). Conflicts are resolved based on `owner_override`, `reliability_score`, and finally `created_at` timestamp.
+- **Stale Context Pruning:** `TASK_SUMMARY` source types older than 180 days with a low reference count (< 5) and no `owner_override` are automatically pruned to prevent outdated context bleed.
 
-## 5. Implementation Details
-- Ensure strict JSON validation via `dec.DisallowUnknownFields()` when decoding related payloads.
-- Maintain minimal memory overhead by avoiding O(N) string manipulations in hot paths.
-- All K8s pods associated with this feature will enforce least privilege (e.g., `runAsNonRoot: true`, `readOnlyRootFilesystem: true`).
-- Implement bounded memory growth by explicitly deleting map entries upon successful execution.
+## 5. Cross-Department Sharing
+- Memories are strictly isolated via row-level security per `tenant_id`. However, within a given `tenant_id`, memories are NOT siloed by department or `agent_id`.
+- For example, context saved by Customer Success about a dissatisfied customer will seamlessly appear during semantic retrieval by the Business Advisory department.
 
 </div>
