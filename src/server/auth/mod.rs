@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+
 use tonic::{Request, Response, Status};
 
 pub mod postgres_store;
@@ -91,6 +91,7 @@ pub struct Store {
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
     secret: Vec<u8>,
+    #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
 }
 

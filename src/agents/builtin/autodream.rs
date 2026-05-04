@@ -5,7 +5,8 @@ use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+use ohc_builtin_agent::memory_store::EmbeddingRecord;
+
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -348,8 +349,9 @@ mod tests {
 #[cfg(test)]
 mod tests_conflict_logic {
     use super::*;
-    use ohc_builtin_agent::memory_store::EmbeddingRecord;
+
     use chrono::Utc;
+use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
     #[test]
     fn test_determine_conflict_winner() {
