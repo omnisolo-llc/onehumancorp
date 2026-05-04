@@ -37,6 +37,7 @@ message RunTaskRequest {
   float temperature = 7;
   // Maximum number of messages retained in the context window before trimming.
   int32 max_context_messages = 8;
+  string injected_context_json = 13;
   // Preferred configuration surface; when populated these values override
   // the process defaults and supersede the legacy fields above.
   AgentRuntimeConfig runtime_config = 9;
@@ -104,6 +105,7 @@ message SubAgentRequest {
   AgentRuntimeConfig runtime_config = 9;
   // Toolset configuration for the sub-agent.
   ToolsetConfig toolset_config = 10;
+  string parent_context_json = 12;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.
