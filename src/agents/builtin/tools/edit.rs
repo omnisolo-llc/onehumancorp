@@ -58,6 +58,9 @@ impl ToolExecutor for EditExecutor {
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                        // Revert the file since it has syntax errors
+                        let _ = fs::write(&actual_path, &content).await;
+
                         return Err(ToolError::LlmRecoverable(format!(
                             "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
 
@@ -203,6 +206,10 @@ mod tests {
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+
+            // Verify the file was reverted
+            let content = fs::read_to_string(&file_path).await.unwrap();
+            assert_eq!(content, "fn main() { println!(\"old\"); }");
         } else {
             panic!("Expected LlmRecoverable error");
         }

@@ -23,6 +23,13 @@ impl ToolExecutor for WriteExecutor {
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
 
+        let file_exists = actual_path.exists();
+        let original_content = if file_exists {
+            fs::read_to_string(&actual_path).await.unwrap_or_default()
+        } else {
+            String::new()
+        };
+
         // Create parent directories if needed.
         if let Some(parent) = actual_path.parent() {
             fs::create_dir_all(parent)
@@ -49,6 +56,13 @@ impl ToolExecutor for WriteExecutor {
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                        // Revert the file since it has syntax errors
+                        if file_exists {
+                            let _ = fs::write(&actual_path, original_content).await;
+                        } else {
+                            let _ = fs::remove_file(&actual_path).await;
+                        }
+
                         return Err(ToolError::LlmRecoverable(format!(
                             "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
 
@@ -147,6 +161,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
 
+        let path = dir.path().join("test.rs");
+        fs::write(&path, "fn main() {}").await.unwrap();
+
         let args = json!({
             "path": "test.rs",
             "content": "fn main() { let x = ; }"
@@ -157,6 +174,34 @@ mod tests {
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+
+            // Verify the file was reverted
+            let content = fs::read_to_string(&path).await.unwrap();
+            assert_eq!(content, "fn main() {}");
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_write_tool_rust_verification_failure_new_file() {
+        let dir = tempdir().unwrap();
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({
+            "path": "new_test.rs",
+            "content": "fn main() { let x = ; }"
+        });
+
+        // Should fail verification due to syntax error
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+
+            // Verify the newly created file was deleted
+            let path = dir.path().join("new_test.rs");
+            assert!(!path.exists());
         } else {
             panic!("Expected LlmRecoverable error");
         }
