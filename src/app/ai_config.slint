@@ -16,8 +16,13 @@ export component AiConfig inherits Window {
     background: #f8fafc;
 
     in property <[UiAiConfigProvider]> providers;
+    in-out property <bool> is_advanced: false;
+
     callback add_provider();
     callback edit_provider(string);
+    callback toggle_advanced();
+
+    toggle_advanced => { is_advanced = !is_advanced; }
 
     VerticalBox {
         spacing: 20px;
@@ -26,7 +31,26 @@ export component AiConfig inherits Window {
         HorizontalBox {
             Text { text: "AI Providers"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { 
+            HorizontalBox {
+                spacing: 8px;
+                alignment: end;
+                Text { text: "Advanced Mode"; color: #94a3b8; font-size: 14px; }
+                TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { toggle_advanced(); }
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 4px;
+                        border-color: #a855f7;
+                        border-width: 1px;
+                        background: is_advanced ? #a855f7 : transparent;
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+            if (is_advanced) : Button {
                 text: "Add Provider"; 
                 clicked => { add_provider(); }
             }
@@ -53,8 +77,8 @@ export component AiConfig inherits Window {
                             clicked => { edit_provider(p.id); }
                         }
                     }
-                    Text { text: p.base_url; color: #64748b; }
-                    HorizontalBox {
+                    if (is_advanced) : Text { text: p.base_url; color: #64748b; }
+                    if (is_advanced) : HorizontalBox {
                         spacing: 5px;
                         for model in p.models : Rectangle { 
                             background: #e2e8f0; 
