@@ -117,30 +117,5 @@ service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
   rpc PostMessage(PostMessageRequest) returns (PostMessageResponse);
   rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
-  rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
-  rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
 }
 
-// Onboarding State
-message OnboardingState {
-  string organization_id = 1;
-  string user_id = 2;
-  int32 current_step = 3;
-  string state_json = 4;
-}
-
-message GetOnboardingStateRequest {
-  string organization_id = 1;
-}
-
-message GetOnboardingStateResponse {
-  OnboardingState state = 1;
-}
-
-message UpdateOnboardingStateRequest {
-  OnboardingState state = 1;
-}
-
-message UpdateOnboardingStateResponse {
-  bool success = 1;
-}

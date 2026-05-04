@@ -12,6 +12,7 @@ exports_files([
     "model.proto",
     "organization.proto",
     "skills.proto",
+    "journey.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -147,6 +148,24 @@ proto_rust_library(
 )
 
 
+
+
+
+# ── Journey ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "journey_proto",
+    srcs = ["journey.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "journey",
+    proto = ":journey_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
 
 # ── App API ────────────────────────────────────────────────────────────────────
 

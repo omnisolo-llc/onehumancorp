@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package ohc.journey;
+
+import "src/proto/common.proto";
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/journey;journeypb";
+
+enum JourneyPhase {
+  NEW = 0;
+  ONBOARDING_STARTED = 1;
+  STORE_LIVE = 2;
+  FIRST_SALE = 3;
+  RETENTION_PHASE = 4;
+}
+
+message JourneyState {
+  string tenant_id = 1;
+  JourneyPhase phase = 2;
+  int64 updated_at_unix = 3;
+}
+
+message GetJourneyStateRequest {
+  string tenant_id = 1;
+}
+
+message GetJourneyStateResponse {
+  JourneyState state = 1;
+}
+
+message TransitionJourneyRequest {
+  string tenant_id = 1;
+  JourneyPhase target_phase = 2;
+}
+
+message TransitionJourneyResponse {
+  bool success = 1;
+  JourneyState new_state = 2;
+}
+
+service JourneyService {
+  rpc GetJourneyState(GetJourneyStateRequest) returns (GetJourneyStateResponse);
+  rpc TransitionJourney(TransitionJourneyRequest) returns (TransitionJourneyResponse);
+}

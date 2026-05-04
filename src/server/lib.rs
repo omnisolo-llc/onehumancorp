@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod services {
+    pub mod journey_service;
     pub mod wizard;
     pub mod billing {
         pub mod auditor;
@@ -116,6 +117,10 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 }
 
 pub mod ohc {
+    pub mod journey {
+        pub use journey_proto::ohc::journey::*;
+        pub use journey_proto::ohc::journey::journey_service_server::*;
+    }
     pub mod orchestration {
         pub use hub_proto::ohc::orchestration::*;
     }
@@ -1122,6 +1127,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(crate::ohc::journey::journey_service_server::JourneyServiceServer::with_interceptor(crate::services::journey_service::MyJourneyService::new(db.pool.clone(), hub.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
