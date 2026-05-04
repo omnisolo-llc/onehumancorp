@@ -177,6 +177,14 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
 
     // Assume an error message like 'Invalid email or password' appears
     await expect(page.locator('text="Invalid"')).toBeVisible();
+
+    // Get bounding box of the error message to verify it wraps and doesn't exceed screen width
+    const errorLocator = page.locator('text="Invalid"');
+    const box = await errorLocator.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      expect(box.width).toBeLessThanOrEqual(400); // login card max width
+    }
 });
 
 test('verify advanced options toggle', async ({ page }) => {
