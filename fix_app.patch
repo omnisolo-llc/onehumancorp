@@ -1,0 +1,45 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -1610,7 +1610,7 @@
+         let setup_wizard_weak = setup_wizard_handle.clone();
+         let async_rt = runtime_handle.clone();
+         setup_wizard_ui.on_finish_wizard(
+-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
++        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+
+             let config = serde_json::json!({
+                 "business_type": business_type.to_string(),
+                 "company_name": company_name.to_string(),
+                 "company_description": company_description.to_string(),
+                 "payment_pref": payment_pref.to_string(),
+                 "admin_email": admin_email.to_string(),
+-                "website_template": _website_template.to_string(),
+-                "product_name": _product_name.to_string(),
+-                "product_price": _product_price.to_string(),
+-                "domain_choice": _domain_choice.to_string(),
++                "website_template": website_template.to_string(),
++                "product_name": product_name.to_string(),
++                "product_price": product_price.to_string(),
++                "domain_choice": domain_choice.to_string(),
+             });
+
+             // Update the UI immediately
+             if let Some(ui) = setup_wizard_weak.upgrade() {
+                 ui.set_is_publishing(true);
+                 ui.set_status_message("Provisioning cloud resources...".into());
+
+                 // Update the main Dashboard UI with these values
+                 if let Some(dashboard) = dashboard_wizard_handle.upgrade() {
+                     dashboard.set_business_name(company_name.clone());
+                     dashboard.set_business_description(company_description.clone());
+
+-                    dashboard.set_website_template(_website_template.clone());
+-                    dashboard.set_product_name(_product_name.clone());
+-                    dashboard.set_product_price(_product_price.clone());
+-                    dashboard.set_domain_choice(_domain_choice.clone());
++                    dashboard.set_website_template(website_template.clone());
++                    dashboard.set_product_name(product_name.clone());
++                    dashboard.set_product_price(product_price.clone());
++                    dashboard.set_domain_choice(domain_choice.clone());
+                 }
+             }

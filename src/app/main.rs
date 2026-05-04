@@ -1122,6 +1122,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 let bs_handle_clone = business_share_handle.clone();
                 let ref_handle_clone_for_open = referrals_handle.clone();
+                let email_marketing_ui = app::EmailMarketing::new().unwrap();
+                let email_marketing_handle = email_marketing_ui.as_weak();
+                dashboard.on_action_open_email_marketing(move || {
+                    if let Some(ui) = email_marketing_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
                 dashboard.on_action_open_referrals(move || {
                     if let Some(ui) = ref_handle_clone_for_open.upgrade() {
                         ui.invoke_refresh();
@@ -1610,7 +1618,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -1938,6 +1946,14 @@ mod growth_e2e_tests {
 
         let referrals_ui = app::Referrals::new().unwrap();
         let referrals_handle = referrals_ui.as_weak();
+
+        let email_marketing_ui = app::EmailMarketing::new().unwrap();
+        let email_marketing_handle = email_marketing_ui.as_weak();
+        dashboard_ui.on_action_open_email_marketing(move || {
+            if let Some(ui) = email_marketing_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
 
         dashboard_ui.on_action_open_referrals(move || {
             *share_store_called_clone.borrow_mut() = true;
