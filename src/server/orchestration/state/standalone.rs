@@ -94,21 +94,26 @@ impl StateManager for StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
             let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
             if !dependencies.is_empty() {
-                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                let mut dep_ids = Vec::with_capacity(dependencies.len());
+                for dep in &dependencies {
+                    dep_ids.push(dep.clone());
+                }
+
+                let placeholders = dep_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
                 let query = format!(
                     "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
                     placeholders
                 );
 
                 let mut db_query = sqlx::query_scalar::<_, i32>(&query);
-                for dep in &dependencies {
+                for dep in &dep_ids {
                     db_query = db_query.bind(dep);
                 }
 
@@ -117,8 +122,8 @@ impl StateManager for StandaloneStateManager {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                if completed_count as usize != dependencies.len() {
-                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dependencies.len()));
+                if completed_count as usize != dep_ids.len() {
+                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dep_ids.len()));
                 }
             }
         }
@@ -145,7 +150,7 @@ impl StateManager for StandaloneStateManager {
             "#
         )
         .bind(trans_id)
-        .bind(&tenant_id)
+        .bind(&tenant_id_db)
         .bind(task_id)
         .bind(from_state)
         .bind(to_state)

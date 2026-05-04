@@ -104,7 +104,6 @@ impl CloudStateManager {
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 
             if !dependencies.is_empty() {
-                // Parse UUIDs carefully, return an error if a dependency id is invalid
                 let mut dep_uuids = Vec::with_capacity(dependencies.len());
                 for dep in &dependencies {
                     let parsed = uuid::Uuid::parse_str(dep).map_err(|_| format!("Invalid dependency UUID: {}", dep))?;

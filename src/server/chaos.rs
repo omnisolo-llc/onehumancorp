@@ -15,6 +15,57 @@ mod tests {
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
+    async fn test_ml_resilience_60s_timeout() {
+        use std::sync::Arc;
+        use crate::db::DB;
+        use crate::orchestration::tasks::TaskDecompositionService;
+        use crate::orchestration::mesh::TeammateMesh;
+        use crate::tasks::SharedTask;
+
+        // Mock mesh that hangs
+        struct HangingMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for HangingMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+                tokio::time::sleep(Duration::from_secs(120)).await;
+                Ok(())
+            }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Vec<u8>) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+                Ok(Box::new(|| {}))
+            }
+        }
+
+        let db = Arc::new(DB::new().await.unwrap());
+        let service = TaskDecompositionService::new(db, Arc::new(HangingMesh));
+
+        let res = service.claim_task("test_agent").await;
+        assert!(res.is_err(), "claim_task should timeout when mesh/db is hanging");
+        let err = res.err().unwrap();
+        assert!(err.contains("timed out"), "Error should mention timeout, got: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_ml_resilience_retry_logic() {
+        use crate::db::DB;
+        let db = DB::new().await.unwrap();
+
+        let mut attempts = 0;
+        let res: Result<(), String> = db.execute_with_retry("test_retry", || {
+            attempts += 1;
+            let fut = async {
+                if attempts <= 3 {
+                    return Err("database is locked".to_string());
+                }
+                Ok(())
+            };
+            Box::pin(fut)
+        }).await;
+
+        assert!(res.is_ok(), "Should eventually succeed after retries");
+        assert_eq!(attempts, 4, "Should have attempted 4 times (1 initial + 3 retries)");
+    }
+
+    #[tokio::test]
     async fn test_sipdb_chaos_parity() {
         let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))

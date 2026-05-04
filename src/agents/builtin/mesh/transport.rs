@@ -16,6 +16,8 @@ pub trait MeshTransport: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String>;
 }
 
 pub struct MemoryTransport {
@@ -120,6 +122,10 @@ impl MeshTransport for MemoryTransport {
 
         Ok(agents)
     }
+
+    async fn ack(&self, _topic: &str, _message_id: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 
@@ -147,6 +153,15 @@ impl IpcTransport {
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
+            "CREATE TABLE IF NOT EXISTS processed_messages (
+                topic TEXT NOT NULL,
+                message_id TEXT NOT NULL,
+                processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (topic, message_id)
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
@@ -162,6 +177,13 @@ impl IpcTransport {
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
         let subs = DashMap::new();
 
         Ok(IpcTransport { pool, subs })
@@ -172,11 +194,24 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let mut last_id = 0;
+        let mut last_id: i64 = sqlx::query_scalar("SELECT value FROM mesh_metadata WHERE key = 'last_id'")
+            .fetch_one(&pool)
+            .await
+            .unwrap_or_else(|_| "0".to_string())
+            .parse()
+            .unwrap_or(0);
+
         loop {
-            // Poll for new messages
+            // Poll for new messages using LEFT JOIN on processed_messages would require parsing payload in SQL
+            // instead we stick to efficient last_id cursor and filter in-memory with a small batch
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+                r#"
+                SELECT m.id, m.topic, m.payload
+                FROM mesh_messages m
+                WHERE m.id > ?
+                ORDER BY m.id ASC
+                LIMIT 100
+                "#
             )
             .bind(last_id)
             .fetch_all(&pool)
@@ -185,16 +220,39 @@ impl IpcTransport {
             if let Ok(rows) = rows {
                 for (id, topic, payload) in rows {
                     last_id = id;
-                    if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
-                            let _ = tx.send(message);
+                    if let Ok(message) = Message::decode(&payload[..]) {
+                        // Efficient deduplication check
+                        let processed: i64 = sqlx::query_scalar(
+                            "SELECT count(*) FROM processed_messages WHERE topic = ? AND message_id = ?"
+                        )
+                        .bind(&topic)
+                        .bind(&message.event_id)
+                        .fetch_one(&pool)
+                        .await
+                        .unwrap_or(0);
+
+                        if processed == 0 {
+                            if let Some(tx) = subs.get(&topic) {
+                                let _ = tx.send(message);
+                            }
                         }
                     }
                 }
+
+                // Persist cursor
+                let _ = sqlx::query("INSERT INTO mesh_metadata (key, value) VALUES ('last_id', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+                    .bind(last_id.to_string())
+                    .execute(&pool)
+                    .await;
             }
 
             // Cleanup old messages (keep last 1 hour)
             let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
+                .execute(&pool)
+                .await;
+
+            // Cleanup processed messages (keep last 24 hours)
+            let _ = sqlx::query("DELETE FROM processed_messages WHERE processed_at < datetime('now', '-24 hours')")
                 .execute(&pool)
                 .await;
 
@@ -308,6 +366,19 @@ impl MeshTransport for IpcTransport {
             Err(e) => Err(e.to_string()),
         }
     }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        sqlx::query(
+            "INSERT INTO processed_messages (topic, message_id) VALUES (?, ?)
+             ON CONFLICT(topic, message_id) DO NOTHING"
+        )
+        .bind(topic)
+        .bind(message_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 pub struct RedisTransport {
@@ -346,15 +417,25 @@ impl MeshTransport for RedisTransport {
         use prost::Message as ProstMessage;
         use futures_util::StreamExt;
 
-        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        let client = self.client.clone();
+        let mut pubsub = client.get_async_pubsub().await.map_err(|e| e.to_string())?;
 
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
+        let topic_str = topic.to_string();
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     if let Ok(message) = Message::decode(&buf[..]) {
+                        // Distributed deduplication check
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let key = format!("mesh:ack:{}:{}", topic_str, message.event_id);
+                            let exists: redis::RedisResult<bool> = conn.exists(&key).await;
+                            if let Ok(true) = exists {
+                                continue;
+                            }
+                        }
                         handler(message);
                     }
                 }
@@ -430,6 +511,20 @@ impl MeshTransport for RedisTransport {
             }
         }
         Ok(active)
+    }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let key = format!("mesh:ack:{}:{}", topic, message_id);
+        let _: () = redis::cmd("SET")
+            .arg(&key)
+            .arg("1")
+            .arg("EX")
+            .arg(86400) // 24h
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 }
 

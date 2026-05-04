@@ -91,6 +91,18 @@ impl TaskDecompositionService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
+        let res = tokio::time::timeout(
+            std::time::Duration::from_secs(60),
+            self.claim_task_inner(agent_id)
+        ).await;
+
+        match res {
+            Ok(inner_res) => inner_res,
+            Err(_) => Err("claim_task timed out after 60 seconds".to_string()),
+        }
+    }
+
+    async fn claim_task_inner(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -98,15 +110,15 @@ impl TaskDecompositionService {
 
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
-                    r#"
-                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
-                    WHERE st.status = 'PENDING'
-                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
-                    LIMIT 1
-                    FOR UPDATE SKIP LOCKED
-                    "#
-                )
-                .fetch_optional(&mut *tx)
+                        r#"
+                        SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                        WHERE st.status = 'PENDING'
+                        AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                        "#
+                    )
+                    .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
@@ -194,19 +206,19 @@ impl TaskDecompositionService {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
-                    r#"
-                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
-                    WHERE st.status = 'PENDING'
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM json_each(st.dependencies) AS dep_id
-                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                        WHERE parent.status != 'COMPLETED'
+                        r#"
+                        SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                        WHERE st.status = 'PENDING'
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM json_each(st.dependencies) AS dep_id
+                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                            WHERE parent.status != 'COMPLETED'
+                        )
+                        LIMIT 1
+                        "#
                     )
-                    LIMIT 1
-                    "#
-                )
-                .fetch_optional(&mut *tx)
+                    .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 

@@ -3,31 +3,31 @@ use sqlx::{PgPool, query};
 use chrono::Utc;
 
 pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "autodream_records_synced_total", "counter", count, serde_json::json!({})).await
+    buffer_metric(pool, "ohc_autodream_records_synced_total", "counter", count, serde_json::json!({})).await
 }
 
 pub async fn record_autodream_sync_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
+    buffer_metric(pool, "ohc_autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
 }
 
 pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_escalation_total", "counter", count, serde_json::json!({ "mode": mode })).await
+    buffer_metric(pool, "ohc_sync_escalation_total", "counter", count, serde_json::json!({ "mode": mode })).await
 }
 
 pub async fn record_sync_daemon_batch_size(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_daemon_batch_size", "gauge", count, serde_json::json!({ "mode": mode })).await
+    buffer_metric(pool, "ohc_sync_daemon_batch_size", "gauge", count, serde_json::json!({ "mode": mode })).await
 }
 
 pub async fn record_sync_latency(pool: &PgPool, latency_ms: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_latency_ms", "histogram", latency_ms, serde_json::json!({ "mode": mode })).await
+    buffer_metric(pool, "ohc_sync_latency_ms", "histogram", latency_ms, serde_json::json!({ "mode": mode })).await
 }
 
 pub async fn record_sync_payload_size(pool: &PgPool, size_bytes: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_payload_size_bytes", "histogram", size_bytes, serde_json::json!({ "mode": mode })).await
+    buffer_metric(pool, "ohc_sync_payload_size_bytes", "histogram", size_bytes, serde_json::json!({ "mode": mode })).await
 }
 
 pub async fn record_sync_daemon_error_total(pool: &PgPool, count: f32, mode: &str, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_daemon_error_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
+    buffer_metric(pool, "ohc_sync_daemon_error_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
 }
 
 

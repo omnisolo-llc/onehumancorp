@@ -736,12 +736,15 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
+                                    let event_id = uuid::Uuid::new_v4().to_string();
                                     let _ = transport.publish("agent_events", crate::mesh::transport::Message {
                                         agent_id: "agent".to_string(),
                                         action: "agent_events".to_string(),
                                         status: "ok".to_string(),
                                         payload: buf,
+                                        event_id: event_id.clone(),
                                     }).await;
+                                    let _ = transport.ack("agent_jobs", &msg.event_id).await;
                                 }
                             }
                         }
