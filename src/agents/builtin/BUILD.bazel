@@ -46,6 +46,7 @@ rust_library(
         "guardrails.rs",
         "harness.rs",
         "legacy_mesh.rs",
+        "langgraph.rs",
         "lib.rs",
         "memory_store.rs",
         "mesh/mod.rs",
@@ -171,3 +172,4 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+# Adding langgraph to srcs

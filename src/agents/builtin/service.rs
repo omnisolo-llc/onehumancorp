@@ -334,6 +334,7 @@ impl AgentServiceImpl {
             thread_id: None,
             resume_from_checkpoint_id: None,
             injected_context: None,
+            enable_langgraph_mechanic: false,
         }
     }
 
@@ -561,6 +562,7 @@ impl AgentService for AgentServiceImpl {
                 thread_id: None,
                 resume_from_checkpoint_id: None,
                 injected_context,
+                enable_langgraph_mechanic: false,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
