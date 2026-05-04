@@ -24,9 +24,11 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[allow(dead_code)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
+        let _url = url;
         // Removed web_sys since it breaks the build, avoiding E0433
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -1610,7 +1612,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),

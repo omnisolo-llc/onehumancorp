@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
 #[cfg(test)]
+#[allow(unused_imports)]
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use tonic::{Request, Response, Status};
 

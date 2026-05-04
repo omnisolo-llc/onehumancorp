@@ -2,10 +2,12 @@
 pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
+#[allow(unused_imports)]
 use tracing::{info, debug, error};
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
+#[allow(unused_imports)]
 use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 
 use opentelemetry::global;
@@ -13,6 +15,7 @@ use opentelemetry::metrics::Counter;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
+    #[allow(dead_code)]
     embedded_counter: Counter<u64>,
 }
 
@@ -456,6 +459,7 @@ impl AutoDreamWorker {
 mod tests {
     use super::*;
     use std::sync::Arc;
+#[allow(unused_imports)]
 use tracing::{info, debug, error};
     use tokio::test;
     use crate::db::DB;
