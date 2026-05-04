@@ -452,7 +452,81 @@ impl MeshTransport for RedisTransport {
     }
 }
 
+pub struct NatsTransport {
+    client: async_nats::Client,
+    memory_fallback: Arc<MemoryTransport>,
+}
+
+impl NatsTransport {
+    pub async fn new(url: &str) -> Result<Self, String> {
+        let client = async_nats::connect(url).await.map_err(|e| e.to_string())?;
+        Ok(Self {
+            client,
+            memory_fallback: Arc::new(MemoryTransport::new()),
+        })
+    }
+}
+
+#[async_trait]
+impl MeshTransport for NatsTransport {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
+        self.client.publish(topic.to_string(), buf.into()).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        use prost::Message as ProstMessage;
+        use futures::StreamExt;
+
+        let mut subscriber = self.client.subscribe(topic.to_string()).await.map_err(|e| e.to_string())?;
+
+        let worker = tokio::spawn(async move {
+            while let Some(msg) = subscriber.next().await {
+                if let Ok(decoded) = Message::decode(&msg.payload[..]) {
+                    handler(decoded);
+                }
+            }
+        });
+
+        Ok(Box::new(move || {
+            worker.abort();
+        }))
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.memory_fallback.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.memory_fallback.release_lock(resource, owner).await
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.memory_fallback.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.memory_fallback.get_active_agents().await
+    }
+}
+
+
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
+    if let Ok(nats_url) = std::env::var("NATS_URL") {
+        match NatsTransport::new(&nats_url).await {
+            Ok(t) => {
+                println!("Initialized NatsTransport");
+                return Ok(Arc::new(t));
+            },
+            Err(e) => {
+                println!("Failed to initialize NatsTransport: {}. Falling back to default transport.", e);
+            }
+        }
+    }
+
     if is_cloud {
         if let Some(url) = redis_url {
             match RedisTransport::new(url).await {

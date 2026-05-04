@@ -1091,6 +1091,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+
+        // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
+        let heartbeat_transport = builtin_transport.clone();
+        let heartbeat_agent_id = agent_id.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+            loop {
+                interval.tick().await;
+                if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "online", 60).await {
+                    eprintln!("Failed to register builtin agent presence: {}", e);
+                }
+            }
+        });
+
         let cfg = ohc_builtin_agent::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
