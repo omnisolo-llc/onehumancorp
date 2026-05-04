@@ -67,7 +67,7 @@ impl StateManager for StandaloneStateManager {
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
         };
 
-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let lock_key = format!("ohc:lock:{}:task:{}", _tenant_id, task_id);
         let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
@@ -95,7 +95,7 @@ impl StateManager for StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let _tenant_id_from_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -146,7 +146,7 @@ impl StateManager for StandaloneStateManager {
             "#
         )
         .bind(trans_id)
-        .bind(&tenant_id)
+        .bind(&_tenant_id_from_db)
         .bind(task_id)
         .bind(from_state)
         .bind(to_state)
