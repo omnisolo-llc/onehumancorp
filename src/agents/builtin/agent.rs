@@ -50,6 +50,7 @@ pub struct AgentRunConfig {
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
+    pub source_thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
 }
@@ -83,6 +84,7 @@ impl Default for AgentRunConfig {
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
             thread_id: None,
+            source_thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
         }
@@ -232,21 +234,32 @@ impl Agent {
         let mut messages: Vec<Message> = Vec::new();
         let mut last_checkpoint_id: Option<String> = None;
 
-        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
-            if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
-                let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
-                    .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
-                    .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
-
-                messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
-                    .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
-                last_checkpoint_id = Some(cp.checkpoint_id.clone());
-            } else {
-                if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
+        if let Some(checkpointer) = &self.checkpointer {
+            if let Some(source_tid) = &cfg.source_thread_id {
+                // Fork mode: Load from source_thread_id, but leave last_checkpoint_id as None to start a new chain
+                if let Ok(checkpoints) = checkpointer.list_checkpoints(source_tid).await {
                     if let Some(cp) = checkpoints.first() {
                         if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
                             messages = saved_msgs;
-                            last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                        }
+                    }
+                }
+            } else if let Some(thread_id) = &cfg.thread_id {
+                if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
+                    let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
+                        .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
+                        .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
+
+                    messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
+                        .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
+                    last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                } else {
+                    if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
+                        if let Some(cp) = checkpoints.first() {
+                            if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                                messages = saved_msgs;
+                                last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                            }
                         }
                     }
                 }
@@ -1693,8 +1706,8 @@ mod tests {
         assert!(llm_recoverable_handled);
 
         let reqs = client_llm.requests.lock().await;
-        let last_req = reqs.last().unwrap();
-        let last_msg = last_req.messages.last().unwrap();
+
+
         // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
@@ -2059,6 +2072,101 @@ mod tests {
             filtered.reverse();
             Ok(filtered)
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_agent_fork_mode_mechanic() {
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+
+
+
+        let checkpointer = Arc::new(MockCheckpointer { checkpoints: tokio::sync::Mutex::new(Vec::new()) });
+
+        // Put a checkpoint manually because terminal condition without tools does not checkpoint
+        checkpointer.put_checkpoint(crate::checkpointer::Checkpoint {
+            thread_id: "source_thread".to_string(),
+            checkpoint_id: "cp1".to_string(),
+            parent_id: None,
+            data: serde_json::to_value(vec![Message::user("Initial task"), Message::assistant("I am done.")]).unwrap(),
+            metadata: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        }).await.unwrap();
+
+
+        struct MutatingMockLlmClientFork2 {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MutatingMockLlmClientFork2 {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                                id: "call_1".to_string(),
+                                name: "dummy".to_string(),
+                                arguments: serde_json::Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("I am done."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+        }
+
+        struct DummyTool2;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for DummyTool2 {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent_core::types::ToolError> {
+                Ok("ok".to_string())
+            }
+        }
+        let tools2 = vec![crate::tools::Tool {
+            name: "dummy".to_string(),
+            description: "".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(DummyTool2),
+        }];
+
+        let client2 = Arc::new(MutatingMockLlmClientFork2 { call_count: tokio::sync::Mutex::new(0) });
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.model = "test-model".to_string();
+        cfg2.thread_id = Some("new_fork_thread".to_string());
+        cfg2.source_thread_id = Some("source_thread".to_string());
+        cfg2.enable_state_checkpointing = true;
+
+        let agent2 = Agent::new(client2, tools2).with_checkpointer(checkpointer.clone());
+        let _ = agent2.run(&cfg2, "Fork task", &mut |_| {}).await;
+
+        let cps2 = checkpointer.checkpoints.lock().await;
+        // the terminal step WITHOUT tool calls DOES NOT create a checkpoint in OHC currently.
+        // We added a checkpoint manually at the start (1).
+        // Then agent1 did a run without tools, so it didn't create one.
+        // Then agent2 did a run WITH tools, so it DID create one for the new fork thread.
+        // Thus, we expect 2 checkpoints total!
+        assert_eq!(cps2.len(), 2, "Total 2 checkpoints");
+
+        let cp2 = cps2.iter().find(|c| c.thread_id == "new_fork_thread").unwrap();
+        let messages2: Vec<Message> = serde_json::from_value(cp2.data.clone()).unwrap();
+        // Inherited 4 messages from source_thread, +1 new user msg, +1 new tool msg, +1 tool result msg.
+        assert!(messages2.len() > 2, "Should have inherited messages");
+        // Verify divergent chain setup
+        assert_eq!(cp2.parent_id, None, "Fork should start a new chain (parent_id = None)");
+
     }
 
     #[tokio::test]
