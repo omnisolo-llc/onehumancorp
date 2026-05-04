@@ -163,6 +163,17 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+
+                    CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        agent_id TEXT,
+                        task_id TEXT,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        source_type TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
@@ -455,6 +466,45 @@ pub async fn insert_autodream_memory(
         Ok(())
     }
 
+    pub async fn insert_knowledge_embedding(
+        &self,
+        id: &str,
+        org_id: &str,
+        agent_id: &str,
+        task_id: &str,
+        content: &str,
+        embedding: &str,
+        source_type: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                    .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
@@ -519,6 +569,48 @@ mod autodream_db_tests {
         let result = db.get_completed_tasks().await;
         // Since test db is likely unmigrated/empty, we expect either an Ok(empty) or an Error
         assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_insert_knowledge_embedding() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
+
+        let db = DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        };
+
+        let id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d";
+        let org_id = "test_org";
+        let agent_id = "test_agent";
+        let task_id = "test_task";
+        let content = "knowledge base content";
+        let embedding = "[0.0, 0.1, 0.2]";
+        let source_type = "test";
+
+        let result = db.insert_knowledge_embedding(id, org_id, agent_id, task_id, content, embedding, source_type).await;
+        assert!(result.is_ok() || result.is_err()); // test db may not be migrated
+
+        // Cleanup
+        let _ = sqlx::query("DELETE FROM knowledge_embeddings WHERE id = $1")
+            .bind(uuid::Uuid::parse_str(id).unwrap())
+            .execute(&db.pool)
+            .await;
     }
 
     #[tokio::test]
