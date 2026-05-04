@@ -117,16 +117,54 @@ impl AgentProgress {
     }
 }
 
+pub(crate) fn gather_agents_md(start_path: Option<&str>) -> String {
+    let mut contents = Vec::new();
+    let start_dir = match start_path {
+        Some(p) => std::path::PathBuf::from(p),
+        None => match std::env::current_dir() {
+            Ok(d) => d,
+            Err(_) => return String::new(),
+        },
+    };
+
+    let mut current_dir = Some(start_dir.as_path());
+    while let Some(dir) = current_dir {
+        let agents_md_path = dir.join("AGENTS.md");
+        if agents_md_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&agents_md_path) {
+                contents.push(content);
+            }
+        }
+
+        // Stop if we reach a git root to bound the traversal
+        if dir.join(".git").exists() {
+            break;
+        }
+
+        current_dir = dir.parent();
+    }
+
+    // Reverse so that the root (highest level) comes first, and the most specific comes last.
+    contents.reverse();
+    contents.join("\n\n")
+}
+
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
+    let mut combined_user_instructions = gather_agents_md(cfg.workspace_path.as_deref());
+    if !combined_user_instructions.is_empty() && !cfg.user_instructions.is_empty() {
+        combined_user_instructions.push_str("\n\n");
+    }
+    combined_user_instructions.push_str(&cfg.user_instructions);
+
     let mut end_idx = 32768;
-    if cfg.user_instructions.len() > 32768 {
-        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+    if combined_user_instructions.len() > 32768 {
+        while end_idx > 0 && !combined_user_instructions.is_char_boundary(end_idx) {
             end_idx -= 1;
         }
     } else {
-        end_idx = cfg.user_instructions.len();
+        end_idx = combined_user_instructions.len();
     }
-    let user_instr = &cfg.user_instructions[..end_idx];
+    let user_instr = &combined_user_instructions[..end_idx];
 
     let mut combined_system = String::new();
     if !cfg.server_system_message.is_empty() {
@@ -2466,5 +2504,33 @@ mod tests {
             }
         }
         assert!(found_task_error);
+    }
+
+    #[test]
+    fn test_cascading_agents_md() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let root = temp_dir.path();
+
+        // Setup hierarchy: root/dir1/dir2
+        let dir1 = root.join("dir1");
+        let dir2 = dir1.join("dir2");
+        std::fs::create_dir_all(&dir2).unwrap();
+
+        // Write AGENTS.md in root and dir2
+        std::fs::write(root.join("AGENTS.md"), "Root Agents Context").unwrap();
+        std::fs::write(dir2.join("AGENTS.md"), "Dir2 Agents Context").unwrap();
+
+        // Write a .git directory in root to bound traversal
+        std::fs::create_dir(root.join(".git")).unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.workspace_path = Some(dir2.to_string_lossy().into_owned());
+        cfg.user_instructions = "Original User Instructions".to_string();
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+
+        // It should contain the root first, then dir2, then the original instructions.
+        let expected_user_section = "[User Instructions]\nRoot Agents Context\n\nDir2 Agents Context\n\nOriginal User Instructions";
+        assert!(prompt.contains(expected_user_section), "Prompt was: {}", prompt);
     }
 }
