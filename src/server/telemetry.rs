@@ -30,6 +30,9 @@ pub async fn record_sync_daemon_error_total(pool: &PgPool, count: f32, mode: &st
     buffer_metric(pool, "sync_daemon_error_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
 }
 
+pub async fn record_local_cloud_mission_sync(pool: &PgPool, sync_queue: i64, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "local_cloud_mission_sync_queue", "gauge", sync_queue as f32, serde_json::json!({ "mode": mode })).await
+}
 
 pub async fn record_sqlite_lock_contention(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await

@@ -136,6 +136,24 @@ use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ohc::orchestration::*;
 
+#[derive(Clone)]
+pub struct AppState {
+    pub mesh_transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
+    pub hub: Arc<crate::hub::Hub>,
+}
+
+impl axum::extract::FromRef<AppState> for Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> {
+    fn from_ref(app_state: &AppState) -> Self {
+        app_state.mesh_transport.clone()
+    }
+}
+
+impl axum::extract::FromRef<AppState> for Arc<crate::hub::Hub> {
+    fn from_ref(app_state: &AppState) -> Self {
+        app_state.hub.clone()
+    }
+}
+
 pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
@@ -1029,10 +1047,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let app_state = AppState {
+        mesh_transport: mesh_transport.clone(),
+        hub: hub.clone(),
+    };
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+        .route("/api/health/hybrid", axum::routing::get(api::health::hybrid_health_probe))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .with_state(mesh_transport);
+        .with_state(app_state);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
