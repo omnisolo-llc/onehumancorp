@@ -10,15 +10,15 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
     limits:
-      cpu: "1500m"
-      memory: "2Gi"
+      cpu: "2000m"
+      memory: "4Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -28,7 +28,7 @@ backend:
     enabled: true
     requests:
       cpu: "2"
-      memory: "2Gi"
+      memory: "4Gi"
       ephemeralStorage: "10Gi"
     limits:
       cpu: "4"
@@ -52,8 +52,8 @@ ohcCore:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
@@ -95,11 +95,11 @@ chatwoot:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
     limits:
       cpu: "1000m"
       memory: "1Gi"
@@ -136,14 +136,14 @@ powersync:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
-      memory: "256Mi"
+      memory: "512Mi"
     limits:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
 
 # Kube-Prometheus-Stack for Cloud Observability
 kube-prometheus-stack:
@@ -165,4 +165,4 @@ pushgateway:
       memory: "64Mi"
     limits:
       cpu: "200m"
-      memory: "256Mi"
+      memory: "512Mi"
