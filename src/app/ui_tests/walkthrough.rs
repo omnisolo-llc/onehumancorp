@@ -21,6 +21,29 @@ fn create() -> app::InteractiveWalkthrough { crate::ui_tests::init(); app::Inter
 
 // --- Unique Scenarios with Verification ---
 
+
+#[test] fn walkthrough_edge_case_negative_step() {
+    let ui = create();
+    ui.set_current_step(-1);
+    assert_eq!(ui.get_current_step(), -1);
+}
+
+#[test] fn walkthrough_edge_case_large_step() {
+    let ui = create();
+    ui.set_current_step(1000);
+    assert_eq!(ui.get_current_step(), 1000);
+}
+
+
+#[test] fn walkthrough_edge_case_jump_step() {
+    let ui = create();
+    ui.set_current_step(1);
+    assert_eq!(ui.get_current_step(), 1);
+    ui.set_current_step(3);
+    assert_eq!(ui.get_current_step(), 3);
+}
+
+
 // --- Consolidated Verified Tests ---
 
 #[test]

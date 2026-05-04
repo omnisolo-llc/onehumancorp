@@ -28,6 +28,32 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
 
 // --- Unique Scenarios with Verification ---
 
+#[test] fn docs_edge_case_empty_strings() {
+    let ui = create();
+
+    // Set empty strings
+    ui.set_api_key("".into());
+    ui.set_endpoint_url("".into());
+
+    // Assert they are empty
+    assert_eq!(ui.get_api_key(), "");
+    assert_eq!(ui.get_endpoint_url(), "");
+}
+
+
+
+#[test] fn docs_edge_case_special_chars_api_key() {
+    let ui = create();
+    ui.set_api_key("sk_live_!@#$".into());
+    assert_eq!(ui.get_api_key(), "sk_live_!@#$");
+}
+
+#[test] fn docs_edge_case_invalid_url_format() {
+    let ui = create();
+    ui.set_endpoint_url("not a url".into());
+    assert_eq!(ui.get_endpoint_url(), "not a url");
+}
+
 // --- Consolidated Verified Tests ---
 
 #[test]

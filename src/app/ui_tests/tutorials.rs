@@ -30,6 +30,19 @@ fn create() -> app::VideoTutorials { crate::ui_tests::init(); app::VideoTutorial
 
 // --- Unique Scenarios with Verification ---
 
+
+#[test] fn tutorials_edge_case_empty_title() {
+    let ui = create();
+    ui.set_selected_video_title("".into());
+    assert_eq!(ui.get_selected_video_title(), "");
+}
+
+#[test] fn tutorials_edge_case_special_chars_title() {
+    let ui = create();
+    ui.set_selected_video_title("How-to & Tips: Setup!".into());
+    assert_eq!(ui.get_selected_video_title(), "How-to & Tips: Setup!");
+}
+
 // --- Consolidated Verified Tests ---
 
 #[test]

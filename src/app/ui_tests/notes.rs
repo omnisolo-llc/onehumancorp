@@ -27,6 +27,19 @@ fn create() -> app::ReleaseNotes { crate::ui_tests::init(); app::ReleaseNotes::n
 
 // --- Unique Scenarios with Verification ---
 
+
+#[test] fn notes_edge_case_empty_version() {
+    let ui = create();
+    ui.set_current_version("".into());
+    assert_eq!(ui.get_current_version(), "");
+}
+
+#[test] fn notes_edge_case_special_chars_version() {
+    let ui = create();
+    ui.set_current_version("v1.0.0-rc.1+build.123".into());
+    assert_eq!(ui.get_current_version(), "v1.0.0-rc.1+build.123");
+}
+
 // --- Consolidated Verified Tests ---
 
 #[test]
