@@ -1,5 +1,6 @@
-use std::sync::Arc;
 use tokio::sync::broadcast;
+#[allow(unused_imports)]
+use std::sync::Arc;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
 

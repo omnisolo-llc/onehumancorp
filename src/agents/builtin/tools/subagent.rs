@@ -5,7 +5,9 @@ use std::sync::Arc;
 
 use agent_service_proto::ohc::agent::service::{agent_service_client::AgentServiceClient, SubAgentRequest};
 
-pub struct SubagentExecutor;
+pub struct SubagentExecutor {
+    pub runner: Arc<dyn crate::runner::CommandRunner>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for SubagentExecutor {
@@ -25,15 +27,9 @@ impl ToolExecutor for SubagentExecutor {
             let worktree_path = format!(".agent-worktrees/{}", task_id);
 
             // Create worktree
-            let _ = tokio::process::Command::new("git")
-                .args(["branch", &branch_name])
-                .output()
-                .await;
+            let _ = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
 
-            let wt_output = tokio::process::Command::new("git")
-                .args(["worktree", "add", &worktree_path, &branch_name])
-                .output()
-                .await;
+            let wt_output = self.runner.run("git", &["worktree", "add", &worktree_path, &branch_name], None, vec![]).await;
 
             if let Err(e) = wt_output {
                 return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
@@ -55,14 +51,8 @@ impl ToolExecutor for SubagentExecutor {
             }.await;
 
             // Cleanup
-            let _ = tokio::process::Command::new("git")
-                .args(["worktree", "remove", "--force", &worktree_path])
-                .output()
-                .await;
-            let _ = tokio::process::Command::new("git")
-                .args(["branch", "-D", &branch_name])
-                .output()
-                .await;
+            let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_path], None, vec![]).await;
+            let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
 
             match res {
                 Ok(r) => {
@@ -116,7 +106,7 @@ impl ToolExecutor for SubagentExecutor {
     }
 }
 
-pub fn subagent_tool() -> Tool {
+pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
         description: "Spawn a subagent to work on a task in an isolated context (fork, teammate, or worktree) and return a condensed summary.".to_string(),
@@ -136,7 +126,7 @@ pub fn subagent_tool() -> Tool {
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor),
+        execute: Arc::new(SubagentExecutor { runner }),
     }
 }
 
@@ -146,7 +136,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_empty_task() {
-        let executor = SubagentExecutor;
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = SubagentExecutor { runner };
         let args = json!({
             "task": "",
             "mode": "fork"
@@ -164,7 +155,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_invalid_mode() {
-        let executor = SubagentExecutor;
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = SubagentExecutor { runner };
         let args = json!({
             "task": "do something",
             "mode": "invalid"

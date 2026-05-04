@@ -1,14 +1,12 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use tokio::process::Command;
 
 use super::{Tool, ToolExecutor};
 
 struct ScreenshotExecutor {
     working_dir: Option<std::path::PathBuf>,
-    #[cfg(test)]
-    mock_command: Option<String>, // Allows overriding "npx" for testing
+    runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
 #[async_trait::async_trait]
@@ -30,35 +28,9 @@ impl ToolExecutor for ScreenshotExecutor {
             return Err(ToolError::LlmRecoverable("screenshot: path cannot contain '..' or be absolute".to_string()));
         }
 
-        #[cfg(not(test))]
-        let base_cmd = "npx";
-
-        #[cfg(test)]
-        let base_cmd = self.mock_command.as_deref().unwrap_or("npx");
-
-        let mut cmd = Command::new(base_cmd);
-        // Force npx to be non-interactive
-        cmd.env("npm_config_yes", "true");
-
-        #[cfg(test)]
-        if base_cmd == "echo" {
-            // For testing success
-            cmd.arg("success");
-        } else if base_cmd == "false" {
-            // For testing failure exit code
-            // false takes no args effectively
-        } else {
-            cmd.arg("playwright").arg("screenshot").arg(url).arg(path);
-        }
-
-        #[cfg(not(test))]
-        cmd.arg("playwright").arg("screenshot").arg(url).arg(path);
-
-        if let Some(wd) = &self.working_dir {
-            cmd.current_dir(wd);
-        }
-
-        let output = cmd.output().await
+        let wd_ref = self.working_dir.as_deref();
+        
+        let output = self.runner.run("npx", &["playwright", "screenshot", url, path], wd_ref, vec![("npm_config_yes".to_string(), "true".to_string())]).await
             .map_err(|e| ToolError::LlmRecoverable(format!("screenshot: failed to execute playwright: {}", e)))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -77,7 +49,7 @@ impl ToolExecutor for ScreenshotExecutor {
     }
 }
 
-pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
+pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "Screenshot".to_string(),
         description: "Takes a screenshot of a web page at the specified URL using Playwright. Use this to visually verify web application functionality. \
@@ -99,8 +71,7 @@ pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
         }),
         execute: Arc::new(ScreenshotExecutor {
             working_dir,
-            #[cfg(test)]
-            mock_command: None,
+            runner,
         }),
     }
 }
@@ -114,7 +85,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_missing_url() {
-        let executor = ScreenshotExecutor { working_dir: None, mock_command: None };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = ScreenshotExecutor { working_dir: None, runner };
         let args = json!({ "path": "test.png" });
         let result = executor.execute(args).await;
         assert!(result.is_err());
@@ -127,7 +99,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_path_traversal() {
-        let executor = ScreenshotExecutor { working_dir: None, mock_command: None };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = ScreenshotExecutor { working_dir: None, runner };
 
         let args1 = json!({ "url": "https://example.com", "path": "../test.png" });
         let result1 = executor.execute(args1).await;
@@ -145,7 +118,8 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_tool_creation() {
         let wd = PathBuf::from("/tmp");
-        let tool = screenshot_tool(Some(wd.clone()));
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let tool = screenshot_tool(Some(wd.clone()), runner);
         assert_eq!(tool.name, "Screenshot");
         assert!(tool.is_read_only);
         assert_eq!(tool.parameters["required"][0], "url");
@@ -153,9 +127,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_success() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("echo".to_string())
+            runner,
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
@@ -165,9 +140,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_failure() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "Error!")));
+        
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("false".to_string())
+            runner,
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
@@ -181,9 +159,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_bad_command() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Simulate binary missing error
+        runner.push_response(Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found")));
+
         let executor = ScreenshotExecutor {
             working_dir: None,
-            mock_command: Some("this_command_does_not_exist_12345".to_string())
+            runner,
         };
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
