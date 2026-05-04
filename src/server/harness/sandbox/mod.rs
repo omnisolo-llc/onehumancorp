@@ -2,4 +2,4 @@ pub mod manager;
 pub mod permissions;
 pub mod wrapper;
 
-pub use manager::SandboxManager;
+pub use manager::{SandboxManager, SandboxAdapter, SandboxPolicy};

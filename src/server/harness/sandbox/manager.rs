@@ -3,6 +3,26 @@ use super::wrapper::BashWrapper;
 use crate::telemetry::buffer_metric;
 use sqlx::PgPool;
 use serde_json::json;
+use async_trait::async_trait;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct SandboxPolicy {
+    #[serde(default)]
+    pub disabled_commands: Vec<String>,
+    #[serde(default)]
+    pub disabled_patterns: Vec<String>,
+    #[serde(default)]
+    pub read_only_paths: Vec<String>,
+    #[serde(default)]
+    pub blocked_domains: Vec<String>,
+}
+
+#[async_trait]
+pub trait SandboxAdapter: Send + Sync {
+    async fn wrap_command(&self, cmd: &str) -> Result<String, String>;
+    async fn update_config(&mut self, policy_json: &str) -> Result<(), String>;
+    fn annotate_error(&self, err: String, stdout: String) -> String;
+}
 
 pub struct SandboxManager {
     evaluator: PermissionEvaluator,
@@ -18,8 +38,11 @@ impl SandboxManager {
             pool,
         }
     }
+}
 
-    pub async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
+#[async_trait]
+impl SandboxAdapter for SandboxManager {
+    async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
         // Record wrapping metrics if pool available
         if let Some(pool) = &self.pool {
             let labels = json!({ "command": cmd });
@@ -50,7 +73,17 @@ impl SandboxManager {
         Ok(self.wrapper.wrap(cmd))
     }
 
-    pub fn annotate_error(&self, err: String, stdout: String) -> String {
+    async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
+        let policy: SandboxPolicy = serde_json::from_str(policy_json)
+            .map_err(|e| format!("Invalid policy JSON: {}", e))?;
+
+        self.evaluator.update_policy(policy.clone());
+        self.wrapper.update_policy(policy);
+
+        Ok(())
+    }
+
+    fn annotate_error(&self, err: String, stdout: String) -> String {
         format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
     }
 }
