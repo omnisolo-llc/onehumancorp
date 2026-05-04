@@ -7,7 +7,10 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
+    unsafe {
+        std::env::set_var("DATABASE_URL", "sqlite::memory:");
+        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
+    }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
 
@@ -155,7 +158,10 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
+    unsafe {
+        std::env::set_var("DATABASE_URL", "sqlite::memory:");
+        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
+    }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
     match &db.store {
@@ -280,7 +286,10 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
+    unsafe {
+        std::env::set_var("DATABASE_URL", "sqlite::memory:");
+        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
+    }
     let db_builder = DB::new().await;
     let db = match db_builder { Ok(db) => db, Err(_) => return, };
     match &db.store {

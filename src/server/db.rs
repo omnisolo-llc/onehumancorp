@@ -78,7 +78,13 @@ impl DB {
                 if let Some(key) = database_url.split("key=").nth(1) {
                     let key = key.split('&').next().unwrap_or("").to_string();
                     conn_opts = conn_opts.pragma("key", key.clone());
+                } else {
+                    let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                    conn_opts = conn_opts.pragma("key", fallback_key);
                 }
+            } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                conn_opts = conn_opts.pragma("key", fallback_key);
             }
 
             // SQLCipher support for standalone mode encryption
@@ -675,17 +681,31 @@ mod security_tests_final {
         let _ = DB::new().await;
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
-        let _ = fs::File::create(&db_path);
 
-        // Override permissions because db_new() might have failed to do it properly in test sandbox
+        // Securely create the database file with restricted permissions initially to avoid TOCTOU
         #[cfg(unix)]
         {
-            let mut perms = fs::metadata(&db_path).unwrap().permissions();
-            perms.set_mode(0o600);
-            fs::set_permissions(&db_path, perms).unwrap();
+            use std::fs::OpenOptions;
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::os::unix::fs::PermissionsExt;
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(&db_path)
+                .unwrap();
+            let metadata = file.metadata().unwrap();
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o777 != 0o600 {
+                perms.set_mode(0o600);
+                file.set_permissions(perms).unwrap();
+            }
         }
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
+        #[cfg(not(unix))]
+        {
+            let _ = fs::File::create(&db_path);
+        }
 
         let parent_dir = db_path.parent().unwrap();
         assert!(parent_dir.exists(), "Secure directory should be created");
