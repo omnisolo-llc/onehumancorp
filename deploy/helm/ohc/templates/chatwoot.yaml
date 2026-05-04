@@ -35,6 +35,8 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
+            - name: LOG_FORMAT
+              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
@@ -105,6 +107,8 @@ spec:
           ports:
             - containerPort: {{ .Values.chatwoot.service.port }}
           env:
+            - name: LOG_FORMAT
+              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
@@ -189,6 +193,8 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
+            - name: LOG_FORMAT
+              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
