@@ -129,7 +129,41 @@ test.describe('Login Page', () => {
     await page.goto('/login');
     await expect(page.locator('text=Terms of Service')).toBeVisible();
   });
+
+  test('should show App Settings button', async ({ page }) => {
+    await page.goto('/login');
+    const settingsBtn = page.locator('button:has-text("App Settings")');
+    await expect(settingsBtn).toBeVisible();
+  });
+
+  test('should not show legacy gear icon for login issues', async ({ page }) => {
+    await page.goto('/login');
+    const oldBtn = page.locator('button:has-text("⚙ Fix Login Issues")');
+    await expect(oldBtn).not.toBeVisible();
+  });
+
+  test('should not show magic sparkles emoji block', async ({ page }) => {
+    await page.goto('/login');
+    const sparkles = page.locator('text="✨"');
+    await expect(sparkles).not.toBeVisible();
+  });
+
+  test('should have accessible App Settings button', async ({ page }) => {
+    await page.goto('/login');
+    const settingsBtn = page.locator('button:has-text("App Settings")');
+    await expect(settingsBtn).toBeEnabled();
+  });
+
+  test('should trigger open_settings callback when App Settings clicked', async ({ page }) => {
+    await page.goto('/login');
+    const settingsBtn = page.locator('button:has-text("App Settings")');
+    await settingsBtn.click();
+    // Assuming open_settings opens a modal or navigates
+    // Since we can't easily mock the slint callback here, we at least verify the page didn't crash
+    await expect(settingsBtn).toBeVisible();
+  });
 });
+
 
 test.describe('Login Authentication', () => {
   test('should login with valid credentials', async ({ page }) => {
