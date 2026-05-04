@@ -15,6 +15,7 @@ export component MyPlan inherits Window {
     in-out property <string> estimated_bill: "$124.50";
     in-out property <string> renewal_date: "Oct 25, 2025";
     in-out property <string> plan_status: "Active Status";
+    in-out property <string> upgrade_prompt_message: "";
 
     callback upgrade();
     callback view_details();
@@ -30,6 +31,20 @@ export component MyPlan inherits Window {
         padding: 24px;
 
         Text { text: "My Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+        if upgrade_prompt_message != "" : GlassCard {
+            border-color: #ef4444;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Action Required"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: #ef4444; }
+                Text { text: upgrade_prompt_message; color: white; wrap: word-wrap; }
+                Button { text: "Upgrade Now"; height: 44px; clicked => { upgrade(); } }
+            }
+        }
 
         GlassCard {
             border-color: #e2e8f0;
