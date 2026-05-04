@@ -16,8 +16,11 @@ pub async fn run_health_monitor(
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
-                for (agent_id, _status) in agents {
-                    active_agent_ids.insert(agent_id.clone());
+                for (agent_id, status) in agents {
+                    // Heartbeat consistency: Agents are marked as 'active' via MeshTransport::heartbeat
+                    if status == "active" || status == "IDLE" || status == "BUSY" || status == "online" {
+                        active_agent_ids.insert(agent_id.clone());
+                    }
                 }
 
                 let mut to_fire = Vec::new();
@@ -44,6 +47,40 @@ mod tests {
     use super::*;
     use tokio::time::Duration;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
+
+    #[tokio::test]
+    async fn test_health_monitor_heartbeat_preserves_agent() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        hub.register_agent(crate::ohc::orchestration::Agent {
+            id: "agent_healthy".to_string(),
+            name: "Healthy Agent".to_string(),
+            role: "test".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "test".to_string(),
+        });
+
+        let transport = Arc::new(MemoryTransport::new());
+        // Register heartbeat
+        transport.heartbeat("agent_healthy").await.unwrap();
+
+        let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_transport, monitor_hub).await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        handle.abort();
+
+        assert!(hub.get_agent("agent_healthy").is_some());
+    }
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {

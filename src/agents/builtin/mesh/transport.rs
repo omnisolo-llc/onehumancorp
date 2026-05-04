@@ -11,6 +11,9 @@ pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    async fn ack(&self, topic: &str, event_id: &str) -> Result<(), String>;
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String>;
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
@@ -62,6 +65,14 @@ impl MeshTransport for MemoryTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn ack(&self, _topic: &str, _event_id: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String> {
+        self.register_presence(agent_id, "active", 60).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -142,7 +153,15 @@ impl IpcTransport {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
+                event_id TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS processed_messages (
+                event_id TEXT PRIMARY KEY,
+                processed_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
@@ -174,20 +193,36 @@ impl IpcTransport {
 
         let mut last_id = 0;
         loop {
-            // Poll for new messages
-            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+            // Poll for new messages, skipping those already processed.
+            // Using a LEFT JOIN to efficiently skip messages with an entry in processed_messages.
+            let rows: Result<Vec<(i64, String, Vec<u8>, Option<String>)>, _> = sqlx::query_as(
+                "SELECT m.id, m.topic, m.payload, m.event_id FROM mesh_messages m
+                 LEFT JOIN processed_messages p ON m.event_id = p.event_id
+                 WHERE m.id > ? AND p.event_id IS NULL
+                 ORDER BY m.id ASC"
             )
             .bind(last_id)
             .fetch_all(&pool)
             .await;
 
             if let Ok(rows) = rows {
-                for (id, topic, payload) in rows {
+                for (id, topic, payload, event_id) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
                         if let Ok(message) = Message::decode(&payload[..]) {
-                            let _ = tx.send(message);
+                            // Deduplicate locally if event_id is present
+                            if let Some(eid) = event_id {
+                                if let Ok(res) = sqlx::query("INSERT INTO processed_messages (event_id) VALUES (?) ON CONFLICT DO NOTHING")
+                                    .bind(&eid)
+                                    .execute(&pool)
+                                    .await {
+                                    if res.rows_affected() > 0 {
+                                        let _ = tx.send(message);
+                                    }
+                                }
+                            } else {
+                                let _ = tx.send(message);
+                            }
                         }
                     }
                 }
@@ -195,6 +230,10 @@ impl IpcTransport {
 
             // Cleanup old messages (keep last 1 hour)
             let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
+                .execute(&pool)
+                .await;
+
+            let _ = sqlx::query("DELETE FROM processed_messages WHERE processed_at < datetime('now', '-1 hour')")
                 .execute(&pool)
                 .await;
 
@@ -207,12 +246,14 @@ impl IpcTransport {
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
+        let event_id = message.event_id.clone();
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (topic, payload, event_id) VALUES (?, ?, ?)")
             .bind(topic)
             .bind(buf)
+            .bind(event_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -244,6 +285,20 @@ impl MeshTransport for IpcTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn ack(&self, _topic: &str, event_id: &str) -> Result<(), String> {
+        if event_id.is_empty() { return Ok(()); }
+        sqlx::query("INSERT INTO processed_messages (event_id) VALUES (?) ON CONFLICT(event_id) DO NOTHING")
+            .bind(event_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String> {
+        self.register_presence(agent_id, "active", 60).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -311,19 +366,18 @@ impl MeshTransport for IpcTransport {
 }
 
 pub struct RedisTransport {
-
     client: redis::Client,
-    publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
+    conn: redis::aio::MultiplexedConnection,
 }
 
 impl RedisTransport {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
 
         Ok(RedisTransport {
             client,
-            publish_conn: tokio::sync::Mutex::new(publish_conn),
+            conn,
         })
     }
 }
@@ -333,7 +387,7 @@ impl MeshTransport for RedisTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let mut conn = self.publish_conn.lock().await;
+        let mut conn = self.conn.clone();
 
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
@@ -351,11 +405,24 @@ impl MeshTransport for RedisTransport {
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
 
+        let mut conn = self.conn.clone();
+        let topic_str = topic.to_string();
+
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     if let Ok(message) = Message::decode(&buf[..]) {
-                        handler(message);
+                        if !message.event_id.is_empty() {
+                            // Distributed deduplication: Only one instance should process a unique event_id per topic
+                            let ack_key = format!("mesh:ack:{}:{}", topic_str, message.event_id);
+                            let is_new: Result<bool, _> = conn.set_nx(&ack_key, 1).await;
+                            if let Ok(true) = is_new {
+                                let _: Result<(), _> = conn.expire(&ack_key, 3600).await;
+                                handler(message);
+                            }
+                        } else {
+                            handler(message);
+                        }
                     }
                 }
             }
@@ -368,8 +435,20 @@ impl MeshTransport for RedisTransport {
         Ok(cancel)
     }
 
+    async fn ack(&self, topic: &str, event_id: &str) -> Result<(), String> {
+        if event_id.is_empty() { return Ok(()); }
+        let mut conn = self.conn.clone();
+        let ack_key = format!("mesh:ack:{}:{}", topic, event_id);
+        let _: () = conn.set_ex(&ack_key, 1, 3600).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String> {
+        self.register_presence(agent_id, "active", 60).await
+    }
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let mut conn = self.publish_conn.lock().await;
+        let mut conn = self.conn.clone();
         let key = format!("lock:{}", resource);
         let res: Option<String> = redis::cmd("SET")
             .arg(&key)
@@ -377,7 +456,7 @@ impl MeshTransport for RedisTransport {
             .arg("NX")
             .arg("EX")
             .arg(ttl_seconds)
-            .query_async(&mut *conn)
+            .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -385,7 +464,7 @@ impl MeshTransport for RedisTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        let mut conn = self.publish_conn.lock().await;
+        let mut conn = self.conn.clone();
         let key = format!("lock:{}", resource);
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -395,35 +474,35 @@ impl MeshTransport for RedisTransport {
             end
         "#);
 
-        let _: i32 = script.key(&key).arg(owner).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        let _: i32 = script.key(&key).arg(owner).invoke_async(&mut conn).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        let mut conn = self.publish_conn.lock().await;
+        let mut conn = self.conn.clone();
         let key = format!("presence:{}", agent_id);
         let _: () = redis::cmd("SET")
             .arg(&key)
             .arg(status)
             .arg("EX")
             .arg(ttl_seconds)
-            .query_async(&mut *conn)
+            .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        let mut conn = self.publish_conn.lock().await;
+        let mut conn = self.conn.clone();
         let keys: Vec<String> = redis::cmd("KEYS")
             .arg("presence:*")
-            .query_async(&mut *conn)
+            .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
 
         let mut active = Vec::new();
         for key in keys {
-            let status: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut *conn).await.map_err(|e| e.to_string())?;
+            let status: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut conn).await.map_err(|e| e.to_string())?;
             if let Some(s) = status {
                 let agent_id = key.strip_prefix("presence:").unwrap_or(&key).to_string();
                 active.push((agent_id, s));
@@ -516,6 +595,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -549,6 +629,69 @@ mod tests {
         assert!(acquired_after_release);
     }
 
+    #[tokio::test]
+    async fn test_ipc_transport_deduplication() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_dedup_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let received_count = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let received_count_clone = received_count.clone();
+
+        let event_id = "unique_event_123".to_string();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.event_id == "unique_event_123" {
+                received_count_clone.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = transport.subscribe("dedup_topic", handler).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        // Manually insert message into DB twice with same event_id
+        use prost::Message as ProstMessage;
+        let msg = Message {
+            agent_id: "test".to_string(),
+            action: "dedup_topic".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            event_id: event_id.clone(),
+        };
+        let mut buf = Vec::new();
+        msg.encode(&mut buf).unwrap();
+
+        sqlx::query("INSERT INTO mesh_messages (topic, payload, event_id) VALUES (?, ?, ?)")
+            .bind("dedup_topic")
+            .bind(&buf)
+            .bind(&event_id)
+            .execute(&transport.pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO mesh_messages (topic, payload, event_id) VALUES (?, ?, ?)")
+            .bind("dedup_topic")
+            .bind(&buf)
+            .bind(&event_id)
+            .execute(&transport.pool)
+            .await
+            .unwrap();
+
+        // Ack it so the worker skips it
+        transport.ack("dedup_topic", &event_id).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+        // It should NOT have been received by the worker because of the Ack (processed_messages entry)
+        // Note: Local delivery in `publish` bypasses this, but we inserted directly into DB.
+        assert_eq!(received_count.load(Ordering::SeqCst), 0);
+    }
+
 
     #[tokio::test]
     async fn test_memory_transport() {
@@ -569,6 +712,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +837,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();

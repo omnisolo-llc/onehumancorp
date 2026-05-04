@@ -11,6 +11,9 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    async fn ack(&self, topic: &str, event_id: &str) -> Result<(), String>;
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String>;
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 }
@@ -39,6 +42,7 @@ impl TeammateMesh for CentrifugeNode {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
@@ -52,6 +56,14 @@ impl TeammateMesh for CentrifugeNode {
         });
 
         self.transport.subscribe(topic, wrapped_handler).await
+    }
+
+    async fn ack(&self, topic: &str, event_id: &str) -> Result<(), String> {
+        self.transport.ack(topic, event_id).await
+    }
+
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String> {
+        self.transport.heartbeat(agent_id).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -88,12 +100,21 @@ impl TeammateMesh for RueidisMapping {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         // The redis mapping delegates entirely to the underlying transport for subscription events
         self.transport.subscribe(topic, handler).await
+    }
+
+    async fn ack(&self, topic: &str, event_id: &str) -> Result<(), String> {
+        self.transport.ack(topic, event_id).await
+    }
+
+    async fn heartbeat(&self, agent_id: &str) -> Result<(), String> {
+        self.transport.heartbeat(agent_id).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {

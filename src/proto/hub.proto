@@ -124,6 +124,7 @@ message TeammateMeshEvent {
   string action = 2;
   string status = 3;
   bytes payload = 4;
+  string event_id = 5;
 }
 
 message SyncStateHandoff {
