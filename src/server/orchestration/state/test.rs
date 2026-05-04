@@ -137,7 +137,7 @@ use super::cloud::CloudStateManager;
 async fn test_cloud_dag_workflow_mock() {
     let db = setup_db().await;
     // For unit coverage we instantiate it
-    let state_manager = CloudStateManager::new(db.clone(), None);
+    let _state_manager = CloudStateManager::new(db.clone(), None);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();

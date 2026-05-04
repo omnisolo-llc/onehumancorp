@@ -83,6 +83,7 @@ pub trait UserRepository: Send + Sync {
     async fn is_revoked(&self, jti: &str) -> Result<bool, String>;
 }
 
+#[allow(dead_code)]
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
     roles: RwLock<HashMap<String, Role>>,
