@@ -118,6 +118,7 @@ mod tests {
             action: "test_chan".to_string(),
             status: "ok".to_string(),
             payload: b"ws_test".to_vec(),
+            msg_id: "".to_string(),
         };
         let mut buf = Vec::new();
         test_msg.encode(&mut buf).unwrap();
@@ -132,6 +133,7 @@ mod tests {
             action: "test_chan".to_string(),
             status: "ok".to_string(),
             payload: b"srv_test".to_vec(),
+            msg_id: "".to_string(),
         };
         transport_clone.publish("test_chan", srv_msg.clone()).await.unwrap();
 

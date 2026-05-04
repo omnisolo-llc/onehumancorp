@@ -140,11 +140,16 @@ impl IpcTransport {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                msg_id TEXT,
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        let _ = sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
+            .execute(&pool)
+            .await;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
@@ -208,9 +213,11 @@ impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
+        let msg_id = message.msg_id.clone();
         message.encode(&mut buf).unwrap();
 
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (msg_id, topic, payload) VALUES (?, ?, ?)")
+            .bind(msg_id)
             .bind(topic)
             .bind(buf)
             .execute(&self.pool)
@@ -516,6 +523,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -569,6 +577,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +702,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();
