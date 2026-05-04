@@ -7,6 +7,7 @@ use super::{Tool, ToolExecutor};
 
 struct EditExecutor {
     working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
 #[async_trait::async_trait]
@@ -51,23 +52,26 @@ impl ToolExecutor for EditExecutor {
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let mut cmd = tokio::process::Command::new("rustc");
-            cmd.arg("--emit=metadata").arg("--edition=2021").arg(&actual_path);
-
-            if let Ok(output) = cmd.output().await {
-                if !output.status.success() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
+            let actual_path_str = actual_path.to_string_lossy();
+            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+                Ok(output) => {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                            return Err(ToolError::LlmRecoverable(format!(
+                                "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                            path, stderr
-                        )));
+                                path, stderr
+                            )));
+                        }
                     }
+                }
+                Err(e) => {
+                    tracing::debug!("Verification skipped: failed to run rustc: {}", e);
                 }
             }
         }
@@ -78,7 +82,7 @@ Please fix the errors and try again.",
     }
 }
 
-pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
+pub fn edit_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "Edit".to_string(),
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
@@ -103,7 +107,7 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path", "old_str", "new_str"]
         }),
-        execute: Arc::new(EditExecutor { working_dir }),
+        execute: Arc::new(EditExecutor { working_dir, runner }),
     }
 }
 
@@ -118,7 +122,8 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello old world").await.unwrap();
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.txt",
@@ -135,7 +140,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_edit_tool_missing_args() {
-        let executor = EditExecutor { working_dir: None };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = EditExecutor { working_dir: None, runner };
 
         let args = json!({ "path": "test.txt", "old_str": "old" });
         let result = executor.execute(args).await;
@@ -148,7 +154,8 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello old old world").await.unwrap();
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.txt",
@@ -171,7 +178,8 @@ mod tests {
         let file_path = dir.path().join("test.rs");
         fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -190,7 +198,11 @@ mod tests {
         let file_path = dir.path().join("test.rs");
         fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Simulate rustc failure
+        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
+
+        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -200,7 +212,7 @@ mod tests {
 
         // Should fail verification due to syntax error
         let result = executor.execute(args).await;
-        assert!(result.is_err());
+        assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
         } else {

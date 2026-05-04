@@ -7,6 +7,7 @@ use super::{Tool, ToolExecutor};
 
 struct WriteExecutor {
     working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
 #[async_trait::async_trait]
@@ -36,29 +37,31 @@ impl ToolExecutor for WriteExecutor {
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let mut cmd = tokio::process::Command::new("rustc");
-            // Check only the specific file to avoid whole-workspace errors when other files are broken
-            cmd.arg("--emit=metadata").arg("--edition=2021").arg(&actual_path);
-
+            let actual_path_str = actual_path.to_string_lossy();
             // Note: In Bazel/Cargo projects, `rustc` alone may miss external crate dependencies
             // and fail with `E0432`. However, it catches pure syntax errors and basic type errors
             // within the file itself without requiring a full `cargo check` of a potentially broken tree.
             // We ignore errors related to missing external crates (E0432, E0463) as they are false positives
             // when running `rustc` outside the build system.
-            if let Ok(output) = cmd.output().await {
-                if !output.status.success() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
+            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+                Ok(output) => {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                            return Err(ToolError::LlmRecoverable(format!(
+                                "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                            path, stderr
-                        )));
+                                path, stderr
+                            )));
+                        }
                     }
+                }
+                Err(e) => {
+                    tracing::debug!("Verification skipped: failed to run rustc: {}", e);
                 }
             }
         }
@@ -69,7 +72,7 @@ Please fix the errors and try again.",
     }
 }
 
-pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
+pub fn write_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "Write".to_string(),
         description: "Write content to a file. Creates parent directories as needed. Overwrites any existing content.".to_string(),
@@ -88,7 +91,7 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path", "content"]
         }),
-        execute: Arc::new(WriteExecutor { working_dir }),
+        execute: Arc::new(WriteExecutor { working_dir, runner }),
     }
 }
 
@@ -100,7 +103,8 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_basic() {
         let dir = tempdir().unwrap();
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.txt",
@@ -116,7 +120,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_write_tool_missing_args() {
-        let executor = WriteExecutor { working_dir: None };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = WriteExecutor { working_dir: None, runner };
 
         let args = json!({ "path": "test.txt" });
         let result = executor.execute(args).await;
@@ -130,7 +135,8 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -145,7 +151,11 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_rust_verification_failure() {
         let dir = tempdir().unwrap();
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Simulate rustc failure
+        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
+
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -154,7 +164,7 @@ mod tests {
 
         // Should fail verification due to syntax error
         let result = executor.execute(args).await;
-        assert!(result.is_err());
+        assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
         } else {

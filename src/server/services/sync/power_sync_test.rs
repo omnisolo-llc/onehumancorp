@@ -162,7 +162,6 @@ mod tests {
         });
 
         // Start a mock gRPC server
-        use std::net::SocketAddr;
         use tonic::{Request, Response, Status};
         use crate::ohc::orchestration::{PowerSyncPushRequest, PowerSyncPushResponse, PowerSyncPullRequest, PowerSyncPullResponse};
         use crate::ohc::orchestration::sync_service_server::{SyncService, SyncServiceServer};

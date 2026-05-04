@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 use crate::ohc::orchestration::TeammateMeshEvent;
 
 pub struct PubSubManager {
@@ -229,7 +229,7 @@ mod tests {
         assert_eq!(agents_b.len(), 1);
         assert_eq!(agents_b[0].0, "agent_3");
 
-        let manager_standalone = PubSubManager::new(transport.clone(), false);
+        let _manager_standalone = PubSubManager::new(transport.clone(), false);
         // Because the underlying memory transport is the same, we expect it to
         // just return the cloud registered ones directly without stripping since we called from cloud manager,
         // so let's register specifically with standalone manager

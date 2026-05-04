@@ -51,7 +51,7 @@ impl CloudSynchronizerImpl {
                     use sqlx::Row;
                     let id: String = file.get("id");
                     let local_path: String = file.get("local_path");
-                    let cloud_path: String = file.get("cloud_path");
+                    let _cloud_path: String = file.get("cloud_path");
 
                     // Read local file (simulated, since we are moving it to cloud via API)
                     if let Ok(_content) = tokio::fs::read(&local_path).await {
