@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export component AiHelpChat inherits Window {
@@ -5,7 +6,7 @@ export component AiHelpChat inherits Window {
     preferred-height: 800px;
     min-width: 375px;
     title: "AI Help Assistant";
-    background: white;
+    background: #0f172a;
 
     in-out property <string> user_input: "";
     callback send_message();
@@ -18,14 +19,12 @@ export component AiHelpChat inherits Window {
             padding: 16px;
             spacing: 16px;
 
-            Rectangle {
-                background: #f1f5f9;
-                border-radius: 8px;
+            GlassCard {
                 VerticalBox {
                     padding: 16px;
                     Text {
                         text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                        color: #0f172a;
+                        color: white;
                         wrap: word-wrap;
                     }
                 }
