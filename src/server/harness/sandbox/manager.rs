@@ -1,9 +1,11 @@
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
+use crate::harness::telemetry::ViolationStore;
 use crate::telemetry::buffer_metric;
 use sqlx::PgPool;
 use serde_json::json;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
@@ -28,14 +30,17 @@ pub struct SandboxManager {
     evaluator: PermissionEvaluator,
     wrapper: BashWrapper,
     pool: Option<PgPool>,
+    violation_store: Arc<ViolationStore>,
 }
 
 impl SandboxManager {
     pub fn new(pool: Option<PgPool>) -> Self {
+        let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         SandboxManager {
             evaluator: PermissionEvaluator::new(),
             wrapper: BashWrapper::new(),
             pool,
+            violation_store,
         }
     }
 }
@@ -56,7 +61,17 @@ impl SandboxAdapter for SandboxManager {
         }
 
         if !self.evaluator.evaluate(cmd) {
-            // Record violation metrics
+            // Record violation via ViolationStore
+            let details = json!({ "command": cmd });
+            let _ = self.violation_store.record_violation(
+                "system", // Tenant ID, default to system since manager doesn't have context
+                "unknown_agent", // SandboxManager doesn't have agent context natively here yet
+                "unknown_session",
+                "command_execution",
+                details
+            ).await;
+
+            // Legacy metric (keep for backwards compatibility if needed, or remove, but we'll keep for safety)
             if let Some(pool) = &self.pool {
                 let labels = json!({ "command": cmd });
                 let _ = buffer_metric(
