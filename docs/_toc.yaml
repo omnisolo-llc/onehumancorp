@@ -29,8 +29,8 @@ toc:
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
     path: /docs/technical/walkthroughs/index.md
-  - title: KAIROS Orchestrator CLI Walkthrough
-    path: /docs/technical/walkthroughs/kairos_orchestrator_cli.md
+  - title: KAIROS Central Orchestration CLI Guide
+    path: /docs/technical/walkthroughs/kairos_central_orchestration_cli_guide.md
   - title: Templates
     path: /docs/technical/templates/index.md
   - title: MCP Protocol
