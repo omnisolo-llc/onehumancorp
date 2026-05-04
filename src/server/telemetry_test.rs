@@ -127,7 +127,7 @@ mod tests {
         let mut search_dirs = vec![PathBuf::from(".")];
         if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
             let mut p = PathBuf::from(workspace_dir);
-            p.push("src/server");
+            p.push("src");
             search_dirs.push(p);
         } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let p = PathBuf::from(runfiles_dir);
@@ -167,10 +167,6 @@ mod tests {
                             }
                         }
                     }
-                }
-
-                if checked_files > 10 {
-                    break;
                 }
             }
         }
