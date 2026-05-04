@@ -16,6 +16,8 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/proto:mcp_proxy_tonic",
+        "//src/proto:mcp_proxy_prost",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
@@ -66,6 +68,8 @@ rust_binary(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/proto:mcp_proxy_tonic",
+        "//src/proto:mcp_proxy_prost",
         ":server_lib",
         "@crates//:tokio",
     ],
@@ -88,6 +92,8 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "//src/proto:mcp_proxy_tonic",
+        "//src/proto:mcp_proxy_prost",
         "@crates//:tempfile",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
@@ -140,6 +146,8 @@ rust_test(
     crate_root = "crypto.rs",
     edition = "2024",
     deps = [
+        "//src/proto:mcp_proxy_tonic",
+        "//src/proto:mcp_proxy_prost",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:hmac",

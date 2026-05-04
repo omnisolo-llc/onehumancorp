@@ -170,3 +170,20 @@ proto_rust_library(
 )
 
 
+
+# ── MCP Proxy ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "mcp_proxy_proto",
+    srcs = ["mcp_proxy.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "mcp_proxy",
+    proto = ":mcp_proxy_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── MCP Proxy ──────────────────────────────────────────────────────────────────
