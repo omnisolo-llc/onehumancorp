@@ -34,7 +34,7 @@ backend:
       cpu: "4"
       memory: "4Gi"
       ephemeralStorage: "20Gi"
-      pods: "20"
+      pods: "10"
   networkPolicy:
     enabled: true
 
