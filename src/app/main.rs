@@ -1151,7 +1151,132 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
                 let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let check_messages_called_clone = check_messages_called.clone();
-                dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+
+                let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+
+                let conversations = vec![
+                    app::UiConversation {
+                        id: "conv-1".into(),
+                        customer_name: "Maya".into(),
+                        channel_icon: "📷".into(), // Instagram
+                        last_message: "Do you do vegan cakes?".into(),
+                        unread: true,
+                        time: "2m ago".into(),
+                    },
+                    app::UiConversation {
+                        id: "conv-2".into(),
+                        customer_name: "Carlos".into(),
+                        channel_icon: "✉️".into(), // Email
+                        last_message: "Thanks for the repair quote.".into(),
+                        unread: false,
+                        time: "1h ago".into(),
+                    },
+                    app::UiConversation {
+                        id: "conv-3".into(),
+                        customer_name: "Fatima".into(),
+                        channel_icon: "💬".into(), // SMS
+                        last_message: "I need to pick up my order.".into(),
+                        unread: false,
+                        time: "Yesterday".into(),
+                    },
+                ];
+                unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
+
+                let unified_inbox_handle = unified_inbox_ui.as_weak();
+
+                dashboard.on_action_check_messages(move || {
+                    *check_messages_called_clone.borrow_mut() = true;
+                    if let Some(ui) = unified_inbox_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let unified_inbox_handle_select = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_select_conversation(move |id| {
+                    if let Some(ui) = unified_inbox_handle_select.upgrade() {
+                        ui.set_active_conversation_id(id.clone());
+
+                        if id == "conv-1" {
+                            let msgs = vec![
+                                app::UiInboxMessage {
+                                    id: "msg-1".into(),
+                                    author_name: "Maya".into(),
+                                    body: "Do you do vegan cakes?".into(),
+                                    is_me: false,
+                                    time: "2m ago".into(),
+                                }
+                            ];
+                            ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+
+                            let replies = vec![
+                                app::UiQuickReply {
+                                    id: "qr-1".into(),
+                                    text: "Yes, we have 3 vegan options!".into(),
+                                },
+                                app::UiQuickReply {
+                                    id: "qr-2".into(),
+                                    text: "We don't currently offer vegan cakes.".into(),
+                                }
+                            ];
+                            ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(replies)));
+                        } else {
+                            ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(vec![])));
+                            ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+                        }
+                    }
+                });
+
+                let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_use_quick_reply(move |reply_text| {
+                    if let Some(ui) = unified_inbox_handle_reply.upgrade() {
+                        // Append the quick reply to the current messages
+                        let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
+                        current_msgs.push(app::UiInboxMessage {
+                            id: format!("msg-{}", current_msgs.len() + 1).into(),
+                            author_name: "Me".into(),
+                            body: reply_text,
+                            is_me: true,
+                            time: "Just now".into(),
+                        });
+                        ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
+
+                        // Clear suggested replies since we used one
+                        ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+
+                        // Clear the active conversation's unread status (simplified update)
+                        let active_id = ui.get_active_conversation_id();
+                        let mut convs: Vec<app::UiConversation> = ui.get_conversations().iter().collect();
+                        for conv in &mut convs {
+                            if conv.id == active_id {
+                                conv.unread = false;
+                                conv.last_message = "You replied".into();
+                            }
+                        }
+                        ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(convs)));
+                    }
+                });
+
+                let unified_inbox_handle_send = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_send_message(move |text| {
+                    if let Some(ui) = unified_inbox_handle_send.upgrade() {
+                        if text.is_empty() { return; }
+                        let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
+                        current_msgs.push(app::UiInboxMessage {
+                            id: format!("msg-{}", current_msgs.len() + 1).into(),
+                            author_name: "Me".into(),
+                            body: text,
+                            is_me: true,
+                            time: "Just now".into(),
+                        });
+                        ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
+
+                        // Clear suggested replies since we sent a manual message
+                        ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+                    }
+                });
+
+                Box::leak(Box::new(unified_inbox_ui));
+
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
                 dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
@@ -4811,6 +4936,118 @@ mod e2e_hybrid_blob_tests {
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
 
+
+    #[test]
+    fn test_e2e_unified_inbox_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+
+        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+        let conversations = vec![
+            app::UiConversation {
+                id: "conv-1".into(),
+                customer_name: "Maya".into(),
+                channel_icon: "📷".into(), // Instagram
+                last_message: "Do you do vegan cakes?".into(),
+                unread: true,
+                time: "2m ago".into(),
+            }
+        ];
+        unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
+
+        let unified_inbox_handle = unified_inbox_ui.as_weak();
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+            if let Some(ui) = unified_inbox_handle.upgrade() {
+                let _ = ui.show();
+            }
+        });
+
+        // Simulating the backend logic setting active conversation & AI replies when selected
+        let unified_inbox_handle_select = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_select_conversation(move |id| {
+            if let Some(ui) = unified_inbox_handle_select.upgrade() {
+                ui.set_active_conversation_id(id.clone());
+                if id == "conv-1" {
+                    let msgs = vec![
+                        app::UiInboxMessage {
+                            id: "msg-1".into(),
+                            author_name: "Maya".into(),
+                            body: "Do you do vegan cakes?".into(),
+                            is_me: false,
+                            time: "2m ago".into(),
+                        }
+                    ];
+                    ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                    let replies = vec![
+                        app::UiQuickReply { id: "qr-1".into(), text: "Yes, we have 3 vegan options!".into() }
+                    ];
+                    ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(replies)));
+                }
+            }
+        });
+
+        let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_use_quick_reply(move |reply_text| {
+            if let Some(ui) = unified_inbox_handle_reply.upgrade() {
+                let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
+                current_msgs.push(app::UiInboxMessage {
+                    id: "msg-2".into(),
+                    author_name: "Me".into(),
+                    body: reply_text,
+                    is_me: true,
+                    time: "Just now".into(),
+                });
+                ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
+                ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+            }
+        });
+
+        // 1. Open the Inbox from Dashboard
+        dashboard_ui.invoke_action_check_messages();
+        assert!(*check_messages_called.borrow(), "Inbox should be opened from Dashboard");
+
+        use slint::Model;
+
+        // 2. Select conversation "conv-1"
+        unified_inbox_ui.invoke_select_conversation("conv-1".into());
+        assert_eq!(unified_inbox_ui.get_active_conversation_id(), "conv-1");
+        assert_eq!(unified_inbox_ui.get_current_messages().row_count(), 1, "Should load 1 message");
+        assert_eq!(unified_inbox_ui.get_suggested_replies().row_count(), 1, "Should load 1 AI reply");
+
+        // 3. Use AI Quick Reply
+        let ai_reply_text = unified_inbox_ui.get_suggested_replies().row_data(0).unwrap().text;
+        unified_inbox_ui.invoke_use_quick_reply(ai_reply_text.clone());
+
+        // 4. Assert outcome
+        assert_eq!(unified_inbox_ui.get_current_messages().row_count(), 2, "Should have 2 messages now");
+        assert_eq!(unified_inbox_ui.get_suggested_replies().row_count(), 0, "AI replies should be cleared");
+        let last_msg = unified_inbox_ui.get_current_messages().row_data(1).unwrap();
+        assert_eq!(last_msg.body, ai_reply_text, "Last message should be the AI reply");
+        assert!(last_msg.is_me, "The AI reply should be marked as sent by 'me'");
+    }
 
 #[test]
 fn test_business_share_flow() {
