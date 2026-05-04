@@ -9,6 +9,45 @@ export component InteractiveWalkthrough inherits Window {
     always-on-top: true;
 
     in-out property <int> current_step: 0;
+    in-out property <string> flow_type: "onboarding"; // onboarding, payments, agents
+
+    property <string> step_title:
+        flow_type == "onboarding" ? (
+            current_step == 0 ? "Welcome to your store!" :
+            current_step == 1 ? "Add your first product" :
+            current_step == 2 ? "Set up payments" :
+            "You're all set!"
+        ) : (
+        flow_type == "payments" ? (
+            current_step == 0 ? "Get Paid Fast" :
+            current_step == 1 ? "Connect Stripe" :
+            current_step == 2 ? "In-Person Payments" :
+            "Payments Configured!"
+        ) : (
+            current_step == 0 ? "Meet your AI Team" :
+            current_step == 1 ? "Hire a Helper" :
+            current_step == 2 ? "Set Boundaries" :
+            "AI Team Ready!"
+        ));
+
+    property <string> step_body:
+        flow_type == "onboarding" ? (
+            current_step == 0 ? "Let's take a quick tour to get you set up." :
+            current_step == 1 ? "Click here to add photos and prices for what you sell." :
+            current_step == 2 ? "Connect your bank so you can get paid by customers." :
+            "Your store is ready. You can always find more help in the Help Center."
+        ) : (
+        flow_type == "payments" ? (
+            current_step == 0 ? "OHC makes it easy to accept money from anywhere." :
+            current_step == 1 ? "Stripe is our secure partner for processing card payments." :
+            current_step == 2 ? "You can also accept payments in-person using your phone." :
+            "You're ready to start making sales!"
+        ) : (
+            current_step == 0 ? "AI helpers do the heavy lifting while you focus on your vision." :
+            current_step == 1 ? "Pick a helper for marketing, sales, or customer support." :
+            current_step == 2 ? "Decide exactly what your helpers can and cannot do." :
+            "Your AI team is now working for you 24/7."
+        ));
 
     HorizontalBox {
         alignment: center;
@@ -26,29 +65,26 @@ export component InteractiveWalkthrough inherits Window {
 
                 GlassCard {
                     width: 335px;
+                    border-color: #6366f1;
+                    border-width: 2px;
 
                     VerticalBox {
-                        padding: 20px;
-                        spacing: 16px;
+                        padding: 24px;
+                        spacing: 20px;
 
                         Text {
-                            text: current_step == 0 ? "Welcome to your store!" :
-                                  current_step == 1 ? "Add your first product" :
-                                  current_step == 2 ? "Set up payments" :
-                                  "You're all set!";
-                            font-size: 20px;
+                            text: step_title;
+                            font-size: 22px;
                             font-family: "Outfit";
                             font-weight: 700;
                             color: white;
                         }
 
                         Text {
-                            text: current_step == 0 ? "Let's take a quick tour to get you set up." :
-                                  current_step == 1 ? "Click here to add photos and prices for what you sell." :
-                                  current_step == 2 ? "Connect your bank so you can get paid by customers." :
-                                  "Your store is ready. You can always find more help in the Help Center.";
-                            color: #94a3b8;
+                            text: step_body;
+                            color: #cbd5e1;
                             font-family: "Inter";
+                            font-size: 16px;
                             wrap: word-wrap;
                         }
 
@@ -57,12 +93,14 @@ export component InteractiveWalkthrough inherits Window {
                             spacing: 12px;
 
                             Button {
-                                text: "Skip tour";
+                                text: "Skip";
+                                height: 44px;
                                 clicked => { root.visible = false; }
                             }
 
                             Button {
-                                text: current_step < 3 ? "Next" : "Done";
+                                text: current_step < 3 ? "Next" : "Finish";
+                                height: 44px;
                                 clicked => {
                                     if (current_step < 3) {
                                         current_step += 1;

@@ -33,3 +33,13 @@ fn create_verify_current_step() {
     ui.set_current_step(2);
     assert_eq!(ui.get_current_step(), 2);
 }
+
+#[test]
+fn test_walkthrough_flow_types() {
+    let ui = create();
+    ui.set_flow_type("payments".into());
+    assert_eq!(ui.get_flow_type(), "payments");
+
+    ui.set_flow_type("agents".into());
+    assert_eq!(ui.get_flow_type(), "agents");
+}

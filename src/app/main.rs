@@ -1165,11 +1165,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let all_articles = vec![
                     app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+                    app::HelpArticle { category: "Getting Started".into(), title: "What is OneHumanCorp?".into(), description: "Learn how our platform empowers you to run your business with AI.".into() },
                     app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
+                    app::HelpArticle { category: "My Store".into(), title: "Managing your inventory".into(), description: "Keep track of what's in stock and get alerts when items are low.".into() },
+                    app::HelpArticle { category: "Payments".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                    app::HelpArticle { category: "Payments".into(), title: "Setting up Stripe".into(), description: "Connect your bank account to start receiving money from customers.".into() },
+                    app::HelpArticle { category: "AI Helpers".into(), title: "Meet your AI Team".into(), description: "Understand the different roles your AI helpers can play in your business.".into() },
+                    app::HelpArticle { category: "AI Helpers".into(), title: "Automating customer replies".into(), description: "Let your Customer Success helper handle common questions while you sleep.".into() },
                     app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                    app::HelpArticle { category: "Marketing".into(), title: "Getting found on Google (SEO)".into(), description: "Simple steps to make sure customers find your store when they search online.".into() },
                     app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
+                    app::HelpArticle { category: "Account & Billing".into(), title: "Managing your profile".into(), description: "Update your business name, logo, and contact information.".into() },
                 ];
                 let all_articles_rc = std::rc::Rc::new(all_articles.clone());
 
@@ -1248,6 +1254,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 dashboard.on_open_interactive_walkthrough(move || {
                     if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                        ui.set_flow_type("onboarding".into());
+                        ui.set_current_step(0);
                         let _ = ui.show();
                     }
                 });
@@ -1610,7 +1618,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),

@@ -112,7 +112,7 @@ export component Dashboard inherits Window {
 
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                TooltipElement { tooltip_id: "connect_apps"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
@@ -157,28 +157,28 @@ export component Dashboard inherits Window {
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    TooltipElement { tooltip_id: "todays_sales"; StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; } }
+                    TooltipElement { tooltip_id: "orders_to_ship"; StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; } }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    TooltipElement { tooltip_id: "active_helpers"; StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; } }
+                    TooltipElement { tooltip_id: "active_help"; StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; } }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+                    TooltipElement { tooltip_id: "generative_score"; StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; } }
                 }
             }
 
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
-                StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+                TooltipElement { tooltip_id: "todays_sales"; StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; } }
+                TooltipElement { tooltip_id: "orders_to_ship"; StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; } }
+                TooltipElement { tooltip_id: "active_helpers"; StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; } }
+                TooltipElement { tooltip_id: "active_help"; StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; } }
+                TooltipElement { tooltip_id: "generative_score"; StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; } }
             }
         }
 
@@ -189,8 +189,8 @@ export component Dashboard inherits Window {
 
             HorizontalBox {
                 spacing: 16px;
-                StatCard { label: "LLM Cache Hits"; value: root.telemetry_cache_hits; value_color: #10b981; }
-                StatCard { label: "RAG Latency"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
+                TooltipElement { tooltip_id: "telemetry_cache"; StatCard { label: "LLM Cache Hits"; value: root.telemetry_cache_hits; value_color: #10b981; } }
+                TooltipElement { tooltip_id: "telemetry_rag"; StatCard { label: "RAG Latency"; value: root.telemetry_rag_latency; value_color: #06b6d4; } }
             }
 
             GlassCard {

@@ -1,11 +1,12 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component VideoTutorials inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
     min-width: 375px;
     title: "Video Tutorials";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
 
@@ -14,50 +15,103 @@ export component VideoTutorials inherits Window {
         VerticalBox {
             max-width: 600px;
             width: 100%;
-            padding: 16px;
+            padding: 24px;
             spacing: 20px;
 
             Text {
                 text: "Watch & Learn";
-                font-size: 24px;
+                font-family: "Outfit";
+                font-size: 28px;
                 font-weight: 700;
-                color: #0f172a;
+                color: white;
             }
 
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
 
-                    Rectangle {
-                        background: white; border-radius: 12px;
+                    GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
                             Rectangle {
                                 height: 200px;
-                                background: #e2e8f0;
+                                background: #1e293b;
                                 border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                                border-width: 1px;
+                                border-color: rgba(255, 255, 255, 0.1);
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
                             }
-                            Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
+                            Text { text: "How to add your first product"; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "A quick 60-second guide to listing items in your store."; font-family: "Inter"; color: #cbd5e1; wrap: word-wrap; }
                         }
+                        TouchArea { clicked => { selected_video_title = "How to add your first product"; is_playing = true; } }
                     }
 
-                    Rectangle {
-                        background: white; border-radius: 12px;
+                    GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
                             Rectangle {
                                 height: 200px;
-                                background: #e2e8f0;
+                                background: #1e293b;
                                 border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                                border-width: 1px;
+                                border-color: rgba(255, 255, 255, 0.1);
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
                             }
-                            Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                            Text { text: "Setting up AI Helpers"; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Learn how to let AI handle your customer emails and social media."; font-family: "Inter"; color: #cbd5e1; wrap: word-wrap; }
                         }
+                        TouchArea { clicked => { selected_video_title = "Setting up AI Helpers"; is_playing = true; } }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #1e293b;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: rgba(255, 255, 255, 0.1);
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #a855f7; }
+                            }
+                            Text { text: "Accepting Payments"; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Connect Stripe and start getting paid instantly."; font-family: "Inter"; color: #cbd5e1; wrap: word-wrap; }
+                        }
+                        TouchArea { clicked => { selected_video_title = "Accepting Payments"; is_playing = true; } }
                     }
                 }
+            }
+        }
+    }
+
+    if (is_playing) : Rectangle {
+        background: rgba(0, 0, 0, 0.9);
+        VerticalBox {
+            padding: 24px;
+            alignment: center;
+            spacing: 20px;
+
+            Text {
+                text: "Playing: " + selected_video_title;
+                font-family: "Outfit";
+                font-size: 20px;
+                color: white;
+                horizontal-alignment: center;
+            }
+
+            Rectangle {
+                width: min(parent.width * 0.9, 400px);
+                height: self.width * 16 / 9; // Portrait optimized for mobile
+                background: black;
+                border-radius: 12px;
+                Text { text: "[ Video Player ]"; color: #475569; horizontal-alignment: center; vertical-alignment: center; }
+            }
+
+            Button {
+                text: "Close Player";
+                height: 44px;
+                clicked => { is_playing = false; }
             }
         }
     }

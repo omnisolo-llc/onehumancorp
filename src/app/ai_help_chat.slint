@@ -1,11 +1,13 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+import { GlassCard } from "glass_card.slint";
+
 export component AiHelpChat inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
     min-width: 375px;
     title: "AI Help Assistant";
-    background: white;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in-out property <string> user_input: "";
     callback send_message();
@@ -15,34 +17,75 @@ export component AiHelpChat inherits Window {
         VerticalBox {
             max-width: 600px;
             width: 100%;
-            padding: 16px;
-            spacing: 16px;
+            padding: 24px;
+            spacing: 20px;
 
-            Rectangle {
-                background: #f1f5f9;
-                border-radius: 8px;
+            Text {
+                text: "Ask OHC Help";
+                font-family: "Outfit";
+                font-size: 28px;
+                font-weight: 700;
+                color: white;
+            }
+
+            ScrollView {
                 VerticalBox {
-                    padding: 16px;
-                    Text {
-                        text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                        color: #0f172a;
-                        wrap: word-wrap;
+                    spacing: 16px;
+
+                    GlassCard {
+                        border-color: #6366f1;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text {
+                                text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
+                                color: white;
+                                font-family: "Inter";
+                                font-size: 16px;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+
+                    // Example AI response with article link
+                    GlassCard {
+                        border-color: rgba(255, 255, 255, 0.1);
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+                            Text {
+                                text: "To add a product, go to your dashboard and click the 'Add' button in the bottom navigation bar. You'll be able to set the name, price, and description.";
+                                color: #cbd5e1;
+                                font-family: "Inter";
+                                font-size: 16px;
+                                wrap: word-wrap;
+                            }
+
+                            HorizontalBox {
+                                alignment: start;
+                                Text {
+                                    text: "Read the full article →";
+                                    color: #6366f1;
+                                    font-weight: 700;
+                                    font-size: 14px;
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            ScrollView {
-                // Chat history would go here
-            }
-
             HorizontalBox {
-                spacing: 8px;
+                spacing: 12px;
                 LineEdit {
                     placeholder-text: "Type your question here...";
+                    font-family: "Inter";
+                    height: 50px;
                     text <=> user_input;
                 }
                 Button {
                     text: "Send";
+                    height: 50px;
                     clicked => { send_message(); }
                 }
             }
