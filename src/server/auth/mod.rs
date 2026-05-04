@@ -825,6 +825,14 @@ mod tests {
     }
 }
 
+pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Result<String, String> {
+    md.get("x-spiffe-id")
+        .ok_or_else(|| "missing x-spiffe-id header".to_string())?
+        .to_str()
+        .map_err(|_| "invalid x-spiffe-id header".to_string())
+        .map(|s| s.to_string())
+}
+
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     if !spiffe_id.starts_with("spiffe://") {
         return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
