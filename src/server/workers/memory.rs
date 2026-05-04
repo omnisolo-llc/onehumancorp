@@ -1,7 +1,5 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-use crate::minimax::LocalLLMClient;
-use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 pub struct MemoryConsolidationWorker {
@@ -81,6 +79,7 @@ impl MemoryConsolidationWorker {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
     use super::*;
 
     fn create_dummy_record(id: &str, override_val: bool, rel_score: i32, time_offset: i64) -> EmbeddingRecord {
