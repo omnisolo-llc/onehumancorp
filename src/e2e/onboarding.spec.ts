@@ -50,7 +50,6 @@ test.describe('Onboarding Flow', () => {
     if (await nextBtn.isVisible()) {
       for (let i = 0; i < 2; i++) {
         await nextBtn.click();
-        await page.waitForTimeout(200);
       }
       const nameInput = page.locator('input[type="text"]').first();
       if (await nameInput.isVisible()) {
@@ -123,7 +122,6 @@ test.describe('Onboarding Flow', () => {
       const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
       if (await nextBtn.isVisible()) {
         await nextBtn.click();
-        await page.waitForTimeout(500);
       }
     }
 
@@ -149,7 +147,6 @@ test.describe('Onboarding Flow', () => {
       const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue"), button:has-text("Launch")').first();
       if (await nextBtn.isVisible()) {
         await nextBtn.click();
-        await page.waitForTimeout(500);
       }
     }
 
@@ -195,7 +192,6 @@ test.describe('Onboarding Welcome Checklist', () => {
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
       await checkboxes.nth(i).check();
-      await page.waitForTimeout(100);
     }
   });
 
@@ -205,7 +201,6 @@ test.describe('Onboarding Welcome Checklist', () => {
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
       await checkboxes.nth(i).check();
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=/congratulations|complete|awesome/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
   });

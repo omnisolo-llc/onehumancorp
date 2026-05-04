@@ -63,6 +63,7 @@ export component Login inherits Window {
                     height: 44px;
                     placeholder-text: "Email or Username";
                     text <=> username;
+                    height: 44px;
                 }
 
                 PasswordInput {
@@ -77,6 +78,7 @@ export component Login inherits Window {
                     Button {
                         height: 44px;
                         text: "Resend Verification Email";
+                        height: 44px;
                         clicked => { resend_verification(username); }
                     }
                 }
@@ -91,12 +93,14 @@ export component Login inherits Window {
                 Button {
                     height: 44px;
                     text: is_sign_up ? "Sign Up" : "Sign In";
+                    height: 44px;
                     clicked => { login(username, password); }
                 }
 
                 Button {
                     height: 44px;
                     text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                    height: 44px;
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
@@ -110,12 +114,14 @@ export component Login inherits Window {
                 Button {
                     height: 44px;
                     text: "Continue with Google/Apple";
+                    height: 44px;
                     clicked => { oauth_login("SSO"); }
                 }
                 
                 Button {
                     height: 44px;
                     text: "⚙ Fix Login Issues";
+                    height: 44px;
                     clicked => { open_settings(); }
                 }
             }

@@ -2,7 +2,8 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
-    width: 600px;
+    min-width: 375px;
+    preferred-width: 600px;
     height: 400px;
     title: "Welcome Checklist";
 
@@ -72,6 +73,7 @@ export component WelcomeChecklist inherits Window {
 
                 Button {
                     text: "Go to Dashboard";
+                    height: 44px;
                     clicked => {
                         root.go_to_dashboard();
                     }
