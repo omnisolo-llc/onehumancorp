@@ -9,6 +9,7 @@ export component ReleaseNotes inherits Window {
     background: #0f172a;
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
+    in-out property <bool> is_advanced: false;
 
     HorizontalBox {
         alignment: center;
@@ -53,7 +54,7 @@ export component ReleaseNotes inherits Window {
                         }
                     }
 
-                    VerticalBox {
+                    if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Text { text: "Version 0.3.1 (Cloud) / v0.3.1+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
                         GlassCard {
@@ -65,7 +66,7 @@ export component ReleaseNotes inherits Window {
                         }
                     }
 
-                    VerticalBox {
+                    if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Text { text: "Version 0.3.0 (Cloud) / v0.3.0+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
                         GlassCard {

@@ -24,6 +24,15 @@ fn create() -> app::InteractiveWalkthrough { crate::ui_tests::init(); app::Inter
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn create_verify_is_advanced() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
 fn create_verify_current_step() {
     let ui = create();
     ui.set_current_step(0);

@@ -33,6 +33,15 @@ fn create() -> app::VideoTutorials { crate::ui_tests::init(); app::VideoTutorial
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn create_verify_is_advanced() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
 fn create_verify_selected_video_title() {
     let ui = create();
     ui.set_selected_video_title("Basic Setup".into());

@@ -31,6 +31,15 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn create_verify_is_advanced() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
 fn create_verify_api_key() {
     let ui = create();
     ui.set_api_key("sk_live_555".into());

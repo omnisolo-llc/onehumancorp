@@ -5,7 +5,8 @@ export component Walkthrough inherits Window {
     height: 500px;
     title: "Automated Setup Guide";
 
-    property <int> current_step: 0;
+    in-out property <int> current_step: 0;
+    in-out property <bool> is_advanced: false;
 
     background: #f8fafc;
 
@@ -40,7 +41,7 @@ export component Walkthrough inherits Window {
                     color: #0284c7;
                 }
                 
-                Text {
+                if (is_advanced) : Text {
                     text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
                           current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
                           current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
@@ -52,7 +53,7 @@ export component Walkthrough inherits Window {
                     wrap: word-wrap;
                 }
                 
-                Rectangle {
+                if (is_advanced) : Rectangle {
                     background: #f1f5f9;
                     border-radius: 8px;
                     

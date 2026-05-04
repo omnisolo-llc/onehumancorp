@@ -15,6 +15,7 @@ export component HelpCenter inherits Window {
     background: #0f172a;
 
     in-out property <string> search_query: "";
+    in-out property <bool> is_advanced: false;
     callback execute_search();
 
     changed search_query => { root.execute_search(); }

@@ -1516,35 +1516,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
+                ai_chat_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let ai_chat_handle = ai_chat_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = ai_chat_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                interactive_walkthrough_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+                kairos_orchestration_walkthrough_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = kairos_orchestration_walkthrough_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
+                help_center_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let help_center_handle = help_center_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = help_center_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(help_center_ui));
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                interactive_walkthrough_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = interactive_walkthrough_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                video_tutorials_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = video_tutorials_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
+                api_docs_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let api_docs_handle = api_docs_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = api_docs_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(api_docs_ui));
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                release_notes_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let release_notes_handle = release_notes_ui.as_weak();
+                add_advanced_listener(Box::new({ let h = release_notes_handle.clone(); move |val| if let Some(ui) = h.upgrade() { ui.set_is_advanced(val); } }));
                 Box::leak(Box::new(release_notes_ui));
 
                 ai_chat_ui.on_send_message({
@@ -3500,37 +3515,58 @@ mod docs_tests {
     #[test]
     fn test_help_center_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
+        let ui = app::HelpCenter::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_release_notes_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
+        let ui = app::ReleaseNotes::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_interactive_walkthrough_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::InteractiveWalkthrough::new().unwrap();
+        let ui = app::InteractiveWalkthrough::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_kairos_orchestration_walkthrough_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::KairosOrchestrationWalkthrough::new().unwrap();
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_ai_help_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::AiHelpChat::new().unwrap();
+        let ui = app::AiHelpChat::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_video_tutorials_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::VideoTutorials::new().unwrap();
+        let ui = app::VideoTutorials::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
+        let ui = app::ApiDocs::new().unwrap();
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
     }
     #[test]
     fn test_e2e_agent_config_flow() {
