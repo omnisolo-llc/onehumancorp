@@ -10,7 +10,7 @@ test.describe('Referral Program', () => {
 
     // 2. Navigate to Referrals dashboard
     await page.goto('/referrals');
-    await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
+    await expect(page.locator('text=Referral Dashboard')).toBeVisible();
 
     // 3. Generate a new referral link
     const newLinkButton = page.locator('button:has-text("New Link")');
