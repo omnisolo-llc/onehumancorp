@@ -74,7 +74,7 @@ export component WebsiteBuilder inherits Window {
                 GlassCard {
                     width: 140px;
                     height: 180px;
-                    background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px; spacing: 12px;
                         Rectangle { height: 60px; background: white; border-radius: 4px;
                             VerticalBox { alignment: center; Text { text: "✦"; color: #a855f7; font-size: 24px; horizontal-alignment: center; } }
@@ -87,7 +87,7 @@ export component WebsiteBuilder inherits Window {
                 GlassCard {
                     width: 140px;
                     height: 180px;
-                    background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px; spacing: 12px;
                         Rectangle { height: 60px; background: #f1f5f9; border-radius: 4px;
                             VerticalBox { alignment: center; Text { text: "🏛️"; color: #475569; font-size: 24px; horizontal-alignment: center; } }
@@ -100,7 +100,7 @@ export component WebsiteBuilder inherits Window {
                 GlassCard {
                     width: 140px;
                     height: 180px;
-                    background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px; spacing: 12px;
                         Rectangle { height: 60px; background: #7e22ce; border-radius: 4px;
                             VerticalBox { alignment: center; Text { text: "🔥"; color: white; font-size: 24px; horizontal-alignment: center; } }
@@ -123,7 +123,7 @@ export component WebsiteBuilder inherits Window {
                 spacing: 10px;
                 GlassCard {
                     height: 80px;
-                    background: primary_color == "#FF3B30" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: primary_color == "#FF3B30" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🔴 Bold Red"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     }
@@ -131,7 +131,7 @@ export component WebsiteBuilder inherits Window {
                 }
                 GlassCard {
                     height: 80px;
-                    background: primary_color == "#34C759" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: primary_color == "#34C759" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🟢 Nature Green"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     }
@@ -139,7 +139,7 @@ export component WebsiteBuilder inherits Window {
                 }
                 GlassCard {
                     height: 80px;
-                    background: primary_color == "#007AFF" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: primary_color == "#007AFF" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🔵 Trust Blue"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     }
@@ -148,7 +148,7 @@ export component WebsiteBuilder inherits Window {
             }
             GlassCard {
                 height: 60px;
-                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "✨ Generate Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     Text { text: "AI will create 3 options"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
@@ -157,7 +157,7 @@ export component WebsiteBuilder inherits Window {
             }
             GlassCard {
                 height: 60px;
-                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "📷 Upload Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     Text { text: "Background will be removed"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
@@ -183,7 +183,7 @@ export component WebsiteBuilder inherits Window {
 
             GlassCard {
                 height: 44px;
-                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "✨ Auto-generate description"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
                 }
@@ -192,7 +192,7 @@ export component WebsiteBuilder inherits Window {
 
             GlassCard {
                 height: 100px;
-                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
@@ -209,7 +209,7 @@ export component WebsiteBuilder inherits Window {
 
             GlassCard {
                 height: 80px;
-                background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
@@ -218,7 +218,7 @@ export component WebsiteBuilder inherits Window {
             }
             GlassCard {
                 height: 80px;
-                background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.03);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "🌍 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }

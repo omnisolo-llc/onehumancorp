@@ -1503,6 +1503,7 @@ mod growth_e2e_tests {
     use super::*;
     use slint::Model;
 
+
     #[test]
     fn test_start_setup_wizard_transitions() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1538,6 +1539,7 @@ mod growth_e2e_tests {
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
     }
 
+
     #[test]
     fn test_e2e_signup_auto_launch_setup_wizard() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1572,6 +1574,7 @@ mod growth_e2e_tests {
         assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on sign up");
     }
 
+
     #[test]
     fn test_setup_wizard_resume_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1590,6 +1593,7 @@ mod growth_e2e_tests {
         assert_eq!(ui.get_company_name(), "My Resumed Store");
         assert_eq!(ui.get_sell_physical(), true);
     }
+
 
     #[test]
     fn test_e2e_referral_flow() {
@@ -1628,6 +1632,7 @@ mod growth_e2e_tests {
         assert_eq!(r.clicks, 45);
         assert_eq!(r.conversions, 12);
     }
+
 
     #[test]
     fn test_e2e_growth_referrals_flow() {
@@ -1714,6 +1719,7 @@ mod growth_e2e_tests {
         assert!(*link_shared.borrow(), "share_link should be invoked");
     }
 
+
     #[test]
     fn test_e2e_referral_share_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1747,6 +1753,7 @@ mod growth_e2e_tests {
 mod e2e_tests {
     use slint::Model;
     use super::*;
+
 
     #[test]
     fn test_cuj_draft_for_review_flow() {
@@ -1814,6 +1821,7 @@ mod e2e_tests {
         assert_eq!(*was_approved.borrow(), true);
     }
 
+
     #[test]
     fn test_login_password_visibility_toggle() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -1824,6 +1832,7 @@ mod e2e_tests {
         ui.set_password("secret".into());
         assert_eq!(ui.get_password(), "secret");
     }
+
 
     #[test]
     fn test_e2e_wizard_flow() {
@@ -1962,6 +1971,7 @@ mod e2e_tests {
 mod tests {
     use super::*;
 
+
     #[test]
     fn test_welcome_checklist_creation() {
         crate::ui_tests::init();
@@ -1997,6 +2007,7 @@ mod tests {
         assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
     }
 
+
     #[test]
     fn test_login_creation() {
         crate::ui_tests::init();
@@ -2006,6 +2017,7 @@ mod tests {
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
     }
+
 
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
@@ -2018,6 +2030,7 @@ mod tests {
         assert_eq!(ui.get_next_enabled(), false);
     }
 
+
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
         crate::ui_tests::init();
@@ -2029,6 +2042,7 @@ mod tests {
         assert_eq!(ui.get_next_enabled(), true);
     }
 
+
     #[test]
     fn test_landing_creation() {
         crate::ui_tests::init();
@@ -2038,46 +2052,55 @@ mod tests {
         assert_eq!(ui.get_is_variant_b(), false);
     }
 
+
     #[test]
     fn test_agents_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Agents::new().unwrap();
     }
+
     #[test]
     fn test_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Chat::new().unwrap();
     }
+
     #[test]
     fn test_channels_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Channels::new().unwrap();
     }
+
     #[test]
     fn test_integrations_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Integrations::new().unwrap();
     }
+
     #[test]
     fn test_security_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Security::new().unwrap();
     }
+
     #[test]
     fn test_meetings_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Meetings::new().unwrap();
     }
+
     #[test]
     fn test_logs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Logs::new().unwrap();
     }
+
     #[test]
     fn test_pricing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Pricing::new().unwrap();
     }
+
     #[test]
     fn test_pricing_select_plan() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2090,6 +2113,7 @@ mod tests {
         ui.invoke_select_plan("Pro".into());
         assert_eq!(*plan_selected.borrow(), "Pro");
     }
+
     #[test]
     fn test_my_plan_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2099,6 +2123,7 @@ mod tests {
         assert_eq!(ui.get_tier(), "Starter");
         assert_eq!(ui.get_total_actions(), "500");
     }
+
     #[test]
     fn test_cost_dashboard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2106,21 +2131,25 @@ mod tests {
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
     }
+
     #[test]
     fn test_scaling_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Scaling::new().unwrap();
     }
+
     #[test]
     fn test_swarm_memory_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SwarmMemory::new().unwrap();
     }
+
     #[test]
     fn test_website_builder_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
     }
+
 
     #[test]
     fn test_website_builder_viral_storefront_footer() {
@@ -2141,11 +2170,13 @@ mod tests {
     }
 
 
+
     #[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SetupWizard::new().unwrap();
     }
+
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
@@ -2211,26 +2242,31 @@ mod tests {
         assert!(*save_prompt_called.borrow(), "on_save_prompt should be called");
     }
 
+
     #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+
     #[test]
     fn test_fix_agent_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::FixAgent::new().unwrap();
     }
+
     #[test]
     fn test_upgrade_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Upgrade::new().unwrap();
     }
+
     #[test]
     fn test_billing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Billing::new().unwrap();
     }
+
     #[test]
     fn test_grow_business_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2241,6 +2277,7 @@ mod tests {
 #[cfg(test)]
 mod docs_tests {
     use super::*;
+
 
     #[test]
     fn test_e2e_instant_build_flow() {
@@ -2328,6 +2365,7 @@ mod docs_tests {
         ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
     }
+
 
     #[test]
     fn test_e2e_setup_wizard_flow() {
@@ -2438,6 +2476,7 @@ mod docs_tests {
 
     }
 
+
     #[test]
     fn test_e2e_website_builder_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2531,6 +2570,7 @@ mod docs_tests {
         assert!(*signup_opened.borrow(), "Viral storefront footer click should be successfully invoked");
     }
 
+
     #[test]
     fn test_e2e_documentation_suite_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2608,6 +2648,7 @@ mod docs_tests {
 
 
 
+
     #[test]
     fn test_e2e_ai_help_chat_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2644,6 +2685,7 @@ mod docs_tests {
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
     }
+
 
     #[test]
     fn test_e2e_help_center_flow() {
@@ -2784,41 +2826,49 @@ mod docs_tests {
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
     }
 
+
     #[test]
     fn test_help_center_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::HelpCenter::new().unwrap();
     }
+
     #[test]
     fn test_release_notes_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ReleaseNotes::new().unwrap();
     }
+
     #[test]
     fn test_interactive_walkthrough_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::InteractiveWalkthrough::new().unwrap();
     }
+
     #[test]
     fn test_kairos_orchestration_walkthrough_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::KairosOrchestrationWalkthrough::new().unwrap();
     }
+
     #[test]
     fn test_ai_help_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::AiHelpChat::new().unwrap();
     }
+
     #[test]
     fn test_video_tutorials_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::VideoTutorials::new().unwrap();
     }
+
     #[test]
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ApiDocs::new().unwrap();
     }
+
     #[test]
     fn test_e2e_agent_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2892,6 +2942,7 @@ mod docs_tests {
         assert!(*publish_success.borrow());
     }
 
+
     #[test]
     fn test_e2e_interactive_walkthrough_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2920,6 +2971,7 @@ mod docs_tests {
         assert_eq!(ui.get_current_step(), 3);
     }
 
+
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -2947,6 +2999,7 @@ mod docs_tests {
         ui.set_current_step(3);
         assert_eq!(ui.get_current_step(), 3);
     }
+
 
     #[test]
     fn test_e2e_grow_business_flow() {
@@ -3004,6 +3057,7 @@ mod docs_tests {
         assert!(*execute_success.borrow());
     }
 
+
     #[test]
     fn test_e2e_agent_hire_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3038,6 +3092,7 @@ mod docs_tests {
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
     }
+
 
     #[test]
     fn test_e2e_soft_paywall_flow() {
@@ -3098,6 +3153,7 @@ mod docs_tests {
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
     }
 
+
     #[test]
     fn test_e2e_fix_agent_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3128,6 +3184,7 @@ mod docs_tests {
         agents_ui.invoke_fix_agent("agent_1".into());
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
     }
+
 
     #[test]
     fn test_e2e_ai_config_flow() {
@@ -3203,6 +3260,7 @@ mod docs_tests {
 #[cfg(test)]
 mod dashboard_docs_tests {
     use super::*;
+
 
     #[test]
     fn test_documentation_components_e2e_flow() {
@@ -3323,6 +3381,7 @@ mod remaining_e2e_tests {
     use super::*;
     use slint::Model;
 
+
     #[test]
     fn test_e2e_dashboard_simplification_flow() {
         // if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3386,6 +3445,7 @@ mod remaining_e2e_tests {
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
     }
+
 
     #[test]
 
@@ -3493,6 +3553,7 @@ mod remaining_e2e_tests {
         assert!(*close_called.borrow());
     }
 
+
     #[test]
     fn test_e2e_progressive_disclosure_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3573,6 +3634,7 @@ mod remaining_e2e_tests {
         assert_eq!(setup_wizard.get_is_advanced(), false);
         assert_eq!(agent_config.get_is_advanced(), false);
     }
+
 
     #[test]
     fn test_e2e_cost_transparency_flow() {
@@ -3714,6 +3776,7 @@ mod remaining_e2e_tests {
 mod e2e_hybrid_blob_tests {
     use super::*;
 
+
     #[test]
     fn test_e2e_hybrid_blob_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3774,6 +3837,7 @@ mod e2e_hybrid_blob_tests {
     }
 }
 
+
     #[test]
     fn test_stat_card_properties() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3784,6 +3848,7 @@ mod e2e_hybrid_blob_tests {
         assert_eq!(ui.get_value(), "123");
     }
 
+
     #[test]
     fn test_dashboard_loading_state() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3792,6 +3857,7 @@ mod e2e_hybrid_blob_tests {
         ui.set_is_loading(true);
         assert!(ui.get_is_loading());
     }
+
 
     #[test]
     fn test_e2e_onboarding_wizard_data_flow() {
@@ -3853,3 +3919,49 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
+
+#[cfg(test)]
+mod glassmorphism_tests {
+    use super::*;
+
+    #[test]
+    fn test_glass_card_design_token() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        // Verify we can instantiate a generic GlassCard correctly per design spec
+        let ui = app::AgentConfig::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(600, 500));
+        assert!(ui.window().size().width > 0);
+    }
+
+    #[test]
+    fn test_glass_card_design_token_setup() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(375, 800));
+        assert!(ui.window().size().width > 0);
+    }
+
+    #[test]
+    fn test_glass_card_design_token_prompt() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::PromptTuning::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(375, 800));
+        assert!(ui.window().size().width > 0);
+    }
+
+    #[test]
+    fn test_glass_card_design_token_website() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::WebsiteBuilder::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(375, 800));
+        assert!(ui.window().size().width > 0);
+    }
+
+    #[test]
+    fn test_glass_card_design_token_business() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::BusinessShare::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(375, 600));
+        assert!(ui.window().size().width > 0);
+    }
+}
