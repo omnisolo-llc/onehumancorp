@@ -5255,3 +5255,69 @@ fn test_business_share_flow() {
     dashboard_ui.invoke_action_share_store();
     assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
 }
+
+    #[test]
+    fn test_e2e_api_docs_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let api_docs_opened_clone = api_docs_opened.clone();
+        dashboard_ui.on_open_api_docs(move || {
+            *api_docs_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_api_docs();
+        assert!(*api_docs_opened.borrow(), "API Docs UI should be opened");
+
+        let ui = app::ApiDocs::new().unwrap();
+        assert_eq!(ui.get_api_key(), "sk_live_...");
+        assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
+    }
+
+    #[test]
+    fn test_e2e_release_notes_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let release_notes_opened_clone = release_notes_opened.clone();
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_release_notes();
+        assert!(*release_notes_opened.borrow(), "Release Notes UI should be opened");
+
+        let ui = app::ReleaseNotes::new().unwrap();
+        assert_eq!(ui.get_current_version(), "v0.3.4");
+        assert_eq!(ui.get_show_latest_only(), false);
+    }
