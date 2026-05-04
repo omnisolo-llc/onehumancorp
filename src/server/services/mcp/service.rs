@@ -204,7 +204,7 @@ impl McpService for MyMcpService {
 
         let req = request.into_inner();
 
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
+        let sip_db = crate::sip::SipDB::new(self.hub.db.clone(), tenant_id.clone());
         let ctx_root = std::env::var("CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
@@ -214,7 +214,7 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.hub.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
@@ -241,7 +241,7 @@ impl McpService for MyMcpService {
         }
 
         let req = request.into_inner();
-        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.hub.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
@@ -281,7 +281,7 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(crate::hub::Hub::new(tx, std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -300,7 +300,7 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(crate::hub::Hub::new(tx, std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncContextRequest {
@@ -325,7 +325,7 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(crate::hub::Hub::new(tx, std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -347,7 +347,7 @@ mod tests {
             .unwrap();
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(crate::hub::Hub::new(tx, std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncContextRequest {

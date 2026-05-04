@@ -24,7 +24,7 @@ mod tests {
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let sip_db = SipDB::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }), "test_org".to_string());
         let threshold = chrono::Duration::hours(2);
 
         // When DB is down or connection times out, prune_stale_missions must fail gracefully instead of panic.

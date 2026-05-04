@@ -40,14 +40,15 @@ pub struct Hub {
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
-    pub(crate) pool: sqlx::PgPool,
+    pub(crate) db: std::sync::Arc<crate::db::DB>,
     redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, db: std::sync::Arc<crate::db::DB>) -> Self {
+        let pool = db.pool.clone();
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
@@ -64,7 +65,7 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
-            pool,
+            db: db.clone(),
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
@@ -620,7 +621,7 @@ impl Hub {
 
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
-        let db_ping = match sqlx::query("SELECT 1").execute(&self.pool).await {
+        let db_ping = match sqlx::query("SELECT 1").execute(&self.db.pool).await {
             Ok(_) => start.elapsed().as_millis() as u64,
             Err(_) => 0,
         };
@@ -636,7 +637,7 @@ impl Hub {
         let cloud_connected = mode != "standalone";
 
         let mission_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
-            .fetch_one(&self.pool)
+            .fetch_one(&self.db.pool)
             .await
         {
             Ok(count) => count,
@@ -698,7 +699,7 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let db_arc = std::sync::Arc::new(crate::db::DB { pool, store: crate::db::DbStore::Postgres }); let hub = std::sync::Arc::new(Hub::new(tx, db_arc));
 
         let raw = serde_json::json!({
             "type": "TestEvent",
@@ -729,7 +730,7 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let db_arc = std::sync::Arc::new(crate::db::DB { pool, store: crate::db::DbStore::Postgres }); let hub = std::sync::Arc::new(Hub::new(tx, db_arc));
 
         // 1. Initial get caches empty state
         let agents = hub.get_agents();
@@ -798,7 +799,7 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let db_arc = std::sync::Arc::new(crate::db::DB { pool, store: crate::db::DbStore::Postgres }); let hub = std::sync::Arc::new(Hub::new(tx, db_arc));
 
         let health = hub.check_health().await.unwrap();
 

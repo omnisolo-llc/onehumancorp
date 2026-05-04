@@ -5,15 +5,15 @@ use chrono::Utc;
 
 
 pub struct SipDB {
-    pool: PgPool,
+    db: std::sync::Arc<crate::db::DB>,
     org_id: String,
     context_root: Option<String>,
 }
 
 impl SipDB {
-    pub fn new(pool: PgPool, org_id: String) -> Self {
+    pub fn new(db: std::sync::Arc<crate::db::DB>, org_id: String) -> Self {
         SipDB {
-            pool,
+            db,
             org_id,
             context_root: None,
         }
@@ -38,32 +38,58 @@ impl SipDB {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
         
-        // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
-            .bind(stuck_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 3. Remove COMPLETED, or very old FAILED missions
-        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
+        if self.db.is_sqlite() {
+            if let crate::db::DbStore::Sqlite(sqlite_pool) = &self.db.store {
+                let stuck_str = stuck_threshold.to_rfc3339();
+                let fail_str = fail_threshold.to_rfc3339();
+
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < ? AND organization_id = ?")
+                    .bind(&stuck_str)
+                    .bind(&self.org_id)
+                    .execute(sqlite_pool)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = ?")
+                    .bind(&self.org_id)
+                    .execute(sqlite_pool)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < ? AND organization_id = ?")
+                    .bind(&fail_str)
+                    .bind(&self.org_id)
+                    .execute(sqlite_pool)
+                    .await?;
+
+                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < ?)) AND organization_id = ? LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                    .bind(&fail_str)
+                    .bind(&self.org_id)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+        } else {
+            sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                .bind(stuck_threshold)
+                .bind(&self.org_id)
+                .execute(&self.db.pool)
+                .await?;
+
+            sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+                .bind(&self.org_id)
+                .execute(&self.db.pool)
+                .await?;
+
+            sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                .bind(fail_threshold)
+                .bind(&self.org_id)
+                .execute(&self.db.pool)
+                .await?;
+
+            sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                .bind(fail_threshold)
+                .bind(&self.org_id)
+                .execute(&self.db.pool)
+                .await?;
+        }
             
         Ok(())
     }
@@ -104,12 +130,84 @@ impl SipDB {
         self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
     }
 
+    pub async fn delegate_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
+        let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
+        if self.db.is_sqlite() {
+            self.upsert_mission_internal(mission_id, status, &final_payload, force_local).await
+        } else {
+            let mut tx = self.db.pool.begin().await?;
+            self.upsert_mission_with_tx(&mut tx, mission_id, status, &final_payload, force_local).await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    }
+
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
-        self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
-        tx.commit().await?;
+        if self.db.is_sqlite() {
+            self.upsert_mission_internal(mission_id, status, payload, force_local).await
+        } else {
+            let mut tx = self.db.pool.begin().await?;
+            self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    }
+
+    pub async fn upsert_mission_internal(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+        if let crate::db::DbStore::Sqlite(sqlite_pool) = &self.db.store {
+            let mut tx = sqlite_pool.begin().await?;
+
+            let row = sqlx::query("SELECT id FROM agent_missions WHERE id = ? AND organization_id = ?")
+                .bind(mission_id)
+                .bind(&self.org_id)
+                .fetch_optional(&mut *tx)
+                .await?;
+
+            if let Some(r) = row {
+                let existing_id: String = r.get("id");
+                if !existing_id.is_empty() && force_local {
+                    sqlx::query("UPDATE agent_missions SET status = ?, payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?")
+                        .bind(status)
+                        .bind(payload)
+                        .bind(mission_id)
+                        .bind(&self.org_id)
+                        .execute(&mut *tx)
+                        .await?;
+                }
+            } else {
+                let row_check = sqlx::query("SELECT id FROM agent_missions WHERE id = ? AND organization_id = ?")
+                    .bind(mission_id)
+                    .bind(&self.org_id)
+                    .fetch_optional(&mut *tx)
+                    .await?;
+
+                if let Some(_) = row_check {
+                     if force_local {
+                         sqlx::query("UPDATE agent_missions SET status = ?, payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?")
+                             .bind(status)
+                             .bind(payload)
+                             .bind(mission_id)
+                             .bind(&self.org_id)
+                             .execute(&mut *tx)
+                             .await?;
+                     }
+                } else {
+                     sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?) ON CONFLICT(id) DO NOTHING")
+                         .bind(mission_id)
+                         .bind(status)
+                         .bind(payload)
+                         .bind(&self.org_id)
+                         .execute(&mut *tx)
+                         .await?;
+                }
+            }
+
+            tx.commit().await?;
+        }
         Ok(())
     }
+
+
 
     pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
@@ -159,6 +257,8 @@ impl SipDB {
 
         Ok(())
     }
+
+
 }
 
 #[cfg(test)]
@@ -169,19 +269,20 @@ mod tests {
     use std::env;
 
     // Helper to get a dummy pgpool for testing
-    async fn setup_dummy_pool() -> PgPool {
+    async fn setup_dummy_pool() -> std::sync::Arc<crate::db::DB> {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
-            .unwrap()
+            .unwrap();
+        std::sync::Arc::new(crate::db::DB { pool, store: crate::db::DbStore::Postgres })
     }
 
     #[tokio::test]
     async fn test_delegate_mission_tc1_no_context_root() {
         let pool = setup_dummy_pool().await;
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let db_arc = pool.clone(); let sip_db = SipDB::new(db_arc, "test_org".to_string());
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
         assert_eq!(enriched, payload, "Payload should be unmodified when no context root is set");
@@ -205,7 +306,7 @@ mod tests {
         let mut file = File::create(&agents_path).unwrap();
         write!(file, "Always write clean code.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
+        let db_arc = pool.clone(); let sip_db = SipDB::new(db_arc, "test_org".to_string())
             .with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
@@ -225,7 +326,7 @@ mod tests {
         let mut file = File::create(&claude_path).unwrap();
         write!(file, "Use specialized tokens.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
+        let db_arc = pool.clone(); let sip_db = SipDB::new(db_arc, "test_org".to_string())
             .with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
@@ -249,7 +350,7 @@ mod tests {
         let mut file2 = File::create(&claude_path).unwrap();
         write!(file2, "CLAUDE rules.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
+        let db_arc = pool.clone(); let sip_db = SipDB::new(db_arc, "test_org".to_string())
             .with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
@@ -265,7 +366,7 @@ mod tests {
         let pool = setup_dummy_pool().await;
         let dir_str = create_temp_dir("tc5");
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
+        let db_arc = pool.clone(); let sip_db = SipDB::new(db_arc, "test_org".to_string())
             .with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";

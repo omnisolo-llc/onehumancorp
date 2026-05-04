@@ -328,7 +328,7 @@ impl HubService for MyHubService {
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
-        .execute(&self.hub.pool)
+        .execute(&self.hub.db.pool)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -352,7 +352,7 @@ impl HubService for MyHubService {
         )
         .bind(&tenant_id)
         .bind(&org_id)
-        .fetch_optional(&self.hub.pool)
+        .fetch_optional(&self.hub.db.pool)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -391,7 +391,7 @@ impl HubService for MyHubService {
         )
         .bind(&tenant_id)
         .bind(&org_id)
-        .execute(&self.hub.pool)
+        .execute(&self.hub.db.pool)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -937,7 +937,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    let hub = Arc::new(Hub::new(event_tx, db.clone()));
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
