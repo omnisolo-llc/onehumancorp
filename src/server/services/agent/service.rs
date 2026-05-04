@@ -30,9 +30,26 @@ impl MyAgentManagerService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let cost_auditor = self.hub.get_cost_auditor();
+        let total_cost = cost_auditor.get_total_cost();
+        let total_tokens = cost_auditor.get_total_tokens();
+        let agent_costs_data = cost_auditor.get_agent_costs_snapshot();
+
+        let mut agent_costs = Vec::new();
+        for (name, cost, roi, efficiency) in agent_costs_data {
+            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+            agent_costs.push(AgentCostSummary {
+                name,
+                cost_usd: cost,
+                roi,
+                efficiency,
+                pct,
+            });
+        }
+
         let costs = Summary {
-            total_cost_usd: cost_auditor.get_total_cost(),
-            total_tokens: cost_auditor.get_total_tokens(),
+            total_cost_usd: total_cost,
+            agent_costs,
+            total_tokens,
         };
 
         let mut status_map = std::collections::HashMap::new();
@@ -235,6 +252,13 @@ impl AgentManagerService for MyAgentManagerService {
         snapshots.push(snap.clone());
 
         Ok(Response::new(snap))
+    }
+
+    async fn get_dashboard_snapshot(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<DashboardSnapshot>, Status> {
+        Ok(Response::new(self.get_snapshot().await))
     }
 
     async fn restore_snapshot(
