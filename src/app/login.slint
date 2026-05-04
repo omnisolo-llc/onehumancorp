@@ -86,6 +86,7 @@ export component Login inherits Window {
                     color: #ef4444;
                     horizontal-alignment: center;
                     font-family: "Inter";
+                    wrap: word-wrap;
                 }
 
                 Button {
@@ -115,7 +116,7 @@ export component Login inherits Window {
                 
                 Button {
                     height: 44px;
-                    text: "⚙ App Settings";
+                    text: "⚙ Advanced Options";
                     clicked => { open_settings(); }
                 }
             }

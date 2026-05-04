@@ -608,4 +608,3 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text="Launch My Business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
-});

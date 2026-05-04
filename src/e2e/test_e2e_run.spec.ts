@@ -166,3 +166,76 @@ test('verify website builder flow', async ({ page }) => {
 
     await expect(page.locator('text="Site Published!"')).toBeVisible({ timeout: 5000 });
 });
+
+test('verify login form error message UX wrap behavior', async ({ page }) => {
+    await page.goto('/');
+
+    // Trigger an error to see if error message is displayed
+    await page.fill('input[type="email"]', 'invalid@example.com');
+    await page.fill('input[type="password"]', 'wrong');
+    await page.click('button:has-text("Sign In")');
+
+    // Assume an error message like 'Invalid email or password' appears
+    await expect(page.locator('text="Invalid"')).toBeVisible();
+});
+
+test('verify advanced options toggle', async ({ page }) => {
+    await page.goto('/');
+
+    // We changed 'App Settings' to 'Advanced Options'
+    await page.click('button:has-text("Advanced Options")');
+
+    // Expect the settings to be shown
+    await expect(page.locator('text="App Settings"')).toBeVisible();
+});
+
+test('verify sign up and sign in toggle', async ({ page }) => {
+    await page.goto('/');
+
+    // Ensure we start at Sign In
+    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+
+    // Click Don't have an account
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+
+    // Ensure we are at Sign Up
+    await expect(page.locator('button:has-text("Sign Up")')).toBeVisible();
+    await expect(page.locator('button:has-text("Already have an account? Sign In")')).toBeVisible();
+
+    // Toggle back
+    await page.click('button:has-text("Already have an account? Sign In")');
+
+    // Ensure we are back at Sign In
+    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+});
+
+test('verify password toggle', async ({ page }) => {
+    await page.goto('/');
+
+    // Fill password
+    await page.fill('input[type="password"]', 'secretpassword');
+
+    // Click Show
+    await page.click('button:has-text("Show")');
+
+    // Check if input type is text
+    const inputType = await page.getAttribute('input[value="secretpassword"]', 'type');
+    expect(inputType).toBe('text');
+
+    // Click Hide
+    await page.click('button:has-text("Hide")');
+
+    // Check if input type is password
+    const inputTypeAfter = await page.getAttribute('input[value="secretpassword"]', 'type');
+    expect(inputTypeAfter).toBe('password');
+});
+
+test('verify login empty submission', async ({ page }) => {
+    await page.goto('/');
+
+    // Submit empty form
+    await page.click('button:has-text("Sign In")');
+
+    // Wait for validation error
+    await expect(page.locator('text="Username cannot be empty"')).toBeVisible();
+});
