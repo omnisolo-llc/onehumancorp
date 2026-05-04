@@ -268,7 +268,7 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        Ok(Response::new(self.get_snapshot().await))
+        Ok(Response::new(self.get_snapshot().await?))
     }
 
     async fn restore_snapshot(
