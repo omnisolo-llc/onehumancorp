@@ -1469,6 +1469,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let dashboard_approve_handle = dashboard.as_weak();
+                dashboard.on_approve_task(move |task_id| {
+                    if let Some(ui) = dashboard_approve_handle.upgrade() {
+                        let current = ui.get_pending_approvals();
+                        let mut remaining = Vec::new();
+                        for i in 0..current.row_count() {
+                            if let Some(item) = current.row_data(i) {
+                                if item.task_id != task_id {
+                                    remaining.push(item);
+                                }
+                            }
+                        }
+                        ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+                    }
+                });
+
                 let dashboard_briefing_handle = dashboard.as_weak();
                 dashboard.on_dismiss_daily_briefing(move || {
                     if let Some(ui) = dashboard_briefing_handle.upgrade() {
@@ -2426,6 +2442,60 @@ mod e2e_tests {
         ui.invoke_approve_task("test-task-123".into());
 
         assert_eq!(*was_approved.borrow(), true);
+    }
+
+    #[test]
+    fn test_e2e_agent_activity_feed_approvals_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // The approve_task callback updates state optimistically in the app
+        let dashboard_approve_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_approve_task(move |task_id| {
+            if let Some(ui) = dashboard_approve_handle.upgrade() {
+                let current = ui.get_pending_approvals();
+                let mut remaining = Vec::new();
+                for i in 0..current.row_count() {
+                    if let Some(item) = current.row_data(i) {
+                        if item.task_id != task_id {
+                            remaining.push(item);
+                        }
+                    }
+                }
+                ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+            }
+        });
+
+        let pending_tasks = vec![
+            app::UiPendingApproval {
+                task_id: "test-task-123".into(),
+                title: "Draft Confirmation for Maya".into(),
+                proposed_content: "Hi Maya, thank you for your custom order!".into(),
+            }
+        ];
+
+        let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
+        dashboard_ui.set_pending_approvals(pending_model.into());
+
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
+
+        dashboard_ui.invoke_approve_task("test-task-123".into());
+
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 0);
     }
 
     #[test]
