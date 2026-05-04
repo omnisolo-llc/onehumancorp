@@ -1,5 +1,5 @@
 import { GlassCard } from "glass_card.slint";
-import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView, CheckBox } from "std-widgets.slint";
 
 export component ApiDocs inherits Window {
     preferred-width: 800px;
@@ -9,6 +9,7 @@ export component ApiDocs inherits Window {
     background: #0f172a;
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
+    in-out property <bool> is_advanced: false;
 
     HorizontalBox {
         alignment: center;
@@ -31,7 +32,12 @@ export component ApiDocs inherits Window {
                 wrap: word-wrap;
             }
 
-            ScrollView {
+            CheckBox {
+                text: "Show Advanced Developer Documentation";
+                checked <=> is_advanced;
+            }
+
+            if (is_advanced): ScrollView {
                 VerticalBox {
                     spacing: 24px;
 
