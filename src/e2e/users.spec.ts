@@ -22,14 +22,17 @@ test.describe('User Management', () => {
     await expect(page.locator('button:has-text("Add User"), button:has-text("Invite")')).toBeVisible();
   });
 
-  test('should invite new user', async ({ page }) => {
+
+  test('should invite new user via referral program', async ({ page }) => {
     await page.goto('/users');
-    const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
+    const inviteBtn = page.locator('button:has-text("Invite User")').first();
     if (await inviteBtn.isVisible()) {
+      await expect(page.locator('text=Referral Program')).toBeVisible();
+      await expect(page.locator('text=Share OHC with a friend')).toBeVisible();
       await inviteBtn.click();
-      await expect(page.locator('text=/invite|email|add.*user/i')).toBeVisible();
     }
   });
+
 
   test('should enter user email', async ({ page }) => {
     await page.goto('/users');

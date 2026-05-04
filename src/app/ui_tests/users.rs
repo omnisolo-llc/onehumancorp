@@ -71,3 +71,12 @@ fn create() -> app::UserManagement { crate::ui_tests::init(); app::UserManagemen
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---
+
+#[test] fn users_flow_invite_user_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_invite_user(move || { *c.borrow_mut() = true; });
+    ui.invoke_invite_user();
+    assert_eq!(*called.borrow(), true);
+}
