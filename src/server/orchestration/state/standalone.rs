@@ -3,20 +3,46 @@ use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 use sqlx::Row;
 use chrono::Utc;
 
+struct TransportLockGuard {
+    transport: Arc<dyn MeshTransport>,
+    key: String,
+}
+
+impl TransportLockGuard {
+    async fn acquire(transport: Arc<dyn MeshTransport>, key: String) -> Result<Self, String> {
+        let acquired = transport.acquire_lock(&key, "standalone_state_manager", 30).await?;
+        if acquired {
+            Ok(Self { transport, key })
+        } else {
+            Err(format!("Task {} is currently locked", key))
+        }
+    }
+}
+
+impl Drop for TransportLockGuard {
+    fn drop(&mut self) {
+        let transport = self.transport.clone();
+        let key = self.key.clone();
+        tokio::spawn(async move {
+            let _ = transport.release_lock(&key, "standalone_state_manager").await;
+        });
+    }
+}
+
 pub struct StandaloneStateManager {
     db: Arc<DB>,
-    lock: Mutex<()>,
+    transport: Arc<dyn MeshTransport>,
 }
 
 impl StandaloneStateManager {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
         Self {
             db,
-            lock: Mutex::new(()),
+            transport,
         }
     }
 }
@@ -32,7 +58,8 @@ impl StateManager for StandaloneStateManager {
         agent_id: Option<&str>,
         reason: Option<&str>,
     ) -> Result<(), String> {
-        let _guard = self.lock.lock().await;
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let _guard = TransportLockGuard::acquire(self.transport.clone(), lock_key).await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
@@ -124,7 +151,7 @@ impl StateManager for StandaloneStateManager {
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
-        let _guard = self.lock.lock().await;
+        let _guard = TransportLockGuard::acquire(self.transport.clone(), "ohc:lock:standalone:pull".to_string()).await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
