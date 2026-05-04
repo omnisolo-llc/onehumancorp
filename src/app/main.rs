@@ -177,6 +177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                                     if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                                     if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                                    if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                                 }
                             }).unwrap();
                         }
@@ -345,6 +346,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
+                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
+                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                        if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                     }
                 }).unwrap();
             }
@@ -370,6 +379,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
             ]);
 
             tokio::spawn(async move {
@@ -2168,11 +2185,36 @@ mod growth_e2e_tests {
         ui.set_business_type("Online Store".into());
         ui.set_company_name("My Resumed Store".into());
         ui.set_sell_physical(true);
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Vegan Cake".into());
+        ui.set_product_price("45".into());
+        ui.set_domain_choice("custom".into());
+        ui.set_instant_bio("A cool bakery".into());
 
         assert_eq!(ui.get_step(), 3);
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_company_name(), "My Resumed Store");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Vegan Cake");
+        assert_eq!(ui.get_product_price(), "45");
+        assert_eq!(ui.get_domain_choice(), "custom");
+        assert_eq!(ui.get_instant_bio(), "A cool bakery");
+
+        // Simulate saving state to hashmap, and verify
+        let state = std::collections::HashMap::from([
+            ("step".to_string(), ui.get_step().to_string()),
+            ("business_type".to_string(), ui.get_business_type().to_string()),
+            ("website_template".to_string(), ui.get_website_template().to_string()),
+            ("product_name".to_string(), ui.get_product_name().to_string()),
+            ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+            ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
+        ]);
+
+        assert_eq!(state.get("website_template").unwrap(), "Modern");
+        assert_eq!(state.get("product_name").unwrap(), "Vegan Cake");
+        assert_eq!(state.get("domain_choice").unwrap(), "custom");
+        assert_eq!(state.get("instant_bio").unwrap(), "A cool bakery");
     }
 
     #[test]
