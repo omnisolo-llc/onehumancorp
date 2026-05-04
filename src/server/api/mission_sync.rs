@@ -171,7 +171,7 @@ mod tests {
         extract::{Path, State},
         Json,
     };
-    use axum::response::IntoResponse;
+
     use crate::api::mission_sync::{escalate_mission, get_mission_status, EscalateRequest, MissionSyncState};
 
     #[tokio::test]

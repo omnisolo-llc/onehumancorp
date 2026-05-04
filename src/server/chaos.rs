@@ -133,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lock_contention_resilience() {
-        use redis::AsyncCommands;
+
         // Start a local redis instance for testing or mock the behavior. Since we may not have a redis server running that we can corrupt,
         // we'll simulate the lock contention logic locally.
 

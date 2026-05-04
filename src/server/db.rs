@@ -101,14 +101,14 @@ impl DB {
 
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
                 .connect(&database_url)
                 .await?;
 
-            Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
+            Ok(DB { pool: _pool.clone(), store: crate::db::DbStore::Postgres })
         }
     }
 
@@ -552,20 +552,20 @@ pub async fn insert_autodream_memory(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
 
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
         // SAFETY: Test-only code setting environment variables
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
+        let db = crate::db::DB::new().await;
         assert!(db.is_err());
     }
 }
 
 #[cfg(test)]
 mod autodream_db_tests {
-    use super::*;
+
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
@@ -574,14 +574,14 @@ mod autodream_db_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
+        let db = crate::db::DB { pool: _pool.clone(), store: crate::db::DbStore::Postgres };
 
         // This is primarily to ensure the code compiles and syntax is fundamentally sound
         // Real tests would run migrations and populate data first.
@@ -596,16 +596,16 @@ mod autodream_db_tests {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = DB {
-            pool: pool.clone(),
-            store: DbStore::Postgres,
+        let db = crate::db::DB {
+            pool: _pool.clone(),
+            store: crate::db::DbStore::Postgres,
         };
 
         let id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d";
@@ -632,14 +632,14 @@ mod autodream_db_tests {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
             .unwrap();
         // Just checking configuration parses ok for multitenancy logic
-        let _ = pool;
+        let _ = _pool;
     }
 }
 
@@ -651,7 +651,7 @@ mod autodream_db_tests {
 
 #[cfg(test)]
 mod security_tests_final {
-    use super::*;
+
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use std::sync::Mutex;
@@ -678,7 +678,7 @@ mod security_tests_final {
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        let _ = DB::new().await;
+        let _ = crate::db::DB::new().await;
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
 
@@ -718,7 +718,7 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
-    use super::*;
+
 
     #[tokio::test]
     async fn test_tenant_data_isolation() {
@@ -727,7 +727,7 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
@@ -740,7 +740,7 @@ mod e2e_tenant_isolation_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let pool2 = sqlx::postgres::PgPoolOptions::new()
+        let _pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
