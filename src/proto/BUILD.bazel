@@ -164,6 +164,7 @@ proto_library(
 proto_rust_library(
     name = "app",
     proto = ":app_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
 
