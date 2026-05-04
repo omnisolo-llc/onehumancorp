@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 export struct UiAgent {
@@ -43,11 +44,7 @@ export component Agents inherits Window {
         VerticalBox {
             spacing: 10px;
             
-            for agent in agents : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            for agent in agents : GlassCard {
                 
                 HorizontalBox {
                     padding: 16px;
