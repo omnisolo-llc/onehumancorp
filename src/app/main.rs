@@ -19,6 +19,7 @@ pub mod ohc {
     }
 }
 
+#[allow(unused_imports)]
 use slint::{ComponentHandle, Model};
 
 pub mod action_queue;
@@ -27,7 +28,7 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-fn open_url(url: &str) {
+fn open_url(#[allow(unused_variables)] url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
         // Removed web_sys since it breaks the build, avoiding E0433
