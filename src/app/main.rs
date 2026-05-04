@@ -1993,7 +1993,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -2005,8 +2005,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
                 ("payment_pref".to_string(), payment_pref.to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_name".to_string(), admin_name.to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
+                ("admin_password".to_string(), admin_password.to_string()),
                 ("website_template".to_string(), website_template.to_string()),
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
@@ -2024,8 +2025,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_company_description = company_description.to_string();
             let req_payment_pref = payment_pref.to_string();
             let req_admin_email = admin_email.to_string();
-            let req_admin_name = ui.get_admin_name().to_string();
-            let req_admin_password = ui.get_admin_password().to_string();
+            let req_admin_name = admin_name.to_string();
+            let req_admin_password = admin_password.to_string();
 
             let mut req_selling_categories = Vec::new();
             if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
@@ -2682,7 +2683,7 @@ mod e2e_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
@@ -2704,7 +2705,9 @@ mod e2e_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
+            ui.get_admin_name(),
+            ui.get_admin_password()
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
@@ -3177,7 +3180,7 @@ mod docs_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
@@ -3199,7 +3202,9 @@ mod docs_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
+            ui.get_admin_name(),
+            ui.get_admin_password()
         );
 
         assert_eq!(ui.get_step(), 10);
@@ -3286,7 +3291,7 @@ mod docs_tests {
         ui.set_product_price("10.0".into());
         ui.set_domain_choice("subdomain".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
             assert_eq!(website_template, "Classic");
             assert_eq!(product_name, "My First Product");
             assert_eq!(product_price, "10.0");
@@ -3309,7 +3314,9 @@ mod docs_tests {
             ui.get_website_template(),
             ui.get_product_name(),
             ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
+            ui.get_admin_name(),
+            ui.get_admin_password()
         );
         assert!(*launch_called.borrow());
         assert_eq!(ui.get_launching(), false);
@@ -5350,7 +5357,7 @@ mod e2e_hybrid_blob_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
@@ -5367,7 +5374,9 @@ mod e2e_hybrid_blob_tests {
             "Modern".into(),
             "Vegan Chocolate Cake".into(),
             "45.00".into(),
-            "custom".into()
+            "custom".into(),
+            ui.get_admin_name(),
+            ui.get_admin_password()
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
