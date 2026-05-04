@@ -15,7 +15,7 @@ actions:
       - run: |
           # xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
-            --config=buildbuddy \
+            --config=buildbuddy-official \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
@@ -35,7 +35,7 @@ actions:
           - "*"
     steps:
       - run: |
-          bazel test //... --config=buildbuddy --test_output=errors --test_summary=terse
+          bazel test //... --config=buildbuddy-official --test_output=errors --test_summary=terse
           bazel build //release:all_release_artifacts --config=linux
           # Cross-platform builds (assumes CI environment has toolchains)
           bazel build //src/app:app //src/server:server --config=windows || echo "Warning: Windows build failed"
