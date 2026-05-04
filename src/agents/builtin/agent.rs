@@ -20,6 +20,7 @@ pub enum AgentEvent {
     UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
+    Handoff { target_agent: String },
 }
 
 /// Configuration for a single agent run.
@@ -894,6 +895,10 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::HandoffRequested(target)) => {
+                        on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                        return Ok(format!("Handoff requested to {}", target));
+                    }
                 }
             }
 
@@ -924,6 +929,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        ToolError::HandoffRequested(target) => {
+                            on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                            return Ok(format!("Handoff requested to {}", target));
                         }
                         _ => {
                             let err = format!("Fatal tool error: {:?}", e);
@@ -995,6 +1004,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        Err(ToolError::HandoffRequested(target)) => {
+                            on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                            return Ok(format!("Handoff requested to {}", target));
                         }
                     }
                 }
@@ -1734,6 +1747,62 @@ mod tests {
 
         // We can verify that it produced the final answer, meaning it survived the loop and compaction.
         assert_eq!(result.unwrap(), "final answer");
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mechanic() {
+        struct HandoffToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for HandoffToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::HandoffRequested("Finance".to_string()))
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Yielding to finance...".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "call_handoff".to_string(),
+                        name: "handoff_tool".to_string(),
+                        arguments: serde_json::Value::Null,
+                    }],
+                    tool_results: vec![],
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+            }]),
+        });
+
+        let tools = vec![Tool {
+            name: "handoff_tool".to_string(),
+            description: "handoff".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(HandoffToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Transfer me to finance", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Handoff requested to Finance");
+
+        let handoff_emitted = events.iter().any(|e| {
+            if let AgentEvent::Handoff { target_agent } = e {
+                target_agent == "Finance"
+            } else {
+                false
+            }
+        });
+        assert!(handoff_emitted);
     }
 
     #[tokio::test]
