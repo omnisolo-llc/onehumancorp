@@ -2082,7 +2082,7 @@ mod tests {
         app::Scaling::new().unwrap();
     }
     #[test]
-    fn test_swarm_memory_creation() {
+    fn test_system_history_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SwarmMemory::new().unwrap();
     }
