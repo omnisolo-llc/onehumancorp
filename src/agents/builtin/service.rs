@@ -329,7 +329,6 @@ impl AgentServiceImpl {
             enable_llm_judge: false,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
-            enable_git_state_checkpointing: false,
             workspace_path: None,
             thread_id: None,
             resume_from_checkpoint_id: None,
@@ -348,7 +347,12 @@ impl AgentServiceImpl {
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         
         let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
-        let agent = Arc::new(Agent::new(llm, tools));
+        let mut unarc_agent = Agent::new(llm, tools);
+        if let Some(wd) = &run_cfg.workspace_path {
+            let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
+            unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
+        }
+        let agent = Arc::new(unarc_agent);
         
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
         if let Err(e) = ralph.run(&req.task).await {
@@ -406,7 +410,12 @@ impl AgentService for AgentServiceImpl {
             all_tools
         };
 
-        let agent = Arc::new(Agent::new(llm, tools));
+        let mut unarc_agent = Agent::new(llm, tools);
+        if let Some(wd) = &run_cfg.workspace_path {
+            let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
+            unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
+        }
+        let agent = Arc::new(unarc_agent);
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
 
@@ -556,7 +565,6 @@ impl AgentService for AgentServiceImpl {
                 enable_llm_judge: false,
                 enable_state_checkpointing: false,
                 state_scratchpad_path: None,
-                enable_git_state_checkpointing: false,
                 workspace_path: None,
                 thread_id: None,
                 resume_from_checkpoint_id: None,
