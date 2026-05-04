@@ -249,6 +249,16 @@ impl DB {
                         tier TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS onboarding_state (
+                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        current_step INTEGER NOT NULL DEFAULT 0,
+                        state_json TEXT NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, organization_id)
+                    );
                     CREATE TABLE IF NOT EXISTS customers (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
