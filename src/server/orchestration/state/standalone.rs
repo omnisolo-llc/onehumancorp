@@ -1,23 +1,21 @@
 use super::StateManager;
+use crate::db::{DbStore, DB};
+use crate::orchestration::state::TransportLockGuard;
 use crate::tasks::SharedTask;
-use crate::db::{DB, DbStore};
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use sqlx::Row;
 use chrono::Utc;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+use sqlx::Row;
+use std::sync::Arc;
 
 pub struct StandaloneStateManager {
     db: Arc<DB>,
-    lock: Mutex<()>,
+    pub transport: Arc<dyn MeshTransport>,
 }
 
 impl StandaloneStateManager {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self {
-            db,
-            lock: Mutex::new(()),
-        }
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
+        Self { db, transport }
     }
 }
 
@@ -32,7 +30,14 @@ impl StateManager for StandaloneStateManager {
         agent_id: Option<&str>,
         reason: Option<&str>,
     ) -> Result<(), String> {
-        let _guard = self.lock.lock().await;
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let _guard = TransportLockGuard::acquire(
+            self.transport.clone(),
+            lock_key,
+            "standalone_state_manager".to_string(),
+            true,
+        )
+        .await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
@@ -42,13 +47,12 @@ impl StateManager for StandaloneStateManager {
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state
-        let row = sqlx::query(
-            "SELECT status, dependencies, tenant_id FROM swarm_tasks WHERE id = ?"
-        )
-        .bind(task_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        let row =
+            sqlx::query("SELECT status, dependencies, tenant_id FROM swarm_tasks WHERE id = ?")
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
         let row = match row {
             Some(r) => r,
@@ -64,20 +68,23 @@ impl StateManager for StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id: String = row
+            .try_get("tenant_id")
+            .unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
-            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let deps_str: String = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
             for dep_id in dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = ?"
-                )
-                .bind(&dep_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                let dep_status: Option<String> =
+                    sqlx::query_scalar("SELECT status FROM swarm_tasks WHERE id = ?")
+                        .bind(&dep_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
 
                 if dep_status.as_deref() != Some("COMPLETED") {
                     return Err(format!("Dependency {} is not COMPLETED", dep_id));
@@ -88,7 +95,7 @@ impl StateManager for StandaloneStateManager {
         // 2. Update state
         let now = Utc::now();
         sqlx::query(
-            "UPDATE swarm_tasks SET status = ?, assigned_agent_id = ?, updated_at = ? WHERE id = ?"
+            "UPDATE swarm_tasks SET status = ?, assigned_agent_id = ?, updated_at = ? WHERE id = ?",
         )
         .bind(to_state)
         .bind(agent_id)
@@ -124,7 +131,14 @@ impl StateManager for StandaloneStateManager {
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
-        let _guard = self.lock.lock().await;
+        let lock_key = format!("ohc:lock:system:tasks_pull");
+        let _guard = TransportLockGuard::acquire(
+            self.transport.clone(),
+            lock_key,
+            "standalone_state_manager".to_string(),
+            true,
+        )
+        .await?;
 
         let sqlite_pool = match &self.db.store {
             DbStore::Sqlite(pool) => pool,
@@ -145,7 +159,7 @@ impl StateManager for StandaloneStateManager {
                   WHERE dep.status != 'COMPLETED'
               )
             LIMIT ?
-            "#
+            "#,
         )
         .bind(limit)
         .fetch_all(&mut *tx)
@@ -157,19 +171,20 @@ impl StateManager for StandaloneStateManager {
 
         for row in rows {
             let id: String = row.get("id");
-            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let deps_str: String = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
 
             // Check dependencies again explicitly in Rust just to be perfectly safe
             let mut all_completed = true;
             for dep_id in &dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = ?"
-                )
-                .bind(dep_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                let dep_status: Option<String> =
+                    sqlx::query_scalar("SELECT status FROM swarm_tasks WHERE id = ?")
+                        .bind(dep_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
 
                 if dep_status.as_deref() != Some("COMPLETED") {
                     all_completed = false;
@@ -178,14 +193,25 @@ impl StateManager for StandaloneStateManager {
             }
 
             if all_completed {
-                let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+                let tenant_id: String = row
+                    .try_get("tenant_id")
+                    .unwrap_or_else(|_| "system".to_string());
                 task_ids.push((id.clone(), tenant_id.clone()));
 
-                let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
-                let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&Utc);
+                let payload_str: String =
+                    row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                let created_at: String = row
+                    .try_get("created_at")
+                    .unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at)
+                    .unwrap_or_default()
+                    .with_timezone(&Utc);
+                let updated_at: String = row
+                    .try_get("updated_at")
+                    .unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at)
+                    .unwrap_or_default()
+                    .with_timezone(&Utc);
 
                 let t = SharedTask {
                     id: id.clone(),
@@ -222,7 +248,7 @@ impl StateManager for StandaloneStateManager {
             let now_rfc = now.to_rfc3339();
             for (id_str, tenant_id) in task_ids {
                 sqlx::query(
-                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?"
+                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?",
                 )
                 .bind(&now_rfc)
                 .bind(&id_str)

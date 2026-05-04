@@ -1,0 +1,11 @@
+--- src/server/orchestration/state/standalone.rs
++++ src/server/orchestration/state/standalone.rs
+@@ -128,7 +128,7 @@
+     }
+
+     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
+-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
++        let lock_key = format!("ohc:lock:system:tasks_pull");
+         let _guard = TransportLockGuard::acquire(self.transport.clone(), lock_key, true).await?;
+
+         let sqlite_pool = match &self.db.store {

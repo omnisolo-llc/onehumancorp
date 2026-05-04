@@ -1,10 +1,11 @@
-use super::{StateManager, standalone::StandaloneStateManager};
-use crate::db::{DB, DbStore};
+use super::{standalone::StandaloneStateManager, StateManager};
+use crate::db::{DbStore, DB};
 use crate::tasks::SharedTask;
+use chrono::Utc;
+use ohc_builtin_agent::mesh::transport::MemoryTransport;
+use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use tokio::test;
-use chrono::Utc;
-use sqlx::sqlite::SqlitePoolOptions;
 
 async fn setup_db() -> Arc<DB> {
     let db_id = uuid::Uuid::new_v4().to_string();
@@ -33,8 +34,11 @@ async fn setup_db() -> Arc<DB> {
             created_at TEXT,
             updated_at TEXT
         );
-        "#
-    ).execute(&sqlite_pool).await.unwrap();
+        "#,
+    )
+    .execute(&sqlite_pool)
+    .await
+    .unwrap();
 
     sqlx::query(
         r#"
@@ -49,8 +53,11 @@ async fn setup_db() -> Arc<DB> {
             reason TEXT,
             occurred_at TEXT
         );
-        "#
-    ).execute(&sqlite_pool).await.unwrap();
+        "#,
+    )
+    .execute(&sqlite_pool)
+    .await
+    .unwrap();
 
     let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
@@ -65,7 +72,8 @@ async fn setup_db() -> Arc<DB> {
 #[tokio::test]
 async fn test_single_agent_flow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let transport = Arc::new(MemoryTransport::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), transport);
 
     let task_id = uuid::Uuid::new_v4().to_string();
 
@@ -77,7 +85,16 @@ async fn test_single_agent_flow() {
             .unwrap();
     }
 
-    let result = state_manager.transition_state(&task_id, "system", "PENDING", "EXECUTING", Some("agent_1"), None).await;
+    let result = state_manager
+        .transition_state(
+            &task_id,
+            "system",
+            "PENDING",
+            "EXECUTING",
+            Some("agent_1"),
+            None,
+        )
+        .await;
     println!("Result: {:?}", result);
     assert!(result.is_ok());
 
@@ -94,7 +111,8 @@ async fn test_single_agent_flow() {
 #[tokio::test]
 async fn test_dag_workflow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let transport = Arc::new(MemoryTransport::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), transport);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
@@ -123,7 +141,17 @@ async fn test_dag_workflow() {
     assert!(!tasks.iter().any(|t| t.id == child_id));
 
     // Complete parent - parent was moved to IN_PROGRESS by pull_available_tasks
-    state_manager.transition_state(&parent_id, "system", "IN_PROGRESS", "COMPLETED", Some("agent_1"), None).await.unwrap();
+    state_manager
+        .transition_state(
+            &parent_id,
+            "system",
+            "IN_PROGRESS",
+            "COMPLETED",
+            Some("agent_1"),
+            None,
+        )
+        .await
+        .unwrap();
 
     // Now child should be available
     let tasks_after = state_manager.pull_available_tasks(10).await.unwrap();
@@ -137,7 +165,8 @@ use super::cloud::CloudStateManager;
 async fn test_cloud_dag_workflow_mock() {
     let db = setup_db().await;
     // For unit coverage we instantiate it
-    let state_manager = CloudStateManager::new(db.clone(), None);
+    let transport = Arc::new(MemoryTransport::new());
+    let state_manager = CloudStateManager::new(db.clone(), transport);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();

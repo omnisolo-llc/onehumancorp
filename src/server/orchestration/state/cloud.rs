@@ -1,65 +1,21 @@
 use super::StateManager;
-use crate::tasks::SharedTask;
 use crate::db::DB;
+use crate::orchestration::state::TransportLockGuard;
+use crate::tasks::SharedTask;
 use async_trait::async_trait;
-use std::sync::Arc;
-use sqlx::Row;
 use chrono::Utc;
-use redis::AsyncCommands;
-
-struct RedisLockGuard {
-    client: Option<redis::Client>,
-    key: String,
-}
-
-impl RedisLockGuard {
-    async fn acquire(client: Option<&redis::Client>, key: String) -> Result<Self, String> {
-        if let Some(c) = client {
-            let mut conn = c.get_async_connection().await.map_err(|e| format!("Failed to connect to Redis: {}", e))?;
-            let acquired: redis::RedisResult<Option<String>> = redis::cmd("SET")
-                .arg(&key)
-                .arg("locked")
-                .arg("NX")
-                .arg("EX")
-                .arg(30)
-                .query_async(&mut conn)
-                .await;
-
-            match acquired {
-                Ok(Some(resp)) if resp == "OK" => {
-                    Ok(Self { client: Some(c.clone()), key })
-                }
-                _ => {
-                    Err(format!("Task {} is currently locked via Redis", key))
-                }
-            }
-        } else {
-            Ok(Self { client: None, key })
-        }
-    }
-}
-
-impl Drop for RedisLockGuard {
-    fn drop(&mut self) {
-        if let Some(client) = self.client.take() {
-            let key = self.key.clone();
-            tokio::spawn(async move {
-                if let Ok(mut conn) = client.get_async_connection().await {
-                    let _: redis::RedisResult<()> = conn.del(&key).await;
-                }
-            });
-        }
-    }
-}
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+use sqlx::Row;
+use std::sync::Arc;
 
 pub struct CloudStateManager {
     db: Arc<DB>,
-    redis_client: Option<redis::Client>,
+    pub transport: Arc<dyn MeshTransport>,
 }
 
 impl CloudStateManager {
-    pub fn new(db: Arc<DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
+        Self { db, transport }
     }
 
     async fn transition_state_inner(
@@ -70,7 +26,7 @@ impl CloudStateManager {
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
-        _lock_guard: &RedisLockGuard,
+        _lock_guard: &TransportLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -97,20 +53,23 @@ impl CloudStateManager {
             ));
         }
 
-        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row
+            .try_get("tenant_id")
+            .unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
-            let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
+            let deps_val: serde_json::Value = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
             for dep_id in dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = $1::uuid"
-                )
-                .bind(&dep_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                let dep_status: Option<String> =
+                    sqlx::query_scalar("SELECT status FROM swarm_tasks WHERE id = $1::uuid")
+                        .bind(&dep_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
 
                 if dep_status.as_deref() != Some("COMPLETED") {
                     return Err(format!("Dependency {} is not COMPLETED", dep_id));
@@ -170,10 +129,25 @@ impl StateManager for CloudStateManager {
     ) -> Result<(), String> {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let lock_guard = RedisLockGuard::acquire(self.redis_client.as_ref(), lock_key).await?;
+        let lock_guard = TransportLockGuard::acquire(
+            self.transport.clone(),
+            lock_key,
+            "cloud_state_manager".to_string(),
+            false,
+        )
+        .await?;
 
         // Will drop automatically when block exits
-        self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
+        self.transition_state_inner(
+            task_id,
+            tenant_id,
+            from_state,
+            to_state,
+            agent_id,
+            reason,
+            &lock_guard,
+        )
+        .await
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
@@ -192,7 +166,7 @@ impl StateManager for CloudStateManager {
               )
             LIMIT $1
             FOR UPDATE SKIP LOCKED
-            "#
+            "#,
         )
         .bind(limit)
         .fetch_all(&mut *tx)
@@ -206,13 +180,19 @@ impl StateManager for CloudStateManager {
             let id: uuid::Uuid = row.get("id");
             let id_str = id.to_string();
 
-            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+            let tenant_id: String = row
+                .try_get("tenant_id")
+                .unwrap_or_else(|_| "system".to_string());
             task_ids.push((id_str.clone(), tenant_id.clone()));
 
-            let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
+            let deps_val: serde_json::Value = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 
-            let payload_val: serde_json::Value = row.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
+            let payload_val: serde_json::Value = row
+                .try_get("payload")
+                .unwrap_or_else(|_| serde_json::json!({}));
             let payload = payload_val.to_string();
 
             tasks.push(SharedTask {

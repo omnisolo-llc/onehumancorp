@@ -1,0 +1,123 @@
+--- src/server/orchestration/state/cloud.rs
++++ src/server/orchestration/state/cloud.rs
+@@ -3,45 +3,51 @@
+ use crate::tasks::SharedTask;
+ use async_trait::async_trait;
+ use chrono::Utc;
+-use redis::AsyncCommands;
+ use sqlx::Row;
+ use std::sync::Arc;
++use ohc_builtin_agent::mesh::transport::MeshTransport;
++use std::time::Duration;
+
+-struct RedisLockGuard {
+-    client: Option<redis::Client>,
++pub struct TransportLockGuard {
++    transport: Arc<dyn MeshTransport>,
+     key: String,
+ }
+
+-impl RedisLockGuard {
+-    async fn acquire(client: Option<&redis::Client>, key: String) -> Result<Self, String> {
+-        if let Some(c) = client {
+-            let mut conn = c
+-                .get_async_connection()
+-                .await
+-                .map_err(|e| format!("Failed to connect to Redis: {}", e))?;
+-            let acquired: redis::RedisResult<Option<String>> = redis::cmd("SET")
+-                .arg(&key)
+-                .arg("locked")
+-                .arg("NX")
+-                .arg("EX")
+-                .arg(30)
+-                .query_async(&mut conn)
+-                .await;
+-
+-            match acquired {
+-                Ok(Some(resp)) if resp == "OK" => Ok(Self {
+-                    client: Some(c.clone()),
+-                    key,
+-                }),
+-                _ => Err(format!("Task {} is currently locked via Redis", key)),
++impl TransportLockGuard {
++    pub async fn acquire(transport: Arc<dyn MeshTransport>, key: String, wait: bool) -> Result<Self, String> {
++        let mut retries = if wait { 100 } else { 1 };
++        let delay = Duration::from_millis(50);
++
++        while retries > 0 {
++            match transport.acquire_lock(&key, "cloud_state_manager", 30).await {
++                Ok(true) => {
++                    return Ok(Self { transport, key });
++                },
++                Ok(false) => {
++                    if !wait {
++                        return Err(format!("Task {} is currently locked via MeshTransport", key));
++                    }
++                    retries -= 1;
++                    tokio::time::sleep(delay).await;
++                },
++                Err(e) => {
++                    return Err(format!("Failed to acquire lock: {}", e));
++                }
+             }
+-        } else {
+-            Ok(Self { client: None, key })
+         }
++
++        Err(format!("Task {} is currently locked via MeshTransport (timeout)", key))
+     }
+ }
+
+-impl Drop for RedisLockGuard {
++impl Drop for TransportLockGuard {
+     fn drop(&mut self) {
+-        if let Some(client) = self.client.take() {
+-            let key = self.key.clone();
+-            tokio::spawn(async move {
+-                if let Ok(mut conn) = client.get_async_connection().await {
+-                    let _: redis::RedisResult<()> = conn.del(&key).await;
+-                }
+-            });
+-        }
++        let transport = self.transport.clone();
++        let key = self.key.clone();
++        tokio::spawn(async move {
++            let _ = transport.release_lock(&key, "cloud_state_manager").await;
++        });
+     }
+ }
+
+@@ -50,13 +56,13 @@
+
+ pub struct CloudStateManager {
+     db: Arc<DB>,
+-    redis_client: Option<redis::Client>,
++    transport: Arc<dyn MeshTransport>,
+ }
+
+ impl CloudStateManager {
+-    pub fn new(db: Arc<DB>, redis_client: Option<redis::Client>) -> Self {
+-        Self { db, redis_client }
++    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
++        Self { db, transport }
+     }
+
+     async fn transition_state_inner(
+@@ -68,7 +74,7 @@
+         to_state: &str,
+         agent_id: Option<&str>,
+         reason: Option<&str>,
+-        _lock_guard: &RedisLockGuard,
++        _lock_guard: &TransportLockGuard,
+     ) -> Result<(), String> {
+         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+@@ -165,7 +171,7 @@
+     ) -> Result<(), String> {
+         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+
+-        let lock_guard = RedisLockGuard::acquire(self.redis_client.as_ref(), lock_key).await?;
++        let lock_guard = TransportLockGuard::acquire(self.transport.clone(), lock_key, false).await?;
+
+         // Will drop automatically when block exits
+         self.transition_state_inner(

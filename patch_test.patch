@@ -1,0 +1,40 @@
+--- src/server/orchestration/state/test.rs
++++ src/server/orchestration/state/test.rs
+@@ -4,6 +4,7 @@
+ use std::sync::Arc;
+ use tokio::test;
+ use chrono::Utc;
++use ohc_builtin_agent::mesh::transport::MemoryTransport;
+ use sqlx::sqlite::SqlitePoolOptions;
+
+ async fn setup_db() -> Arc<DB> {
+@@ -53,7 +54,8 @@
+ #[tokio::test]
+ async fn test_single_agent_flow() {
+     let db = setup_db().await;
+-    let state_manager = StandaloneStateManager::new(db.clone());
++    let transport = Arc::new(MemoryTransport::new());
++    let state_manager = StandaloneStateManager::new(db.clone(), transport);
+
+     let task_id = uuid::Uuid::new_v4().to_string();
+
+@@ -82,7 +84,8 @@
+ #[tokio::test]
+ async fn test_dag_workflow() {
+     let db = setup_db().await;
+-    let state_manager = StandaloneStateManager::new(db.clone());
++    let transport = Arc::new(MemoryTransport::new());
++    let state_manager = StandaloneStateManager::new(db.clone(), transport);
+
+     let parent_id = uuid::Uuid::new_v4().to_string();
+     let child_id = uuid::Uuid::new_v4().to_string();
+@@ -124,7 +127,8 @@
+ async fn test_cloud_dag_workflow_mock() {
+     let db = setup_db().await;
+     // For unit coverage we instantiate it
+-    let state_manager = CloudStateManager::new(db.clone(), None);
++    let transport = Arc::new(MemoryTransport::new());
++    let state_manager = CloudStateManager::new(db.clone(), transport);
+
+     let parent_id = uuid::Uuid::new_v4().to_string();
+     let child_id = uuid::Uuid::new_v4().to_string();
