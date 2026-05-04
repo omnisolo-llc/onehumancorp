@@ -1001,7 +1001,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
-    autodream_worker.start();
+    autodream_worker.clone().start();
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {

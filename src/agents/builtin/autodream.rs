@@ -24,7 +24,7 @@ impl AutoDreamWorker {
     }
 
 
-    pub fn start(&self) {
+    pub fn start(self: Arc<Self>) {
         info!("Starting AutoDream worker");
         
         let db = self.db.clone();
@@ -39,6 +39,7 @@ impl AutoDreamWorker {
         });
         
         let db = self.db.clone();
+        let this = self.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
@@ -46,7 +47,7 @@ impl AutoDreamWorker {
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
-                if let Err(e) = Self::compress_session_contexts(&db).await {
+                if let Err(e) = this.compress_session_contexts(&db).await {
                     println!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db).await {
@@ -245,7 +246,7 @@ impl AutoDreamWorker {
     }
 
 
-    async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn compress_session_contexts(&self, db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         // Fetch sessions that aren't compressed yet
         let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
             .fetch_all(&db.pool)
@@ -259,6 +260,8 @@ impl AutoDreamWorker {
                 if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
                 }
+
+                self.embedded_counter.add(1, &[]);
             }
 
             if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
