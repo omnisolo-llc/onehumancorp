@@ -1220,6 +1220,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    welcome_checklist_ui.on_go_to_dashboard({
+        let handle = welcome_checklist_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                dashboard.show().unwrap();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
+
     setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
@@ -1995,6 +2008,14 @@ mod tests {
 
         ui.invoke_go_to_share_link();
         assert!(*share_link_clicked.borrow(), "Share link callback should be triggered");
+
+        let dashboard_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_clone = dashboard_clicked.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_clicked.borrow(), "Dashboard callback should be triggered");
     }
 
     #[test]
