@@ -1512,23 +1512,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let _help_center_handle = help_center_ui.as_weak();
+                let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
 
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
                 Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
 
-                let help_center_ui = app::HelpCenter::new().unwrap();
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
