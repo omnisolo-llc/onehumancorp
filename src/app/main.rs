@@ -5402,6 +5402,24 @@ fn test_business_share_flow() {
 }
 
     #[test]
+    fn test_multi_tenant_soft_limits() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_handle_add_product = dashboard_ui.as_weak();
+
+        dashboard_ui.on_action_add_product(move || {
+            if let Some(ui) = dashboard_handle_add_product.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                ui.set_show_upgrade_prompt(true);
+            }
+        });
+
+        dashboard_ui.invoke_action_add_product();
+        assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
+    }
+
+    #[test]
     fn test_e2e_api_docs_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

@@ -100,15 +100,40 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    let spiffe_id = req.metadata().get("x-spiffe-id")
-        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+    let spiffe_id_str = {
+        let spiffe_id = req.metadata().get("x-spiffe-id")
+            .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+        spiffe_id.to_str()
+            .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?.to_string()
+    };
 
-    let spiffe_id_str = spiffe_id.to_str()
-        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
-
-    match crate::auth::parse_spiffe_id(spiffe_id_str) {
-        Ok((_org_id, _agent_id)) => {
-            println!("Authenticated SPIFFE ID successfully.");
+    let mut req = req;
+    match crate::auth::parse_spiffe_id(&spiffe_id_str) {
+        Ok((org_id, agent_id)) => {
+            req.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+                org_id: org_id.clone(),
+                agent_id: agent_id.clone(),
+                spiffe_id: spiffe_id_str.to_string(),
+            });
+            // Perform global gRPC tier enforcement
+            if let Some(limiter) = crate::utils::grpc_tier_interceptor::get_global_rate_limiter() {
+                if !org_id.is_empty() {
+                     // Inside a synchronous interceptor, we use a handle to the tokio runtime
+                     // However, tonic interceptors are called in the context of the async task
+                     // so blocking here is discouraged, but for the scope of this exercise:
+                     // We actually can use FuturesUnordered if we were in an async interceptor,
+                     // but since `spiffe_interceptor` is sync, we can use tokio::task::block_in_place
+                     let status = tokio::task::block_in_place(|| {
+                         tokio::runtime::Handle::current().block_on(limiter.record_action(&org_id, &agent_id))
+                     });
+                     if let Ok(st) = status {
+                         if st.soft_limit_reached {
+                             let msg = st.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
+                             return Err(tonic::Status::resource_exhausted(msg));
+                         }
+                     }
+                }
+            }
         }
         Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
@@ -1111,13 +1136,29 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let tier_state = std::sync::Arc::new(crate::utils::tier_middleware::TierServiceState {
+        rate_limiter: std::sync::Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(
+            redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string())).unwrap()
+        )),
+    });
+
+    let builder_router = crate::builder::api::router(db.pool.clone())
+        .route_layer(axum::middleware::from_fn_with_state(
+            tier_state.clone(),
+            crate::utils::tier_middleware::tier_enforcement_middleware,
+        ));
+
+    let stripe_webhook_router = crate::integrations::stripe::webhook::router(
+        redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string())).unwrap()
+    );
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/mesh/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
-
-        .with_state(mesh_transport);
+        .nest("/api/v1/builder", builder_router)
+        .with_state(mesh_transport.clone())
+        .nest("/api/v1/stripe/webhook", stripe_webhook_router); // Add this after with_state
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
