@@ -995,7 +995,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ).await.expect("Failed to create MeshTransport");
 
     // Initialize Handoff Manager
-    let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
+    let handoff_manager = crate::orchestration::interop::HandoffManager::new(
         mesh_transport.clone(),
         db.clone(),
         is_cloud

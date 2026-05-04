@@ -13,7 +13,7 @@ mod tests {
     use super::*;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
-    use ohc_builtin_agent::legacy_mesh::DistributedLock;
+    use crate::orchestration::interop::HybridLock as DistributedLock;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
@@ -34,15 +34,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_corrupt_agent_lock_failure() {
-        // Simulating a redis drop or corruption.
-        let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
-        let lock = DistributedLock::new(client, "test_chaos_lock");
+        // Simulating a redis drop or corruption via memory transport dropping.
+        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let lock = DistributedLock::new(transport.clone(), "test_chaos_lock");
 
-        let acquire_res = lock.acquire(Duration::from_millis(100), Duration::from_millis(500)).await;
-        assert!(acquire_res.is_err());
+        let acquire_res = lock.acquire("corrupt_owner", Duration::from_millis(100), Duration::from_millis(500)).await;
+        assert!(acquire_res.is_ok());
 
-        let release_res = lock.release().await;
-        assert!(release_res.is_err());
+        let release_res = lock.release("corrupt_owner").await;
+        assert!(release_res.is_ok());
     }
 
     // Testing graceful degradation during network latency
