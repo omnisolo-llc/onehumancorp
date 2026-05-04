@@ -4120,6 +4120,163 @@ mod remaining_e2e_tests {
         assert_eq!(first_agent.name, "Customer Support Agent");
         assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
     }
+
+    #[test]
+    fn test_e2e_cost_dashboard_refresh_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let cost_ui = app::CostDashboard::new().unwrap();
+        let cost_ui_handle = cost_ui.as_weak();
+
+        cost_ui.on_refresh_data(move || {
+            if let Some(ui) = cost_ui_handle.upgrade() {
+                ui.set_total_spend("$100.00".into());
+                ui.set_total_tokens("2,000,000".into());
+            }
+        });
+
+        cost_ui.invoke_refresh_data();
+        assert_eq!(cost_ui.get_total_spend(), "$100.00");
+        assert_eq!(cost_ui.get_total_tokens(), "2,000,000");
+    }
+
+    #[test]
+    fn test_e2e_pricing_upgrade_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let my_plan_ui = app::MyPlan::new().unwrap();
+        let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let upgrade_opened_clone = upgrade_opened.clone();
+        my_plan_ui.on_upgrade(move || {
+            *upgrade_opened_clone.borrow_mut() = true;
+        });
+        my_plan_ui.invoke_upgrade();
+        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
+
+        let pricing_ui = app::Pricing::new().unwrap();
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        pricing_ui.on_select_plan(move |plan| {
+            *plan_selected_clone.borrow_mut() = plan.to_string();
+        });
+        pricing_ui.invoke_select_plan("Starter".into());
+        assert_eq!(*plan_selected.borrow(), "Starter");
+    }
+
+    #[test]
+    fn test_e2e_pricing_annual_discount_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let pricing_ui = app::Pricing::new().unwrap();
+        let pricing_ui_toggle_handle = pricing_ui.as_weak();
+        pricing_ui.on_toggle_billing_cycle(move || {
+            if let Some(ui) = pricing_ui_toggle_handle.upgrade() {
+                let current = ui.get_is_annual();
+                ui.set_is_annual(!current);
+            }
+        });
+
+        pricing_ui.set_is_annual(false);
+        pricing_ui.invoke_toggle_billing_cycle();
+        assert_eq!(pricing_ui.get_is_annual(), true);
+
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        pricing_ui.on_select_plan(move |plan| {
+            *plan_selected_clone.borrow_mut() = plan.to_string();
+        });
+        pricing_ui.invoke_select_plan("Pro".into());
+        assert_eq!(*plan_selected.borrow(), "Pro");
+    }
+
+    #[test]
+    fn test_e2e_my_plan_billing_history_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let my_plan_ui = app::MyPlan::new().unwrap();
+
+        let history_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let history_opened_clone = history_opened.clone();
+        my_plan_ui.on_view_history(move || {
+            *history_opened_clone.borrow_mut() = true;
+        });
+
+        let payment_updated = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let payment_updated_clone = payment_updated.clone();
+        my_plan_ui.on_update_payment(move || {
+            *payment_updated_clone.borrow_mut() = true;
+        });
+
+        let invoice_downloaded = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let invoice_downloaded_clone = invoice_downloaded.clone();
+        my_plan_ui.on_download_invoice(move || {
+            *invoice_downloaded_clone.borrow_mut() = true;
+        });
+
+        my_plan_ui.invoke_view_history();
+        my_plan_ui.invoke_update_payment();
+        my_plan_ui.invoke_download_invoice();
+
+        assert!(*history_opened.borrow(), "History should be opened");
+        assert!(*payment_updated.borrow(), "Payment should be updated");
+        assert!(*invoice_downloaded.borrow(), "Invoice should be downloaded");
+    }
+
+
+
+
 }
 
 #[cfg(test)]
