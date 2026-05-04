@@ -36,7 +36,7 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
+        assert!(msg.contains("Executing: bwrap --unshare-net --setenv PATH /bin:/usr/bin --ro-bind / / --dev-bind /dev /dev --proc /proc --tmpfs /tmp --tmpfs /var/tmp bash -c \"set -e; echo 'hello'\""));
     }
 
     #[tokio::test]

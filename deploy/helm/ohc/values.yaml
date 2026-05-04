@@ -10,8 +10,8 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 65
+    targetMemoryUtilizationPercentage: 70
   resources:
     requests:
       cpu: "250m"
@@ -52,8 +52,8 @@ ohcCore:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 65
+    targetMemoryUtilizationPercentage: 70
   resources:
     requests:
       cpu: "50m"

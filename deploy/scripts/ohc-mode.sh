@@ -17,6 +17,7 @@ case $MODE in
     export OHC_SOURCE_MODE=cloud
     export LOG_FORMAT="json"
     export LOG_LEVEL="info"
+    export PROMETHEUS_CONFIG=prometheus.yml
     echo "Configured for Cloud-Native Multi-Tenant Mode."
     ;;
   standalone)
@@ -30,6 +31,7 @@ case $MODE in
     mkdir -p .ohc/memory/auto/ .ohc/memory/team/
     export LOG_FORMAT="text"
     export LOG_LEVEL="info"
+    export PROMETHEUS_CONFIG=prometheus-agent.yml
     if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
       export OHC_TELEMETRY_ENABLED=false
     fi

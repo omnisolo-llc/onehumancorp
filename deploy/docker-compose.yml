@@ -222,7 +222,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/${PROMETHEUS_CONFIG:-prometheus.yml}:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     deploy:
