@@ -167,7 +167,7 @@ export component Dashboard inherits Window {
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
                 }
             }
 
@@ -178,19 +178,19 @@ export component Dashboard inherits Window {
                 StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
                 StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+                StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
             }
         }
 
-        // AutoDream Memory Pipeline (Telemetry Visualization)
+        // AI Assistant Health (Telemetry Visualization)
         if (show_telemetry_visualization) : VerticalBox {
             spacing: 12px;
-            Text { text: "AutoDream Memory Pipeline"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "AI Assistant Health"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
             HorizontalBox {
                 spacing: 16px;
-                StatCard { label: "LLM Cache Hits"; value: root.telemetry_cache_hits; value_color: #10b981; }
-                StatCard { label: "RAG Latency"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
+                StatCard { label: "Quick Answers"; value: root.telemetry_cache_hits; value_color: #10b981; }
+                StatCard { label: "Thinking Time"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
             }
 
             GlassCard {

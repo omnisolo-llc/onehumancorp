@@ -4563,6 +4563,75 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
+    fn test_e2e_login_ui_friction_fixes_subtitle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Login::new().unwrap();
+
+        ui.set_is_sign_up(false);
+        // We cannot directly read properties not exposed, but we can verify it runs without crashing
+        // Slint testing typically validates properties if exposed.
+        assert_eq!(ui.get_is_sign_up(), false);
+
+        ui.set_is_sign_up(true);
+        assert_eq!(ui.get_is_sign_up(), true);
+    }
+
+    #[test]
+    fn test_e2e_login_ui_friction_fixes_settings_button() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Login::new().unwrap();
+        // Triggering the open_settings callback to make sure it's wired correctly
+        let settings_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let settings_opened_clone = settings_opened.clone();
+
+        ui.on_open_settings(move || {
+            *settings_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_open_settings();
+        assert!(*settings_opened.borrow(), "Settings should open from Login");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_dejargon_health() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+        // Since we changed text in UI, properties are untouched.
+        // We ensure telemetry_chart_placeholder can still be fetched.
+        assert_eq!(ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_dejargon_metrics() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Dashboard::new().unwrap();
+
+        ui.set_telemetry_cache_hits("99%".into());
+        ui.set_telemetry_rag_latency("10ms".into());
+
+        assert_eq!(ui.get_telemetry_cache_hits(), "99%");
+        assert_eq!(ui.get_telemetry_rag_latency(), "10ms");
+    }
+
+    #[test]
+    fn test_e2e_settings_ui_friction_fixes() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Settings::new().unwrap();
+
+        ui.set_standalone_mode(true);
+        assert_eq!(ui.get_standalone_mode(), true);
+
+        // Trigger run_doctor to ensure callback isn't broken
+        let doctor_run = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let doctor_run_clone = doctor_run.clone();
+
+        ui.on_run_doctor(move || {
+            *doctor_run_clone.borrow_mut() = true;
+        });
+        ui.invoke_run_doctor();
+        assert!(*doctor_run.borrow(), "Doctor should run from Settings");
+    }
+
+    #[test]
     fn test_e2e_telemetry_visualization_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

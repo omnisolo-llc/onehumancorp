@@ -52,7 +52,7 @@ export component Login inherits Window {
                 }
 
                 Text {
-                    text: "Sign in to manage your business";
+                    text: is_sign_up ? "Create an account to start your business" : "Sign in to manage your business";
                     font-size: 14px;
                     horizontal-alignment: center;
                     color: #a8b2c1;
@@ -115,7 +115,7 @@ export component Login inherits Window {
                 
                 Button {
                     height: 44px;
-                    text: "⚙ Fix Login Issues";
+                    text: "⚙ App Settings";
                     clicked => { open_settings(); }
                 }
             }
