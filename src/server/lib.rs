@@ -38,9 +38,7 @@ pub mod builder;
 pub mod services {
     pub mod dashboard;
     pub mod wizard;
-    pub mod billing {
-        pub mod auditor;
-    }
+    pub mod billing;
     pub mod growth;
     pub mod onboarding;
     pub mod sync;
@@ -122,6 +120,9 @@ pub mod ohc {
     pub mod orchestration {
         pub use hub_proto::ohc::orchestration::*;
     }
+    pub mod billing {
+        pub use billing_proto::ohc::billing::*;
+    }
     pub mod agent {
         pub mod service {
             pub use agent_service_proto::ohc::agent::service::*;
@@ -140,6 +141,7 @@ pub mod ohc {
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ohc::orchestration::growth_service_server::GrowthServiceServer;
+use ohc::billing::billing_service_server::BillingServiceServer;
 use ohc::orchestration::*;
 
 pub struct MyHubService {
@@ -1198,12 +1200,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     println!("Server listening on {}", addr);
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone());
+    let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
+        .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
