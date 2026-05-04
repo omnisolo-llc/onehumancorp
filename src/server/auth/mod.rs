@@ -5,7 +5,9 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+#[cfg(test)]
+use jsonwebtoken::{encode, decode, Algorithm, EncodingKey, DecodingKey};
+use jsonwebtoken::{Header, Validation};
 use tonic::{Request, Response, Status};
 
 pub mod postgres_store;
@@ -90,7 +92,9 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>, // key -> user_id
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
+    #[allow(dead_code)]
     secret: Vec<u8>,
+    #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
 }
 
@@ -362,6 +366,7 @@ impl Store {
         false
     }
 
+    #[allow(unused_variables)]
     pub fn issue_token(&self, user: &User) -> Result<String, String> {
         #[cfg(not(test))]
         {
@@ -393,6 +398,7 @@ impl Store {
         }
     }
 
+    #[allow(unused_variables)]
     pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
         #[cfg(not(test))]
         {

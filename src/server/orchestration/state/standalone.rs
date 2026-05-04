@@ -26,6 +26,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
+        #[allow(unused_variables)]
         tenant_id: &str,
         from_state: &str,
         to_state: &str,

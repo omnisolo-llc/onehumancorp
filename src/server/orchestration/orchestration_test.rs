@@ -1,7 +1,12 @@
+#[cfg(test)]
 use crate::db::{DB, DbStore};
+#[cfg(test)]
 use std::sync::Arc;
+#[cfg(test)]
 use crate::orchestration::tasks::TaskDecompositionService;
+#[cfg(test)]
 use crate::tasks::SharedTask;
+#[cfg(test)]
 use chrono::Utc;
 
 #[tokio::test]
