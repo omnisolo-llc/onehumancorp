@@ -4,3 +4,4 @@
 ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS organization_id TEXT;
 ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS task_id TEXT;
 ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS source_type TEXT;
+ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT '';

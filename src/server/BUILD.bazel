@@ -24,6 +24,8 @@ rust_library(
         "@crates//:aes-gcm",
         "@crates//:axum",
         "@crates//:async-nats",
+        "@crates//:tower",
+        "@crates//:http-body-util",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",

@@ -232,7 +232,8 @@ impl DB {
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
                         embedding BLOB,
-                        source_type TEXT NOT NULL,
+                        source_type TEXT,
+                        topic TEXT NOT NULL DEFAULT '',
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1

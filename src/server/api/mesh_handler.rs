@@ -15,6 +15,29 @@ pub struct ConnectQuery {
     pub channel: String,
 }
 
+#[derive(Deserialize)]
+pub struct BroadcastRequest {
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Option<serde_json::Value>,
+}
+
+pub async fn mesh_broadcast_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(req): axum::Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    let payload_bytes = req.payload.map(|p| serde_json::to_vec(&p).unwrap_or_default()).unwrap_or_default();
+    let msg = MeshMessage {
+        agent_id: req.agent_id,
+        action: req.action.clone(),
+        status: req.status,
+        payload: payload_bytes,
+    };
+    let _ = transport.publish(&msg.action.clone(), msg).await;
+    (axum::http::StatusCode::OK, "Broadcasted")
+}
+
 pub async fn mesh_ws_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -87,6 +110,57 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
+
+    #[tokio::test]
+    async fn test_mesh_broadcast_handler() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport_clone = transport.clone();
+
+        let app = Router::new()
+            .route("/api/v1/mesh/broadcast", axum::routing::post(mesh_broadcast_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        // Set up subscription to listen
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+        let _cancel = transport_clone.subscribe("test_action", Box::new(move |msg: MeshMessage| {
+            if msg.agent_id == "test_agent" {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        // Broadcast a message
+        let req_body = serde_json::json!({
+            "agent_id": "test_agent",
+            "action": "test_action",
+            "status": "ok",
+            "payload": {"key": "value"}
+        });
+
+        let client = reqwest::Client::new();
+        let resp = client.post(format!("http://{}/api/v1/mesh/broadcast", addr))
+            .json(&req_body)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), reqwest::StatusCode::OK);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst), "Did not receive broadcasted message on mesh");
+    }
 
     #[tokio::test]
     async fn test_mesh_ws_handler() {

@@ -286,15 +286,34 @@ impl AutoDreamWorker {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(&mem_id)
-                            .bind("system") // Placeholder since we don't have org_id in yml name
-                            .bind("system_agent")
-                            .bind(&content)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .execute(&db.pool)
-                            .await?;
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type, topic) VALUES ($1::uuid, $2, $3, $4, $5, $6::vector, $7, $8)")
+                                    .bind(&mem_id)
+                                    .bind("system") // Placeholder since we don't have org_id in yml name
+                                    .bind("system_agent")
+                                    .bind("system_task")
+                                    .bind(&content)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .bind("")
+                                    .execute(&db.pool)
+                                    .await?;
+                            }
+                            crate::db::DbStore::Sqlite(_) => {
+                                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type, topic) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                                    .bind(&mem_id)
+                                    .bind("system") // Placeholder since we don't have org_id in yml name
+                                    .bind("system_agent")
+                                    .bind("system_task")
+                                    .bind(&content)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .bind("")
+                                    .execute(&db.pool)
+                                    .await?;
+                            }
+                        }
 
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;
