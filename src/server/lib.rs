@@ -33,6 +33,8 @@ pub mod benchmarks;
 
 pub mod config;
 pub mod http;
+pub mod builder;
+
 pub mod services {
     pub mod wizard;
     pub mod billing {
@@ -1032,6 +1034,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
