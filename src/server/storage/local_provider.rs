@@ -118,6 +118,16 @@ impl Provider for LocalProvider {
             final_data.truncate(data.len() / 2);
         }
 
+        // Quota Enforcement
+        let t_id = key.split('/').next().unwrap_or("default");
+        if let Ok(status) = self.tracker.track_storage_usage(t_id, final_data.len() as i64).await {
+            if status.soft_limit_reached {
+                if let Some(msg) = status.user_message {
+                    tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
+                }
+            }
+        }
+
         tokio::fs::write(path, &final_data).await
     }
 }
