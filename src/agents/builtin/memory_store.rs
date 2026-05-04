@@ -171,63 +171,142 @@ impl VectorRepository {
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                     FROM consolidated_memory \
-                     WHERE tenant_id = ? \
-                     ORDER BY vec_distance_cosine(embedding, ?) \
-                     LIMIT ?"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| e.to_string())?;
+                let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
+                    .execute(pool)
+                    .await
+                    .is_ok();
 
-                let mut ids_to_update = Vec::new();
+                if has_vec_extension {
+                    let rows = sqlx::query(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = ? \
+                         ORDER BY vec_distance_cosine(embedding, ?) \
+                         LIMIT ?"
+                    )
+                    .bind(tenant_id)
+                    .bind(&emb_str)
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-                for row in rows {
-                    let id: String = row.get("id");
-                    ids_to_update.push(id.clone());
-                    let tenant_id: String = row.get("tenant_id");
-                    let agent_id: String = row.get("agent_id");
-                    let content: String = row.get("content");
-                    let emb_str_res: String = row.get("embedding");
-                    let source_type: String = row.get("source_type");
-                    let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
-                    let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
-                    let reference_count: i32 = row.get("reference_count");
-                    let reliability_score: i32 = row.get("reliability_score");
-                    let owner_override: bool = row.get("owner_override");
-                    let metadata: Option<String> = row.get("metadata");
+                    let mut ids_to_update = Vec::new();
 
-                    let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                    for row in rows {
+                        let id: String = row.get("id");
+                        ids_to_update.push(id.clone());
+                        let tenant_id: String = row.get("tenant_id");
+                        let agent_id: String = row.get("agent_id");
+                        let content: String = row.get("content");
+                        let emb_str_res: String = row.get("embedding");
+                        let source_type: String = row.get("source_type");
+                        let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
+                        let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
+                        let reference_count: i32 = row.get("reference_count");
+                        let reliability_score: i32 = row.get("reliability_score");
+                        let owner_override: bool = row.get("owner_override");
+                        let metadata: Option<String> = row.get("metadata");
 
-                    results.push(EmbeddingRecord {
-                        id,
-                        tenant_id,
-                        agent_id,
-                        content,
-                        embedding,
-                        source_type,
-                        created_at,
-                        last_referenced_at,
-                        reference_count,
-                        reliability_score,
-                        owner_override,
-                        metadata,
-                    });
-                }
+                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
-                if !ids_to_update.is_empty() {
-                    let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                    let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
-                    let mut q = sqlx::query(&query);
-                    for id in ids_to_update {
-                        q = q.bind(id);
+                        results.push(EmbeddingRecord {
+                            id,
+                            tenant_id,
+                            agent_id,
+                            content,
+                            embedding,
+                            source_type,
+                            created_at,
+                            last_referenced_at,
+                            reference_count,
+                            reliability_score,
+                            owner_override,
+                            metadata,
+                        });
                     }
-                    let _ = q.execute(pool).await;
+
+                    if !ids_to_update.is_empty() {
+                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let mut q = sqlx::query(&query);
+                        for id in ids_to_update {
+                            q = q.bind(id);
+                        }
+                        let _ = q.execute(pool).await;
+                    }
+                } else {
+                    let rows = sqlx::query(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = ? \
+                         LIMIT 1000"
+                    )
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let mut all_records = Vec::new();
+                    for row in rows {
+                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
+                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+
+                        let record = EmbeddingRecord {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            agent_id: row.get("agent_id"),
+                            content: row.get("content"),
+                            embedding,
+                            source_type: row.get("source_type"),
+                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
+                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            reference_count: row.get("reference_count"),
+                            reliability_score: row.get("reliability_score"),
+                            owner_override: row.get("owner_override"),
+                            metadata: row.get("metadata"),
+                        };
+                        all_records.push(record);
+                    }
+
+                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+                        if a.len() != b.len() || a.is_empty() {
+                            return 1.0;
+                        }
+                        let mut dot_product = 0.0;
+                        let mut norm_a = 0.0;
+                        let mut norm_b = 0.0;
+                        for i in 0..a.len() {
+                            dot_product += a[i] * b[i];
+                            norm_a += a[i] * a[i];
+                            norm_b += b[i] * b[i];
+                        }
+                        if norm_a == 0.0 || norm_b == 0.0 {
+                            return 1.0;
+                        }
+                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+                        1.0 - similarity
+                    }
+
+                    let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                    all_records.sort_by(|a, b| {
+                        let dist_a = cosine_distance(&a.embedding, &query_emb);
+                        let dist_b = cosine_distance(&b.embedding, &query_emb);
+                        dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+
+                    results = all_records.into_iter().take(limit as usize).collect();
+
+                    if !results.is_empty() {
+                        let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let mut q = sqlx::query(&query);
+                        for id in ids_to_update {
+                            q = q.bind(id);
+                        }
+                        let _ = q.execute(pool).await;
+                    }
                 }
             }
         }
