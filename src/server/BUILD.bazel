@@ -84,7 +84,7 @@ rust_test(
     },
     proc_macro_deps = [
         "@crates//:async-trait",
-    ],
+        ],
     deps = [
         "@crates//:tempfile",
         "//src/proto:hub_tonic",
