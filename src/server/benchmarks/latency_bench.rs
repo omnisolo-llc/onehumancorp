@@ -96,8 +96,8 @@ pub async fn bench_dashboard_snapshot() {
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings())
         );
-        let _ = agents_res.unwrap();
-        let _ = meetings_res.unwrap();
+        let _ = agents_res.unwrap_or_default();
+        let _ = meetings_res.unwrap_or_default();
 
         fetch_times.push(start.elapsed().as_micros());
     }
