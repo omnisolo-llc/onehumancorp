@@ -7,6 +7,13 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
+
+use serde::Serialize;
+use axum::Json;
+use axum::response::sse::{Event, Sse};
+use tokio_stream::wrappers::ReceiverStream;
+use std::convert::Infallible;
+
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
@@ -73,6 +80,64 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     };
 
     cancel();
+}
+
+
+
+#[derive(Deserialize)]
+pub struct BroadcastRequest {
+    pub channel: String,
+    pub message: MeshMessage,
+}
+
+#[derive(Serialize)]
+pub struct BroadcastResponse {
+    pub success: bool,
+}
+
+pub async fn mesh_broadcast_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    Json(payload): Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    match transport.publish(&payload.channel, payload.message).await {
+        Ok(_) => Json(BroadcastResponse { success: true }),
+        Err(_) => Json(BroadcastResponse { success: false }),
+    }
+}
+
+pub async fn task_stream_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+) -> Sse<impl futures::stream::Stream<Item = Result<Event, Infallible>>> {
+    let (tx, rx) = mpsc::channel::<MeshMessage>(100);
+
+    let handler = Box::new(move |msg: MeshMessage| {
+        let _ = tx.try_send(msg);
+    });
+
+    let _cancel = match transport.subscribe("tasks", handler).await {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to subscribe to tasks channel: {}", e);
+            // In a real app we'd handle cancellation better
+            Box::new(|| {}) as Box<dyn Fn() + Send + Sync>
+        }
+    };
+
+    let stream = ReceiverStream::new(rx).map(|msg| {
+        let mut buf = Vec::new();
+        if msg.encode(&mut buf).is_ok() {
+            let b64 = STANDARD.encode(&buf);
+            Ok(Event::default().data(b64))
+        } else {
+            Ok(Event::default().data("error"))
+        }
+    });
+
+    Sse::new(stream).keep_alive(
+        axum::response::sse::KeepAlive::new()
+            .interval(std::time::Duration::from_secs(1))
+            .text("keep-alive-text"),
+    )
 }
 
 #[cfg(test)]

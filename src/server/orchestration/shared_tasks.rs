@@ -23,11 +23,15 @@ pub struct SharedTaskV4 {
 
 pub struct SharedTaskOrchestrator {
     db: Arc<DB>,
+    sqlite_mu: tokio::sync::Mutex<()>,
 }
 
 impl SharedTaskOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self {
+            db,
+            sqlite_mu: tokio::sync::Mutex::new(()),
+        }
     }
 
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
@@ -152,6 +156,92 @@ impl SharedTaskOrchestrator {
                     created_at: dt_created,
                     updated_at: dt_updated,
                 })
+            }
+        }
+    }
+
+    pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskV4>, String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT st.id, st.dependencies FROM shared_tasks_v4 st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep_id JOIN shared_tasks_v4 parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                    "#
+                )
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => return Ok(None)
+                };
+
+                let id: String = row.get("id");
+
+                sqlx::query(
+                    "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = $2 WHERE id = $3"
+                )
+                .bind(agent_id)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                self.get_task(&id).await.map(Some)
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mu.lock().await;
+
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT st.id, st.dependencies FROM shared_tasks_v4 st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(CASE WHEN st.dependencies = '' THEN '[]' ELSE st.dependencies END) AS dep_id
+                        JOIN shared_tasks_v4 parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
+                    )
+                    LIMIT 1
+                    "#
+                )
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => return Ok(None)
+                };
+
+                let id: String = row.get("id");
+
+                sqlx::query(
+                    "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = ?, updated_at = ? WHERE id = ?"
+                )
+                .bind(agent_id)
+                .bind(now.to_rfc3339())
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                self.get_task(&id).await.map(Some)
             }
         }
     }
