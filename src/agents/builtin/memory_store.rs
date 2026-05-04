@@ -577,9 +577,11 @@ impl VectorRepository {
                             let a = &all_records[i];
                             let b = &all_records[j];
                             if a.tenant_id == b.tenant_id {
-                                let distance = cosine_distance(&a.embedding, &b.embedding);
+                                // Ensure a consistent ordering to avoid duplicate pairs in different orders
+                                let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
+                                let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
                                 if distance < 0.05 {
-                                    conflicts.push((a.clone(), b.clone()));
+                                    conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
                                         break;
