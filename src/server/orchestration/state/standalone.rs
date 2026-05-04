@@ -56,7 +56,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -67,6 +67,7 @@ impl StateManager for StandaloneStateManager {
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
         };
 
+        let _ = tenant_id;
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
         let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
 

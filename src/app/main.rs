@@ -1610,7 +1610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -1651,10 +1651,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
-            let req_first_product_name = product_name.to_string();
-            let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let _ = website_template; let req_website_template = website_template.to_string();
+            let _ = product_name; let req_first_product_name = product_name.to_string();
+            let _ = product_price; let req_first_product_price = product_price.to_string();
+            let _ = domain_choice; let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2196,7 +2196,7 @@ mod e2e_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| { let _ = website_template; let _ = product_name; let _ = product_price; let _ = domain_choice;
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
@@ -2695,7 +2695,7 @@ mod docs_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| { let _ = website_template; let _ = product_name; let _ = product_price; let _ = domain_choice;
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
@@ -2803,7 +2803,7 @@ mod docs_tests {
         ui.set_product_price("10.0".into());
         ui.set_domain_choice("subdomain".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| { let _ = website_template; let _ = product_name; let _ = product_price; let _ = domain_choice;
             assert_eq!(website_template, "Classic");
             assert_eq!(product_name, "My First Product");
             assert_eq!(product_price, "10.0");
