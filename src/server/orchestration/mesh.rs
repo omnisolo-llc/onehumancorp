@@ -13,6 +13,9 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
 pub struct CentrifugeNode {
@@ -62,6 +65,14 @@ impl TeammateMesh for CentrifugeNode {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.transport.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.transport.get_active_agents().await
+    }
 }
 
 // To explicitly meet the 'Implement Redis mapping (using rueidis)' criteria as specified,
@@ -104,6 +115,14 @@ impl TeammateMesh for RueidisMapping {
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.transport.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.transport.get_active_agents().await
     }
 }
 
@@ -168,6 +187,16 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(_) => {
+            if let Ok(db_url) = std::env::var("DATABASE_URL") {
+                if let Ok(ipc) = ohc_builtin_agent::mesh::transport::IpcTransport::new(&db_url).await {
+                    let ipc_clone = ipc.clone();
+                    tokio::spawn(async move {
+                        ipc_clone.start_worker().await;
+                    });
+                    return Ok(Arc::new(CentrifugeNode::new(Arc::new(ipc))));
+                }
+            }
+
             let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }

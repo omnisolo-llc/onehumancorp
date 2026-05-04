@@ -35,6 +35,12 @@ impl TeammateMesh for MockMesh {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.transport.register_presence(agent_id, status, ttl_seconds).await
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.transport.get_active_agents().await
+    }
 }
 
 async fn setup_db() -> Arc<DB> {
