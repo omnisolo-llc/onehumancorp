@@ -474,6 +474,11 @@ impl AgentService for AgentServiceImpl {
                         error,
                         ..Default::default()
                     },
+                    AgentEvent::UserInterventionRequired { error } => RunTaskEvent {
+                        r#type: EventType::TaskError as i32,
+                        error: format!("USER INTERVENTION REQUIRED: {}", error),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
