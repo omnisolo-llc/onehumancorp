@@ -40,22 +40,20 @@ pub async fn bench_dashboard_snapshot() {
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
-    if database_url == "postgres://localhost/dummy" {
+    let pg_pool = if database_url != "postgres://localhost/dummy" {
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .connect(&database_url).await;
 
-        return;
-    }
-
-    let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-
-        .connect(&database_url).await;
-
-    let pg_pool = match pool_res {
-        Ok(p) => p,
-        Err(_e) => {
-
-            return;
+        match pool_res {
+            Ok(p) => p,
+            Err(_e) => {
+                // Fallback to a dummy pool if postgres connection fails
+                sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
+            }
         }
+    } else {
+        sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
     };
 
     let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
@@ -169,10 +167,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
-            return;
-        }
         bench_dashboard_snapshot().await;
     }
 }

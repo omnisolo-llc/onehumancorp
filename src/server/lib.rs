@@ -133,6 +133,9 @@ pub mod ohc {
     pub mod common {
         pub use common_proto::ohc::common::*;
     }
+    pub mod billing {
+        pub use billing_proto::ohc::billing::*;
+    }
     pub mod app {
         pub use app_proto::ohc::api::v1::*;
     }
@@ -1197,7 +1200,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))

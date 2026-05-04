@@ -30,9 +30,20 @@ impl MyAgentManagerService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let cost_auditor = self.hub.get_cost_auditor();
-        let total_cost = cost_auditor.get_total_cost();
-        let total_tokens = cost_auditor.get_total_tokens();
-        let agent_costs_data = cost_auditor.get_agent_costs_snapshot();
+
+        let auditor1 = cost_auditor.clone();
+        let auditor2 = cost_auditor.clone();
+        let auditor3 = cost_auditor.clone();
+
+        let (total_cost_res, total_tokens_res, agent_costs_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || auditor1.get_total_cost()),
+            tokio::task::spawn_blocking(move || auditor2.get_total_tokens()),
+            tokio::task::spawn_blocking(move || auditor3.get_agent_costs_snapshot())
+        );
+
+        let total_cost = total_cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let total_tokens = total_tokens_res.map_err(|e| Status::internal(e.to_string()))?;
+        let agent_costs_data = agent_costs_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut agent_costs = Vec::new();
         for (name, cost, roi, efficiency) in agent_costs_data {
@@ -281,5 +292,39 @@ impl AgentManagerService for MyAgentManagerService {
         }
 
         Ok(Response::new(self.get_snapshot().await?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_get_snapshot_parallel() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url).unwrap();
+
+        let (tx, _) = mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool));
+        let service = MyAgentManagerService::new(hub.clone());
+
+        // Register a few agents to ensure we have data
+        hub.register_agent(Agent {
+            id: "agent-1".to_string(),
+            name: "Agent 1".to_string(),
+            role: "Role 1".to_string(),
+            organization_id: "org-1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "test".to_string(),
+        });
+
+        let snapshot = service.get_snapshot().await.unwrap();
+
+        assert_eq!(snapshot.agents.len(), 1);
+        assert!(snapshot.costs.is_some());
+        assert!(snapshot.updated_at_unix > 0);
     }
 }

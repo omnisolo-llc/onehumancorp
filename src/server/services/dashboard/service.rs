@@ -2,14 +2,17 @@ use tonic::{Request, Response, Status};
 use crate::ohc::app::*;
 use crate::ohc::app::dashboard_service_server::DashboardService;
 use std::sync::Arc;
+use crate::hub::Hub;
+use chrono::Utc;
 
 pub struct MyDashboardService {
     db: Arc<crate::db::DB>,
+    hub: Arc<Hub>,
 }
 
 impl MyDashboardService {
-    pub fn new(db: Arc<crate::db::DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<crate::db::DB>, hub: Arc<Hub>) -> Self {
+        Self { db, hub }
     }
 }
 
@@ -20,6 +23,71 @@ impl DashboardService for MyDashboardService {
         _request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
         Err(Status::unimplemented("Not implemented"))
+    }
+
+    async fn get_lightweight_dashboard(
+        &self,
+        request: Request<GetDashboardRequest>,
+    ) -> Result<Response<LightweightDashboardSnapshot>, Status> {
+        let req = request.into_inner();
+        let org_id = req.organization_id;
+
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let (agents_res, meetings_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        );
+
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let cost_auditor = self.hub.get_cost_auditor();
+        let auditor1 = cost_auditor.clone();
+        let auditor2 = cost_auditor.clone();
+        let auditor3 = cost_auditor.clone();
+
+        let (total_cost_res, total_tokens_res, agent_costs_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || auditor1.get_total_cost()),
+            tokio::task::spawn_blocking(move || auditor2.get_total_tokens()),
+            tokio::task::spawn_blocking(move || auditor3.get_agent_costs_snapshot())
+        );
+
+        let total_cost = total_cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let total_tokens = total_tokens_res.map_err(|e| Status::internal(e.to_string()))?;
+        let agent_costs_data = agent_costs_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut status_map = std::collections::HashMap::new();
+        for a in agents.iter() {
+            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        }
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count: count as u32 }).collect();
+
+        let mut agent_costs = Vec::new();
+        for (name, cost, _roi, _efficiency) in agent_costs_data {
+            agent_costs.push(crate::ohc::billing::AgentCostSummary {
+                agent_id: name,
+                cost_usd: cost,
+                token_used: 0, // Simplified for lightweight
+            });
+        }
+
+        let cost_summary = crate::ohc::billing::CostSummary {
+            organization_id: org_id.clone(),
+            total_cost_usd: total_cost,
+            total_tokens,
+            projected_monthly_usd: total_cost * 30.0, // Rough estimate
+            agents: agent_costs,
+        };
+
+        Ok(Response::new(LightweightDashboardSnapshot {
+            organization: None, // Simplified
+            agent_count: agents.len() as u32,
+            meeting_count: meetings.len() as u32,
+            cost_summary: Some(cost_summary),
+            statuses,
+            updated_at: Utc::now().to_rfc3339(),
+        }))
     }
 
     async fn post_message(
@@ -101,5 +169,35 @@ impl DashboardService for MyDashboardService {
         .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+    use crate::hub::Hub;
+
+    #[tokio::test]
+    async fn test_get_lightweight_dashboard() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url).unwrap();
+
+        let (tx, _) = mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MyDashboardService::new(db, hub);
+
+        let req = tonic::Request::new(GetDashboardRequest {
+            organization_id: "org-1".to_string(),
+        });
+
+        let resp = service.get_lightweight_dashboard(req).await.unwrap();
+        let snapshot = resp.into_inner();
+
+        assert!(snapshot.cost_summary.is_some());
+        assert!(snapshot.updated_at.len() > 0);
     }
 }

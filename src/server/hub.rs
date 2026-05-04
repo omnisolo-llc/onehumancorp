@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::OnceLock;
+use std::time::Instant;
 use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
@@ -43,8 +44,9 @@ pub struct Hub {
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
     redis_client: Option<redis::Client>,
-    agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
-    meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
+    agent_cache: RwLock<Option<(Arc<Vec<Agent>>, Instant)>>,
+    meetings_cache: RwLock<Option<(Arc<Vec<MeetingRoom>>, Instant)>>,
+    cache_ttl: std::time::Duration,
 }
 
 impl Hub {
@@ -82,12 +84,18 @@ impl Hub {
             }
         });
 
+        let cache_ttl_secs = std::env::var("OHC_HUB_CACHE_TTL_SECS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(300);
+
         Hub {
             telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
             agent_cache: RwLock::new(None),
             meetings: RwLock::new(HashMap::new()),
             meetings_cache: RwLock::new(None),
+            cache_ttl: std::time::Duration::from_secs(cache_ttl_secs),
             inbox: RwLock::new(HashMap::new()),
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
@@ -166,8 +174,10 @@ impl Hub {
     pub fn get_agents(&self) -> Arc<Vec<Agent>> {
         {
             let cache = self.agent_cache.read().unwrap();
-            if let Some(agents) = &*cache {
-                return Arc::clone(agents);
+            if let Some((agents, expiry)) = &*cache {
+                if Instant::now() < *expiry {
+                    return Arc::clone(agents);
+                }
             }
         }
 
@@ -176,7 +186,7 @@ impl Hub {
                 if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:agents") {
                     if let Ok(agents) = serde_json::from_str::<Vec<Agent>>(&data) {
                         let arc = Arc::new(agents);
-                        *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+                        *self.agent_cache.write().unwrap() = Some((Arc::clone(&arc), Instant::now() + self.cache_ttl));
                         return arc;
                     }
                 }
@@ -188,7 +198,7 @@ impl Hub {
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
 
         let arc = Arc::new(agents_vec);
-        *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+        *self.agent_cache.write().unwrap() = Some((Arc::clone(&arc), Instant::now() + self.cache_ttl));
 
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_connection() {
@@ -321,8 +331,10 @@ impl Hub {
     pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
-            if let Some(meetings) = &*cache {
-                return Arc::clone(meetings);
+            if let Some((meetings, expiry)) = &*cache {
+                if Instant::now() < *expiry {
+                    return Arc::clone(meetings);
+                }
             }
         }
 
@@ -331,7 +343,7 @@ impl Hub {
                 if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:meetings") {
                     if let Ok(meetings) = serde_json::from_str::<Vec<MeetingRoom>>(&data) {
                         let arc = Arc::new(meetings);
-                        *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+                        *self.meetings_cache.write().unwrap() = Some((Arc::clone(&arc), Instant::now() + self.cache_ttl));
                         return arc;
                     }
                 }
@@ -342,7 +354,7 @@ impl Hub {
         let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
 
         let arc = Arc::new(meetings_vec);
-        *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+        *self.meetings_cache.write().unwrap() = Some((Arc::clone(&arc), Instant::now() + self.cache_ttl));
 
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_connection() {
@@ -857,5 +869,38 @@ mod tests {
         assert!(health.get("mission_sync_backlog").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_hub_cache_ttl_expiration() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url).unwrap();
+
+        let (tx, _) = mpsc::channel(100);
+
+        // Set short TTL for test
+        unsafe { std::env::set_var("OHC_HUB_CACHE_TTL_SECS", "1"); }
+        let hub = Arc::new(Hub::new(tx, pool));
+
+        // 1. Initial fetch, cache populated
+        let _ = hub.get_agents();
+        assert!(hub.agent_cache.read().unwrap().is_some());
+
+        // 2. Wait for expiration
+        tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+
+        // 3. get_agents should return from fresh source because of expiration
+        let agents = hub.get_agents();
+        assert_eq!(agents.len(), 0);
+        // After get_agents, it should be re-cached
+        assert!(hub.agent_cache.read().unwrap().is_some());
     }
 }
