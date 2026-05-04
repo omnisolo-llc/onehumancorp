@@ -251,7 +251,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
                                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                                         });
                                         dashboard.show().unwrap();
@@ -304,7 +305,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
@@ -3440,7 +3442,8 @@ mod docs_tests {
 
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
         });
 
@@ -4118,6 +4121,21 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_video_tutorials(move || {
             *video_tutorials_opened_clone.borrow_mut() = true;
             let _video_tutorials = app::VideoTutorials::new().unwrap();
+            let mock_videos = vec![
+                app::VideoMetadata {
+                    title: "How to add your first product".into(),
+                    description: "A quick 60-second guide to listing items in your store.".into(),
+                    duration: "1:20".into(),
+                    category: "Beginner".into(),
+                },
+                app::VideoMetadata {
+                    title: "Setting up AI Helpers".into(),
+                    description: "Learn how to let AI handle your customer emails and social media.".into(),
+                    duration: "2:15".into(),
+                    category: "Advanced".into(),
+                },
+            ];
+            _video_tutorials.set_videos(slint::ModelRc::new(slint::VecModel::from(mock_videos)));
         });
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");

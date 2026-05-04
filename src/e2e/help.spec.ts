@@ -251,6 +251,15 @@ test.describe('AI Help Chat', () => {
       await expect(page.locator('text=/cleared|new.*chat/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
     }
   });
+
+  test('should provide link to full article', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Ask AI")').first().click()
+    ]);
+    const linkBtn = page.locator('button:has-text("Read the full article ->")').first();
+    await expect(linkBtn).toBeVisible({ timeout: 3000 });
+  });
 });
 
 test.describe('Interactive Walkthrough', () => {
@@ -440,5 +449,49 @@ test.describe('Video Tutorials', () => {
     const videoItem = page.locator('[class*="video"]').first();
     await videoItem.click();
     await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+  });
+});
+test.describe('Release Notes', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display release notes page', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("What\'s New")').first().click()
+    ]);
+    await expect(page.locator('text=/What\'s New in OHC/i')).toBeVisible();
+  });
+
+  test('should display link to full changelog', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("What\'s New")').first().click()
+    ]);
+    const linkBtn = page.locator('button:has-text("View Full Changelog on Website")').first();
+    await expect(linkBtn).toBeVisible();
+  });
+});
+
+test.describe('API Docs', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display interactive API documentation', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Connect Apps")').first().click()
+    ]);
+    await expect(page.locator('text=/Test Endpoint/i')).toBeVisible();
   });
 });

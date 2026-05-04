@@ -1,6 +1,13 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+export struct VideoMetadata {
+    title: string,
+    description: string,
+    duration: string,
+    category: string,
+}
+
 export component VideoTutorials inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
@@ -9,6 +16,7 @@ export component VideoTutorials inherits Window {
     background: #0f172a;
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
+    in property <[VideoMetadata]> videos;
 
     HorizontalBox {
         alignment: center;
@@ -25,35 +33,57 @@ export component VideoTutorials inherits Window {
                 color: white;
             }
 
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Beginner"; clicked => { /* filter */ } }
+                Button { text: "Advanced"; clicked => { /* filter */ } }
+            }
+
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
 
-                    GlassCard {
+                    for video in videos : GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
                             Rectangle {
-                                height: 200px;
+                                height: 320px; // portrait-optimized player
                                 background: #0f172a;
-                                border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
-                            }
-                            Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: white; }
-                            Text { text: "A quick 60-second guide to listing items in your store."; color: white; wrap: word-wrap; }
-                        }
-                    }
+                                border-radius: 12px;
+                                clip: true;
+                                border-color: #334155;
+                                border-width: 1px;
 
-                    GlassCard {
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Rectangle {
-                                height: 200px;
-                                background: #0f172a;
-                                border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                                VerticalBox {
+                                    alignment: center;
+                                    HorizontalBox {
+                                        alignment: center;
+                                        Rectangle {
+                                            width: 64px;
+                                            height: 64px;
+                                            border-radius: 32px;
+                                            background: rgba(255, 255, 255, 0.2);
+                                            Text { text: "▶"; font-size: 24px; horizontal-alignment: center; vertical-alignment: center; color: white; }
+                                            TouchArea {
+                                                clicked => { is_playing = !is_playing; selected_video_title = video.title; }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Video Duration indicator
+                                Rectangle {
+                                    x: parent.width - 50px;
+                                    y: parent.height - 30px;
+                                    width: 40px;
+                                    height: 20px;
+                                    background: rgba(0, 0, 0, 0.7);
+                                    border-radius: 4px;
+                                    Text { text: video.duration; color: white; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                                }
                             }
-                            Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: white; }
-                            Text { text: "Learn how to let AI handle your customer emails and social media."; color: white; wrap: word-wrap; }
+                            Text { text: video.title; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: video.description; color: white; wrap: word-wrap; }
                         }
                     }
                 }

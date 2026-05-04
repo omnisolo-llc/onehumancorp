@@ -35,14 +35,59 @@ export component ApiDocs inherits Window {
                 VerticalBox {
                     spacing: 24px;
 
-                    VerticalBox {
+                    HorizontalBox {
                         spacing: 8px;
+                        Text { text: "Base URL: "; color: #94a3b8; vertical-alignment: center; }
+                        Rectangle {
+                            background: #1e293b;
+                            border-radius: 4px;
+
+                            Text { text: root.endpoint_url; color: white; font-family: "monospace"; }
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 12px;
                         Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: white; }
-                        GlassCard { // dark theme for code
+
+                        GlassCard {
                             VerticalBox {
-                                padding: 16px; spacing: 8px;
-                                Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
-                                Text { text: "Returns a list of all products in your store."; color: white; wrap: word-wrap; }
+                                padding: 16px; spacing: 12px;
+                                HorizontalBox {
+                                    spacing: 12px;
+                                    Rectangle {
+                                        width: 60px;
+                                        height: 24px;
+                                        background: #10b981;
+                                        border-radius: 4px;
+                                        Text { text: "GET"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                                    }
+                                    Text { text: "/v1/products"; color: white; font-family: "monospace"; vertical-alignment: center; font-weight: 700; }
+                                }
+                                Text { text: "Returns a list of all products in your store."; color: #94a3b8; wrap: word-wrap; }
+
+                                Button {
+                                    text: "Test Endpoint";
+                                    clicked => { /* Trigger API Request */ }
+                                }
+                            }
+                        }
+
+                        GlassCard {
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                HorizontalBox {
+                                    spacing: 12px;
+                                    Rectangle {
+                                        width: 60px;
+                                        height: 24px;
+                                        background: #3b82f6;
+                                        border-radius: 4px;
+                                        Text { text: "POST"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                                    }
+                                    Text { text: "/v1/products"; color: white; font-family: "monospace"; vertical-alignment: center; font-weight: 700; }
+                                }
+                                Text { text: "Creates a new product."; color: #94a3b8; wrap: word-wrap; }
                             }
                         }
                     }

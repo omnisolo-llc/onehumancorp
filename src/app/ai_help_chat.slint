@@ -31,7 +31,39 @@ export component AiHelpChat inherits Window {
             }
 
             ScrollView {
-                // Chat history would go here
+                VerticalBox {
+                    spacing: 16px;
+
+                    // Simulated history
+                    HorizontalBox {
+                        alignment: end;
+                        GlassCard {
+                            background: #0ea5e9;
+                            VerticalBox {
+                                padding: 12px;
+                                Text { text: "How do I add a new product?"; color: white; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+                        GlassCard {
+                            VerticalBox {
+                                padding: 12px;
+                                spacing: 8px;
+                                Text { text: "To add a new product, go to the 'My Store' section from the main dashboard and click 'Add Product'. You can upload photos, set a price, and write a description."; color: white; wrap: word-wrap; }
+                                HorizontalBox {
+                                    alignment: start;
+                                    Button {
+                                        text: "Read the full article ->";
+                                        clicked => { /* open article */ }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             HorizontalBox {
@@ -43,6 +75,10 @@ export component AiHelpChat inherits Window {
                 Button {
                     text: "Send";
                     clicked => { send_message(); }
+                }
+                Button {
+                    text: "Clear";
+                    clicked => { /* clear chat history */ }
                 }
             }
         }

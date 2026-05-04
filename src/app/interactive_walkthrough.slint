@@ -10,14 +10,43 @@ export component InteractiveWalkthrough inherits Window {
 
     in-out property <int> current_step: 0;
 
+    // Overlay to dim the background
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+
+        // Simulated spotlight highlight for the active element
+        Rectangle {
+            x: current_step == 0 ? 20px : (current_step == 1 ? root.width / 2 - 100px : root.width - 220px);
+            y: current_step == 0 ? 80px : (current_step == 1 ? root.height / 2 - 40px : root.height - 150px);
+            width: 200px;
+            height: 80px;
+            border-radius: 8px;
+            background: transparent;
+            border-color: #0ea5e9;
+            border-width: 2px;
+            clip: false;
+
+            // Speech Bubble Pointer
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                background: #1e293b;
+                x: parent.width / 2 - 8px;
+                y: current_step == 1 ? parent.height - 8px : -8px;
+            }
+        }
+    }
+
     HorizontalBox {
         alignment: center;
         VerticalBox {
             max-width: 600px;
             width: 100%;
             alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
-            padding-top: current_step == 0 ? 100px : 0;
-            padding-bottom: current_step == 2 || current_step == 3 ? 100px : 0;
+            padding-top: current_step == 0 ? 170px : 0;
+            padding-bottom: current_step == 2 || current_step == 3 ? 170px : 0;
 
             HorizontalBox {
                 alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
@@ -27,6 +56,7 @@ export component InteractiveWalkthrough inherits Window {
                 GlassCard {
                     width: 335px;
 
+                    // Speech Bubble styling (represented by the GlassCard itself along with the pointer above)
                     VerticalBox {
                         padding: 20px;
                         spacing: 16px;

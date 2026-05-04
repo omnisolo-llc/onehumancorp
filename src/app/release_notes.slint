@@ -29,6 +29,14 @@ export component ReleaseNotes inherits Window {
                 VerticalBox {
                     spacing: 24px;
 
+                    HorizontalBox {
+                        alignment: center;
+                        Button {
+                            text: "View Full Changelog on Website";
+                            clicked => { /* open browser link */ }
+                        }
+                    }
+
                     VerticalBox {
                         spacing: 8px;
                         Text { text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
@@ -37,6 +45,14 @@ export component ReleaseNotes inherits Window {
                                 padding: 16px; spacing: 12px;
                                 Text { text: "🎉 Better Team Collaboration & Offline Reliability"; font-weight: 700; font-size: 18px; color: white; }
                                 Text { text: "Your agents can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection."; color: white; wrap: word-wrap; }
+
+                                // Screenshot Placeholder
+                                Rectangle {
+                                    height: 200px;
+                                    background: #1e293b;
+                                    border-radius: 8px;
+                                    Text { text: "[ Screenshot Placeholder ]"; color: #94a3b8; horizontal-alignment: center; vertical-alignment: center; }
+                                }
                             }
                         }
                     }
@@ -49,6 +65,14 @@ export component ReleaseNotes inherits Window {
                                 padding: 16px; spacing: 12px;
                                 Text { text: "🚀 Enhanced Privacy & New Walkthrough"; font-weight: 700; font-size: 18px; color: white; }
                                 Text { text: "We have strengthened the way we store your business data to keep it completely private. We also added your task list directly to the main dashboard and included a new guide to help you sync your website with AutoDream."; color: white; wrap: word-wrap; }
+
+                                // Screenshot Placeholder
+                                Rectangle {
+                                    height: 200px;
+                                    background: #1e293b;
+                                    border-radius: 8px;
+                                    Text { text: "[ Screenshot Placeholder ]"; color: #94a3b8; horizontal-alignment: center; vertical-alignment: center; }
+                                }
                             }
                         }
                     }
