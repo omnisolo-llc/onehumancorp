@@ -58,6 +58,7 @@ export component Dashboard inherits Window {
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
+    callback action_upgrade();
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
@@ -70,6 +71,7 @@ export component Dashboard inherits Window {
         if (show_upgrade_prompt) : UpgradePrompt {
             message: root.upgrade_prompt_message;
             action_dismiss => { root.show_upgrade_prompt = false; }
+            action_upgrade => { root.action_upgrade(); }
         }
 
         // Header

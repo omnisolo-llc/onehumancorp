@@ -23,6 +23,7 @@ export component Agents inherits Window {
     in-out property <string> upgrade_prompt_message: "";
 
     callback hire_agent();
+    callback action_upgrade();
     callback fix_agent(string);
 
     VerticalBox {
@@ -32,6 +33,7 @@ export component Agents inherits Window {
         if (show_upgrade_prompt) : UpgradePrompt {
             message: root.upgrade_prompt_message;
             action_dismiss => { root.show_upgrade_prompt = false; }
+            action_upgrade => { root.action_upgrade(); }
         }
 
         HorizontalBox {

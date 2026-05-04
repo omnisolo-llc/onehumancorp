@@ -50,6 +50,28 @@ thread_local! {
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
 
+static PRICING_WINDOW: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<slint::Weak<app::Pricing>>>>> = std::sync::OnceLock::new();
+
+fn get_or_create_pricing() -> slint::Weak<app::Pricing> {
+    let mutex = PRICING_WINDOW.get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(None)));
+    let mut guard = mutex.lock().unwrap();
+    if let Some(weak) = &*guard {
+        if weak.upgrade().is_some() {
+            return weak.clone();
+        }
+    }
+
+    // Create new if none or expired
+    let pricing_ui = app::Pricing::new().unwrap();
+    let weak = pricing_ui.as_weak();
+
+    // We need to keep it alive using Box::leak because Slint requires it to be alive to show
+    // Since we only leak one instance globally (or replace a dropped one), this prevents unlimited leakage.
+    Box::leak(Box::new(pricing_ui));
+    *guard = Some(weak.clone());
+    weak
+}
+
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
 
@@ -808,32 +830,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();
 
-    let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle = pricing_ui.as_weak();
+    let pricing_handle = get_or_create_pricing();
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
     Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_toggle = pricing_handle.clone();
-    pricing_ui.on_toggle_billing_cycle(move || {
-        if let Some(ui) = pricing_handle_toggle.upgrade() {
-            let current = ui.get_is_annual();
-            ui.set_is_annual(!current);
-        }
-    });
+    if let Some(pricing_ui) = pricing_handle.upgrade() {
+        pricing_ui.on_toggle_billing_cycle(move || {
+            if let Some(ui) = pricing_handle_toggle.upgrade() {
+                let current = ui.get_is_annual();
+                ui.set_is_annual(!current);
+            }
+        });
 
-    let pricing_handle_select = pricing_handle.clone();
-    let my_plan_handle_select = my_plan_handle.clone();
-    pricing_ui.on_select_plan(move |plan| {
-        if let Some(ui) = pricing_handle_select.upgrade() {
-            let _ = ui.hide();
-        }
-        if let Some(ui) = my_plan_handle_select.upgrade() {
-            ui.set_tier(format!("{} Tier", plan).into());
-            let _ = ui.show();
-        }
-    });
+        let pricing_handle_select = pricing_handle.clone();
+        let my_plan_handle_select = my_plan_handle.clone();
+        pricing_ui.on_select_plan(move |plan| {
+            if let Some(ui) = pricing_handle_select.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(ui) = my_plan_handle_select.upgrade() {
+                ui.set_tier(format!("{} Tier", plan).into());
+                let _ = ui.show();
+            }
+        });
+    }
 
     let pricing_handle_clone = pricing_handle.clone();
     my_plan_ui.on_upgrade(move || {
@@ -867,6 +890,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
             if let Ok(dashboard) = app::Dashboard::new() {
+                let pricing_ui_clone_dash = get_or_create_pricing();
+                let pricing_handle_dash = pricing_ui_clone_dash.clone();
+                dashboard.on_action_upgrade(move || {
+                    if let Some(ui) = pricing_handle_dash.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 let dashboard_handle = dashboard.as_weak();
                 let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -1088,12 +1118,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(dashboard));
 
                 Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(pricing_ui));
             }
         }
     });
 
+    let pricing_ui_clone_agents = get_or_create_pricing();
     let agents_ui = app::Agents::new()?;
+
+    let pricing_handle_agents = pricing_ui_clone_agents.clone();
+    agents_ui.on_action_upgrade(move || {
+        if let Some(ui) = pricing_handle_agents.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
 
