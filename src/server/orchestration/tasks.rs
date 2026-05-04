@@ -6,7 +6,6 @@ use chrono::Utc;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
-    sqlite_mu: tokio::sync::Mutex<()>,
     mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
 }
 
@@ -14,7 +13,6 @@ impl TaskDecompositionService {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
         Self {
             db,
-            sqlite_mu: tokio::sync::Mutex::new(()),
             mesh,
         }
     }
@@ -189,7 +187,7 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let _lock = self.sqlite_mu.lock().await;
+                let _lock = crate::orchestration::state::MeshLockGuard::acquire(self.mesh.clone(), "ohc:lock:system:task_decomposition_claim".to_string(), "task_decomposition".to_string(), 30).await.map_err(|e| e.to_string())?;
 
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
