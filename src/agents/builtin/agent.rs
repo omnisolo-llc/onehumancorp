@@ -20,6 +20,7 @@ pub enum AgentEvent {
     UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
+    Handoff { target: String },
 }
 
 /// Configuration for a single agent run.
@@ -661,6 +662,10 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::HandoffRequested(target)) => {
+                        on_event(AgentEvent::Handoff { target: target.clone() });
+                        return Ok(format!("Handed off to {}", target));
+                    }
                 }
             }
 
@@ -691,6 +696,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        ToolError::HandoffRequested(target) => {
+                            on_event(AgentEvent::Handoff { target: target.clone() });
+                            return Ok(format!("Handed off to {}", target));
                         }
                         _ => {
                             let err = format!("Fatal tool error: {:?}", e);
@@ -762,6 +771,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        Err(ToolError::HandoffRequested(target)) => {
+                            on_event(AgentEvent::Handoff { target: target.clone() });
+                            return Ok(format!("Handed off to {}", target));
                         }
                     }
                 }
@@ -1539,6 +1552,69 @@ mod tests {
 
         // We can verify that it produced the final answer, meaning it survived the loop and compaction.
         assert_eq!(result.unwrap(), "final answer");
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mechanic() {
+        struct HandoffMockToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for HandoffMockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::HandoffRequested("CodingAgent".to_string()))
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I need to handoff".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_handoff".to_string(),
+                            name: "handoff_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let handoff_tool = Tool {
+            name: "handoff_tool".to_string(),
+            description: "A tool that requests handoff".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(HandoffMockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![handoff_tool]);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Start", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Handed off to CodingAgent");
+
+        let handoff_handled = events.iter().any(|e| {
+            if let AgentEvent::Handoff { target } = e {
+                target == "CodingAgent"
+            } else {
+                false
+            }
+        });
+        assert!(handoff_handled, "Should have emitted AgentEvent::Handoff");
     }
 
     #[tokio::test]
