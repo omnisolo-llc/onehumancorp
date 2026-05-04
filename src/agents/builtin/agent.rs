@@ -54,6 +54,12 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub crew_flow: Option<CrewFlow>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrewFlow {
+    pub roles: Vec<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -88,6 +94,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            crew_flow: None,
         }
     }
 }
@@ -202,6 +209,36 @@ impl Agent {
     /// Run the agent loop. Calls `on_event` for each event.
     #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
     pub async fn run<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send,
+    {
+        // CrewAI Mechanic: Role-based Deterministic Backbone
+        if let Some(crew_flow) = &cfg.crew_flow {
+            let mut final_result = initial_message.to_string();
+            for role in &crew_flow.roles {
+                on_event(AgentEvent::IterationStarted { iteration: 0, message_count: 0 });
+                // We inject a strict routing directive into the developer instructions to force the current role
+                let mut role_cfg = cfg.clone();
+                role_cfg.crew_flow = None; // Avoid infinite recursion
+                role_cfg.developer_instructions = format!(
+                    "{}\n\n[DETERMINISTIC BACKBONE] You are now acting as the '{}' role. Focus ONLY on your specific domain.",
+                    cfg.developer_instructions, role
+                );
+
+                final_result = self.run_internal(&role_cfg, &final_result, &mut *on_event).await?;
+            }
+            return Ok(final_result);
+        }
+
+        self.run_internal(cfg, initial_message, on_event).await
+    }
+
+    async fn run_internal<F>(
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
@@ -2033,6 +2070,63 @@ mod tests {
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
         assert_eq!(user_part.len(), 32766);
+    }
+
+    #[tokio::test]
+    async fn test_crew_flow_deterministic_backbone() {
+        struct CrewMockClient {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for CrewMockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut requests = self.requests.lock().await;
+                requests.push(req.clone());
+
+                let response_content = format!("Output for role");
+
+                Ok(ChatResponse {
+                    message: Message::assistant(response_content),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let client = Arc::new(CrewMockClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.developer_instructions = "Base instructions".to_string();
+        cfg.crew_flow = Some(CrewFlow {
+            roles: vec!["Researcher".to_string(), "Writer".to_string(), "Editor".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Initial topic", &mut on_event).await;
+
+        assert!(result.is_ok());
+
+        let requests = client.requests.lock().await;
+        assert_eq!(requests.len(), 3, "Expected exactly 3 calls (one per role)");
+
+        // Verify the injected system prompt for each role
+        let req_researcher = &requests[0];
+        assert!(req_researcher.system.contains("[DETERMINISTIC BACKBONE] You are now acting as the 'Researcher' role. Focus ONLY on your specific domain."));
+
+        let req_writer = &requests[1];
+        assert!(req_writer.system.contains("[DETERMINISTIC BACKBONE] You are now acting as the 'Writer' role. Focus ONLY on your specific domain."));
+        assert!(req_writer.messages.iter().any(|m| m.content.contains("Output for role")), "Writer should receive Researcher's output");
+
+        let req_editor = &requests[2];
+        assert!(req_editor.system.contains("[DETERMINISTIC BACKBONE] You are now acting as the 'Editor' role. Focus ONLY on your specific domain."));
+        assert!(req_editor.messages.iter().any(|m| m.content.contains("Output for role")), "Editor should receive Writer's output");
     }
 
     #[tokio::test]

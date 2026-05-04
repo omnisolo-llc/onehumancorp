@@ -304,6 +304,10 @@ impl AgentServiceImpl {
             0.0
         };
 
+        let crew_flow = req.crew_flow.as_ref().map(|cf| crate::agent::CrewFlow {
+            roles: cf.roles.clone(),
+        });
+
         AgentRunConfig {
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
@@ -334,6 +338,7 @@ impl AgentServiceImpl {
             thread_id: None,
             resume_from_checkpoint_id: None,
             injected_context: None,
+            crew_flow,
         }
     }
 
@@ -528,6 +533,10 @@ impl AgentService for AgentServiceImpl {
             };
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
+            let sub_crew_flow = sub_req.crew_flow.as_ref().map(|cf| crate::agent::CrewFlow {
+                roles: cf.roles.clone(),
+            });
+
             let run_cfg = AgentRunConfig {
                 enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
@@ -561,6 +570,7 @@ impl AgentService for AgentServiceImpl {
                 thread_id: None,
                 resume_from_checkpoint_id: None,
                 injected_context,
+                crew_flow: sub_crew_flow,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

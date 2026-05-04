@@ -47,6 +47,12 @@ message RunTaskRequest {
   ToolsetConfig toolset_config = 10;
   // The OHC department handling the task.
   string department = 12;
+  // CrewFlow configuration for deterministic role-based execution.
+  CrewFlowConfig crew_flow = 14;
+}
+
+message CrewFlowConfig {
+  repeated string roles = 1;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
@@ -106,6 +112,7 @@ message SubAgentRequest {
   // Toolset configuration for the sub-agent.
   ToolsetConfig toolset_config = 10;
   string parent_context_json = 12;
+  CrewFlowConfig crew_flow = 13;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.
