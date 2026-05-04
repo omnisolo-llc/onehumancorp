@@ -28,6 +28,7 @@ export component Dashboard inherits Window {
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
+    in property <string> generative_score: "85";
     in property <bool> is_loading: false;
 
     in property <[UiPendingApproval]> pending_approvals;
@@ -157,6 +158,10 @@ export component Dashboard inherits Window {
                     StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
                     StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+                }
             }
 
             // Small Screen (List)
@@ -166,6 +171,7 @@ export component Dashboard inherits Window {
                 StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
                 StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
             }
         }
 
