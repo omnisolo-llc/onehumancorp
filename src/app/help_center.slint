@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct HelpArticle {
     title: string,
@@ -77,13 +78,16 @@ export component HelpCenter inherits Window {
         border-radius: 28px;
         background: #0ea5e9;
 
-        Text {
-            text: "?";
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+        TooltipElement {
+            tooltip_id: "help_center_chat";
+            Text {
+                text: "?";
+                color: white;
+                font-size: 24px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
         }
     }
 }

@@ -9,5 +9,8 @@
   "share": "Share your store link with others.",
   "add_product": "Add a new product to your store.",
   "view_orders": "View and manage your recent orders.",
-  "messages": "Check your customer messages."
+  "messages": "Check your customer messages.",
+  "send_help_msg": "Send your question to the Help Assistant.",
+  "help_center_chat": "Open the AI Help Assistant.",
+  "walkthrough_next": "Continue the walkthrough."
 }

@@ -1,5 +1,6 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export component InteractiveWalkthrough inherits Window {
     preferred-width: 600px;
@@ -61,13 +62,16 @@ export component InteractiveWalkthrough inherits Window {
                                 clicked => { root.visible = false; }
                             }
 
-                            Button {
-                                text: current_step < 3 ? "Next" : "Done";
-                                clicked => {
-                                    if (current_step < 3) {
-                                        current_step += 1;
-                                    } else {
-                                        root.visible = false;
+                            TooltipElement {
+                                tooltip_id: "walkthrough_next";
+                                Button {
+                                    text: current_step < 3 ? "Next" : "Done";
+                                    clicked => {
+                                        if (current_step < 3) {
+                                            current_step += 1;
+                                        } else {
+                                            root.visible = false;
+                                        }
                                     }
                                 }
                             }
