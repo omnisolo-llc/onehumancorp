@@ -32,3 +32,35 @@ fn test_integrations_plain_language_2() {
     let ui = app::Integrations::new().unwrap();
     // Assuming we can instantiate it
 }
+
+
+
+#[test]
+fn test_login_help_label() {
+    let ui = app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), slint::SharedString::from("Help with Login"));
+}
+
+#[test]
+fn test_login_help_label_2() {
+    let ui = app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), slint::SharedString::from("Help with Login"));
+}
+
+#[test]
+fn test_login_help_label_3() {
+    let ui = app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), slint::SharedString::from("Help with Login"));
+}
+
+#[test]
+fn test_login_help_label_4() {
+    let ui = app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), slint::SharedString::from("Help with Login"));
+}
+
+#[test]
+fn test_login_help_label_5() {
+    let ui = app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), slint::SharedString::from("Help with Login"));
+}
