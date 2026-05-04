@@ -46,6 +46,7 @@ pub struct AgentRunConfig {
     pub enable_git_state_checkpointing: bool,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
+    pub injected_context: Option<Vec<ohc_builtin_agent_core::types::Message>>,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
@@ -79,6 +80,7 @@ impl Default for AgentRunConfig {
             enable_git_state_checkpointing: false,
             workspace_path: None,
             project_trusted: true,
+            injected_context: None,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
@@ -229,7 +231,7 @@ impl Agent {
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
-        let mut messages: Vec<Message> = Vec::new();
+        let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
@@ -265,6 +267,8 @@ impl Agent {
         }
 
         if messages.is_empty() {
+            messages.push(Message::user(initial_message));
+        } else if !initial_message.is_empty() {
             messages.push(Message::user(initial_message));
         }
         let mut budget_tracker = BudgetTracker::default();
@@ -560,6 +564,7 @@ impl Agent {
                 let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
+                let messages_clone = messages.clone();
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
@@ -567,7 +572,7 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = 2;
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -687,7 +692,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools).await {
+                    match self.execute_tool(&tc, &session_tools, &messages).await {
                         Ok(r) => {
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
@@ -958,13 +963,25 @@ impl Agent {
         &self,
         tc: &ToolCall,
         session_tools: &[Tool],
+        current_messages: &[Message],
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let mut args = tc.arguments.clone();
+        if tc.name == "spawn_subagent" {
+            if let Some(obj) = args.as_object_mut() {
+                if obj.get("mode").and_then(|v| v.as_str()) == Some("fork") {
+                    if let Ok(context_json) = serde_json::to_string(current_messages) {
+                        obj.insert("parent_context_json".to_string(), serde_json::json!(context_json));
+                    }
+                }
+            }
+        }
+
+        tool.execute.execute(args).await
     }
 }
 
