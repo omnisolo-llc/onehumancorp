@@ -1,3 +1,4 @@
+pub mod rate_limiter;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
@@ -110,6 +111,7 @@ pub fn all_tools(
         subagent::subagent_tool(),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone()),
+        rate_limiter::rate_limiter_tool(),
     ];
 
     if let Some(accessor) = memory_accessor {

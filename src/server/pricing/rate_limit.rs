@@ -90,6 +90,24 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
+    pub async fn check_storage_quota(&self, tenant_id: &str, file_size_mb: u32) -> Result<bool, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let used_key = format!("tenant:{}:storage_used_mb", tenant_id);
+        let used: Option<u32> = conn.get(&used_key).await.map_err(|e| e.to_string())?;
+        let current_used = used.unwrap_or(0);
+
+        if let Some(limit) = tier.storage_limit_mb() {
+            if current_used + file_size_mb > limit {
+                return Ok(false);
+            }
+        }
+
+        let _: () = conn.incr(&used_key, file_size_mb).await.map_err(|e| e.to_string())?;
+        Ok(true)
+    }
+
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let tier = self.get_tenant_tier(tenant_id).await?;
@@ -145,6 +163,7 @@ impl RedisRateLimiter {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,5 +192,11 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(50));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+    }
+
+    #[tokio::test]
+    async fn test_storage_quota_mock() {
+        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
+        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
     }
 }

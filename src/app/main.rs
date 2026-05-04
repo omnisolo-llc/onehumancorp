@@ -3575,6 +3575,38 @@ mod remaining_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_cost_transparency_flow_2() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let cost_ui = app::CostDashboard::new().unwrap();
+        cost_ui.set_total_spend("$100.00".into());
+        assert_eq!(cost_ui.get_total_spend(), "$100.00");
+    }
+
+    #[test]
+    fn test_e2e_pricing_flow_3() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing_ui = app::Pricing::new().unwrap();
+        pricing_ui.set_is_annual(true);
+        assert_eq!(pricing_ui.get_is_annual(), true);
+    }
+
+    #[test]
+    fn test_e2e_myplan_flow_4() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let my_plan_ui = app::MyPlan::new().unwrap();
+        my_plan_ui.set_tier("Business Tier".into());
+        assert_eq!(my_plan_ui.get_tier(), "Business Tier");
+    }
+
+    #[test]
+    fn test_e2e_agent_cost_flow_5() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let cost_ui = app::CostDashboard::new().unwrap();
+        cost_ui.set_total_tokens("5,000,000".into());
+        assert_eq!(cost_ui.get_total_tokens(), "5,000,000");
+    }
+
+    #[test]
     fn test_e2e_cost_transparency_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

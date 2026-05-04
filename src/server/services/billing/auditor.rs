@@ -110,6 +110,18 @@ impl CostAuditor {
         savings
     }
 
+        pub fn export_metrics(&self) -> String {
+        // Simulates exporting to OpenTelemetry/Prometheus
+        let total_cost = *self.total_cost.lock().unwrap();
+        let total_compute = *self.total_compute_cost.lock().unwrap();
+        let total_network = *self.total_network_cost.lock().unwrap();
+        let storage_savings = *self.storage_savings.lock().unwrap();
+        let caching_savings = *self.caching_savings.lock().unwrap();
+
+        format!("metrics{{total_cost={},compute={},network={},storage_savings={},cache_savings={}}}",
+            total_cost, total_compute, total_network, storage_savings, caching_savings)
+    }
+
     pub fn get_total_storage_savings(&self) -> f64 {
         let storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings

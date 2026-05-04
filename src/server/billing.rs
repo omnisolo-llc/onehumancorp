@@ -31,6 +31,14 @@ impl Tracker {
         }
     }
 
+    pub async fn check_storage_quota(&self, tenant_id: &str, file_size_mb: u32) -> Result<bool, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.check_storage_quota(tenant_id, file_size_mb).await
+        } else {
+            Ok(true) // Allow if no redis configured
+        }
+    }
+
     pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.record_action(tenant_id, agent_id).await
@@ -42,6 +50,16 @@ impl Tracker {
             })
         }
     }
+
+
+    pub async fn create_payment_intent(&self, amount_cents: i64, customer_id: &str) -> Result<serde_json::Value, String> {
+        if let Some(ref client) = self.stripe_client {
+            client.create_payment_intent(amount_cents, customer_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
 
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
@@ -64,5 +82,26 @@ pub struct TokenSummary {
 impl Default for Tracker {
     fn default() -> Self {
         Tracker::new()
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_tracker_create_payment_intent() {
+        let stripe_client = Arc::new(StripeClient::new("test_key".to_string()));
+        let tracker = Tracker {
+            rate_limiter: None,
+            stripe_client: Some(stripe_client),
+        };
+
+        let ach_intent = tracker.create_payment_intent(100000, "cus_123").await.unwrap();
+        assert_eq!(ach_intent["client_secret"], "pi_ach_test_secret_12345");
+
+        let card_intent = tracker.create_payment_intent(5000, "cus_123").await.unwrap();
+        assert_eq!(card_intent["client_secret"], "pi_card_test_secret_67890");
     }
 }
