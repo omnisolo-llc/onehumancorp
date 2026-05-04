@@ -51,3 +51,12 @@ fn create_verify_endpoint_url() {
     ui.set_endpoint_url("e22".into());
     assert_eq!(ui.get_endpoint_url(), "e22");
 }
+
+#[test]
+fn test_api_docs_is_advanced_toggle() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false); // Should be false by default
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}
