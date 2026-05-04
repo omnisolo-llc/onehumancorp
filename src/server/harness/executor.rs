@@ -1,4 +1,4 @@
-use super::sandbox::SandboxManager;
+use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 
 pub struct LocalShellTask {
@@ -10,6 +10,10 @@ impl LocalShellTask {
         LocalShellTask {
             manager: SandboxManager::new(pool),
         }
+    }
+
+    pub async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
+        self.manager.update_config(policy_json).await
     }
 
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
@@ -47,5 +51,43 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err.contains("SANDBOX_FAILURE"));
         assert!(err.contains("Command execution denied by sandbox policy"));
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_config_update() {
+        let mut task = LocalShellTask::new(None);
+
+        let result1 = task.execute("curl http://example.com").await;
+        assert!(result1.is_ok());
+
+        let policy = r#"{
+            "disabled_commands": ["curl"]
+        }"#;
+
+        task.update_config(policy).await.unwrap();
+
+        let result2 = task.execute("curl http://example.com").await;
+        assert!(result2.is_err());
+
+        let msg = result2.unwrap_err();
+        assert!(msg.contains("Command execution denied by sandbox policy"));
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_config_wrapper_update() {
+        let mut task = LocalShellTask::new(None);
+
+        let policy = r#"{
+            "read_only_paths": ["/etc", "/var"],
+            "blocked_domains": ["evil.com"]
+        }"#;
+
+        task.update_config(policy).await.unwrap();
+
+        let result = task.execute("echo 'hello'").await;
+        assert!(result.is_ok());
+        let msg = result.unwrap();
+        assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
+        assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
     }
 }
