@@ -8,7 +8,7 @@ test.describe('Referral Program', () => {
     await page.locator('button:has-text("Login")').click();
 
     await page.goto('/referrals');
-    await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
+    await expect(page.locator('text=Referral Dashboard')).toBeVisible();
 
     const newLinkButton = page.locator('button:has-text("New Link")');
     await newLinkButton.click();
@@ -23,7 +23,7 @@ test.describe('Referral Program', () => {
 
   test('should display referral dashboard header', async ({ page }) => {
     await page.goto('/referrals');
-    await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
+    await expect(page.locator('text=Referral Dashboard')).toBeVisible();
   });
 
   test('should show your referral link section', async ({ page }) => {
@@ -57,7 +57,7 @@ test.describe('Referral Program', () => {
     // Must navigate naturally as a real user would from the dashboard
     await page.locator('button:has-text("Referrals")').first().click();
 
-    await expect(page.locator('text=Viral Loop Dashboard')).toBeVisible();
+    await expect(page.locator('text=Referral Dashboard')).toBeVisible();
 
     const inviteBtn = page.locator('button:has-text("Copy Invite Message")').first();
     await expect(inviteBtn).toBeVisible();
