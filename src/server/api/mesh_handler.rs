@@ -23,6 +23,25 @@ pub async fn mesh_ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
+#[derive(serde::Deserialize)]
+pub struct BroadcastRequest {
+    pub topic: String,
+    pub message: MeshMessage,
+}
+
+pub async fn broadcast_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    match transport.publish(&payload.topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
+}
+
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(100);
@@ -95,6 +114,7 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
+            .route("/mesh/broadcast", axum::routing::post(broadcast_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
