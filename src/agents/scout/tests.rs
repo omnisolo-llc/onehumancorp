@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::db::{ScoutDb, ToolIntegration};
+    use crate::db::ScoutDb;
     use crate::agent::ScoutAgent;
     use ohc_builtin_agent_core::pubsub::SubagentBus;
     use sqlx::sqlite::SqlitePoolOptions;
