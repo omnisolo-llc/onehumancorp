@@ -1,133 +1,79 @@
-# 🔍 Scout: Tool Integration Research Q2
+# Issue Brief: Website & Storefront Builder Architecture
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+## Title
+Website & Storefront Builder Architecture: Mobile-First, Zero-Code Content Blocks
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Problem Statement
+Building a website is overwhelming for a non-technical small business owner. Existing platforms like Shopify and WordPress force users into complex, desktop-centric editors with endless customization options that often result in broken, amateurish mobile sites. Maya (the baker) and Carlos (the handyman) need to publish beautiful, high-converting storefronts from their smartphones in under 10 minutes without touching code, configuring DNS, or wrestling with SEO plugins.
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
-**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
-**Research Report**:
-- **Tool**: Mailchimp
-- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
-- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Research Report
+- **Competitive Analysis**:
+  - **Shopify**: Desktop-heavy theme editor. Requires understanding of "sections" and "blocks." Mobile app editing is limited.
+  - **Wix/Squarespace**: High learning curve. Too many formatting choices often lead to poor design outcomes for non-designers.
+  - **OHC Advantage**: OHC restricts the "how" (styling) to ensure aesthetic excellence while allowing users to fully customize the "what" (content). We prioritize a 375px mobile-first builder and leverage AI to auto-fill content, handle SEO, and automatically structure pages.
+- **Key Findings**:
+  - Users drop off when asked to write copy or structure a layout.
+  - 80% of small business sites consist of just 5-6 core block types (Hero, Products, Services, Testimonials, Contact, About).
+  - Domain mapping and SSL provisioning are massive friction points for non-technical users.
 
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
-**Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
-**Estimated Scope**: Large
+## Design Doc
 
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+### Architecture Diagram
+```mermaid
+graph TD
+    A[Mobile UI Builder 375px] --> B{Marketing & Advertising Agent}
+    B -->|Draft Content| C[Page Draft State]
+    C -->|1-Tap Publish| D[Live Storefront]
 
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+    C --> E[Content Blocks]
+    E --> F[Hero Section]
+    E --> G[Product Grid]
+    E --> H[Booking Calendar]
+    E --> I[Testimonials]
+    E --> J[Contact Form]
 
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+    D --> K[Automated SEO Optimization]
+    D --> L[Custom Domain & SSL Provisioning]
+```
+
+### Mobile UX Flow (375px First)
+1. **The "Instant" Start**: The user opens the "Website" tab. Instead of a blank canvas, they see a 100% complete, AI-generated storefront based on their business profile (e.g., a bakery theme for Maya).
+2. **Block-Based Editing**: The UI is a vertical stack of "Blocks". Tapping a block opens a full-screen mobile editor for that specific block.
+   - *Example*: Tapping the "Hero" block allows the user to swap the photo, edit the headline, or tap "AI Rewrite".
+3. **Adding Content**: Tapping a floating "+" button brings up a curated list of block types (Product Grid, Testimonials, Service List).
+4. **Publishing**: Changes are auto-saved as "Draft". A persistent "Publish Changes" button at the bottom pushes the draft to the live site.
+
+### Content Blocks & Customization
+To prevent broken designs, OHC enforces rigid but beautiful templates (Glassmorphism, Outfit/Inter typography). Users cannot drag elements arbitrarily; they stack predefined blocks.
+- **Hero**: Main image/video, headline, subheadline, Primary CTA (e.g., "Order Now").
+- **Product Grid**: Auto-syncs with the Operations inventory. Displays physical/digital items with "Sold Out" toggles.
+- **Booking Calendar**: Auto-syncs with the Operations schedule. Allows picking time slots.
+- **Testimonials**: Text blocks or AI-curated reviews from past customers.
+- **Contact Form**: Simple message intake routing directly to the Customer Success Agent inbox.
+- **Text/About**: Rich text with optional image alignment.
+
+### AI Agent Integration Points
+- **The Promoter (Marketing & Advertising)**:
+  - Generates the initial website layout and copy.
+  - Auto-optimizes the site for SEO: writes meta titles, descriptions, and generates structured data (schema.org) based on the business type, without asking the user.
+- **The Advisor (Business Advisory)**:
+  - Suggests adding blocks. "You have 5 five-star reviews! Should I add a Testimonials block to your homepage?"
+
+### Domain & Publishing Infrastructure
+- **Draft -> Live**: The builder operates strictly on a draft state. Publishing atomically swaps the draft to the live state, ensuring visitors never see a half-edited site.
+- **Custom Domains & SSL**: Free tiers get an `ohc.site` subdomain. Upgrading to Starter allows custom domains. The provisioning is abstract: the user types their domain, and OHC handles DNS verification (if purchased through OHC) or provides simple copy-paste records. SSL is provisioned automatically upon domain attachment without user intervention.
+
+### Key Design Decisions
+1. **No Drag-and-Drop Canvas**: True drag-and-drop is impossible to use well on a phone and ruins mobile responsiveness. We use a vertical stacking "Block" system instead.
+2. **AI-First Copywriting**: Blank text fields paralyze users. Every block comes pre-filled with AI-generated copy that the user can tweak.
+3. **Invisible SEO**: No SEO tabs or meta-tag inputs. The AI handles it perfectly based on the content.
+
+## Implementation Prompt
+**To Implementer Agent:**
+Implement the "Website & Storefront Builder" UI and underlying state management. The builder must be mobile-first (375px) and use a vertical block-stacking paradigm rather than free-form drag-and-drop. Implement the following core blocks: Hero, Product Grid, Booking Calendar, and Contact Form. Ensure the builder supports a draft state with a clear "Publish" mechanism. Integrate the "Marketing Agent" to provide an "AI Rewrite" button for text fields. All UI components must use the OHC premium design system (Glassmorphism, Outfit/Inter). Do not prescribe the specific JSON schema for saving blocks or the CDN mechanism for publishing; focus on the unified API contract and the user journey transitions. Include E2E test coverage verifying a successful run-through from opening the builder to publishing a live site.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
