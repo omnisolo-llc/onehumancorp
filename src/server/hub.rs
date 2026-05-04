@@ -59,15 +59,16 @@ impl Hub {
 
         let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
         let pool_clone = pool.clone();
+        let cost_auditor = Arc::new({
+            let mut a = CostAuditor::new(CostConfig::default());
+            a.set_telemetry_tx(telemetry_tx.clone());
+            a
+        });
+
+        let cost_auditor_clone = cost_auditor.clone();
         tokio::spawn(async move {
             while let Some(event) = telemetry_rx.recv().await {
-                let cost = crate::pricing::calculator::calculate_cost_with_config(
-                    event.input_tokens,
-                    event.output_tokens,
-                    event.cached_input_tokens,
-                    event.local_embedding_tokens,
-                    &crate::pricing::calculator::CostConfig::default(),
-                );
+                let cost = cost_auditor_clone.record_event(event.clone());
 
                 let labels = serde_json::json!({
                     "agent_id": event.agent_id,
@@ -98,11 +99,7 @@ impl Hub {
             tracker: Tracker::new(),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
-            cost_auditor: Arc::new({
-                let mut a = CostAuditor::new(CostConfig::default());
-                a.set_telemetry_tx(telemetry_tx.clone());
-                a
-            }),
+            cost_auditor,
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
             get_token_usage: None,
