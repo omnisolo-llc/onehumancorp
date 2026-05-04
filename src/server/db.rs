@@ -189,6 +189,16 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS onboarding_state (
+                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        current_step INTEGER NOT NULL DEFAULT 0,
+                        state_json TEXT NOT NULL DEFAULT '{}',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, organization_id)
+                    );
+
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
