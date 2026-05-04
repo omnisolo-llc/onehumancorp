@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use uuid::Uuid;
-
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 
 #[async_trait::async_trait]
@@ -14,6 +13,15 @@ pub trait Department: Send + Sync {
     async fn request_approval(&self, description: String, tenant_id: String) -> Result<ApprovalRequest, String>;
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig>;
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig);
+    // Added Scheduled trigger explicitly
+    async fn handle_scheduled_task(&self, task_id: &str) -> Result<(), String> {
+        let _ = &task_id;
+        Ok(())
+    }
+    // Added OnDemand trigger explicitly
+    async fn handle_on_demand_request(&self, request_payload: &str) -> Result<String, String> {
+        Ok(format!("Handled: {}", request_payload))
+    }
 }
 
 pub struct DummyDepartment {
