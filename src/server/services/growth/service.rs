@@ -233,15 +233,6 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
-        // Implement Credit Attribution: "both get 1 month free Pro"
-        // In a real app we'd update a billing or organizations table.
-        // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
-            .bind(&org_id)
-            .bind(&req.id)
-            .execute(&mut *tx)
-            .await;
-
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
@@ -559,15 +550,28 @@ mod tests {
         assert_eq!(resp.user_id, "test_user");
         assert_eq!(resp.referral_code, "TESTCODE");
 
+        let _ = sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ('org1', 'Test Org', 'Free') ON CONFLICT DO NOTHING")
+            .execute(&service.pool).await;
+
         let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
         click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
         assert_eq!(click_resp.clicks, 1);
 
+        // Verify plan is still Free after click
+        let org_tier: String = sqlx::query_scalar("SELECT plan_tier FROM organizations WHERE id = 'org1'")
+            .fetch_one(&service.pool).await.unwrap_or_else(|_| "Free".to_string());
+        assert_eq!(org_tier, "Free", "Plan should not upgrade on click");
+
         let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
         conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
         assert_eq!(conv_resp.conversions, 1);
+
+        // Verify plan is upgraded to Pro after conversion
+        let upgraded_tier: String = sqlx::query_scalar("SELECT plan_tier FROM organizations WHERE id = 'org1'")
+            .fetch_one(&service.pool).await.unwrap_or_else(|_| "Free".to_string());
+        assert_eq!(upgraded_tier, "Pro", "Plan should upgrade on conversion");
 
         let mut list_req = Request::new(EmptyRequest {});
         list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
