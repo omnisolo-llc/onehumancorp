@@ -27,7 +27,8 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-fn open_url(url: &str) {
+#[allow(dead_code)]
+fn open_url(_url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
         // Removed web_sys since it breaks the build, avoiding E0433
@@ -35,11 +36,11 @@ fn open_url(url: &str) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         #[cfg(target_os = "windows")]
-        let _ = std::process::Command::new("cmd").args(["/C", "start", url]).spawn();
+        let _ = std::process::Command::new("cmd").args(["/C", "start", _url]).spawn();
         #[cfg(target_os = "macos")]
-        let _ = std::process::Command::new("open").arg(url).spawn();
+        let _ = std::process::Command::new("open").arg(_url).spawn();
         #[cfg(target_os = "linux")]
-        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+        let _ = std::process::Command::new("xdg-open").arg(_url).spawn();
     }
 }
 
