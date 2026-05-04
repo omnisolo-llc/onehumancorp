@@ -104,6 +104,8 @@ message SubAgentRequest {
   AgentRuntimeConfig runtime_config = 9;
   // Toolset configuration for the sub-agent.
   ToolsetConfig toolset_config = 10;
+  // The parent agent's thread ID to fork context from.
+  string source_thread_id = 12;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.

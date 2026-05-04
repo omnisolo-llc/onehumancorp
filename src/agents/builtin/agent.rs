@@ -51,6 +51,7 @@ pub struct AgentRunConfig {
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
+    pub source_thread_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
 }
 
@@ -84,6 +85,7 @@ impl Default for AgentRunConfig {
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
+            source_thread_id: None,
             enable_lazy_tool_loading: false,
         }
     }
@@ -232,21 +234,43 @@ impl Agent {
         let mut messages: Vec<Message> = Vec::new();
         let mut last_checkpoint_id: Option<String> = None;
 
-        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
-            if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
-                let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
-                    .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
-                    .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
+        if let Some(checkpointer) = &self.checkpointer {
+            if let Some(thread_id) = &cfg.thread_id {
+                if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
+                    let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
+                        .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
+                        .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
 
-                messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
-                    .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
-                last_checkpoint_id = Some(cp.checkpoint_id.clone());
-            } else {
-                if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
-                    if let Some(cp) = checkpoints.first() {
-                        if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
-                            messages = saved_msgs;
-                            last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                    messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
+                        .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
+                    last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                } else if let Some(source_thread_id) = &cfg.source_thread_id {
+                    // Fork orchestration mode logic: load context from source thread, but ignore its checkpoint ID
+                    // so the subagent creates its own divergent checkpoint chain.
+                    if let Ok(checkpoints) = checkpointer.list_checkpoints(source_thread_id).await {
+                        if let Some(cp) = checkpoints.first() {
+                            if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                                messages = saved_msgs;
+                                // We purposely DO NOT set `last_checkpoint_id = Some(cp.checkpoint_id.clone())` here.
+                                // We want the new checkpoint to have `parent_id = None` (or start a fresh chain for this subagent).
+                                // Wait, should it have the source's checkpoint as its parent, or None?
+                                // "Creates its own divergent checkpoint chain instead of merging states."
+                                // The new thread will just start with parent_id = None for its first checkpoint, which contains the loaded messages.
+                                // It seems reasonable to leave last_checkpoint_id as None.
+                                // Or we can set it to the source's checkpoint as a parent, but then it crosses thread_id boundaries?
+                                // Checkpoints are identified by (thread_id, checkpoint_id). parent_id is just an Option<String>.
+                                // To truly diverge, setting parent_id to the source's cp id could make sense, but it might confuse
+                                // the UI if it expects parent to be in the same thread. Let's leave it as None to start fresh.
+                            }
+                        }
+                    }
+                } else {
+                    if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
+                        if let Some(cp) = checkpoints.first() {
+                            if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                                messages = saved_msgs;
+                                last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                            }
                         }
                     }
                 }
