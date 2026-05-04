@@ -305,7 +305,8 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
-            enable_lazy_tool_loading: false,
+            enable_plan_and_execute: std::env::var("OHC_AGENT_ENABLE_PLAN_AND_EXECUTE").map(|v| v == "true" || v == "1").unwrap_or(false),
+            enable_lazy_tool_loading: std::env::var("OHC_AGENT_ENABLE_LAZY_TOOL_LOADING").map(|v| v == "true" || v == "1").unwrap_or(false),
             agent_id: self.agent_id.clone(),
             model,
             server_system_message,
@@ -517,6 +518,7 @@ impl AgentService for AgentServiceImpl {
         if sub_req.sub_agent_address.is_empty() {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                enable_plan_and_execute: false,
                 enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },

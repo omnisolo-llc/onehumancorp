@@ -52,6 +52,7 @@ pub struct AgentRunConfig {
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
+    pub enable_plan_and_execute: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -85,6 +86,7 @@ impl Default for AgentRunConfig {
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
+            enable_plan_and_execute: false,
         }
     }
 }
@@ -265,7 +267,42 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            let mut actual_initial_message = initial_message.to_string();
+
+            // ---------------------------------------------------------------------
+            // PLAN AND EXECUTE MECHANIC
+            // ---------------------------------------------------------------------
+            if cfg.enable_plan_and_execute {
+                on_event(AgentEvent::TextChunk { content: "[System: Generating step-by-step execution plan...]\n".to_string() });
+
+                let plan_prompt = format!(
+                    "You are the planning component of an AI agent. Your task is to generate a step-by-step plan to solve the following problem. Do NOT use any tools. Return ONLY the plan in clear, numbered steps.\n\nProblem:\n{}",
+                    initial_message
+                );
+
+                let plan_req = ChatRequest {
+                    model: cfg.model.clone(),
+                    system: "You are a master planner. Break down the user's request into discrete, actionable steps.".to_string(),
+                    messages: vec![Message::user(plan_prompt)],
+                    tools: vec![], // Zero tools for planning phase
+                    max_tokens: cfg.max_tokens,
+                    temperature: 0.0, // Low temperature for deterministic planning
+                };
+
+                match self.llm.chat(plan_req).await {
+                    Ok(resp) => {
+                        let plan = resp.message.content;
+                        on_event(AgentEvent::TextChunk { content: format!("[Generated Plan]:\n{}\n\n", plan) });
+                        actual_initial_message = format!("{}\n\n[Execution Plan provided by Planner]:\n{}", initial_message, plan);
+                    }
+                    Err(e) => {
+                        tracing::error!("Plan generation failed: {}", e);
+                        on_event(AgentEvent::TextChunk { content: format!("[System: Failed to generate plan: {}]\n", e) });
+                    }
+                }
+            }
+
+            messages.push(Message::user(actual_initial_message));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -2059,6 +2096,81 @@ mod tests {
             filtered.reverse();
             Ok(filtered)
         }
+    }
+
+    #[tokio::test]
+    async fn test_plan_and_execute_mechanic() {
+        struct MockPlannerLlm {
+            call_count: Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockPlannerLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // First call is the planner (zero tools)
+                    assert!(req.tools.is_empty());
+                    assert_eq!(req.temperature, 0.0);
+
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "1. Step one".to_string(),
+                            tool_calls: vec![],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                } else {
+                    // Second call is the actual execution
+                    // initial_message is pushed to index 1 or 2 depending on system prompt.
+                    // The planner prompt doesn't overwrite system prompt.
+                    // Let's just find the user message with the plan.
+                    let mut found = false;
+                    for m in &req.messages {
+                        if m.role == Role::User && m.content.contains("[Execution Plan provided by Planner]") {
+                            found = true;
+                            assert!(m.content.contains("1. Step one"));
+                        }
+                    }
+                    assert!(found);
+
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Task completed based on plan.".to_string(),
+                            tool_calls: vec![],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+        }
+
+        let llm = Arc::new(MockPlannerLlm {
+            call_count: Mutex::new(0),
+        });
+
+        let agent = Agent::new(llm.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_plan_and_execute = true;
+        cfg.max_iterations = 5;
+
+        let mut events = Vec::new();
+        let mut on_event = |evt| events.push(evt);
+
+        let result = agent.run(&cfg, "Do the task", &mut on_event).await.unwrap();
+
+        // We want to verify it completed the plan and execute flow.
+        assert_eq!(result, "Task completed based on plan.");
+        assert_eq!(*llm.call_count.lock().await, 2);
     }
 
     #[tokio::test]
