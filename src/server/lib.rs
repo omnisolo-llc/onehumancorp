@@ -554,7 +554,11 @@ impl HubService for MyHubService {
             locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
             created_at_unix: task.created_at.timestamp(),
             updated_at_unix: task.updated_at.timestamp(),
-            action_risk: task.action_risk.unwrap_or_default(),
+            action_risk: match task.action_risk {
+                Some(crate::tasks::ActionRisk::Low) => 1,
+                Some(crate::tasks::ActionRisk::High) => 2,
+                _ => 0,
+            },
             approval_status: task.approval_status.unwrap_or_default(),
             proposed_content: task.proposed_content.unwrap_or_default(),
         }))
@@ -584,7 +588,11 @@ impl HubService for MyHubService {
                 locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
-                action_risk: task.action_risk.unwrap_or_default(),
+                action_risk: match task.action_risk {
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
+                },
                 approval_status: task.approval_status.unwrap_or_default(),
                 proposed_content: task.proposed_content.unwrap_or_default(),
             })
@@ -632,6 +640,43 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn get_pending_approvals(
+        &self,
+        request: Request<GetPendingApprovalsRequest>,
+    ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
+        let req = request.into_inner();
+        let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
+
+        let mapped_tasks: Vec<SharedTask> = tasks.into_iter().map(|task| {
+            SharedTask {
+                id: task.id,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
+                action_risk: match task.action_risk {
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
+                },
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
+            }
+        }).collect();
+
+        Ok(Response::new(GetPendingApprovalsResponse {
+            tasks: mapped_tasks,
+        }))
+    }
+
     async fn trigger_custom_order(
         &self,
         request: Request<TriggerCustomOrderRequest>,
@@ -645,7 +690,7 @@ impl HubService for MyHubService {
             req.details.clone(),
             "P1".to_string(),
         ).map_err(|e| Status::internal(e))?;
-        ops_task.action_risk = Some("low".to_string());
+        ops_task.action_risk = Some(crate::tasks::ActionRisk::Low);
         self.hub.task_manager().insert_task(ops_task);
 
         let mut cs_task = self.hub.task_manager().create_task(
@@ -655,7 +700,7 @@ impl HubService for MyHubService {
             req.details.clone(),
             "P1".to_string(),
         ).map_err(|e| Status::internal(e))?;
-        cs_task.action_risk = Some("high".to_string());
+        cs_task.action_risk = Some(crate::tasks::ActionRisk::High);
         cs_task.approval_status = Some("PENDING".to_string());
         cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
         self.hub.task_manager().insert_task(cs_task);

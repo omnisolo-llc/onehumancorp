@@ -22,9 +22,36 @@ pub struct SharedTask {
     pub depth: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub action_risk: Option<String>,
+    pub action_risk: Option<ActionRisk>,
     pub approval_status: Option<String>,
     pub proposed_content: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "VARCHAR")]
+pub enum ActionRisk {
+    Unspecified,
+    Low,
+    High,
+}
+
+impl ActionRisk {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ActionRisk::Unspecified => "UNSPECIFIED",
+            ActionRisk::Low => "LOW",
+            ActionRisk::High => "HIGH",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s.to_uppercase().as_str() {
+            "LOW" => ActionRisk::Low,
+            "HIGH" => ActionRisk::High,
+            _ => ActionRisk::Unspecified,
+        }
+    }
 }
 
 pub struct TaskManager {
@@ -99,7 +126,7 @@ impl TaskManager {
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
-            if task.status == "PENDING" {
+            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
@@ -135,8 +162,10 @@ impl TaskManager {
                     serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({}))
                 };
                 
-                payload_map["result"] = serde_json::Value::String(result);
-                payload_map["completed_at"] = serde_json::Value::String(Utc::now().to_rfc3339());
+                if let Some(obj) = payload_map.as_object_mut() {
+                    obj.insert("result".to_string(), serde_json::Value::String(result));
+                    obj.insert("completed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+                }
                 
                 task.payload = payload_map.to_string();
                 task.updated_at = Utc::now();
@@ -162,8 +191,10 @@ impl TaskManager {
                     serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({}))
                 };
 
-                payload_map["error"] = serde_json::Value::String(reason.to_string());
-                payload_map["failed_at"] = serde_json::Value::String(Utc::now().to_rfc3339());
+                if let Some(obj) = payload_map.as_object_mut() {
+                    obj.insert("error".to_string(), serde_json::Value::String(reason.to_string()));
+                    obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+                }
 
                 task.payload = payload_map.to_string();
                 task.updated_at = Utc::now();
@@ -180,9 +211,23 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
             if is_approved {
-                task.status = "APPROVED".to_string();
+                // Return to IN_PROGRESS so the assigned agent can complete it
+                task.status = "IN_PROGRESS".to_string();
             } else {
-                task.status = "REJECTED".to_string();
+                // If rejected, fail the task
+                task.status = "FAILED".to_string();
+
+                let mut payload_map: serde_json::Value = if task.payload.is_empty() {
+                    serde_json::json!({})
+                } else {
+                    serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({}))
+                };
+
+                if let Some(obj) = payload_map.as_object_mut() {
+                    obj.insert("error".to_string(), serde_json::Value::String("Task was rejected by user".to_string()));
+                    obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+                }
+                task.payload = payload_map.to_string();
             }
             task.updated_at = Utc::now();
             Ok(())
@@ -191,12 +236,20 @@ impl TaskManager {
         }
     }
 
+    pub fn get_pending_approvals(&self, org_id: &str) -> Vec<SharedTask> {
+        let tasks = self.tasks.read().unwrap();
+        tasks.values()
+            .filter(|t| t.organization_id == org_id && t.approval_status.as_deref() == Some("PENDING"))
+            .cloned()
+            .collect()
+    }
+
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
         let mut tasks = self.tasks.write().unwrap();
         let mut claimed_tasks = Vec::new();
         
         for task in tasks.values_mut() {
-            if task.status == "PENDING" {
+            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id.to_string());
                 task.updated_at = Utc::now();
@@ -289,5 +342,59 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["result"], "Success result");
         assert!(payload["completed_at"].is_string());
+    }
+
+    #[test]
+    fn test_get_pending_approvals() {
+        let tm = TaskManager::new();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Pending Approval Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+
+        task.approval_status = Some("PENDING".to_string());
+        task.action_risk = Some(ActionRisk::High);
+
+        tm.insert_task(task.clone());
+
+        let mut ignored_task = tm.create_task("org1".to_string(), "mission1".to_string(), "Other Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        ignored_task.approval_status = Some("APPROVED".to_string());
+        tm.insert_task(ignored_task.clone());
+
+        let mut ignored_task2 = tm.create_task("org2".to_string(), "mission1".to_string(), "Other Org Task".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        ignored_task2.approval_status = Some("PENDING".to_string());
+        tm.insert_task(ignored_task2.clone());
+
+        let pending = tm.get_pending_approvals("org1");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].id, task.id);
+        assert_eq!(pending[0].action_risk, Some(ActionRisk::High));
+    }
+
+    #[test]
+    fn test_approve_task() {
+        let tm = TaskManager::new();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Approve".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        task.approval_status = Some("PENDING".to_string());
+        tm.insert_task(task.clone());
+
+        tm.approve_task(&task.id, true).unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.approval_status, Some("APPROVED".to_string()));
+        assert_eq!(fetched.status, "IN_PROGRESS");
+    }
+
+    #[test]
+    fn test_reject_task() {
+        let tm = TaskManager::new();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Reject".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        task.approval_status = Some("PENDING".to_string());
+        tm.insert_task(task.clone());
+
+        tm.approve_task(&task.id, false).unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.approval_status, Some("REJECTED".to_string()));
+        assert_eq!(fetched.status, "FAILED");
+        let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
+        assert_eq!(payload["error"], "Task was rejected by user");
     }
 }
