@@ -1401,9 +1401,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::spawn(async move {
                     let mut company_name = "AI Generated Store".to_string();
                     let mut business_type = "Online Store".to_string();
+                    let mut product_name = "My First Product".to_string();
+                    let mut product_price = "19.99".to_string();
+                    let mut company_description = "A great AI-generated business.".to_string();
+                    let mut domain_choice = "free".to_string();
+                    let mut website_template = "Modern".to_string();
 
                     if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other).", bio);
+                        let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
                             from_agent_id: "setup_wizard".into(),
@@ -1415,6 +1420,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
                                 if let Some(n) = v.get("company_name").and_then(|n| n.as_str()) { company_name = n.to_string(); }
                                 if let Some(t) = v.get("business_type").and_then(|t| t.as_str()) { business_type = t.to_string(); }
+                                if let Some(p) = v.get("product_name").and_then(|p| p.as_str()) { product_name = p.to_string(); }
+                                if let Some(pr) = v.get("product_price").and_then(|pr| pr.as_str()) { product_price = pr.to_string(); }
+                                if let Some(d) = v.get("company_description").and_then(|d| d.as_str()) { company_description = d.to_string(); }
+                                if let Some(dc) = v.get("domain_choice").and_then(|dc| dc.as_str()) { domain_choice = dc.to_string(); }
+                                if let Some(wt) = v.get("website_template").and_then(|wt| wt.as_str()) { website_template = wt.to_string(); }
                             }
                         }
                     }
@@ -1423,6 +1433,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_handle.upgrade() {
                             ui.set_company_name(company_name.into());
                             ui.set_business_type(business_type.into());
+                            ui.set_product_name(product_name.into());
+                            ui.set_product_price(product_price.into());
+                            ui.set_company_description(company_description.into());
+                            ui.set_domain_choice(domain_choice.into());
+                            ui.set_website_template(website_template.into());
                             ui.set_admin_email("admin@ai-generated.test".into());
                             ui.set_payment_pref("online".into());
                             ui.set_is_generating_instant_preview(false);
