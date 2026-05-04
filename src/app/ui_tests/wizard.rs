@@ -253,3 +253,41 @@ fn wizard_template_preview_retention() {
     ui.set_website_template("Bold".into());
     assert_eq!(ui.get_website_template(), "Bold");
 }
+
+    #[test]
+    fn test_e2e_setup_wizard_template_selection() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(4); // Template selection
+        ui.set_website_template("Creative".into());
+        assert_eq!(ui.get_website_template(), "Creative");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_product_entry() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(6); // Product entry
+        ui.set_product_name("Art Print".into());
+        ui.set_product_price("25.00".into());
+        assert_eq!(ui.get_product_name(), "Art Print");
+        assert_eq!(ui.get_product_price(), "25.00");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_domain_config() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(8); // Domain config
+        ui.set_domain_choice("ohc_subdomain".into());
+        assert_eq!(ui.get_domain_choice(), "ohc_subdomain");
+    }
+
+    #[test]
+    fn test_e2e_setup_wizard_cross_device_resume_stub() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(2);
+        ui.set_company_description("test".into());
+        assert_eq!(ui.get_step(), 2);
+    }
