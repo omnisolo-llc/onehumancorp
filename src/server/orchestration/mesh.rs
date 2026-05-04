@@ -9,6 +9,7 @@ use opentelemetry::KeyValue;
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
@@ -62,6 +63,48 @@ impl TeammateMesh for CentrifugeNode {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
+
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            let _ = tx.try_send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let event = TeammateMeshEvent {
+                agent_id: "sys".to_string(),
+                action: topic.to_string(),
+                status: "pending".to_string(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.transport.publish(topic, event).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
+    }
 }
 
 // To explicitly meet the 'Implement Redis mapping (using rueidis)' criteria as specified,
@@ -104,6 +147,48 @@ impl TeammateMesh for RueidisMapping {
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
+    }
+
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            let _ = tx.try_send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let event = TeammateMeshEvent {
+                agent_id: "sys".to_string(),
+                action: topic.to_string(),
+                status: "pending".to_string(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.transport.publish(topic, event).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
     }
 }
 
