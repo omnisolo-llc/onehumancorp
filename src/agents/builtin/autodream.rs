@@ -103,20 +103,22 @@ impl AutoDreamWorker {
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
              if db.is_sqlite() {
-                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                      .bind(&format!("session-summary-{}", id))
                      .bind("system")
                      .bind("system_agent")
+                     .bind(&id)
                      .bind(&summary)
                      .bind(&embedding)
                      .bind("SESSION_SUMMARY")
                      .execute(&db.pool)
                      .await?;
              } else {
-                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                      .bind(&format!("session-summary-{}", id))
                      .bind("system")
                      .bind("system_agent")
+                     .bind(&id)
                      .bind(&summary)
                      .bind(&embedding)
                      .bind("SESSION_SUMMARY")
@@ -297,20 +299,22 @@ impl AutoDreamWorker {
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
                     
                     if db.is_sqlite() {
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                             .bind(&mem_id)
                             .bind("system")
                             .bind("system_agent")
+                            .bind(&session_id)
                             .bind(&context_data)
                             .bind(&emb_str)
                             .bind("SESSION_DATA")
                             .execute(&db.pool)
                             .await?;
                     } else {
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                             .bind(&mem_id)
                             .bind("system")
                             .bind("system_agent")
+                            .bind(&session_id)
                             .bind(&context_data)
                             .bind(&emb_str)
                             .bind("SESSION_DATA")
@@ -356,20 +360,22 @@ impl AutoDreamWorker {
                         db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
 
                         if db.is_sqlite() {
-                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&mem_id)
                                 .bind("system")
                                 .bind("fs-agent")
+                                .bind("fs-task")
                                 .bind(&content)
                                 .bind(&emb_str)
                                 .bind("FS_MEMORY")
                                 .execute(&db.pool)
                                 .await?;
                         } else {
-                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                                 .bind(&mem_id)
                                 .bind("system")
                                 .bind("fs-agent")
+                                .bind("fs-task")
                                 .bind(&content)
                                 .bind(&emb_str)
                                 .bind("FS_MEMORY")
@@ -412,20 +418,22 @@ impl AutoDreamWorker {
                         db.insert_autodream_memory(&mem_id, "system", "system_agent", "agent-task", &content, &emb_str, "TASK_SUMMARY").await?;
 
                         if db.is_sqlite() {
-                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&mem_id)
                                 .bind("system") // Placeholder since we don't have org_id in yml name
                                 .bind("system_agent")
+                                .bind("agent-task")
                                 .bind(&content)
                                 .bind(&emb_str)
                                 .bind("TASK_SUMMARY")
                                 .execute(&db.pool)
                                 .await?;
                         } else {
-                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                                 .bind(&mem_id)
                                 .bind("system") // Placeholder since we don't have org_id in yml name
                                 .bind("system_agent")
+                                .bind("agent-task")
                                 .bind(&content)
                                 .bind(&emb_str)
                                 .bind("TASK_SUMMARY")
