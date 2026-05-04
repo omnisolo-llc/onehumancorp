@@ -37,6 +37,7 @@ export component SetupWizard inherits Window {
     in-out property <string> product_name: "";
     in-out property <string> product_description: "";
     in-out property <string> product_price: "";
+    in-out property <string> price_type: "fixed"; // fixed, starting_at, request_quote
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
@@ -347,8 +348,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Set up payments later"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "⏭️ Receive money later"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Skip Stripe connection for now"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); } }
                 }
@@ -470,8 +471,37 @@ export component SetupWizard inherits Window {
                     }
                 }
 
-                Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                Text { text: "Pricing Type"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                HorizontalBox {
+                    spacing: 8px;
+                    GlassCard {
+                        height: 44px;
+                        background: price_type == "fixed" ? rgba(168, 85, 247, 0.4) : transparent;
+                        border-width: 1px; border-color: #334155;
+                        VerticalBox { alignment: center; Text { text: "Fixed"; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { price_type = "fixed"; } }
+                    }
+                    GlassCard {
+                        height: 44px;
+                        background: price_type == "starting_at" ? rgba(168, 85, 247, 0.4) : transparent;
+                        border-width: 1px; border-color: #334155;
+                        VerticalBox { alignment: center; Text { text: "Starting At"; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { price_type = "starting_at"; } }
+                    }
+                    GlassCard {
+                        height: 44px;
+                        background: price_type == "request_quote" ? rgba(168, 85, 247, 0.4) : transparent;
+                        border-width: 1px; border-color: #334155;
+                        VerticalBox { alignment: center; Text { text: "Quote"; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { price_type = "request_quote"; } }
+                    }
+                }
+
+                if (price_type != "request_quote") : VerticalBox {
+                    spacing: 8px;
+                    Text { text: price_type == "fixed" ? "Price" : "Starting Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                }
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
