@@ -59,7 +59,7 @@ impl ToolExecutor for ScreenshotExecutor {
         }
 
         let output = cmd.output().await
-            .map_err(|e| ToolError::LlmRecoverable(format!("screenshot: failed to execute playwright: {}", e)))?;
+            .map_err(|e| ToolError::Fatal(format!("screenshot: failed to execute playwright: {}", e)))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -188,10 +188,10 @@ mod tests {
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = executor.execute(args).await;
         assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
+        if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("screenshot: failed to execute playwright"));
         } else {
-            panic!("Expected LlmRecoverable error");
+            panic!("Expected Fatal error");
         }
     }
 }

@@ -24,7 +24,7 @@ impl ToolExecutor for WebFetchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("webfetch: GET {}: {}", url, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("webfetch: GET {}: {}", url, e)).map_err(|e| ToolError::Transient(e.to_string()))?;
 
         if !resp.status().is_success() {
             return Err(ToolError::LlmRecoverable(format!("webfetch: HTTP {}", resp.status())));
@@ -40,7 +40,7 @@ impl ToolExecutor for WebFetchExecutor {
         let body = resp
             .text()
             .await
-            .map_err(|e| format!("webfetch: read body: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("webfetch: read body: {}", e)).map_err(|e| ToolError::Transient(e.to_string()))?;
 
         // Strip HTML tags for HTML content.
         let text = if content_type.contains("html") {

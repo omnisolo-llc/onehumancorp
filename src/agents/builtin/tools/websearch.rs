@@ -31,7 +31,7 @@ impl ToolExecutor for WebSearchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("websearch: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("websearch: {}", e)).map_err(|e| ToolError::Transient(e.to_string()))?;
 
         if !resp.status().is_success() {
             return Ok(format!(

@@ -31,7 +31,7 @@ impl ToolExecutor for BashExecutor {
         let output = tokio::time::timeout(timeout, cmd.output())
         .await
         .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
-        .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::Fatal(e.to_string()))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();

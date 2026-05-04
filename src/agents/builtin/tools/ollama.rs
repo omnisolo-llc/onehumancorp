@@ -19,11 +19,11 @@ impl ToolExecutor for OllamaExecutor {
         match action {
             "list_models" => {
                 let endpoint = format!("{}/api/tags", url.trim_end_matches('/'));
-                let resp = client.get(&endpoint).send().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let resp = client.get(&endpoint).send().await.map_err(|e| ToolError::Transient(e.to_string()))?;
                 if !resp.status().is_success() {
                     return Err(ToolError::LlmRecoverable(format!("ollama returned status {}", resp.status())));
                 }
-                let result: Value = resp.json().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let result: Value = resp.json().await.map_err(|e| ToolError::Transient(e.to_string()))?;
                 Ok(result.to_string())
             }
             "pull_model" => {
@@ -33,7 +33,7 @@ impl ToolExecutor for OllamaExecutor {
                     "name": model_name,
                     "stream": false,
                 });
-                let resp = client.post(&endpoint).json(&payload).send().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let resp = client.post(&endpoint).json(&payload).send().await.map_err(|e| ToolError::Transient(e.to_string()))?;
                 if !resp.status().is_success() {
                     return Err(ToolError::LlmRecoverable(format!("ollama returned status {}", resp.status())));
                 }
@@ -47,7 +47,7 @@ impl ToolExecutor for OllamaExecutor {
                     "prompt": "Hello",
                     "stream": false,
                 });
-                let resp = client.post(&endpoint).json(&payload).send().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                let resp = client.post(&endpoint).json(&payload).send().await.map_err(|e| ToolError::Transient(e.to_string()))?;
                 if resp.status().is_success() {
                     Ok(json!({"status":"healthy"}).to_string())
                 } else {
