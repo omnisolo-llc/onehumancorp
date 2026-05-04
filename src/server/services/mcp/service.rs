@@ -5,12 +5,14 @@ use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
+use crate::tools::local_log_analyzer::LocalLogAnalyzerServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
+    local_log_analyzer: Arc<LocalLogAnalyzerServer>,
 }
 
 impl MyMcpService {
@@ -20,6 +22,7 @@ impl MyMcpService {
             registry,
             hub,
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
+            local_log_analyzer: Arc::new(LocalLogAnalyzerServer::default()),
         }
     }
 }
@@ -63,6 +66,8 @@ impl McpService for MyMcpService {
         let mut tools = self.dynamic_tools.read().unwrap().clone();
         let hybrid_fs_tools = self.hybrid_fs_server.get_tools();
         tools.extend(hybrid_fs_tools);
+        let log_tools = self.local_log_analyzer.get_tools();
+        tools.extend(log_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -192,6 +197,12 @@ impl McpService for MyMcpService {
             }
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
                 match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
+            }
+            "local_log_analyzer" => {
+                match self.local_log_analyzer.invoke_tool(&req).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
