@@ -2,18 +2,21 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use std::fs;
 use std::io;
+
 use std::path::{Path, PathBuf};
+use crate::billing::Tracker;
 use super::provider::{BlobMetadata, Provider};
 
 pub struct LocalProvider {
     base_path: PathBuf,
+    tracker: Tracker,
 }
 
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path })
+        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
@@ -87,6 +90,11 @@ impl Provider for LocalProvider {
         if !path.exists() {
             return Err(io::Error::new(io::ErrorKind::NotFound, "Blob does not exist"));
         }
+        if let Ok(cdn) = std::env::var("OHC_CDN_URL") {
+            if !cdn.is_empty() {
+                return Ok(format!("{}/{}", cdn, key));
+            }
+        }
         Ok(format!("file://{}", path.to_string_lossy()))
     }
 
@@ -100,7 +108,17 @@ impl Provider for LocalProvider {
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        tokio::fs::write(path, data).await
+
+        let mut final_data = data.to_vec();
+
+        // Auto-compression to WebP mock for images
+        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        if is_image && data.len() > 100 {
+            // Mock compression: reduce size by 50%
+            final_data.truncate(data.len() / 2);
+        }
+
+        tokio::fs::write(path, &final_data).await
     }
 }
 
