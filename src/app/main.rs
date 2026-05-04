@@ -1385,10 +1385,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -3878,10 +3878,10 @@ mod e2e_hybrid_blob_tests {
             ui.get_company_description(),
             ui.get_payment_pref(),
             ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
+            "Modern".into(),
+            "Vegan Chocolate Cake".into(),
+            "45.00".into(),
+            "custom".into()
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
