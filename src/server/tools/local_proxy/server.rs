@@ -1,5 +1,4 @@
 use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
-use std::sync::Arc;
 use tracing::Instrument;
 
 pub struct LocalProxyServer {
