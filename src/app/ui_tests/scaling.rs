@@ -31,12 +31,12 @@ fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwra
     let called_count = std::rc::Rc::new(std::cell::RefCell::new(0));
     let c1 = called_role.clone();
     let c2 = called_count.clone();
-    ui.on_scale_agents(move |role, count| {
+    ui.on_scale_helpers(move |role, count| {
         *c1.borrow_mut() = role.to_string();
         *c2.borrow_mut() = count;
     });
     
-    ui.invoke_scale_agents("DEVOPS".into(), 5);
+    ui.invoke_scale_helpers("DEVOPS".into(), 5);
     assert_eq!(*called_role.borrow(), "DEVOPS");
     assert_eq!(*called_count.borrow(), 5);
 }

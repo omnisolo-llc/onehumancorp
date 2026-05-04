@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
+fn create_f() -> app::FixHelper { crate::ui_tests::init(); app::FixHelper::new().unwrap() }
 fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
 
 // --- Hacking / Corner Cases ---

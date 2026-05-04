@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create() -> app::SecureAgentConfig { crate::ui_tests::init(); app::SecureAgentConfig::new().unwrap() }
+fn create() -> app::SecureHelperConfig { crate::ui_tests::init(); app::SecureHelperConfig::new().unwrap() }
 
 // --- Hacking / Corner Cases ---
 
@@ -20,7 +20,7 @@ fn create() -> app::SecureAgentConfig { crate::ui_tests::init(); app::SecureAgen
 
 #[test] fn secure_long_token() {
     let ui = create();
-    let long = "spiffe://ohc.os/agent/".to_string() + &"a".repeat(1000);
+    let long = "spiffe://ohc.os/helper/".to_string() + &"a".repeat(1000);
     ui.set_token(long.clone().into());
     assert_eq!(ui.get_token(), long);
 }

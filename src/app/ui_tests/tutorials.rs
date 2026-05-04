@@ -37,8 +37,8 @@ fn create_verify_selected_video_title() {
     let ui = create();
     ui.set_selected_video_title("Basic Setup".into());
     assert_eq!(ui.get_selected_video_title(), "Basic Setup");
-    ui.set_selected_video_title("Advanced Agents".into());
-    assert_eq!(ui.get_selected_video_title(), "Advanced Agents");
+    ui.set_selected_video_title("Advanced Helpers".into());
+    assert_eq!(ui.get_selected_video_title(), "Advanced Helpers");
     ui.set_selected_video_title("Billing Help".into());
     assert_eq!(ui.get_selected_video_title(), "Billing Help");
 }

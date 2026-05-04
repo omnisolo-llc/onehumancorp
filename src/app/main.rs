@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
                         id: "agent_1".into(),
-                        name: "Rust Agent".into(),
+                        name: "Rust Helper".into(),
                         role: "Worker".into(),
                         organization_id: "org_1".into(),
                         status: "Running".into(),
@@ -300,7 +300,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agent_config_ui = app::AgentConfig::new()?;
+    let agent_config_ui = app::HelperConfig::new()?;
     agent_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let agent_config_handle = agent_config_ui.as_weak();
     let ac_ui_weak = agent_config_handle.clone();
@@ -338,7 +338,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
-    agent_config_ui.on_activate_agent({
+    agent_config_ui.on_activate_helper({
         let ui_handle = agent_config_handle.clone();
         move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             let ui_handle_err = ui_handle.clone();
@@ -946,17 +946,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.set_total_spend(format!("${:.2}", costs.total_cost_usd).into());
                             ui.set_total_tokens(format!("{}", costs.total_tokens).into());
 
-                            let ui_agent_costs: Vec<app::UiAgentCost> = costs.agent_costs.into_iter().map(|ac| {
-                                app::UiAgentCost {
+                            let ui_agent_costs: Vec<app::UiHelperCost> = costs.agent_costs.into_iter().map(|ac| {
+                                app::UiHelperCost {
                                     name: ac.name.into(),
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
-                                    efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    efficiency: format!("{:.1} AI/$", ac.efficiency).into(),
                                     pct: ac.pct,
                                 }
                             }).collect();
 
-                            ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
+                            ui.set_helper_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
                         }
                     }).unwrap();
                 }
@@ -1166,7 +1166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let all_articles = vec![
                     app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
                     app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                    app::HelpArticle { category: "Payments".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
                     app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
                     app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
                     app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
@@ -1345,14 +1345,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
-    let fix_agent_ui = app::FixAgent::new()?;
+    let agents_ui = app::Helpers::new()?;
+    let agent_hire_ui = app::HelperHire::new()?;
+    let fix_agent_ui = app::FixHelper::new()?;
 
     let agents_ui_handle = agents_ui.as_weak();
     let agent_hire_handle = agent_hire_ui.as_weak();
 
-    agents_ui.on_hire_agent(move || {
+    agents_ui.on_hire_helper(move || {
         let agents_ui_handle_inner = agents_ui_handle.clone();
         let agent_hire_handle_inner = agent_hire_handle.clone();
 
@@ -1365,7 +1365,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 helper. Upgrade to unlock more power!".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
@@ -1399,7 +1399,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let fix_agent_handle = fix_agent_ui.as_weak();
-    agents_ui.on_fix_agent(move |_id| {
+    agents_ui.on_fix_helper(move |_id| {
         if let Some(ui) = fix_agent_handle.upgrade() {
             let _ = ui.show();
         }
@@ -1610,7 +1610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -2325,7 +2325,7 @@ mod tests {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_role(), "");
         assert_eq!(ui.get_next_enabled(), false);
@@ -2336,7 +2336,7 @@ mod tests {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
@@ -2354,7 +2354,7 @@ mod tests {
     #[test]
     fn test_agents_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Agents::new().unwrap();
+        app::Helpers::new().unwrap();
     }
     #[test]
     fn test_chat_creation() {
@@ -2613,7 +2613,7 @@ mod tests {
     #[test]
     fn test_fix_agent_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::FixAgent::new().unwrap();
+        app::FixHelper::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
@@ -2996,7 +2996,7 @@ mod docs_tests {
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*docs_opened.borrow(), "Connect Apps should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
@@ -3236,14 +3236,14 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let ui = app::AgentConfig::new().unwrap();
+        let ui = app::HelperConfig::new().unwrap();
 
         ui.on_save_state(|| {});
 
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+        ui.on_activate_helper(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
@@ -3253,14 +3253,14 @@ mod docs_tests {
             *publish_success_clone.borrow_mut() = true;
         });
 
-        // Step 0: Choose Agent -> Step 1
+        // Step 0: Choose Helper -> Step 1
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_is_advanced(), false);
         ui.set_is_advanced(true);
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("Customer Support".into());
+        ui.set_selected_helper("Customer Support".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -3273,8 +3273,8 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 3: Review
-        ui.invoke_activate_agent(
-            ui.get_selected_agent(),
+        ui.invoke_activate_helper(
+            ui.get_selected_helper(),
             ui.get_can_reply(),
             ui.get_can_social(),
             ui.get_can_write_descriptions(),
@@ -3283,7 +3283,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "Customer Support");
+        assert_eq!(ui.get_selected_helper(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);
@@ -3481,19 +3481,19 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
+        // Here we simulate the dashboard launching the Helpers view
+        let agents_ui = app::Helpers::new().unwrap();
         let agent_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let agent_hire_opened_clone = agent_hire_opened.clone();
 
-        agents_ui.on_hire_agent(move || {
+        agents_ui.on_hire_helper(move || {
             *agent_hire_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(*agent_hire_opened.borrow(), "Agent Hire should be opened from Agents screen");
+        agents_ui.invoke_hire_helper();
+        assert!(*agent_hire_opened.borrow(), "Helper Hire should be opened from Helpers screen");
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
@@ -3531,17 +3531,17 @@ mod docs_tests {
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
         // Test agents limit soft paywall
-        let agents_ui = app::Agents::new().unwrap();
+        let agents_ui = app::Helpers::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
+        agents_ui.on_hire_helper(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
                 ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        agents_ui.invoke_hire_helper();
+        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring helper beyond free tier limit");
     }
 
     #[test]
@@ -3561,18 +3561,18 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
+        // Here we simulate the dashboard launching the Helpers view
+        let agents_ui = app::Helpers::new().unwrap();
         let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let fix_agent_opened_clone = fix_agent_opened.clone();
 
-        agents_ui.on_fix_agent(move |id| {
+        agents_ui.on_fix_helper(move |id| {
             assert_eq!(id, "agent_1");
             *fix_agent_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+        agents_ui.invoke_fix_helper("agent_1".into());
+        assert!(*fix_agent_opened.borrow(), "Fix Helper should be opened from Helpers screen");
     }
 
     #[test]
@@ -3760,7 +3760,7 @@ mod dashboard_docs_tests {
             let _api_docs = app::ApiDocs::new().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+        assert!(*api_docs_opened.borrow(), "Connect Apps should be opened from Dashboard");
     }
 }
 
@@ -3977,7 +3977,7 @@ mod remaining_e2e_tests {
             }
         });
 
-        let agent_config = app::AgentConfig::new().unwrap();
+        let agent_config = app::HelperConfig::new().unwrap();
         agent_config.set_is_advanced(false);
         let ac_weak = agent_config.as_weak();
         add_advanced_listener(Box::new(move |val| {
@@ -4133,28 +4133,28 @@ mod remaining_e2e_tests {
         cost_ui.set_total_tokens("1,500,000".into());
 
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiAgentCost {
-                name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+            app::UiHelperCost {
+                name: "Customer Support Helper".into(),
+                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 AI/$".into(),
                 pct: 0.55,
             },
-            app::UiAgentCost {
-                name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+            app::UiHelperCost {
+                name: "Marketing Helper".into(),
+                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 AI/$".into(),
                 pct: 0.45,
             }
         ]));
 
-        cost_ui.set_agent_costs(agent_costs.clone());
+        cost_ui.set_helper_costs(agent_costs.clone());
 
         assert_eq!(cost_ui.get_total_spend(), "$45.50");
         assert_eq!(cost_ui.get_total_tokens(), "1,500,000");
 
-        let retrieved_costs = cost_ui.get_agent_costs();
+        let retrieved_costs = cost_ui.get_helper_costs();
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
-        assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        assert_eq!(first_agent.name, "Customer Support Helper");
+        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 AI/$");
     }
 
     #[test]

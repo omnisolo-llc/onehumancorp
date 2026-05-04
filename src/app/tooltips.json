@@ -9,5 +9,11 @@
   "share": "Share your store link with others.",
   "add_product": "Add a new product to your store.",
   "view_orders": "View and manage your recent orders.",
-  "messages": "Check your customer messages."
+  "messages": "Check your customer messages.",
+  "advanced_mode": "Enable advanced settings and technical details.",
+  "business_type": "Select the category that best describes your business.",
+  "company_name": "Enter the public name of your business.",
+  "website_template": "Choose a visual style for your online storefront.",
+  "product_price": "Set the selling price for this item.",
+  "domain_choice": "Choose how customers will access your website address."
 }

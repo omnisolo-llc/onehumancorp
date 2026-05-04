@@ -1,15 +1,15 @@
 use crate::app;
 
 
-fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new().unwrap() }
+fn create_c() -> app::HelperConfig { crate::ui_tests::init(); app::HelperConfig::new().unwrap() }
 
 // --- Hacking / Corner Cases ---
 
 #[test] fn agent_name_injection() {
     let ui = create_c();
-    let inj = "Admin'; DROP TABLE agents; --";
-    ui.set_selected_agent(inj.into());
-    assert_eq!(ui.get_selected_agent(), inj);
+    let inj = "Admin'; DROP TABLE helpers; --";
+    ui.set_selected_helper(inj.into());
+    assert_eq!(ui.get_selected_helper(), inj);
 }
 
 #[test] fn agent_freq_oob() {
@@ -23,8 +23,8 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 #[test] fn agent_xss_toast() {
     let ui = create_c();
     let xss = "<script>console.log(1)</script>";
-    ui.set_selected_agent(xss.into());
-    assert_eq!(ui.get_selected_agent(), xss);
+    ui.set_selected_helper(xss.into());
+    assert_eq!(ui.get_selected_helper(), xss);
 }
 
 // --- Interaction / Flow Tests ---
@@ -44,9 +44,9 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 
 #[test] fn agent_selection_retention_flow() {
     let ui = create_c();
-    ui.set_selected_agent("Agent Alpha".into());
+    ui.set_selected_helper("Helper Alpha".into());
     ui.set_is_advanced(true);
-    ui.set_selected_agent("Agent Beta".into());
+    ui.set_selected_helper("Helper Beta".into());
     assert!(ui.get_is_advanced());
 }
 
@@ -57,12 +57,12 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 #[test]
 fn create_a_verify_selected_agent() {
     let ui = create_c();
-    ui.set_selected_agent("Support Bot".into());
-    assert_eq!(ui.get_selected_agent(), "Support Bot");
-    ui.set_selected_agent("".into());
-    assert_eq!(ui.get_selected_agent(), "");
-    ui.set_selected_agent("DeepThought".into());
-    assert_eq!(ui.get_selected_agent(), "DeepThought");
+    ui.set_selected_helper("Support Bot".into());
+    assert_eq!(ui.get_selected_helper(), "Support Bot");
+    ui.set_selected_helper("".into());
+    assert_eq!(ui.get_selected_helper(), "");
+    ui.set_selected_helper("DeepThought".into());
+    assert_eq!(ui.get_selected_helper(), "DeepThought");
 }
 
 #[test]

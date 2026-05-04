@@ -9,6 +9,7 @@ export component InteractiveWalkthrough inherits Window {
     always-on-top: true;
 
     in-out property <int> current_step: 0;
+    in-out property <string> flow_type: "onboarding"; // 'onboarding', 'payments', 'helpers'
 
     HorizontalBox {
         alignment: center;
@@ -26,16 +27,29 @@ export component InteractiveWalkthrough inherits Window {
 
                 GlassCard {
                     width: 335px;
+                    border-radius: 20px;
+                    border-width: 1px;
+                    border-color: rgba(255, 255, 255, 0.2);
 
                     VerticalBox {
-                        padding: 20px;
+                        padding: 24px;
                         spacing: 16px;
 
                         Text {
-                            text: current_step == 0 ? "Welcome to your store!" :
-                                  current_step == 1 ? "Add your first product" :
-                                  current_step == 2 ? "Set up payments" :
-                                  "You're all set!";
+                            text: flow_type == "onboarding" ?
+                                  (current_step == 0 ? "Welcome to your store!" :
+                                   current_step == 1 ? "Add your first product" :
+                                   current_step == 2 ? "Set up your storefront" :
+                                   "You're ready to grow!") :
+                                  (flow_type == "payments" ?
+                                  (current_step == 0 ? "Get Paid Instantly" :
+                                   current_step == 1 ? "Connect Stripe" :
+                                   current_step == 2 ? "Test a Transaction" :
+                                   "Money is Flowing!") :
+                                  (current_step == 0 ? "Meet Your Helpers" :
+                                   current_step == 1 ? "Assign a Task" :
+                                   current_step == 2 ? "Review a Draft" :
+                                   "Automation Active!"));
                             font-size: 20px;
                             font-family: "Outfit";
                             font-weight: 700;
@@ -43,13 +57,24 @@ export component InteractiveWalkthrough inherits Window {
                         }
 
                         Text {
-                            text: current_step == 0 ? "Let's take a quick tour to get you set up." :
-                                  current_step == 1 ? "Click here to add photos and prices for what you sell." :
-                                  current_step == 2 ? "Connect your bank so you can get paid by customers." :
-                                  "Your store is ready. You can always find more help in the Help Center.";
-                            color: #94a3b8;
+                            text: flow_type == "onboarding" ?
+                                  (current_step == 0 ? "Let's take a quick tour to get you set up." :
+                                   current_step == 1 ? "Click the 'Add' button to list photos and prices for what you sell." :
+                                   current_step == 2 ? "Choose a template that matches your brand vibe." :
+                                   "Your store is live. AI helpers are now optimizing it for you.") :
+                                  (flow_type == "payments" ?
+                                  (current_step == 0 ? "OHC makes it easy to accept credit cards and Apple Pay." :
+                                   current_step == 1 ? "Click here to securely connect your bank account." :
+                                   current_step == 2 ? "We'll send a small test to make sure everything works." :
+                                   "You're all set to accept payments from anywhere in the world.") :
+                                  (current_step == 0 ? "Your AI helpers work 24/7 to run your business." :
+                                   current_step == 1 ? "Ask your Helper to 'Write a product description' for you." :
+                                   current_step == 2 ? "Check your drafts to approve what your Helper created." :
+                                   "Your business is now running on autopilot!"));
+                            color: #cbd5e1;
                             font-family: "Inter";
                             wrap: word-wrap;
+                            font-size: 14px;
                         }
 
                         HorizontalBox {
@@ -58,11 +83,13 @@ export component InteractiveWalkthrough inherits Window {
 
                             Button {
                                 text: "Skip tour";
+                                height: 44px;
                                 clicked => { root.visible = false; }
                             }
 
                             Button {
                                 text: current_step < 3 ? "Next" : "Done";
+                                height: 44px;
                                 clicked => {
                                     if (current_step < 3) {
                                         current_step += 1;

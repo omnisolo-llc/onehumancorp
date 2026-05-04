@@ -13,7 +13,7 @@ fn create() -> app::TaskList { crate::ui_tests::init(); app::TaskList::new().unw
         app::UiTask {
             title: xss.into(),
             status: "Todo".into(),
-            agent_id: "a1".into(),
+            helper_id: "a1".into(),
             dependencies: "".into(),
             parent_task_id: "".into(),
             workflow_state: "".into(),
@@ -30,7 +30,7 @@ fn create() -> app::TaskList { crate::ui_tests::init(); app::TaskList::new().unw
         app::UiTask {
             title: "T1".into(),
             status: inj.into(),
-            agent_id: "".into(),
+            helper_id: "".into(),
             dependencies: "".into(),
             parent_task_id: "".into(),
             workflow_state: "".into(),
@@ -45,7 +45,7 @@ fn create() -> app::TaskList { crate::ui_tests::init(); app::TaskList::new().unw
     let v: Vec<app::UiTask> = (0..500).map(|i| app::UiTask {
         title: format!("Task {}", i).into(),
         status: "Queued".into(),
-        agent_id: "".into(),
+        helper_id: "".into(),
         dependencies: "".into(),
         parent_task_id: "".into(),
         workflow_state: "".into(),

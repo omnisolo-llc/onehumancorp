@@ -1,5 +1,12 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+export struct TutorialVideo {
+    title: string,
+    description: string,
+    thumbnail_color: color,
+    duration: string,
+}
+
 export component VideoTutorials inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
@@ -9,52 +16,80 @@ export component VideoTutorials inherits Window {
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
 
-    HorizontalBox {
-        alignment: center;
-        VerticalBox {
-            max-width: 600px;
-            width: 100%;
-            padding: 16px;
-            spacing: 20px;
+    in property <[TutorialVideo]> tutorials: [
+        { title: "Set up your storefront", description: "Learn how to choose a template and go live in minutes.", thumbnail_color: #a855f7, duration: "1:20" },
+        { title: "Adding products with AI", description: "See how our AI helps you write descriptions and set prices.", thumbnail_color: #06b6d4, duration: "0:45" },
+        { title: "Accepting your first payment", description: "Connect Stripe and start getting paid instantly.", thumbnail_color: #10b981, duration: "1:15" },
+        { title: "Meet your AI Helpers", description: "How to assign tasks to your virtual operations team.", thumbnail_color: #f59e0b, duration: "1:30" },
+        { title: "Running a flash sale", description: "Quick guide to creating discount codes and promos.", thumbnail_color: #ef4444, duration: "0:55" },
+        { title: "Connect Instagram storefront", description: "Sync your OHC products with your social media.", thumbnail_color: #ec4899, duration: "1:40" },
+        { title: "Managing customer messages", description: "Use the unified inbox to reply to everyone in one place.", thumbnail_color: #6366f1, duration: "1:10" },
+        { title: "Understanding your stats", description: "A simple walkthrough of your business health dashboard.", thumbnail_color: #8b5cf6, duration: "1:25" },
+        { title: "Customizing your domain", description: "How to use your own web address with OHC.", thumbnail_color: #14b8a6, duration: "1:00" },
+        { title: "Shipping and fulfillment", description: "Learn how to track orders and mark them as ready.", thumbnail_color: #f97316, duration: "1:15" }
+    ];
 
-            Text {
-                text: "Watch & Learn";
-                font-size: 24px;
-                font-weight: 700;
-                color: #0f172a;
-            }
+    VerticalBox {
+        padding: 16px;
+        spacing: 20px;
 
-            ScrollView {
-                VerticalBox {
-                    spacing: 24px;
+        Text {
+            text: "Watch & Learn";
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            font-family: "Outfit";
+        }
 
-                    Rectangle {
-                        background: white; border-radius: 12px;
-                        VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Rectangle {
-                                height: 200px;
-                                background: #e2e8f0;
-                                border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                for video in tutorials : Rectangle {
+                    background: white;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: #e2e8f0;
+
+                    VerticalBox {
+                        padding: 16px; spacing: 12px;
+                        Rectangle {
+                            height: 200px;
+                            background: video.thumbnail_color.transparentize(80%);
+                            border-radius: 8px;
+
+                            Text {
+                                text: "▶";
+                                font-size: 48px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                color: video.thumbnail_color;
                             }
-                            Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
+
+                            Rectangle {
+                                x: parent.width - 60px;
+                                y: parent.height - 35px;
+                                width: 50px;
+                                height: 25px;
+                                background: rgba(0, 0, 0, 0.6);
+                                border-radius: 4px;
+                                Text { text: video.duration; color: white; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                            }
                         }
-                    }
 
-                    Rectangle {
-                        background: white; border-radius: 12px;
                         VerticalBox {
-                            padding: 16px; spacing: 12px;
-                            Rectangle {
-                                height: 200px;
-                                background: #e2e8f0;
-                                border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            spacing: 4px;
+                            Text { text: video.title; font-weight: 700; font-size: 18px; color: #0f172a; font-family: "Outfit"; }
+                            Text { text: video.description; color: #475569; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+                        }
+
+                        Button {
+                            text: "Play Tutorial";
+                            height: 44px;
+                            clicked => {
+                                selected_video_title = video.title;
+                                is_playing = true;
                             }
-                            Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                            Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
                         }
                     }
                 }

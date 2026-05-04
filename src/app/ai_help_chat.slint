@@ -1,50 +1,79 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct ChatMessage {
+    text: string,
+    is_user: bool,
+}
+
 export component AiHelpChat inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
     min-width: 375px;
     title: "AI Help Assistant";
-    background: white;
+    background: #f8fafc;
 
     in-out property <string> user_input: "";
+    in property <[ChatMessage]> messages: [
+        { text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?", is_user: false },
+        { text: "How do I add a new product?", is_user: true },
+        { text: "To add a product, click the 'Add' button in the bottom navigation bar. You can then upload photos, set a price, and even let AI write the description for you!", is_user: false }
+    ];
+
     callback send_message();
 
-    HorizontalBox {
-        alignment: center;
-        VerticalBox {
-            max-width: 600px;
-            width: 100%;
-            padding: 16px;
-            spacing: 16px;
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
 
-            Rectangle {
-                background: #f1f5f9;
-                border-radius: 8px;
-                VerticalBox {
-                    padding: 16px;
-                    Text {
-                        text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                        color: #0f172a;
-                        wrap: word-wrap;
+        Text {
+            text: "Ask OHC Support";
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            font-family: "Outfit";
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 12px;
+                alignment: start;
+
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_user ? end : start;
+                    Rectangle {
+                        background: msg.is_user ? #0ea5e9 : white;
+                        border-radius: 12px;
+                        border-width: msg.is_user ? 0 : 1px;
+                        border-color: #e2e8f0;
+                        width: 300px;
+
+                        VerticalBox {
+                            padding: 12px;
+                            Text {
+                                text: msg.text;
+                                color: msg.is_user ? white : #1e293b;
+                                wrap: word-wrap;
+                                font-family: "Inter";
+                                font-size: 14px;
+                            }
+                        }
                     }
                 }
             }
+        }
 
-            ScrollView {
-                // Chat history would go here
+        HorizontalBox {
+            spacing: 8px;
+            LineEdit {
+                placeholder-text: "Type your question here...";
+                text <=> user_input;
+                height: 44px;
             }
-
-            HorizontalBox {
-                spacing: 8px;
-                LineEdit {
-                    placeholder-text: "Type your question here...";
-                    text <=> user_input;
-                }
-                Button {
-                    text: "Send";
-                    clicked => { send_message(); }
-                }
+            Button {
+                text: "Send";
+                height: 44px;
+                primary: true;
+                clicked => { send_message(); }
             }
         }
     }

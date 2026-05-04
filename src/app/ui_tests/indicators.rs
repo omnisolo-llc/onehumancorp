@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create() -> app::AgentStatusIndicatorWindow { crate::ui_tests::init(); app::AgentStatusIndicatorWindow::new().unwrap() }
+fn create() -> app::HelperStatusIndicatorWindow { crate::ui_tests::init(); app::HelperStatusIndicatorWindow::new().unwrap() }
 
 // --- Specialized / Flow Tests ---
 

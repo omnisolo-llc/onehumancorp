@@ -1,89 +1,75 @@
-export { TooltipRegistry } from "./tooltip_registry.slint";
-export { ApiDocs } from "./api_docs.slint";
-export { VideoTutorials } from "./video_tutorials.slint";
-export { AiHelpChat } from "./ai_help_chat.slint";
-export { InteractiveWalkthrough } from "./interactive_walkthrough.slint";
-export { KairosOrchestrationWalkthrough } from "./kairos_orchestration_walkthrough.slint";
-export { ReleaseNotes } from "./release_notes.slint";
-export { HelpCenter } from "./help_center.slint";
-import { Button, VerticalBox } from "std-widgets.slint";
+import { TooltipRegistry } from "tooltip_registry.slint";
+import { StatCard } from "stat_card.slint";
+import { GlassCard } from "glass_card.slint";
+import { Landing } from "landing.slint";
+import { Login } from "login.slint";
+import { SetupWizard } from "setup_wizard.slint";
+import { HelperStatusIndicator } from "./helper_status_indicator.slint";
 
-
-import { AgentStatusIndicator } from "./agent_status_indicator.slint";
-export { FixAgent, Upgrade, Billing } from "./ongoing_management.slint";
-export { Settings } from "./settings.slint";
-export { Agents } from "./agents.slint";
-export { MyPlan } from "./my_plan.slint";
-export { Channels } from "./channels.slint";
+export { FixHelper, Upgrade, Billing } from "./ongoing_management.slint";
+export { Helpers } from "./helpers.slint";
 export { Chat } from "./chat.slint";
-export { Dashboard } from "./dashboard.slint";
-export { WelcomeChecklist } from "./welcome_checklist.slint";
-export { Login } from "./login.slint";
-export { CostDashboard, UiAgentCost } from "./cost_dashboard.slint";
-export { Security, UiSecurityIssue } from "./security.slint";
-export { Integrations, UiMcpTool } from "./integrations.slint";
-export { Logs, UiLogLine } from "./logs.slint";
-export { Pipelines, UiPipeline } from "./pipelines.slint";
-export { Pricing, UiPricingTier } from "./pricing.slint";
-export { Diagnostics } from "./diagnostics.slint";
-export { Handoffs, UiHandoff } from "./handoffs.slint";
-export { UserManagement, UiUser } from "./user_management.slint";
-export { PromptTuning, UiPromptExample } from "./prompt_tuning.slint";
-export { AiConfig, UiAiConfigProvider } from "./ai_config.slint";
-export { Referrals, UiReferral } from "./referrals.slint";
+export { Channels } from "./channels.slint";
+export { Integrations } from "./integrations.slint";
+export { Security } from "./security.slint";
+export { Meetings } from "./meetings.slint";
+export { Logs } from "./logs.slint";
+export { CostDashboard, UiHelperCost } from "./cost_dashboard.slint";
+export { Pricing } from "./pricing.slint";
+export { MyPlan } from "./my_plan.slint";
 export { Scaling } from "./scaling.slint";
 export { SwarmMemory } from "./swarm_memory.slint";
-export { WebsiteBuilder } from "./website_builder.slint";
-export { SecureAgentConfig } from "./secure_agent_config.slint";
-export { AgentConfig } from "./agent_config.slint";
-export { AgentHire } from "./agent_hire.slint";
-export { Landing } from "./landing.slint";
-export { SetupWizard } from "./setup_wizard.slint";
 export { TaskList, UiTask } from "./task_list.slint";
+export { Dashboard, UiPendingApproval as DashPendingApproval } from "./dashboard.slint";
+export { WebsiteBuilder } from "./website_builder.slint";
+export { SecureHelperConfig } from "./secure_helper_config.slint";
+export { HelperConfig } from "./helper_config.slint";
+export { HelperHire } from "./helper_hire.slint";
+export { PromptTuning } from "./prompt_tuning.slint";
+export { HelpCenter, HelpArticle } from "./help_center.slint";
+export { InteractiveWalkthrough } from "./interactive_walkthrough.slint";
+export { KairosOrchestrationWalkthrough } from "./kairos_orchestration_walkthrough.slint";
+export { VideoTutorials } from "./video_tutorials.slint";
+export { ApiDocs } from "./api_docs.slint";
+export { ReleaseNotes } from "./release_notes.slint";
+export { GrowBusiness } from "./grow_business.slint";
+export { Settings } from "./settings.slint";
+export { Referrals, UiReferral } from "./referrals.slint";
+export { WelcomeChecklist } from "./welcome_checklist.slint";
+export { AiHelpChat, ChatMessage } from "./ai_help_chat.slint";
+export { AiConfig, UiAiConfigProvider } from "./ai_config.slint";
 export { BusinessShare } from "./business_share.slint";
-
-import { StatCard } from "./stat_card.slint";
-
-
+export { Skills, UiSkill } from "./skills.slint";
+export { UserManagement, UiUser } from "./user_management.slint";
+export { Pipelines, UiPipeline } from "./pipelines.slint";
+export { Diagnostics } from "./diagnostics.slint";
+export { Handoffs, UiHandoff } from "./handoffs.slint";
+export { TooltipRegistry }
 
 export component StatCardWindow inherits Window {
-    width: 200px;
-    height: 100px;
-    in-out property <string> label <=> sc.label;
-    in-out property <string> value <=> sc.value;
-    sc := StatCard {}
+    in property <string> label;
+    in property <string> value;
+    StatCard {
+        label: label;
+        value: value;
+    }
 }
 
-export component AgentStatusIndicatorWindow inherits Window {
-    width: 100px;
+export component HelperStatusIndicatorWindow inherits Window {
+    width: 200px;
     height: 100px;
-    title: "Agent Status Indicator Test";
-    
+    title: "Helper Status Indicator Test";
+
     in-out property <bool> is_active <=> asi.is_active;
     in-out property <string> status_text <=> asi.status_text;
     in-out property <string> status_color <=> asi.status_color;
 
-    asi := AgentStatusIndicator {}
-}
-export { GrowBusiness } from "./grow_business.slint";
-export { Meetings, UiMeeting } from "./meetings.slint";
-export { Skills, UiSkill } from "./skills.slint";
+    asi := HelperStatusIndicator {}
 
-export component AppWindow inherits Window {
-    width: 400px;
-    height: 300px;
-    title: "New Rust + Slint App";
-
-    VerticalBox {
-        alignment: center;
-        spacing: 20px;
-        Text {
-            text: "Hello from Slint!";
-            horizontal-alignment: center;
-            font-size: 20px;
-        }
-        Button {
-            text: "Click me";
-        }
+    public function set_status(status: string, is_running: bool) {
+        asi.status_text = status;
+        asi.is_active = is_running;
     }
 }
+
+export { Landing, Login, SetupWizard }
