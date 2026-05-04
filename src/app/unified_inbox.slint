@@ -1,0 +1,209 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiConversation {
+    id: string,
+    customer_name: string,
+    channel_icon: string,
+    last_message: string,
+    unread: bool,
+    time: string,
+}
+
+export struct UiInboxMessage {
+    id: string,
+    author_name: string,
+    body: string,
+    is_me: bool,
+    time: string,
+}
+
+export struct UiQuickReply {
+    id: string,
+    text: string,
+}
+
+export component UnifiedInbox inherits Window {
+    width: 800px;
+    height: 600px;
+    title: "Customer Inbox";
+
+    background: #f8fafc;
+
+    in property <[UiConversation]> conversations;
+    in property <[UiInboxMessage]> current_messages;
+    in property <[UiQuickReply]> suggested_replies;
+    in property <string> active_conversation_id: "";
+
+    in-out property <string> new_message: "";
+    in-out property <bool> show_mobile_list: true;
+
+    callback select_conversation(string);
+    callback send_message(string);
+    callback use_quick_reply(string);
+    callback back_to_list();
+
+    HorizontalBox {
+        // Conversation List (Left side on desktop, full screen conditionally on mobile)
+        if (root.width > 768px || show_mobile_list) : Rectangle {
+            width: root.width > 768px ? 300px : root.width;
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 16px;
+
+                Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+
+                ScrollView {
+                    VerticalBox {
+                        spacing: 8px;
+                        for conv in conversations : Rectangle {
+                            height: 72px;
+                            background: conv.id == active_conversation_id ? #f1f5f9 : (conv.unread ? #f8fafc : white);
+                            border-radius: 8px;
+                            border-color: conv.id == active_conversation_id ? #3b82f6 : transparent;
+                            border-width: 1px;
+
+                            TouchArea {
+                                clicked => {
+                                    select_conversation(conv.id);
+                                    if (root.width <= 768px) {
+                                        show_mobile_list = false;
+                                    }
+                                }
+                            }
+
+                            HorizontalBox {
+                                padding: 12px;
+                                spacing: 12px;
+                                Text { text: conv.channel_icon; font-size: 24px; vertical-alignment: center; }
+                                VerticalBox {
+                                    alignment: center;
+                                    HorizontalBox {
+                                        Text { text: conv.customer_name; font-weight: conv.unread ? 700 : 400; color: #1e293b; }
+                                        Rectangle {}
+                                        Text { text: conv.time; font-size: 12px; color: #64748b; }
+                                    }
+                                    Text { text: conv.last_message; font-size: 14px; color: conv.unread ? #1e293b : #64748b; overflow: elide; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Chat Detail Area (Right side on desktop, full screen conditionally on mobile)
+        if (root.width > 768px || !show_mobile_list) : Rectangle {
+            background: #f8fafc;
+
+            VerticalBox {
+                // Header
+                Rectangle {
+                    height: 64px;
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        alignment: start;
+                        if (root.width <= 768px) : Button {
+                            text: "< Back";
+                            clicked => { show_mobile_list = true; }
+                        }
+                        Text {
+                            text: active_conversation_id != "" ? "Chat" : "Select a conversation";
+                            font-size: 18px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                if (active_conversation_id != "") : VerticalBox {
+                    // Message History
+                    ScrollView {
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 16px;
+                            alignment: end;
+
+                            for msg in current_messages : HorizontalBox {
+                                alignment: msg.is_me ? end : start;
+                                if (msg.is_me) : Rectangle {} // Spacer
+                                Rectangle {
+                                    background: msg.is_me ? #8b5cf6 : white; // OHC Purple for 'me'
+                                    border-radius: 12px;
+                                    border-color: msg.is_me ? transparent : #e2e8f0;
+                                    border-width: msg.is_me ? 0px : 1px;
+                                    max-width: 400px;
+
+                                    VerticalBox {
+                                        padding: 12px;
+                                        spacing: 4px;
+                                        Text { text: msg.body; color: msg.is_me ? white : #1e293b; wrap: word-wrap; font-family: "Inter"; }
+                                        Text { text: msg.time; font-size: 11px; color: msg.is_me ? #ddd6fe : #94a3b8; horizontal-alignment: right; }
+                                    }
+                                }
+                                if (!msg.is_me) : Rectangle {} // Spacer
+                            }
+                        }
+                    }
+
+                    // AI Quick Replies
+                    if (suggested_replies.length > 0) : Rectangle {
+                        background: rgba(139, 92, 246, 0.05);
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        padding: 12px;
+
+                        VerticalBox {
+                            spacing: 8px;
+                            HorizontalBox {
+                                Text { text: "✨ Suggested Replies (The Ambassador)"; font-size: 12px; font-weight: 700; color: #8b5cf6; }
+                            }
+                            HorizontalBox {
+                                spacing: 8px;
+                                alignment: start;
+                                for reply in suggested_replies : Button {
+                                    text: reply.text;
+                                    clicked => { use_quick_reply(reply.text); }
+                                }
+                            }
+                        }
+                    }
+
+                    // Input Area
+                    Rectangle {
+                        height: 80px;
+                        background: white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+
+                        HorizontalBox {
+                            padding: 16px;
+                            spacing: 12px;
+                            LineEdit {
+                                placeholder-text: "Type a message...";
+                                text <=> new_message;
+                            }
+                            Button {
+                                text: "Send";
+                                primary: true;
+                                clicked => {
+                                    send_message(new_message);
+                                    new_message = "";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
