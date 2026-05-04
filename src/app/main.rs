@@ -1466,10 +1466,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1994,7 +1994,16 @@ mod e2e_tests {
         let launch_called_clone = launch_called.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Vegan Chocolate Cake".into());
+        ui.set_product_price("45.00".into());
+        ui.set_domain_choice("custom".into());
+
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Modern");
+            assert_eq!(product_name, "Vegan Chocolate Cake");
+            assert_eq!(product_price, "45.00");
+            assert_eq!(domain_choice, "custom");
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
@@ -2395,7 +2404,16 @@ mod docs_tests {
         let launch_called_clone = launch_called.clone();
 
         let ui_weak_launch = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Vegan Chocolate Cake".into());
+        ui.set_product_price("45.00".into());
+        ui.set_domain_choice("custom".into());
+
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Modern");
+            assert_eq!(product_name, "Vegan Chocolate Cake");
+            assert_eq!(product_price, "45.00");
+            assert_eq!(domain_choice, "custom");
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
@@ -2494,7 +2512,16 @@ mod docs_tests {
         let launch_called_clone = launch_called.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pr, _dc| {
+        ui.set_website_template("Classic".into());
+        ui.set_product_name("My First Product".into());
+        ui.set_product_price("10.0".into());
+        ui.set_domain_choice("subdomain".into());
+
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Classic");
+            assert_eq!(product_name, "My First Product");
+            assert_eq!(product_price, "10.0");
+            assert_eq!(domain_choice, "subdomain");
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
