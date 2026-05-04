@@ -297,10 +297,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                                         });
+                                        let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
+                                        let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+                                        dashboard.on_open_ai_chat(move || {
+                                            if let Some(ui) = ai_help_chat_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        dashboard.on_open_interactive_walkthrough(move || {
+                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                                        let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        dashboard.on_open_video_tutorials(move || {
+                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_handle = api_docs_ui.as_weak();
+                                        dashboard.on_open_api_docs(move || {
+                                            if let Some(ui) = api_docs_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                                        let release_notes_handle = release_notes_ui.as_weak();
+                                        dashboard.on_open_release_notes(move || {
+                                            if let Some(ui) = release_notes_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
                                         dashboard.show().unwrap();
                                         Box::leak(Box::new(dashboard));
                                         Box::leak(Box::new(my_plan_ui));
                                         Box::leak(Box::new(cost_dashboard_ui));
+                                        Box::leak(Box::new(ai_help_chat_ui));
+                                        Box::leak(Box::new(interactive_walkthrough_ui));
+                                        Box::leak(Box::new(video_tutorials_ui));
+                                        Box::leak(Box::new(api_docs_ui));
+                                        Box::leak(Box::new(release_notes_ui));
                                     }
                                 }
                             }
@@ -351,10 +396,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
+
+                                        let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
+                                        let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+                                        dashboard.on_open_ai_chat(move || {
+                                            if let Some(ui) = ai_help_chat_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        dashboard.on_open_interactive_walkthrough(move || {
+                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                                        let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        dashboard.on_open_video_tutorials(move || {
+                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_handle = api_docs_ui.as_weak();
+                                        dashboard.on_open_api_docs(move || {
+                                            if let Some(ui) = api_docs_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
+                                        let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                                        let release_notes_handle = release_notes_ui.as_weak();
+                                        dashboard.on_open_release_notes(move || {
+                                            if let Some(ui) = release_notes_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                         Box::leak(Box::new(my_plan_ui));
                         Box::leak(Box::new(cost_dashboard_ui));
+                        Box::leak(Box::new(ai_help_chat_ui));
+                        Box::leak(Box::new(interactive_walkthrough_ui));
+                        Box::leak(Box::new(video_tutorials_ui));
+                        Box::leak(Box::new(api_docs_ui));
+                        Box::leak(Box::new(release_notes_ui));
                     }
                 }
             }
