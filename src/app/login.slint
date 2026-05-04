@@ -6,7 +6,7 @@ export component Login inherits Window {
     min-width: 375px;
     preferred-width: 400px;
     height: 600px;
-    title: "OneHumanCorp - Login";
+    title: "One Human Corp - Login";
 
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
@@ -36,14 +36,7 @@ export component Login inherits Window {
                 padding: 24px;
 
                 Text {
-                    text: "✨";
-                    font-size: 64px;
-                    horizontal-alignment: center;
-                    color: #a855f7;
-                }
-
-                Text {
-                    text: "OneHumanCorp";
+                    text: "One Human Corp";
                     font-size: 28px;
                     font-weight: 700;
                     horizontal-alignment: center;
@@ -113,16 +106,10 @@ export component Login inherits Window {
                     text: "Continue with Google/Apple";
                     clicked => { oauth_login("SSO"); }
                 }
-                
-                Button {
-                    height: 44px;
-                    text: "🚀 Start Business Setup";
-                    clicked => { start_setup_wizard(); }
-                }
 
                 Button {
                     height: 44px;
-                    text: "⚙ Advanced Options";
+                    text: "App Settings";
                     clicked => { open_settings(); }
                 }
             }
