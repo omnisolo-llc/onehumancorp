@@ -333,6 +333,7 @@ impl AgentServiceImpl {
             workspace_path: None,
             thread_id: None,
             resume_from_checkpoint_id: None,
+            injected_context: None,
         }
     }
 
@@ -515,6 +516,12 @@ impl AgentService for AgentServiceImpl {
 
         // In-process dispatch when no remote address.
         if sub_req.sub_agent_address.is_empty() {
+            let injected_context = if !sub_req.parent_context_json.is_empty() {
+                serde_json::from_str(&sub_req.parent_context_json).ok()
+            } else {
+                None
+            };
+
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 enable_lazy_tool_loading: false,
@@ -548,6 +555,7 @@ impl AgentService for AgentServiceImpl {
                 workspace_path: None,
                 thread_id: None,
                 resume_from_checkpoint_id: None,
+                injected_context,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
@@ -589,6 +597,7 @@ impl AgentService for AgentServiceImpl {
             model: sub_req.model,
             llm_provider: sub_req.llm_provider,
             max_tokens: self.cfg.max_tokens,
+            injected_context_json: sub_req.parent_context_json,
             ..Default::default()
         };
 
