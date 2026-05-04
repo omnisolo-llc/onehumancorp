@@ -6,6 +6,37 @@ use std::sync::Arc;
 
 use sqlx::sqlite::SqlitePoolOptions;
 
+
+use crate::orchestration::mesh::TeammateMesh;
+use ohc_builtin_agent::mesh::transport::{Message, MemoryTransport, MeshTransport};
+use async_trait::async_trait;
+
+struct MockMesh {
+    transport: MemoryTransport,
+}
+
+impl MockMesh {
+    fn new() -> Self {
+        Self { transport: MemoryTransport::new() }
+    }
+}
+
+#[async_trait]
+impl TeammateMesh for MockMesh {
+    async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+    }
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.transport.release_lock(resource, owner).await
+    }
+}
+
 async fn setup_db() -> Arc<DB> {
     let db_id = uuid::Uuid::new_v4().to_string();
     let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -65,7 +96,8 @@ async fn setup_db() -> Arc<DB> {
 #[tokio::test]
 async fn test_single_agent_flow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
 
     let task_id = uuid::Uuid::new_v4().to_string();
 
@@ -94,7 +126,8 @@ async fn test_single_agent_flow() {
 #[tokio::test]
 async fn test_dag_workflow() {
     let db = setup_db().await;
-    let state_manager = StandaloneStateManager::new(db.clone());
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
@@ -137,7 +170,8 @@ use super::cloud::CloudStateManager;
 async fn test_cloud_dag_workflow_mock() {
     let db = setup_db().await;
     // For unit coverage we instantiate it
-    let _state_manager = CloudStateManager::new(db.clone(), None);
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let _state_manager = CloudStateManager::new(db.clone(), mesh);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
