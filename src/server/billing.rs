@@ -31,6 +31,19 @@ impl Tracker {
         }
     }
 
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, file_size_mb: u32) -> Result<RateLimitStatus, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.check_storage_quota(tenant_id, file_size_mb).await
+        } else {
+            Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
+        }
+    }
+
     pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.record_action(tenant_id, agent_id).await

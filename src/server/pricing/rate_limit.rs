@@ -90,6 +90,46 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, file_size_mb: u32) -> Result<RateLimitStatus, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let storage_key = format!("tenant:{}:storage_used_mb", tenant_id);
+        let used_mb: u32 = conn.get(&storage_key).await.unwrap_or(0);
+
+        if let Some(limit) = tier.storage_limit_mb() {
+            if used_mb + file_size_mb > limit {
+                return Ok(RateLimitStatus {
+                    is_allowed: false,
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "Storage quota exceeded. You have used {}MB of your {}MB limit.",
+                        used_mb, limit
+                    )),
+                });
+            } else if used_mb + file_size_mb > (limit as f64 * 0.9) as u32 {
+                // Soft limit at 90%
+                let _: () = conn.incr(&storage_key, file_size_mb).await.unwrap_or(());
+                return Ok(RateLimitStatus {
+                    is_allowed: true,
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "Warning: Storage almost full. You have used {}MB of your {}MB limit.",
+                        used_mb + file_size_mb, limit
+                    )),
+                });
+            }
+        }
+
+        let _: () = conn.incr(&storage_key, file_size_mb).await.unwrap_or(());
+        Ok(RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        })
+    }
+
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let tier = self.get_tenant_tier(tenant_id).await?;

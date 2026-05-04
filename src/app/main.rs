@@ -96,7 +96,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tokio::spawn(async move {
-        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+
+            match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
@@ -829,7 +831,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
+
+
+    let cost_dashboard_refresh = cost_dashboard_handle.clone();
+    cost_dashboard_ui.on_refresh(move || {
+        let ui_handle = cost_dashboard_refresh.clone();
+        tokio::spawn(async move {
+            match ohc::orchestration::org_service_client::OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                Ok(mut client) => {
+                    let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                    if let Ok(resp) = client.get_analytics(req).await {
+                        let analytics = resp.into_inner();
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_total_tokens(analytics.token_velocity.to_string().into());
+                            }
+                        }).unwrap();
+                    }
+                }
+                Err(e) => println!("Failed to connect: {:?}", e),
+            }
+        });
+    });
     Box::leak(Box::new(cost_dashboard_ui));
+
+
+
 
     let pricing_handle_toggle = pricing_handle.clone();
     pricing_ui.on_toggle_billing_cycle(move || {
@@ -1340,10 +1368,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -1367,10 +1395,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2105,7 +2133,49 @@ mod tests {
         let ui = app::CostDashboard::new().unwrap();
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
+
+        let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let refresh_called_clone = refresh_called.clone();
+        ui.on_refresh(move || {
+            *refresh_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_refresh();
+        assert!(*refresh_called.borrow(), "Refresh should be called");
     }
+
+    #[test]
+    fn test_cost_dashboard_total_spend() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        ui.set_total_spend("$100.50".into());
+        assert_eq!(ui.get_total_spend(), "$100.50");
+    }
+
+    #[test]
+    fn test_cost_dashboard_total_tokens() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        ui.set_total_tokens("500000".into());
+        assert_eq!(ui.get_total_tokens(), "500000");
+    }
+
+    #[test]
+    fn test_cost_dashboard_agent_costs() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiAgentCost {
+                name: "Agent A".into(),
+                cost: "$5.00".into(),
+                roi: "10%".into(),
+                efficiency: "100 tok/$".into(),
+                pct: 0.1,
+            },
+        ]));
+        ui.set_agent_costs(agent_costs);
+        assert_eq!(slint::Model::row_count(&ui.get_agent_costs()), 1);
+    }
+
     #[test]
     fn test_scaling_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }

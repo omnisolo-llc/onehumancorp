@@ -76,7 +76,7 @@ impl OrgService for MyOrgService {
         );
         let agents = agents_res.unwrap();
         let meetings = meetings_res.unwrap();
-        let summary = self.hub.tracker().summary("system");
+        let total_tokens = self.hub.get_cost_auditor().get_total_tokens();
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
@@ -119,7 +119,7 @@ impl OrgService for MyOrgService {
             resumption_latency_ms: 4800,
             pending_approvals: 2,
             active_handoffs: 1,
-            token_velocity: summary.total_tokens,
+            token_velocity: total_tokens,
         }))
     }
 }
