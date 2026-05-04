@@ -27,6 +27,8 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
