@@ -54,14 +54,14 @@ impl DB {
                             let mut builder = std::fs::DirBuilder::new();
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                eprintln!("Failed to securely create DB directory: {}", e);
+                                tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                eprintln!("Failed to create DB directory: {}", e);
+                                tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
@@ -146,7 +146,7 @@ impl DB {
     }
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Running migrations...");
+        tracing::info!("Running migrations...");
 
         match &self.store {
             DbStore::Postgres => {
