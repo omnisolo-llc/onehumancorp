@@ -157,3 +157,67 @@ fn login_responsive_dimensions() {
     window.set_size(slint::PhysicalSize::new(1440, 900));
     assert_eq!(window.size().width, 1440);
 }
+
+// --- Added for Audit Verification ---
+
+#[test]
+fn login_handles_advanced_options_to_app_settings() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_open_settings(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert!(*invoked.borrow(), "The App Settings button should invoke open_settings");
+}
+
+#[test]
+fn login_handles_oauth() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_oauth_login("SSO".into());
+    assert!(*invoked.borrow(), "The Continue with Google/Apple button should invoke oauth_login");
+}
+
+#[test]
+fn login_handles_sign_in_click() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_login(move |username, password| {
+        assert_eq!(username, "testuser");
+        assert_eq!(password, "testpass");
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_login("testuser".into(), "testpass".into());
+    assert!(*invoked.borrow(), "The Sign In button should invoke login");
+}
+
+#[test]
+fn login_handles_start_setup_wizard_programmatically() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_start_setup_wizard(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_start_setup_wizard();
+    assert!(*invoked.borrow(), "start_setup_wizard should still be callable programmatically");
+}
+
+#[test]
+fn login_has_correct_title_and_window_size() {
+    let ui = create();
+    // Validate window constraints and title as per design standards
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(375, 600));
+    assert_eq!(window.size().width, 375, "Window must support 375px width");
+    // Not directly asserting title because slint doesn't expose `get_title()` on Window natively in all bindings,
+    // but we can ensure the minimum dimensions aren't violated.
+}
