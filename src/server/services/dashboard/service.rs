@@ -3,24 +3,88 @@ use crate::ohc::app::*;
 use crate::ohc::app::dashboard_service_server::DashboardService;
 use std::sync::Arc;
 
+use crate::hub::Hub;
+use chrono::Utc;
+
 pub struct MyDashboardService {
+    hub: Arc<Hub>,
     db: Arc<crate::db::DB>,
 }
 
 impl MyDashboardService {
-    pub fn new(db: Arc<crate::db::DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<crate::db::DB>, hub: Arc<Hub>) -> Self {
+        Self { db, hub }
     }
 }
 
 #[tonic::async_trait]
 impl DashboardService for MyDashboardService {
+
     async fn get_dashboard(
         &self,
-        _request: Request<GetDashboardRequest>,
+        request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        Err(Status::unimplemented("Not implemented"))
+        let req = request.into_inner();
+        let org_id = req.organization_id.clone();
+
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let hub3 = self.hub.clone();
+        let (agents_res, meetings_res, cost_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || {
+                let cost_auditor = hub3.get_cost_auditor();
+                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+            })
+        );
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut agent_costs = Vec::new();
+        for (agent_id, cost, _roi, _efficiency) in agent_costs_data {
+            agent_costs.push(crate::ohc::billing::AgentCostSummary {
+                agent_id,
+                cost_usd: cost,
+                token_used: 0,
+            });
+        }
+
+        let cost_summary = crate::ohc::billing::CostSummary {
+            organization_id: org_id.clone(),
+            total_cost_usd: total_cost,
+            total_tokens: total_tokens as i64,
+            projected_monthly_usd: total_cost,
+            agents: agent_costs,
+        };
+
+        let mut status_map = std::collections::HashMap::new();
+        for a in agents.iter() {
+            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        }
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+
+        Ok(Response::new(DashboardSnapshot {
+            organization: None, // Or populated if required
+            meetings: meetings.iter().map(|m| MeetingRoom {
+                id: m.id.clone(),
+                participants: m.participants.clone(),
+                transcript: vec![],
+            }).collect(),
+            cost_summary: Some(cost_summary),
+            agents: agents.iter().map(|a| crate::ohc::agent::Agent {
+                id: a.id.clone(),
+                role: 0, // ohc::common::Role::RoleUnspecified
+                name: a.name.clone(),
+                status: 0, // ohc::common::AgentStatus::StatusUnspecified
+                organization_id: a.organization_id.clone()
+            }).collect(),
+            statuses,
+            updated_at: Utc::now().to_rfc3339(),
+        }))
     }
+
 
     async fn post_message(
         &self,
