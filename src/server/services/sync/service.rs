@@ -352,6 +352,34 @@ impl SyncService for MySyncService {
             synced_count,
         }))
     }
+
+    async fn state_handoff(
+        &self,
+        request: Request<SyncStateHandoff>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let handoff = request.into_inner();
+
+        // Idempotent upsert logic
+        let query = "
+            INSERT INTO agent_memories (id, organization_id, raw_content, updated_at)
+            VALUES ($1, $2, $3, to_timestamp($4::double precision))
+            ON CONFLICT(id) DO UPDATE SET
+                raw_content = excluded.raw_content,
+                updated_at = excluded.updated_at
+            WHERE agent_memories.updated_at < excluded.updated_at
+        ";
+
+        sqlx::query(query)
+            .bind(&handoff.state_id)
+            .bind(&handoff.tenant_id)
+            .bind(&handoff.serialized_state)
+            .bind(handoff.timestamp)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("failed to persist state handoff: {}", e)))?;
+
+        Ok(Response::new(EmptyResponse {}))
+    }
 }
 
 #[cfg(test)]
@@ -474,5 +502,67 @@ mod tests {
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
+    }
+
+    #[tokio::test]
+    async fn test_state_handoff_idempotency() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        // Ensure table exists (usually handled by migrations, but for safety in test)
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BYTEA, updated_at TIMESTAMP WITH TIME ZONE)")
+            .execute(&pool).await.unwrap();
+
+        let service = MySyncService::new(pool.clone());
+        let state_id = format!("handoff_{}", uuid::Uuid::new_v4());
+        let tenant_id = "test_tenant";
+        let timestamp = chrono::Utc::now().timestamp();
+
+        let req = Request::new(SyncStateHandoff {
+            tenant_id: tenant_id.to_string(),
+            state_id: state_id.clone(),
+            serialized_state: b"initial_state".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp,
+        });
+
+        // 1. First handoff
+        service.state_handoff(req).await.unwrap();
+
+        // 2. Older handoff (should be ignored due to LWW)
+        let req_older = Request::new(SyncStateHandoff {
+            tenant_id: tenant_id.to_string(),
+            state_id: state_id.clone(),
+            serialized_state: b"older_state".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp: timestamp - 10,
+        });
+        service.state_handoff(req_older).await.unwrap();
+
+        let row: (Vec<u8>,) = sqlx::query_as("SELECT raw_content FROM agent_memories WHERE id = $1")
+            .bind(&state_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, b"initial_state");
+
+        // 3. Newer handoff (should overwrite)
+        let req_newer = Request::new(SyncStateHandoff {
+            tenant_id: tenant_id.to_string(),
+            state_id: state_id.clone(),
+            serialized_state: b"newer_state".to_vec(),
+            mode_source: "standalone".to_string(),
+            timestamp: timestamp + 10,
+        });
+        service.state_handoff(req_newer).await.unwrap();
+
+        let row_newer: (Vec<u8>,) = sqlx::query_as("SELECT raw_content FROM agent_memories WHERE id = $1")
+            .bind(&state_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row_newer.0, b"newer_state");
+
+        sqlx::query("DELETE FROM agent_memories WHERE id = $1").bind(&state_id).execute(&pool).await.unwrap();
     }
 }

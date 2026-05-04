@@ -31,6 +31,7 @@ impl TeammateMesh for TeammateMeshClient {
             action: "mesh:tasks".to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
@@ -40,6 +41,7 @@ impl TeammateMesh for TeammateMeshClient {
             action: "mesh:coordination".to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
@@ -75,10 +77,10 @@ impl TeammateMesh for TeammateMeshClient {
                 action: topic.to_string(),
                 status: "pending".to_string(),
                 payload: payload.clone(),
+                event_id: msg_id.clone(),
             };
 
-            // In a real implementation we would attach the msg_id to the event,
-            // but the proto might not have it. Let's send it anyway.
+            // Attach the msg_id as event_id for deduplication and acknowledgement
             self.transport.publish(topic, event).await?;
 
             tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;

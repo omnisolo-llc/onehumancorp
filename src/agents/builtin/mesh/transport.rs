@@ -10,6 +10,7 @@ pub use crate::proto::hub::TeammateMeshEvent as Message;
 pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
@@ -62,6 +63,11 @@ impl MeshTransport for MemoryTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn ack(&self, _topic: &str, _message_id: &str) -> Result<(), String> {
+        // MemoryTransport doesn't persist messages, so ack is a no-op
+        Ok(())
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -147,6 +153,15 @@ impl IpcTransport {
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
+            "CREATE TABLE IF NOT EXISTS processed_messages (
+                topic TEXT NOT NULL,
+                message_id TEXT NOT NULL,
+                processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (topic, message_id)
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
@@ -174,9 +189,15 @@ impl IpcTransport {
 
         let mut last_id = 0;
         loop {
-            // Poll for new messages
+            // Optimized poll using a LEFT JOIN to skip processed messages in a single query
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+                r#"
+                SELECT m.id, m.topic, m.payload
+                FROM mesh_messages m
+                LEFT JOIN processed_messages p ON m.topic = p.topic AND (m.event_id = p.message_id OR printf('%d', m.id) = p.message_id)
+                WHERE m.id > ? AND p.message_id IS NULL
+                ORDER BY m.id ASC
+                "#
             )
             .bind(last_id)
             .fetch_all(&pool)
@@ -185,8 +206,8 @@ impl IpcTransport {
             if let Ok(rows) = rows {
                 for (id, topic, payload) in rows {
                     last_id = id;
-                    if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
+                    if let Ok(message) = Message::decode(&payload[..]) {
+                        if let Some(tx) = subs.get(&topic) {
                             let _ = tx.send(message);
                         }
                     }
@@ -244,6 +265,16 @@ impl MeshTransport for IpcTransport {
         });
 
         Ok(cancel)
+    }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        sqlx::query("INSERT INTO processed_messages (topic, message_id) VALUES (?, ?) ON CONFLICT DO NOTHING")
+            .bind(topic)
+            .bind(message_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -347,6 +378,8 @@ impl MeshTransport for RedisTransport {
         use futures_util::StreamExt;
 
         let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        let client_clone = self.client.clone();
+        let topic_str = topic.to_string();
 
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
@@ -355,7 +388,22 @@ impl MeshTransport for RedisTransport {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     if let Ok(message) = Message::decode(&buf[..]) {
-                        handler(message);
+                        // Cloud-side deduplication using acks stored in Redis
+                        let ack_key = format!("ack:{}:{}", topic_str, message.event_id);
+                        if let Ok(mut conn) = client_clone.get_multiplexed_tokio_connection().await {
+                            let exists: bool = redis::cmd("EXISTS")
+                                .arg(&ack_key)
+                                .query_async(&mut conn)
+                                .await
+                                .unwrap_or(false);
+
+                            if !exists {
+                                handler(message);
+                            }
+                        } else {
+                            // Fallback to deliver if Redis is temporarily unreachable for dedupe check
+                            handler(message);
+                        }
                     }
                 }
             }
@@ -368,9 +416,25 @@ impl MeshTransport for RedisTransport {
         Ok(cancel)
     }
 
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let key = format!("ack:{}:{}", topic, message_id);
+        let _: () = redis::cmd("SET")
+            .arg(&key)
+            .arg("1")
+            .arg("EX")
+            .arg(86400) // 1 day TTL for acks
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
+
+        // Robust single-instance lock acquisition
         let res: Option<String> = redis::cmd("SET")
             .arg(&key)
             .arg(owner)
@@ -381,7 +445,15 @@ impl MeshTransport for RedisTransport {
             .await
             .map_err(|e| e.to_string())?;
 
-        Ok(res.is_some())
+        // In Redis, SET with NX returns OK (Some("OK")) if successful, else nil (None)
+        if res.is_some() {
+            tracing::info!("Lock acquired: {} by {}", resource, owner);
+            Ok(true)
+        } else {
+            // Check for re-entrancy: do we already own this lock?
+            let current_owner: Option<String> = conn.get(&key).await.map_err(|e| e.to_string())?;
+            Ok(current_owner == Some(owner.to_string()))
+        }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
@@ -489,6 +561,76 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
+    async fn test_ipc_transport_ack() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_ack_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_count_clone = received_count.clone();
+
+        let handler = Box::new(move |_msg: Message| {
+            received_count_clone.fetch_add(1, Ordering::SeqCst);
+        });
+
+        let topic = "ack_test_topic";
+        let _cancel = transport.subscribe(topic, handler).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let event_id = "msg_1".to_string();
+        let msg = Message {
+            agent_id: "test".to_string(),
+            action: topic.to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            event_id: event_id.clone(),
+        };
+
+        // 1. Publish first time
+        transport.publish(topic, msg.clone()).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        assert_eq!(received_count.load(Ordering::SeqCst), 1);
+
+        // 2. Ack the message
+        transport.ack(topic, &event_id).await.unwrap();
+
+        // 3. Verify ack persistence in DB
+        let processed: (i64,) = sqlx::query_as("SELECT count(*) FROM processed_messages WHERE topic = ? AND message_id = ?")
+            .bind(topic)
+            .bind(&event_id)
+            .fetch_one(&transport.pool)
+            .await
+            .unwrap();
+        assert_eq!(processed.0, 1);
+
+        // 4. Test that the worker loop skips processed messages
+        // We'll insert a message directly into mesh_messages and see if it gets picked up.
+        // It should NOT be picked up because we already acked this event_id.
+        let msg_raw = {
+            use prost::Message as ProstMessage;
+            let mut buf = Vec::new();
+            msg.encode(&mut buf).unwrap();
+            buf
+        };
+
+        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+            .bind(topic)
+            .bind(msg_raw)
+            .execute(&transport.pool)
+            .await
+            .unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        // received_count should still be 1 (from step 1) because the worker JOIN should filter out msg_1
+        assert_eq!(received_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
     async fn test_ipc_transport() {
         let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
         let db_path = format!("{}/test_ipc_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
@@ -516,6 +658,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -569,6 +712,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +837,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            event_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();

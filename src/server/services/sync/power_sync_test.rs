@@ -246,6 +246,13 @@ mod tests {
                     synced_count: 0,
                 }))
             }
+
+        async fn state_handoff(
+            &self,
+            _request: tonic::Request<ohc_builtin_agent::proto::hub::SyncStateHandoff>,
+        ) -> Result<tonic::Response<ohc_builtin_agent::proto::hub::EmptyResponse>, tonic::Status> {
+            Ok(tonic::Response::new(ohc_builtin_agent::proto::hub::EmptyResponse {}))
+        }
         }
 
         let pushed_items = Arc::new(Mutex::new(Vec::new()));

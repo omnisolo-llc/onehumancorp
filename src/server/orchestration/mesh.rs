@@ -39,6 +39,7 @@ impl TeammateMesh for CentrifugeNode {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
@@ -88,6 +89,7 @@ impl TeammateMesh for RueidisMapping {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            event_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 

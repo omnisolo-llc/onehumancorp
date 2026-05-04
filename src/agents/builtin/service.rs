@@ -741,6 +741,7 @@ pub async fn start_builtin_agent(
                                         action: "agent_events".to_string(),
                                         status: "ok".to_string(),
                                         payload: buf,
+                                        event_id: uuid::Uuid::new_v4().to_string(),
                                     }).await;
                                 }
                             }

@@ -9,10 +9,12 @@ pub async fn run_health_monitor(
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
     loop {
         interval.tick().await;
+
+        // 1. Get current presence list from mesh
         match monitor_transport.get_active_agents().await {
             Ok(agents) => {
                 if agents.is_empty() {
-                    tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
+                    tracing::warn!("HEALTH MONITOR: No active agents found in mesh presence.");
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -22,18 +24,21 @@ pub async fn run_health_monitor(
 
                 let mut to_fire = Vec::new();
                 for agent in monitor_hub.get_agents().iter() {
-                    // Fire agents that are missing from active agents mesh list, regardless of their IDLE/BUSY status
+                    // 2. Heartbeat check: Monitor verifies presence within last 60 seconds
+                    // The get_active_agents call already filters by TTL in MemoryTransport/IpcTransport/RedisTransport
+                    // so we just check if they are present in the set.
                     if !active_agent_ids.contains(&agent.id) {
                         to_fire.push(agent.id.clone());
                     }
                 }
+
                 for agent_id in to_fire {
-                    tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::warn!("HEALTH MONITOR: Agent {} heartbeat failed (missing from mesh presence). Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                 }
             }
             Err(e) => {
-                tracing::error!("HEALTH MONITOR: Failed to get active agents: {}", e);
+                tracing::error!("HEALTH MONITOR: Failed to get active agents from mesh: {}", e);
             }
         }
     }
