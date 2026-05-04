@@ -52,6 +52,8 @@ thread_local! {
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
 
+static WEBSITE_BUILDER_UI: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<slint::Weak<app::WebsiteBuilder>>>>> = std::sync::OnceLock::new();
+
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
 
@@ -60,6 +62,7 @@ thread_local! {
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
 }
+
 
 #[cfg(test)]
 mod ui_tests;
@@ -493,7 +496,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let builder_store = WEBSITE_BUILDER_UI.get_or_init(|| {
+        std::sync::Arc::new(std::sync::Mutex::new(None))
+    });
     let website_builder_ui = app::WebsiteBuilder::new()?;
+    {
+        let mut store = builder_store.lock().unwrap();
+        *store = Some(website_builder_ui.as_weak());
+    }
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let website_builder_handle = website_builder_ui.as_weak();
     let wb_ui_weak = website_builder_handle.clone();
@@ -1022,6 +1032,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let add_product_called_clone = add_product_called.clone();
 
                 let dashboard_handle_clone_add_product = dashboard_handle.clone();
+                let dashboard_handle_inner_wb = website_builder_handle.clone();
                 dashboard.on_action_add_product(move || {
                     *add_product_called_clone.borrow_mut() = true;
 
@@ -1041,6 +1052,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
+                                            let builder_store = WEBSITE_BUILDER_UI.get_or_init(|| {
+                                                std::sync::Arc::new(std::sync::Mutex::new(None))
+                                            });
+                                            let store = builder_store.lock().unwrap();
+                                            if let Some(weak) = store.as_ref() {
+                                                if let Some(builder) = weak.upgrade() {
+                                                    let _ = builder.show();
+                                                }
+                                            }
                                         }
                                     }
                                 }).unwrap();
@@ -1610,7 +1630,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
