@@ -51,23 +51,21 @@ impl ToolExecutor for EditExecutor {
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let mut cmd = tokio::process::Command::new("rustc");
-            cmd.arg("--emit=metadata").arg("--edition=2021").arg(&actual_path);
+            let mut cmd = tokio::process::Command::new("rustfmt");
+            cmd.arg("--edition=2021").arg(&actual_path);
 
             if let Ok(output) = cmd.output().await {
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
+                    return Err(ToolError::LlmRecoverable(format!(
+                        "Verification Loop Failed: `rustfmt` reported syntax errors after editing {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                            path, stderr
-                        )));
-                    }
+                        path, stderr
+                    )));
                 }
             }
         }
@@ -202,7 +200,7 @@ mod tests {
         let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+            assert!(msg.contains("Verification Loop Failed: `rustfmt` reported syntax errors"));
         } else {
             panic!("Expected LlmRecoverable error");
         }

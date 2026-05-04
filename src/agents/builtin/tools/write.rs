@@ -36,29 +36,22 @@ impl ToolExecutor for WriteExecutor {
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let mut cmd = tokio::process::Command::new("rustc");
+            let mut cmd = tokio::process::Command::new("rustfmt");
             // Check only the specific file to avoid whole-workspace errors when other files are broken
-            cmd.arg("--emit=metadata").arg("--edition=2021").arg(&actual_path);
+            cmd.arg("--edition=2021").arg(&actual_path);
 
-            // Note: In Bazel/Cargo projects, `rustc` alone may miss external crate dependencies
-            // and fail with `E0432`. However, it catches pure syntax errors and basic type errors
-            // within the file itself without requiring a full `cargo check` of a potentially broken tree.
-            // We ignore errors related to missing external crates (E0432, E0463) as they are false positives
-            // when running `rustc` outside the build system.
             if let Ok(output) = cmd.output().await {
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
+                    return Err(ToolError::LlmRecoverable(format!(
+                        "Verification Loop Failed: `rustfmt` reported syntax errors after writing to {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                            path, stderr
-                        )));
-                    }
+                        path, stderr
+                    )));
                 }
             }
         }
@@ -156,7 +149,7 @@ mod tests {
         let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
+            assert!(msg.contains("Verification Loop Failed: `rustfmt` reported syntax errors"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
