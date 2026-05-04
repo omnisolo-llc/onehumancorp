@@ -8,6 +8,7 @@ This document outlines the design and implementation of the long-term memory and
 1. **Persistent Memory Layer (`VectorRepository`)**:
    - Implements multi-tenant scalable memory storage using `consolidated_memory` SQL tables.
    - Dual-mode compatible: Integrates natively with `pgvector` in cloud (PostgreSQL) and falls back to `sqlite-vec` or manual cosine distance checking in standalone mode (SQLite).
+   - `search` and `retrieve` methods implemented to enable sharing context cross-department.
 
 2. **Conflict Resolution (`MemoryConsolidationWorker`)**:
    - Periodically computes pairwise semantic conflicts in background threads.

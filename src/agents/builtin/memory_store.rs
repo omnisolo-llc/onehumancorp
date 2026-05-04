@@ -277,6 +277,152 @@ impl VectorRepository {
     }
 
 
+    pub async fn search(&self, query_embedding: &[f32], limit: usize, tenant_id: &str) -> Result<Vec<EmbeddingRecord>, String> {
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let emb_str = serde_json::to_string(&query_embedding).map_err(|e| e.to_string())?;
+                let query = "
+                    SELECT id, tenant_id, agent_id, content, embedding::text AS embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                    FROM consolidated_memory
+                    WHERE tenant_id = $1
+                    ORDER BY embedding <=> $2::vector
+                    LIMIT $3
+                ";
+                let rows = sqlx::query(query)
+                    .bind(tenant_id)
+                    .bind(&emb_str)
+                    .bind(limit as i64)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let mut results = Vec::new();
+                for row in rows {
+                    let emb_str: String = sqlx::Row::try_get(&row, "embedding").unwrap_or_else(|_| String::from_utf8(sqlx::Row::get::<Vec<u8>, _>(&row, "embedding")).unwrap_or_default());
+                    let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+                    results.push(EmbeddingRecord {
+                        id: sqlx::Row::get(&row, "id"),
+                        tenant_id: sqlx::Row::get(&row, "tenant_id"),
+                        agent_id: sqlx::Row::get::<Option<String>, _>(&row, "agent_id").unwrap_or_default(),
+                        content: sqlx::Row::get(&row, "content"),
+                        embedding,
+                        source_type: sqlx::Row::get(&row, "source_type"),
+                        created_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "created_at").map_err(|e| e.to_string())?,
+                        last_referenced_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "last_referenced_at").map_err(|e| e.to_string())?,
+                        reference_count: sqlx::Row::get(&row, "reference_count"),
+                        reliability_score: sqlx::Row::get(&row, "reliability_score"),
+                        owner_override: sqlx::Row::get(&row, "owner_override"),
+                        metadata: sqlx::Row::get(&row, "metadata"),
+                    });
+                }
+                Ok(results)
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
+                    .execute(pool)
+                    .await
+                    .is_ok();
+
+                if has_vec_extension {
+                    let emb_str = serde_json::to_string(&query_embedding).map_err(|e| e.to_string())?;
+                    let query = "
+                        SELECT id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                        FROM consolidated_memory
+                        WHERE tenant_id = ?
+                        ORDER BY vec_distance_cosine(embedding, ?)
+                        LIMIT ?
+                    ";
+                    let rows = sqlx::query(query)
+                        .bind(tenant_id)
+                        .bind(&emb_str)
+                        .bind(limit as i64)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let mut results = Vec::new();
+                    for row in rows {
+                        let emb_str: String = sqlx::Row::try_get(&row, "embedding").unwrap_or_else(|_| String::from_utf8(sqlx::Row::get::<Vec<u8>, _>(&row, "embedding")).unwrap_or_default());
+                        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+                        results.push(EmbeddingRecord {
+                            id: sqlx::Row::get(&row, "id"),
+                            tenant_id: sqlx::Row::get(&row, "tenant_id"),
+                            agent_id: sqlx::Row::get::<Option<String>, _>(&row, "agent_id").unwrap_or_default(),
+                            content: sqlx::Row::get(&row, "content"),
+                            embedding,
+                            source_type: sqlx::Row::get(&row, "source_type"),
+                            created_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "created_at").map_err(|e| e.to_string())?,
+                            last_referenced_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "last_referenced_at").map_err(|e| e.to_string())?,
+                            reference_count: sqlx::Row::get(&row, "reference_count"),
+                            reliability_score: sqlx::Row::get(&row, "reliability_score"),
+                            owner_override: sqlx::Row::get(&row, "owner_override"),
+                            metadata: sqlx::Row::get(&row, "metadata"),
+                        });
+                    }
+                    Ok(results)
+                } else {
+                    let query = "
+                        SELECT id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                        FROM consolidated_memory
+                        WHERE tenant_id = ?
+                    ";
+                    let rows = sqlx::query(query)
+                        .bind(tenant_id)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let mut all_records = Vec::new();
+                    for row in rows {
+                        let emb_str: String = sqlx::Row::try_get(&row, "embedding").unwrap_or_else(|_| String::from_utf8(sqlx::Row::get::<Vec<u8>, _>(&row, "embedding")).unwrap_or_default());
+                        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+                        all_records.push(EmbeddingRecord {
+                            id: sqlx::Row::get(&row, "id"),
+                            tenant_id: sqlx::Row::get(&row, "tenant_id"),
+                            agent_id: sqlx::Row::get::<Option<String>, _>(&row, "agent_id").unwrap_or_default(),
+                            content: sqlx::Row::get(&row, "content"),
+                            embedding,
+                            source_type: sqlx::Row::get(&row, "source_type"),
+                            created_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "created_at").map_err(|e| e.to_string())?,
+                            last_referenced_at: sqlx::Row::try_get::<DateTime<Utc>, _>(&row, "last_referenced_at").map_err(|e| e.to_string())?,
+                            reference_count: sqlx::Row::get(&row, "reference_count"),
+                            reliability_score: sqlx::Row::get(&row, "reliability_score"),
+                            owner_override: sqlx::Row::get(&row, "owner_override"),
+                            metadata: sqlx::Row::get(&row, "metadata"),
+                        });
+                    }
+
+                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+                        if a.len() != b.len() || a.is_empty() { return 1.0; }
+                        let mut dot_product = 0.0;
+                        let mut norm_a = 0.0;
+                        let mut norm_b = 0.0;
+                        for i in 0..a.len() {
+                            dot_product += a[i] * b[i];
+                            norm_a += a[i] * a[i];
+                            norm_b += b[i] * b[i];
+                        }
+                        if norm_a == 0.0 || norm_b == 0.0 { return 1.0; }
+                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+                        1.0 - similarity
+                    }
+
+                    all_records.sort_by(|a, b| {
+                        let dist_a = cosine_distance(&a.embedding, query_embedding);
+                        let dist_b = cosine_distance(&b.embedding, query_embedding);
+                        dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+
+                    all_records.truncate(limit);
+                    Ok(all_records)
+                }
+            }
+        }
+    }
+
     pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
@@ -476,6 +622,9 @@ impl VectorRepository {
         Ok(conflicts)
     }
 
+    pub async fn retrieve(&self, query_embedding: &[f32], limit: usize, tenant_id: &str) -> Result<Vec<EmbeddingRecord>, String> {
+        self.search(query_embedding, limit, tenant_id).await
+    }
 }
 
 
@@ -897,6 +1046,15 @@ mod get_conflicts_tests {
         // get_conflicting_pairs test
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
         assert!(conflicts.is_empty(), "Should have no conflicts");
+
+        // search / retrieve test
+        let results = repo.search(&[1.0, 2.0, 3.0], 10, "org1").await.unwrap();
+        assert_eq!(results.len(), 1, "Should find the one record");
+        assert_eq!(results[0].id, "rec1", "Should retrieve the correct id");
+
+        let retrieve_results = repo.retrieve(&[1.0, 2.0, 3.0], 10, "org1").await.unwrap();
+        assert_eq!(retrieve_results.len(), 1, "Should find the one record");
+        assert_eq!(retrieve_results[0].id, "rec1", "Should retrieve the correct id");
     }
 }
 
