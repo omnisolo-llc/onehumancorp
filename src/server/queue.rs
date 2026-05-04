@@ -29,8 +29,9 @@ pub struct Job {
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
+        async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;
+    async fn requeue(&self, job: Job) -> Result<(), String>;
 }
 
 pub struct MemoryTaskQueue {
@@ -89,6 +90,11 @@ impl TaskQueue for MemoryTaskQueue {
             Err("job not found".to_string())
         }
     }
+
+    async fn requeue(&self, job: Job) -> Result<(), String> {
+        self.jobs.insert(job.id.clone(), job);
+        Ok(())
+    }
 }
 
 pub struct PostgresTaskQueue {
@@ -103,6 +109,23 @@ impl PostgresTaskQueue {
 
 #[async_trait]
 impl TaskQueue for PostgresTaskQueue {
+    async fn requeue(&self, job: Job) -> Result<(), String> {
+        let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
+        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, scheduled_at = $4 WHERE id = $1 AND organization_id = $2")
+            .bind(&job.id)
+            .bind(&job.tenant_id)
+            .bind(new_payload)
+            .bind(job.run_after)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let run_after = job.run_after;
         
@@ -237,14 +260,28 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             println!("Worker processing job: {}", job.id);
-                            match self.handler.handle(job.clone()).await {
+                            let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), self.handler.handle(job.clone())).await;
+                            let handler_res = match handle_res {
+                                Ok(Ok(())) => Ok(()),
+                                Ok(Err(e)) => Err(e),
+                                Err(_) => Err("Timeout executing job".to_string()),
+                            };
+                            match handler_res {
                                 Ok(_) => {
                                     println!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
                                     println!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
+                                    if job.attempts < job.max_attempts {
+                                        let mut retry_job = job.clone();
+                                        retry_job.attempts += 1;
+                                        retry_job.status = "PENDING".to_string();
+                                        retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                        let _ = self.queue.requeue(retry_job).await;
+                                    } else {
+                                        let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
+                                    }
                                 }
                             }
                         }
@@ -403,7 +440,7 @@ impl QueueManager {
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
             .bind(worker_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -438,6 +475,26 @@ impl QueueManager {
         Ok(())
     }
 
+
+    pub async fn requeue(&self, job_id: &str, organization_id: &str, payload: serde_json::Value) -> Result<(), sqlx::Error> {
+        let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+        // Since SubAgentJob's polling uses `status = 'QUEUED'`, and some implementations might not filter by scheduled_at,
+        // we can still add a simple delay by using tokio::time::sleep here or rely on the caller to backoff,
+        // or actually update the scheduled_at column if the poll query respects it.
+        // Wait, QueueManager::poll does: `SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC`
+        // It does NOT use `scheduled_at`!
+        // To implement a true backoff, we need to add `AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)`.
+
+        // Update the row.
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + INTERVAL '5 seconds' WHERE id = $1 AND organization_id = $2")
+            .bind(job_id)
+            .bind(organization_id)
+            .bind(payload_str)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn mark_failed(&self, job_id: &str, _reason: &str, organization_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
@@ -462,14 +519,30 @@ impl QueueManager {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
                                 println!("QueueManager dispatched job: {}", job.id);
-                                match handler(job.clone()).await {
+                                let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                                let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
+                                attempts += 1;
+                                let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler(job.clone())).await;
+                                let handler_res = match handle_res {
+                                    Ok(Ok(())) => Ok(()),
+                                    Ok(Err(e)) => Err(e),
+                                    Err(_) => Err("Timeout executing job".to_string()),
+                                };
+                                match handler_res {
                                     Ok(_) => {
                                         println!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id, &job.organization_id).await;
                                     }
                                     Err(e) => {
                                         println!("Job handler failed: {}, error: {}", job.id, e);
-                                        let _ = self.mark_failed(&job.id, &e, &job.organization_id).await;
+                                        if attempts < max_attempts {
+                                            let mut retry_job = job.clone();
+                                            retry_job.payload["attempts"] = serde_json::json!(attempts);
+                                            retry_job.payload["max_attempts"] = serde_json::json!(max_attempts);
+                                            let _ = self.requeue(&job.id, &job.organization_id, retry_job.payload).await;
+                                        } else {
+                                            let _ = self.mark_failed(&job.id, &e, &job.organization_id).await;
+                                        }
                                     }
                                 }
                             }
@@ -741,6 +814,22 @@ impl TaskQueue for SqliteTaskQueue {
             .map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    async fn requeue(&self, job: Job) -> Result<(), String> {
+        let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
+        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+
+        sqlx::query("UPDATE local_queue_jobs SET status = 'PENDING', payload = ? WHERE id = ? AND tenant_id = ?")
+            .bind(new_payload)
+            .bind(&job.id)
+            .bind(&job.tenant_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 pub struct RedisTaskQueue {
@@ -830,6 +919,18 @@ impl TaskQueue for RedisTaskQueue {
             }
         }
         Err("job not found".to_string())
+    }
+
+    async fn requeue(&self, job: Job) -> Result<(), String> {
+        let payload_json = serde_json::to_string(&job).unwrap_or_default();
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let _: () = redis::cmd("RPUSH")
+            .arg(&self.queue_name)
+            .arg(&payload_json)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 }
 
