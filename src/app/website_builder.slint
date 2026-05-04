@@ -24,8 +24,23 @@ export component WebsiteBuilder inherits Window {
     in-out property <string> product_price: "";
     in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
+
     in-out property <bool> is_advanced: false;
     in-out property <bool> is_publishing: false;
+
+    // Site Editor Block Logic
+    in-out property <string> block_hero_title: "Welcome to My Store";
+    in-out property <string> block_hero_image: "hero.png";
+    in-out property <string> block_hero_button: "Shop Now";
+
+    in-out property <string> block_product_title: "Featured Products";
+
+    callback update_block(string, string); // block_type, content_json
+    callback reorder_block_up(string);
+    callback reorder_block_down(string);
+    callback generate_site();
+
+
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -237,8 +252,88 @@ export component WebsiteBuilder inherits Window {
 
         }
 
-        // Step 4: Review
+        // Step 4: Site Editor (Blocks)
         if (step == 4) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Edit Your Site Blocks"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+            Text { text: "Tap to edit or reorder blocks"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+            GlassCard {
+                height: 44px;
+                background: rgba(168, 85, 247, 0.4);
+                VerticalBox { alignment: center; padding: 12px;
+                    Text { text: "✨ Auto-Generate Site Layout"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                }
+                TouchArea { clicked => { generate_site(); } }
+            }
+
+            // Reorderable List Simulation
+            // Block 1: Hero
+            GlassCard {
+                height: 120px;
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                VerticalBox {
+                    padding: 12px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "Hero Block"; font-family: "Outfit"; font-size: 16px; font-weight: 700; color: white; }
+                        Rectangle {} // Spacer
+                        GlassCard {
+                            width: 32px; height: 32px;
+                            VerticalBox { alignment: center; Text { text: "↑"; color: white; horizontal-alignment: center; } }
+                            TouchArea { clicked => { reorder_block_up("HeroBlock"); } }
+                        }
+                        GlassCard {
+                            width: 32px; height: 32px;
+                            VerticalBox { alignment: center; Text { text: "↓"; color: white; horizontal-alignment: center; } }
+                            TouchArea { clicked => { reorder_block_down("HeroBlock"); } }
+                        }
+                    }
+                    Text { text: "Title"; font-size: 12px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit {
+                        placeholder-text: "Hero Title";
+                        text <=> block_hero_title;
+                        height: 36px;
+                        edited => { update_block("HeroBlock", "{\"title\":\"" + block_hero_title + "\"}"); }
+                    }
+                }
+            }
+
+            // Block 2: Product Grid
+            GlassCard {
+                height: 120px;
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                VerticalBox {
+                    padding: 12px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "Product Grid Block"; font-family: "Outfit"; font-size: 16px; font-weight: 700; color: white; }
+                        Rectangle {} // Spacer
+                        GlassCard {
+                            width: 32px; height: 32px;
+                            VerticalBox { alignment: center; Text { text: "↑"; color: white; horizontal-alignment: center; } }
+                            TouchArea { clicked => { reorder_block_up("ProductGridBlock"); } }
+                        }
+                        GlassCard {
+                            width: 32px; height: 32px;
+                            VerticalBox { alignment: center; Text { text: "↓"; color: white; horizontal-alignment: center; } }
+                            TouchArea { clicked => { reorder_block_down("ProductGridBlock"); } }
+                        }
+                    }
+                    Text { text: "Title"; font-size: 12px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit {
+                        placeholder-text: "Product Grid Title";
+                        text <=> block_product_title;
+                        height: 36px;
+                        edited => { update_block("ProductGridBlock", "{\"title\":\"" + block_product_title + "\"}"); }
+                    }
+                }
+            }
+        }
+
+        // Step 5: Review
+        if (step == 5) : VerticalBox {
+
             spacing: 24px;
             Text { text: "Go Live: Review your site"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
@@ -302,9 +397,9 @@ export component WebsiteBuilder inherits Window {
                 width: 120px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: step == 4 ? "Publish →" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: step == 5 ? "Publish →" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
-                    if (step < 4) {
+                    if (step < 5) {
                         step += 1;
                     } else {
                         is_publishing = true;

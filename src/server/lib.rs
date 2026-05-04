@@ -1211,6 +1211,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(crate::ohc::orchestration::sites_service_server::SitesServiceServer::with_interceptor(crate::builder::grpc::SitesServiceImpl::new(db.pool.clone()), spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))

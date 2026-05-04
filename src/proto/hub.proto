@@ -1589,3 +1589,60 @@ service McpService {
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
 }
+
+// Website & Storefront Builder Messages
+message SiteProto {
+  string id = 1;
+  string domain = 2;
+}
+
+message PageProto {
+  string id = 1;
+  string path = 2;
+  string title = 3;
+  string seo_metadata_json = 4;
+}
+
+message BlockProto {
+  string id = 1;
+  string block_type = 2;
+  string content_json = 3;
+  int32 sort_order = 4;
+}
+
+message GenerateSiteRequest {
+  string tenant_id = 1;
+  string business_category = 2;
+  string initial_prompt = 3;
+}
+
+message GenerateSiteResponse {
+  SiteProto site = 1;
+  repeated PageProto pages = 2;
+  repeated BlockProto blocks = 3;
+}
+
+message UpdateBlockRequest {
+  string tenant_id = 1;
+  string block_id = 2;
+  string content_json = 3;
+}
+
+message UpdateBlockResponse {
+  BlockProto block = 1;
+}
+
+message PublishSiteRequest {
+  string tenant_id = 1;
+  string site_id = 2;
+}
+
+message PublishSiteResponse {
+  string live_url = 1;
+}
+
+service SitesService {
+  rpc GenerateSite(GenerateSiteRequest) returns (GenerateSiteResponse);
+  rpc UpdateBlock(UpdateBlockRequest) returns (UpdateBlockResponse);
+  rpc PublishSite(PublishSiteRequest) returns (PublishSiteResponse);
+}

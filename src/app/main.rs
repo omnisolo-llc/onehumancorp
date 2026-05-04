@@ -656,9 +656,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |_template, _color, _product, _price, _description, _domain| {
             if let Some(ui) = ui_handle.upgrade() {
                 ui.set_is_publishing(false);
-                ui.set_step(4); // Ensure it stays on review/publish screen
+                ui.set_step(5); // Ensure it stays on review/publish screen
             }
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::sites_service_client::SitesServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::PublishSiteRequest {
+                        tenant_id: "default".into(), // Real app uses session
+                        site_id: "default_site".into(),
+                    });
+                    let _ = client.publish_site(req).await;
+                }
+            });
         }
+    });
+
+    website_builder_ui.on_generate_site({
+        let _ui_handle = website_builder_handle.clone();
+        move || {
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::sites_service_client::SitesServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::GenerateSiteRequest {
+                        tenant_id: "default".into(),
+                        business_category: "Retail".into(),
+                        initial_prompt: "Create a storefront".into(),
+                    });
+                    let _ = client.generate_site(req).await;
+                }
+            });
+        }
+    });
+
+    website_builder_ui.on_update_block({
+        let _ui_handle = website_builder_handle.clone();
+        move |block_type, content_json| {
+            let _bt = block_type.to_string();
+            let cj = content_json.to_string();
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::sites_service_client::SitesServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::UpdateBlockRequest {
+                        tenant_id: "default".into(),
+                        block_id: "default_block".into(),
+                        content_json: cj,
+                    });
+                    let _ = client.update_block(req).await;
+                }
+            });
+        }
+    });
+
+
+    website_builder_ui.on_reorder_block_up({
+        let _ui_handle = website_builder_handle.clone();
+        move |_| {}
+    });
+
+    website_builder_ui.on_reorder_block_down({
+        let _ui_handle = website_builder_handle.clone();
+        move |_| {}
     });
 
     website_builder_ui.on_open_ohc_signup(|| {
@@ -2773,9 +2828,9 @@ mod tests {
 
         assert_eq!(ui.get_step(), 3);
         ui.set_domain_choice("buy".into());
-        ui.set_step(4);
+        ui.set_step(5);
 
-        assert_eq!(ui.get_step(), 4);
+        assert_eq!(ui.get_step(), 5);
 
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
@@ -2812,8 +2867,8 @@ mod tests {
     fn test_website_builder_viral_storefront_footer() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::WebsiteBuilder::new().unwrap();
-        ui.set_step(4);
-        assert_eq!(ui.get_step(), 4);
+        ui.set_step(5);
+        assert_eq!(ui.get_step(), 5);
 
         let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let signup_opened_clone = signup_opened.clone();
@@ -3209,7 +3264,7 @@ mod docs_tests {
         ui.set_step(3);
 
         ui.set_domain_choice("custom".into());
-        ui.set_step(4);
+        ui.set_step(5);
 
         assert_eq!(ui.get_selected_template(), "Modern");
         assert_eq!(ui.get_primary_color(), "#34C759");
@@ -4758,7 +4813,7 @@ mod e2e_hybrid_blob_tests {
             *builder_published_clone.borrow_mut() = true;
         });
 
-        builder_ui.set_step(4); // Advance to the publish step
+        builder_ui.set_step(5); // Advance to the publish step
         builder_ui.invoke_publish_site(
             "Modern".into(),
             "#34C759".into(),
@@ -4822,14 +4877,14 @@ mod e2e_hybrid_blob_tests {
         ui.set_sell_physical(true);
         ui.set_sell_food(true);
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 4);
+        assert_eq!(ui.get_step(), 5);
     }
 
     #[test]
     fn test_e2e_wizard_flow_step_4_template_selection() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(4);
+        ui.set_step(5);
         ui.set_website_template("Dark Mode".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 5);

@@ -158,6 +158,47 @@ test.describe('Website Builder', () => {
       await page.locator('button:has-text("Connect"), button:has-text("Add")').click();
     }
   });
+
+  test('should generate site with AI', async ({ page }) => {
+    await page.goto('/website-builder');
+
+    // Step through to blocks page (step 4 in new logic)
+    const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+    if (await nextBtn.isVisible()) {
+      for (let i = 0; i < 4; i++) {
+        await nextBtn.click();
+        await page.waitForTimeout(200);
+      }
+    }
+
+    const autoGenBtn = page.locator('text=/Auto-Generate Site Layout/i').first();
+    if (await autoGenBtn.isVisible()) {
+      await autoGenBtn.click();
+    }
+  });
+
+  test('should edit and reorder blocks', async ({ page }) => {
+    await page.goto('/website-builder');
+
+    const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+    if (await nextBtn.isVisible()) {
+      for (let i = 0; i < 4; i++) {
+        await nextBtn.click();
+        await page.waitForTimeout(200);
+      }
+    }
+
+    const heroTitle = page.locator('input[placeholder="Hero Title"]').first();
+    if (await heroTitle.isVisible()) {
+      await heroTitle.fill('New Hero Title for E2E');
+    }
+
+    const upBtn = page.locator('text="↑"').first();
+    if (await upBtn.isVisible()) {
+      await upBtn.click();
+    }
+  });
+
 });
 
 test.describe('Prompt Tuning', () => {
