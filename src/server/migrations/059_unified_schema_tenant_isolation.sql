@@ -94,3 +94,5 @@ ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS interaction_data JSONB DEFAU
 ALTER TABLE agent_memories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_agent_memories_tenant_id ON agent_memories
     USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
+
+ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS context_embedding vector;
