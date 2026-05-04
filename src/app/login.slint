@@ -85,12 +85,31 @@ export component Login inherits Window {
                     font-family: "Inter";
                 }
 
-                Button {
+                if (loading) : VerticalBox {
+                    spacing: 16px;
+                    Rectangle {
+                        height: 44px;
+                        border-radius: 4px;
+                        background: #1e293b;
+                        Text {
+                            text: "Signing in...";
+                            color: #9ca3af;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    Rectangle {
+                        height: 44px;
+                        border-radius: 4px;
+                        background: transparent;
+                    }
+                }
+                if (!loading) : Button {
                     text: is_sign_up ? "Sign Up" : "Sign In";
                     clicked => { login(username, password); }
                 }
 
-                Button {
+                if (!loading) : Button {
                     text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
                     clicked => {
                         is_sign_up = !is_sign_up;

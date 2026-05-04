@@ -80,11 +80,16 @@ test.describe('Login Page', () => {
   });
 
   test('should submit form with enter key', async ({ page }) => {
+    await page.route('/api/auth/login', async route => {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await route.continue();
+    });
+
     await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.keyboard.press('Enter');
-    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/Signing in.../i')).toBeVisible();
   });
 
   test('should remember email if checked', async ({ page }) => {
@@ -98,20 +103,42 @@ test.describe('Login Page', () => {
   });
 
   test('should show loading state during sign in', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.locator('button:has-text("Sign In")').click();
-    await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
-  });
+    // Intercept the login API call and delay it to allow us to test the loading state
+    await page.route('/api/auth/login', async route => {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await route.continue();
+    });
 
-  test('should disable button during loading', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     const signInButton = page.locator('button:has-text("Sign In")');
     await signInButton.click();
-    await expect(signInButton).toBeDisabled();
+
+    // We expect the Loading text to be visible since we artificially delayed the API response
+    await expect(page.locator('text=/Signing in.../i')).toBeVisible();
+
+    // And we expect the sign in button to be hidden
+    await expect(signInButton).toBeHidden();
+  });
+
+  test('should hide buttons and show skeleton during loading', async ({ page }) => {
+    await page.route('/api/auth/login', async route => {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await route.continue();
+    });
+
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    const signInButton = page.locator('button:has-text("Sign In")');
+    await signInButton.click();
+
+    // We expect the Loading text to be visible since we artificially delayed the API response
+    await expect(page.locator('text=/Signing in.../i')).toBeVisible();
+
+    // And we expect the sign in button to be hidden
+    await expect(signInButton).toBeHidden();
   });
 
   test('should clear form on successful sign out', async ({ page }) => {

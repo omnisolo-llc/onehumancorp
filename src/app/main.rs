@@ -1504,6 +1504,15 @@ mod growth_e2e_tests {
     use slint::Model;
 
     #[test]
+    fn test_login_loading_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Login::new().unwrap();
+        assert!(!ui.get_loading());
+        ui.set_loading(true);
+        assert!(ui.get_loading());
+    }
+
+    #[test]
     fn test_start_setup_wizard_transitions() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
