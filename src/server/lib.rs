@@ -1032,6 +1032,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
@@ -1061,6 +1062,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
+        let escalator = Arc::new(crate::services::sync::escalator::SyncEscalator::new(db.pool.clone()));
+        let (_tx, rx) = tokio::sync::broadcast::channel(1);
+        escalator.start(rx, tokio::time::Duration::from_secs(60));
 
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
         power_sync_orchestrator.start().await;
