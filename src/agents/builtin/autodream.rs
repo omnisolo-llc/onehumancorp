@@ -13,6 +13,7 @@ use opentelemetry::metrics::Counter;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
+    #[allow(dead_code)]
     embedded_counter: Counter<u64>,
 }
 

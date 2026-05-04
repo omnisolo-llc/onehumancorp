@@ -9,6 +9,7 @@ use super::provider::{BlobMetadata, Provider};
 
 pub struct LocalProvider {
     base_path: PathBuf,
+    #[allow(dead_code)]
     tracker: Tracker,
 }
 
