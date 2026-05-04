@@ -24,7 +24,7 @@ impl MemoryConsolidationWorker {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
-                let older_than = chrono::Utc::now() - chrono::Duration::days(180);
+                let older_than = Utc::now() - chrono::Duration::days(180);
                 if let Err(e) = repository.prune_stale(older_than).await {
                     eprintln!("Failed to prune stale context: {}", e);
                 }
@@ -195,7 +195,7 @@ mod tests {
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
 
-        let now = Utc::now();
+        let _now = Utc::now();
         let mut a = create_dummy_record("a", true, 50, 0); // wins due to override
         let mut b = create_dummy_record("b", false, 100, 100);
 

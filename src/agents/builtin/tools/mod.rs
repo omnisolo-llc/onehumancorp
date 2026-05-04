@@ -3,6 +3,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+pub mod runner;
 pub mod bash;
 pub mod read;
 pub mod write;
@@ -82,13 +83,14 @@ pub fn all_tools(
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
 ) -> Vec<Tool> {
+    let runner = Arc::new(runner::RealCommandRunner);
     let mut tools = vec![
-        bash::bash_tool(working_dir.clone()),
+        bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
-        write::write_tool(working_dir.clone()),
-        edit::edit_tool(working_dir.clone()),
+        write::write_tool(working_dir.clone(), runner.clone()),
+        edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
@@ -108,9 +110,9 @@ pub fn all_tools(
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
-        subagent::subagent_tool(),
+        subagent::subagent_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
-        screenshot::screenshot_tool(working_dir.clone()),
+        screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
     ];
 
