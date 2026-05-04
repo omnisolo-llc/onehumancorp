@@ -15,7 +15,7 @@ path = "src/agents/builtin/main.rs"
 [dependencies]
 tokio = { workspace = true }
 tokio-stream = { version = "0.1", features = ["full"] }
-tonic = { workspace = true, features = ["transport"] }
+tonic = { workspace = true, features = ["transport", "tls"] }
 prost = { workspace = true }
 serde_yaml = { workspace = true }
 serde = { workspace = true }

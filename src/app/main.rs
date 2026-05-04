@@ -1040,6 +1040,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
 
+                let autodream_walkthrough_ui = app::Walkthrough::new().unwrap();
+                let autodream_walkthrough_handle = autodream_walkthrough_ui.as_weak();
+                Box::leak(Box::new(autodream_walkthrough_ui)) // Intentionally leaked per OHC global modal component pattern;
+
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
@@ -1088,6 +1092,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_open_ai_chat(move || {
                     if let Some(ui) = ai_chat_handle.upgrade() {
                         let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_autodream_walkthrough(move || {
+                    if let Some(ui) = autodream_walkthrough_handle.upgrade() {
+                        ui.show().unwrap();
                     }
                 });
 

@@ -524,7 +524,22 @@ message HybridSyncMissionsResponse {
   int32 synced_count = 3;
 }
 
-message VectorSyncRequest {}
+message VectorSyncRecord {
+  string id = 1;
+  string organization_id = 2;
+  string agent_id = 3;
+  string task_id = 4;
+  string content = 5;
+  string embedding = 6;
+  string source_type = 7;
+  string topic = 8;
+  string sync_status = 9;
+  string last_sync_at = 10;
+}
+
+message VectorSyncRequest {
+  repeated VectorSyncRecord records = 1;
+}
 message VectorSyncResponse {
   string status = 1;
   string message = 2;

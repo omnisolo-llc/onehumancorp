@@ -68,8 +68,36 @@ impl SyncService for MySyncService {
 
     async fn vector_sync(
         &self,
-        _request: Request<VectorSyncRequest>,
+        request: Request<VectorSyncRequest>,
     ) -> Result<Response<VectorSyncResponse>, Status> {
+        let req = request.into_inner();
+        if req.records.is_empty() {
+            return Ok(Response::new(VectorSyncResponse {
+                status: "success".to_string(),
+                message: "vectors synced successfully".to_string(),
+            }));
+        }
+        let mut mapped_records = Vec::new();
+        for r in req.records {
+            mapped_records.push(crate::autodream_sync::AutoDreamSyncRecord {
+                id: r.id,
+                organization_id: if r.organization_id.is_empty() { None } else { Some(r.organization_id) },
+                agent_id: if r.agent_id.is_empty() { None } else { Some(r.agent_id) },
+                task_id: if r.task_id.is_empty() { None } else { Some(r.task_id) },
+                content: r.content,
+                embedding: if r.embedding.is_empty() { None } else { Some(r.embedding) },
+                source_type: if r.source_type.is_empty() { None } else { Some(r.source_type) },
+                topic: if r.topic.is_empty() { None } else { Some(r.topic) },
+                sync_status: if r.sync_status.is_empty() { None } else { Some(r.sync_status) },
+                last_sync_at: if r.last_sync_at.is_empty() { None } else { r.last_sync_at.parse::<chrono::DateTime<chrono::Utc>>().ok() },
+            });
+        }
+        let sync_service = crate::autodream_sync::AutoDreamSyncServiceImpl::new(self.pool.clone());
+        use crate::autodream_sync::AutoDreamSyncService;
+        if let Err(e) = sync_service.process_incoming_syncs(mapped_records).await {
+            eprintln!("vector_sync: failed to process incoming syncs: {}", e);
+            return Err(Status::internal(e.to_string()));
+        }
         Ok(Response::new(VectorSyncResponse {
             status: "success".to_string(),
             message: "vectors synced successfully".to_string(),
@@ -469,7 +497,7 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(VectorSyncRequest {});
+        let req = Request::new(VectorSyncRequest { records: vec![] });
         let resp = service.vector_sync(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
     }
