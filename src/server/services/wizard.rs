@@ -146,6 +146,29 @@ impl WizardService for MyWizardService {
                 status: "ok".to_string(),
                 message: "Standalone mode active".to_string(),
             });
+
+            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+            if db_url.is_empty() {
+                is_all_healthy = false;
+                health_checks.push(DiagnosticCheckProto {
+                    check: "DATABASE_URL".to_string(),
+                    status: "missing".to_string(),
+                    message: "SQLite DATABASE_URL is required in standalone mode".to_string(),
+                });
+            } else if !db_url.starts_with("sqlite://") {
+                is_all_healthy = false;
+                health_checks.push(DiagnosticCheckProto {
+                    check: "DATABASE_URL".to_string(),
+                    status: "invalid".to_string(),
+                    message: "DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
+                });
+            } else {
+                health_checks.push(DiagnosticCheckProto {
+                    check: "DATABASE_URL".to_string(),
+                    status: "ok".to_string(),
+                    message: "SQLite fallback is configured".to_string(),
+                });
+            }
         }
 
         let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
@@ -157,4 +180,89 @@ impl WizardService for MyWizardService {
             diagnostics: health_checks,
         }))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use crate::ohc::orchestration::EmptyRequest;
+    use std::sync::Mutex;
+    use std::sync::OnceLock;
+
+    static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
+
+
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_ok() {
+        let _guard = env_lock();
+        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
+
+        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::set_var("DATABASE_URL", "sqlite://local.db"); }
+
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "healthy");
+        assert_eq!(response.mode, "standalone");
+
+        let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
+        assert!(has_ok_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
+    }
+
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_missing() {
+        let _guard = env_lock();
+        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
+
+        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::remove_var("DATABASE_URL"); }
+
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "degraded");
+        assert_eq!(response.mode, "standalone");
+
+        let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
+        assert!(has_missing_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
+    }
+
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_invalid() {
+        let _guard = env_lock();
+        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
+
+        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db"); }
+
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "degraded");
+        assert_eq!(response.mode, "standalone");
+
+        let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
+        assert!(has_invalid_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
+    }
+
 }
