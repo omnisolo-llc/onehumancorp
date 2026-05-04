@@ -20,7 +20,6 @@ pub mod integrations;
 pub mod diagnostics;
 pub mod handoffs;
 pub mod scaling;
-pub mod memory;
 pub mod hire;
 pub mod landing;
 pub mod share;
