@@ -302,6 +302,19 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
+                        entity_id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        from_state TEXT NOT NULL,
+                        to_state TEXT NOT NULL,
+                        agent_id TEXT,
+                        reason TEXT,
+                        occurred_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        task_id TEXT,
+                        transitioned_at TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
                         status TEXT NOT NULL,
