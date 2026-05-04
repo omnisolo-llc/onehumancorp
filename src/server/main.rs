@@ -1,4 +1,4 @@
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    server_lib::run_server().await
+    server::run_server().await
 }

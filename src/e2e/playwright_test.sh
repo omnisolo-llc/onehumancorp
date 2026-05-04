@@ -46,7 +46,7 @@ trap cleanup EXIT
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker compose -f deploy/docker-compose.e2e.yml up -d 2>&1
+# docker compose -f deploy/docker-compose.e2e.yml up -d 2>docker compose -f deploy/docker-compose.e2e.yml up -d 2>&11
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."

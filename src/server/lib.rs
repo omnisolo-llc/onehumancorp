@@ -1029,10 +1029,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let store = std::sync::Arc::new(auth::Store::new());
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+        .route("/api/mesh/broadcast", axum::routing::post(api::mesh_handler::mesh_broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .with_state(mesh_transport);
+        .with_state((mesh_transport, store.clone()));
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
@@ -1054,7 +1057,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if in standalone mode)
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
