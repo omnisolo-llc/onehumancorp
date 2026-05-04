@@ -54,7 +54,6 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: error={}", e);
                 }
             }
         }
@@ -82,7 +81,6 @@ impl SyncService for MySyncService {
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
         let _md = request.metadata().clone();
         let _req = request.into_inner();
-        println!("PowerSync received push request.");
 
         Ok(Response::new(PowerSyncPushResponse {
             status: "ok".to_string(),
@@ -93,7 +91,6 @@ impl SyncService for MySyncService {
         &self,
         _request: Request<PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
-        println!("PowerSync received pull request");
         Ok(Response::new(PowerSyncPullResponse {
             payload: "[]".to_string(),
         }))
@@ -152,7 +149,6 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert CRDT delta: error={}", e);
                 }
             }
         }
@@ -215,7 +211,6 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to enqueue escalation job: error={}", e);
                 }
             }
         }

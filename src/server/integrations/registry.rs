@@ -235,7 +235,6 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
         .await;
     
     if let Err(e) = res {
-        println!("Failed to send Telegram message: {}", e);
     }
 }
 
@@ -250,6 +249,5 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         .await;
 
     if let Err(e) = res {
-        println!("Failed to send Discord webhook: {}", e);
     }
 }

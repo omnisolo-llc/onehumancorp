@@ -307,7 +307,6 @@ impl ResilientClient {
         match self.primary.reason(prompt).await {
             Ok(res) => Ok(res),
             Err(e) => {
-                println!("Primary LLM failed: {}. Falling back to local.", e);
                 self.fallback.reason(prompt).await
             }
         }
@@ -317,7 +316,6 @@ impl ResilientClient {
         match self.primary.generate_embedding(text).await {
             Ok(res) => Ok(res),
             Err(e) => {
-                println!("Primary LLM failed: {}. Falling back to local.", e);
                 self.fallback.generate_embedding(text).await
             }
         }

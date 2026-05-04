@@ -34,7 +34,6 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let cancel = match transport.subscribe(&channel, handler).await {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Failed to subscribe to mesh transport: {}", e);
             return;
         }
     };
@@ -48,7 +47,6 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
                     break;
                 }
             } else {
-                eprintln!("Failed to encode mesh message to protobuf");
             }
         }
     });

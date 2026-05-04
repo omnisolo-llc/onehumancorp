@@ -39,7 +39,7 @@ impl SipDB {
         let fail_threshold = Utc::now() - age_threshold;
         
         // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1 AND organization_id = $2")
             .bind(stuck_threshold)
             .bind(&self.org_id)
             .execute(&self.pool)

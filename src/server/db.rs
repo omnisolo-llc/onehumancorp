@@ -57,7 +57,6 @@ impl DB {
     }
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Running migrations...");
 
         match &self.store {
             DbStore::Postgres => {
