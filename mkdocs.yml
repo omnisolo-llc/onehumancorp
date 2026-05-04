@@ -43,7 +43,7 @@ nav:
       - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
   - API:
       - api/index.md
-      - "Interactive Api Playbook": api/api_playbook.md
+      - "Interactive Api Playbook": api/playbook.md
   - Features:
       - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
@@ -75,6 +75,7 @@ nav:
       - Task Tracking: operations/task-tracking.md
       - Issue Migration Seed: operations/github-issues-migration.md
       - Docs Audit: reports/docs-site-audit.md
+      - Market Research Report: reports/ohc_market_research_report.md
   - Releases:
       - public/index.md
       - Changelog: public/CHANGELOG.md
