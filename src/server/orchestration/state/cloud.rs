@@ -31,6 +31,7 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -144,6 +145,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
         let rows = sqlx::query(
             r#"

@@ -67,6 +67,33 @@ impl DB {
                         }
                     }
                 }
+
+                // Securely create the database file with restricted permissions initially to avoid TOCTOU
+                #[cfg(unix)]
+                {
+                    use std::fs::OpenOptions;
+                    use std::os::unix::fs::OpenOptionsExt;
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(file) = OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .create(true)
+                        .mode(0o600)
+                        .open(&db_path)
+                    {
+                        if let Ok(metadata) = file.metadata() {
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = file.set_permissions(perms);
+                            }
+                        }
+                    }
+                }
+                #[cfg(not(unix))]
+                {
+                    let _ = std::fs::File::create(&db_path);
+                }
             }
 
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
