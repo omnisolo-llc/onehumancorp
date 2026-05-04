@@ -1,32 +1,110 @@
---- src/app/main.rs
-+++ src/app/main.rs
-@@ -1341,10 +1341,10 @@
-                 ("payment_pref".to_string(), payment_pref.to_string()),
-                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                 ("admin_email".to_string(), admin_email.to_string()),
--                ("website_template".to_string(), ui.get_website_template().to_string()),
--                ("product_name".to_string(), ui.get_product_name().to_string()),
--                ("product_price".to_string(), ui.get_product_price().to_string()),
--                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-+                ("website_template".to_string(), website_template.to_string()),
-+                ("product_name".to_string(), product_name.to_string()),
-+                ("product_price".to_string(), product_price.to_string()),
-+                ("domain_choice".to_string(), domain_choice.to_string()),
-                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
-@@ -1367,10 +1367,10 @@
-             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
-             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
+--- src/server/orchestration/state/standalone.rs
++++ src/server/orchestration/state/standalone.rs
+@@ -1,52 +1,24 @@
+ use super::StateManager;
+ use crate::tasks::SharedTask;
+ use crate::db::{DB, DbStore};
++use ohc_builtin_agent::mesh::transport::MeshTransport;
+ use async_trait::async_trait;
+ use std::sync::Arc;
+ use tokio::sync::Mutex;
+ use sqlx::Row;
+ use chrono::Utc;
 
--            let req_website_template = ui.get_website_template().to_string();
--            let req_first_product_name = ui.get_product_name().to_string();
--            let req_first_product_price = ui.get_product_price().to_string();
--            let req_domain_choice = ui.get_domain_choice().to_string();
-+            let req_website_template = website_template.to_string();
-+            let req_first_product_name = product_name.to_string();
-+            let req_first_product_price = product_price.to_string();
-+            let req_domain_choice = domain_choice.to_string();
+ pub struct StandaloneStateManager {
+     db: Arc<DB>,
++    transport: Arc<dyn MeshTransport>,
+ }
 
-             tokio::spawn(async move {
-                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+ impl StandaloneStateManager {
+-    pub fn new(db: Arc<DB>) -> Self {
+-        Self { db }
+-    }
+-}
+-
+-struct SqliteLockGuard<'a> {
+-    pool: &'a sqlx::SqlitePool,
+-    key: String,
+-}
+-
+-impl<'a> SqliteLockGuard<'a> {
+-    async fn acquire(pool: &'a sqlx::SqlitePool, key: String) -> Result<Self, String> {
+-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS local_advisory_locks (id TEXT PRIMARY KEY, locked_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+-            .execute(pool)
+-            .await;
+-
+-        let res = sqlx::query("INSERT INTO local_advisory_locks (id) VALUES (?)")
+-            .bind(&key)
+-            .execute(pool)
+-            .await;
+-
+-        if res.is_ok() {
+-            Ok(Self { pool, key })
+-        } else {
+-            Err(format!("Task {} is currently locked via SQLite", key))
+-        }
+-    }
+-}
+-
+-impl<'a> Drop for SqliteLockGuard<'a> {
+-    fn drop(&mut self) {
+-        let key = self.key.clone();
+-        let pool = self.pool.clone();
+-        tokio::spawn(async move {
+-            let _ = sqlx::query("DELETE FROM local_advisory_locks WHERE id = ?").bind(key).execute(&pool).await;
+-        });
++    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
++        Self { db, transport }
+     }
+ }
+
+@@ -58,15 +30,17 @@
+         from_state: &str,
+         to_state: &str,
+         agent_id: Option<&str>,
+         reason: Option<&str>,
+     ) -> Result<(), String> {
+         let sqlite_pool = match &self.db.store {
+             DbStore::Sqlite(pool) => pool,
+             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+         };
+
+-        let lock_key = format!("ohc:lock:{}:task:{}", _tenant_id, task_id);
+-        let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
++        let lock_key = format!("ohc:lock:{}:task:{}", _tenant_id, task_id);
++        if !self.transport.acquire_lock(&lock_key, "standalone", 30).await? {
++            return Err(format!("Task {} is currently locked", lock_key));
++        }
+
+         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+@@ -158,18 +132,21 @@
+
+         tx.commit().await.map_err(|e| e.to_string())?;
+
++        let _ = self.transport.release_lock(&lock_key, "standalone").await;
+         Ok(())
+     }
+
+     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
+         let sqlite_pool = match &self.db.store {
+             DbStore::Sqlite(pool) => pool,
+             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+         };
+
+         let lock_key = "ohc:lock:system:pull_tasks".to_string();
+-        let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
++        if !self.transport.acquire_lock(&lock_key, "standalone", 30).await? {
++            return Err(format!("Task {} is currently locked", lock_key));
++        }
+
+         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+@@ -282,6 +259,7 @@
+             t.status = "IN_PROGRESS".to_string();
+         }
+
++        let _ = self.transport.release_lock(&lock_key, "standalone").await;
+         Ok(tasks)
+     }
+ }
