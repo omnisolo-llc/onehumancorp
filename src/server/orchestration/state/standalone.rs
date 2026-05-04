@@ -3,7 +3,6 @@ use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use sqlx::Row;
 use chrono::Utc;
 
@@ -67,7 +66,7 @@ impl StateManager for StandaloneStateManager {
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
         };
 
-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let lock_key = format!("ohc:lock:{}:task:{}", _tenant_id, task_id);
         let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;

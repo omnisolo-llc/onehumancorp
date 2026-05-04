@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 
-use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 pub struct MemoryConsolidationWorker {
@@ -91,8 +90,8 @@ mod tests {
             content: "dummy".to_string(),
             embedding: vec![],
             source_type: "dummy".to_string(),
-            created_at: Utc::now() + chrono::Duration::seconds(time_offset),
-            last_referenced_at: Utc::now(),
+            created_at: chrono::Utc::now() + chrono::Duration::seconds(time_offset),
+            last_referenced_at: chrono::Utc::now(),
             reference_count: 0,
             reliability_score: rel_score,
             owner_override: override_val,
@@ -195,7 +194,7 @@ mod tests {
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
 
-        let now = Utc::now();
+        let now = chrono::Utc::now();
         let mut a = create_dummy_record("a", true, 50, 0); // wins due to override
         let mut b = create_dummy_record("b", false, 100, 100);
 
