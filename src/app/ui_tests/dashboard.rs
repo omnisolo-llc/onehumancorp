@@ -1,4 +1,5 @@
 use crate::app;
+use slint::{ComponentHandle, Model};
 
 fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().unwrap() }
 
@@ -54,6 +55,74 @@ fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().u
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---
+
+#[test]
+fn test_optimistic_ui_mark_order_ready() {
+    let ui = create();
+    ui.set_new_orders_count(5);
+
+    // In actual implementation, calling on_action_mark_order_ready
+    // directly reduces the count optimistically. Here we mock the behavior
+    // that main.rs provides.
+    let ui_handle = ui.as_weak();
+    ui.on_action_mark_order_ready(move || {
+        if let Some(ui) = ui_handle.upgrade() {
+            let current = ui.get_new_orders_count();
+            if current > 0 {
+                ui.set_new_orders_count(current - 1);
+            }
+        }
+    });
+
+    ui.invoke_action_mark_order_ready();
+    assert_eq!(ui.get_new_orders_count(), 4);
+
+    ui.invoke_action_mark_order_ready();
+    assert_eq!(ui.get_new_orders_count(), 3);
+}
+
+#[test]
+fn test_optimistic_ui_approve_task() {
+    let ui = create();
+    let pending_tasks = vec![
+        app::UiPendingApproval {
+            task_id: "task-1".into(),
+            title: "Task 1".into(),
+            proposed_content: "Content 1".into(),
+        },
+        app::UiPendingApproval {
+            task_id: "task-2".into(),
+            title: "Task 2".into(),
+            proposed_content: "Content 2".into(),
+        }
+    ];
+    let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
+    ui.set_pending_approvals(pending_model.into());
+
+    assert_eq!(ui.get_pending_approvals().row_count(), 2);
+
+    let ui_handle = ui.as_weak();
+    ui.on_approve_task(move |task_id| {
+        if let Some(ui) = ui_handle.upgrade() {
+            let current_approvals = ui.get_pending_approvals();
+            let mut remaining = Vec::new();
+            for i in 0..current_approvals.row_count() {
+                if let Some(item) = current_approvals.row_data(i) {
+                    if item.task_id != task_id {
+                        remaining.push(item);
+                    }
+                }
+            }
+            let remaining_model = slint::ModelRc::new(slint::VecModel::from(remaining));
+            ui.set_pending_approvals(remaining_model.into());
+        }
+    });
+
+    ui.invoke_approve_task("task-1".into());
+
+    assert_eq!(ui.get_pending_approvals().row_count(), 1);
+    assert_eq!(ui.get_pending_approvals().row_data(0).unwrap().task_id, "task-2");
+}
 
 #[test]
 fn create_verify_todays_sales() {
