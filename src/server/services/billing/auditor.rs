@@ -2,6 +2,14 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use crate::pricing::calculator::{self, CostConfig};
 
+#[derive(Debug, Clone)]
+pub struct AgentCostInfo {
+    pub agent_id: String,
+    pub cost: f64,
+    pub roi: f64,
+    pub efficiency: f64,
+}
+
 pub struct AuditEvent {
     pub agent_id: String,
     pub input_tokens: i64,
@@ -131,6 +139,23 @@ impl CostAuditor {
 
     pub fn calculate_efficiency(&self, cost: f64, output_tokens: i64) -> f64 {
         calculator::calculate_efficiency(cost, output_tokens)
+    }
+
+    pub fn get_all_agent_costs(&self) -> Vec<AgentCostInfo> {
+        let agent_costs = self.agent_costs.lock().unwrap();
+        let agent_revenues = self.agent_revenues.lock().unwrap();
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+
+        agent_costs.iter().map(|(agent_id, cost)| {
+            let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
+            let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
+            AgentCostInfo {
+                agent_id: agent_id.clone(),
+                cost: *cost,
+                roi: self.calculate_roi(*cost, *revenue),
+                efficiency: self.calculate_efficiency(*cost, *output_tokens),
+            }
+        }).collect()
     }
 
     pub fn record_revenue(&self, agent_id: &str, amount: f64) {
@@ -294,5 +319,49 @@ mod tests {
         let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
+    }
+
+    #[test]
+    fn test_get_all_agent_costs() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let event1 = AuditEvent {
+            agent_id: "agent1".to_string(),
+            input_tokens: 1000,
+            output_tokens: 500,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+        auditor.record_event(event1);
+        auditor.record_revenue("agent1", 5.0);
+
+        let event2 = AuditEvent {
+            agent_id: "agent2".to_string(),
+            input_tokens: 500,
+            output_tokens: 200,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+        auditor.record_event(event2);
+
+        let mut costs = auditor.get_all_agent_costs();
+        costs.sort_by(|a, b| a.agent_id.cmp(&b.agent_id));
+
+        assert_eq!(costs.len(), 2);
+
+        assert_eq!(costs[0].agent_id, "agent1");
+        assert_eq!(costs[0].cost, 2.0);
+        assert_eq!(costs[0].roi, auditor.calculate_roi(2.0, 5.0));
+        assert_eq!(costs[0].efficiency, auditor.calculate_efficiency(2.0, 500));
+
+        assert_eq!(costs[1].agent_id, "agent2");
+        assert_eq!(costs[1].cost, 0.9);
+        assert_eq!(costs[1].roi, auditor.calculate_roi(0.9, 0.0));
+        assert_eq!(costs[1].efficiency, auditor.calculate_efficiency(0.9, 200));
     }
 }

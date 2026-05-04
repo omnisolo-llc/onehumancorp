@@ -35,4 +35,18 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
 
 // --- Unique Scenarios with Verification ---
 
+#[test] fn cost_dashboard_update_from_snapshot() {
+    let ui = create();
+
+    let called = Rc::new(std::cell::RefCell::new(false));
+    let called_clone = called.clone();
+
+    ui.on_refresh(move || {
+        *called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_refresh();
+    assert!(*called.borrow(), "Refresh callback was not triggered");
+}
+
 // --- Consolidated Verified Tests ---

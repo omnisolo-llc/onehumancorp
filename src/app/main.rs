@@ -1,6 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
@@ -829,6 +831,82 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
+    let cost_dashboard_handle_refresh = cost_dashboard_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(ui) = cost_dashboard_handle_refresh.upgrade() {
+
+        let initial_handle = cost_dashboard_handle_refresh.clone();
+        tokio::task::spawn(async move {
+            let grpc_port = std::env::var("OHC_GRPC_PORT").unwrap_or_else(|_| "18790".to_string());
+            if let Ok(mut client) = AgentManagerServiceClient::connect(format!("http://[::1]:{}", grpc_port)).await {
+                let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                if let Ok(resp) = client.get_dashboard_snapshot(req).await {
+                    let snapshot = resp.into_inner();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = initial_handle.upgrade() {
+                            if let Some(costs) = snapshot.costs {
+                                let formatted_spend = format!("${:.2}", costs.total_cost_usd);
+                                let formatted_tokens = format!("{}", costs.total_tokens);
+                                ui.set_total_spend(formatted_spend.into());
+                                ui.set_total_tokens(formatted_tokens.into());
+
+                                let mut ui_agents = Vec::new();
+                                for ac in costs.agent_costs {
+                                    ui_agents.push(app::UiAgentCost {
+                                        name: ac.agent_id.into(),
+                                        cost: format!("${:.2}", ac.cost_usd).into(),
+                                        roi: format!("{:.1}%", ac.roi).into(),
+                                        efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                        pct: 0.0,
+                                    });
+                                }
+
+                                ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agents)));
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        ui.on_refresh(move || {
+            let handle = cost_dashboard_handle_refresh.clone();
+            tokio::task::spawn(async move {
+                let grpc_port = std::env::var("OHC_GRPC_PORT").unwrap_or_else(|_| "18790".to_string());
+                if let Ok(mut client) = AgentManagerServiceClient::connect(format!("http://[::1]:{}", grpc_port)).await {
+                    let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                    if let Ok(resp) = client.get_dashboard_snapshot(req).await {
+                        let snapshot = resp.into_inner();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                if let Some(costs) = snapshot.costs {
+                                    let formatted_spend = format!("${:.2}", costs.total_cost_usd);
+                                    let formatted_tokens = format!("{}", costs.total_tokens);
+                                    ui.set_total_spend(formatted_spend.into());
+                                    ui.set_total_tokens(formatted_tokens.into());
+
+                                    let mut ui_agents = Vec::new();
+                                    for ac in costs.agent_costs {
+                                        ui_agents.push(app::UiAgentCost {
+                                            name: ac.agent_id.into(),
+                                            cost: format!("${:.2}", ac.cost_usd).into(),
+                                            roi: format!("{:.1}%", ac.roi).into(),
+                                            efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                            pct: 0.0,
+                                        });
+                                    }
+
+                                    ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agents)));
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    }
+
     Box::leak(Box::new(cost_dashboard_ui));
 
     let pricing_handle_toggle = pricing_handle.clone();

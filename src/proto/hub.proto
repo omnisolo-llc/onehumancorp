@@ -1164,9 +1164,17 @@ message StatusCount {
   int32 count = 2;
 }
 
+message AgentCostSummary {
+  string agent_id = 1;
+  double cost_usd = 2;
+  double roi = 3;
+  double efficiency = 4;
+}
+
 message Summary {
   double total_cost_usd = 1;
   int64 total_tokens = 2;
+  repeated AgentCostSummary agent_costs = 3;
 }
 
 message DashboardSnapshot {
@@ -1276,6 +1284,8 @@ message RestoreSnapshotRequest {
 }
 
 service AgentManagerService {
+  rpc GetDashboardSnapshot(EmptyRequest) returns (DashboardSnapshot);
+
   rpc HireAgent(HireAgentRequest) returns (DashboardSnapshot);
   rpc FireAgent(FireAgentRequest) returns (DashboardSnapshot);
   rpc DelegateTask(DelegateTaskRequest) returns (DashboardSnapshot);

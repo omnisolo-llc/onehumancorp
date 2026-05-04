@@ -30,9 +30,20 @@ impl MyAgentManagerService {
         let agents = agents_res.unwrap();
         let meetings = meetings_res.unwrap();
         let cost_auditor = self.hub.get_cost_auditor();
+        let agent_costs = cost_auditor.get_all_agent_costs()
+            .into_iter()
+            .map(|c| AgentCostSummary {
+                agent_id: c.agent_id,
+                cost_usd: c.cost,
+                roi: c.roi,
+                efficiency: c.efficiency,
+            })
+            .collect();
+
         let costs = Summary {
             total_cost_usd: cost_auditor.get_total_cost(),
             total_tokens: cost_auditor.get_total_tokens(),
+            agent_costs,
         };
 
         let mut status_map = std::collections::HashMap::new();
@@ -76,6 +87,13 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.register_agent(agent);
 
+        Ok(Response::new(self.get_snapshot().await))
+    }
+
+    async fn get_dashboard_snapshot(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<DashboardSnapshot>, Status> {
         Ok(Response::new(self.get_snapshot().await))
     }
 
