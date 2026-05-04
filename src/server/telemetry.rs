@@ -44,6 +44,10 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
+pub async fn record_token_usage_forecast(pool: &PgPool, org_id: &str, forecast: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_token_usage_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
