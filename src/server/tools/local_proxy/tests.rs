@@ -1,4 +1,4 @@
-use super::server::LocalProxyServer;
+use crate::tools::local_proxy::server::LocalProxyServer;
 use crate::ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
