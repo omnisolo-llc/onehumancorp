@@ -19,7 +19,9 @@ pub mod ohc {
     }
 }
 
-use slint::{ComponentHandle, Model};
+use slint::ComponentHandle;
+#[cfg(not(target_arch = "wasm32"))]
+use slint::Model;
 
 pub mod action_queue;
 
