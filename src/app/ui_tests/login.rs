@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() }
 
@@ -145,4 +146,14 @@ fn create_verify_verification_message() {
     assert_eq!(ui.get_verification_message(), "Please enter the 6-digit code sent to your phone.");
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
+}
+
+#[test]
+fn login_responsive_dimensions() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(375, 667));
+    assert_eq!(window.size().width, 375);
+    window.set_size(slint::PhysicalSize::new(1440, 900));
+    assert_eq!(window.size().width, 1440);
 }
