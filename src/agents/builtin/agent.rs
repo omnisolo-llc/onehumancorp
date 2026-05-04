@@ -20,6 +20,7 @@ pub enum AgentEvent {
     UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
+    Handoff { payload: String },
 }
 
 /// Configuration for a single agent run.
@@ -661,6 +662,10 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::HandoffRequested(payload)) => {
+                        on_event(AgentEvent::Handoff { payload: payload.clone() });
+                        return Ok(format!("HandoffRequested: {}", payload));
+                    }
                 }
             }
 
@@ -762,6 +767,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        Err(ToolError::HandoffRequested(payload)) => {
+                            on_event(AgentEvent::Handoff { payload: payload.clone() });
+                            return Ok(format!("HandoffRequested: {}", payload));
                         }
                     }
                 }
@@ -2428,6 +2437,67 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+
+    struct HandoffToolExecutor;
+    #[async_trait::async_trait]
+    impl ToolExecutor for HandoffToolExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::HandoffRequested("target_agent_x".to_string()))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handoff_requested_mechanic() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_handoff".to_string(),
+                            name: "handoff_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let handoff_tool = Tool {
+            name: "handoff_tool".to_string(),
+            description: "A tool that triggers a handoff".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(HandoffToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![handoff_tool]);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Trigger handoff", &mut on_event).await;
+
+        // Result should be Ok(payload)
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "HandoffRequested: target_agent_x");
+
+        // Verify that the Handoff event was emitted
+        let mut found_handoff = false;
+        for e in events {
+            if let AgentEvent::Handoff { payload } = e {
+                assert_eq!(payload, "target_agent_x");
+                found_handoff = true;
+                break;
+            }
+        }
+        assert!(found_handoff);
     }
 
 #[tokio::test]

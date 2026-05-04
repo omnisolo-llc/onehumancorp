@@ -119,6 +119,8 @@ pub enum ToolError {
     Fatal(String),
     /// Unexpected errors. Bubbles up to debug/halt immediately.
     Unexpected(String),
+    /// Yield execution to another agent. Halts current orchestration.
+    HandoffRequested(String),
 }
 
 impl std::fmt::Display for ToolError {
@@ -129,6 +131,7 @@ impl std::fmt::Display for ToolError {
             Self::UserFixable(msg) => write!(f, "User intervention required: {}", msg),
             Self::Fatal(msg) => write!(f, "Fatal error: {}", msg),
             Self::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
+            Self::HandoffRequested(msg) => write!(f, "Handoff requested: {}", msg),
         }
     }
 }
