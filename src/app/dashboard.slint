@@ -31,6 +31,12 @@ export component Dashboard inherits Window {
     in property <string> generative_score: "85";
     in property <bool> is_loading: false;
 
+    // AutoDream Memory Pipeline Telemetry
+    in property <string> telemetry_cache_hits: "84%";
+    in property <string> telemetry_rag_latency: "120ms";
+    in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
+    in-out property <bool> show_telemetry_visualization: true;
+
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
 
@@ -173,6 +179,25 @@ export component Dashboard inherits Window {
                 StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
                 StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 StatCard { label: "Generative Score"; value: generative_score; value_color: #34d399; }
+            }
+        }
+
+        // AutoDream Memory Pipeline (Telemetry Visualization)
+        if (show_telemetry_visualization) : VerticalBox {
+            spacing: 12px;
+            Text { text: "AutoDream Memory Pipeline"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+
+            HorizontalBox {
+                spacing: 16px;
+                StatCard { label: "LLM Cache Hits"; value: root.telemetry_cache_hits; value_color: #10b981; }
+                StatCard { label: "RAG Latency"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
+            }
+
+            GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                height: 200px;
+                HorizontalBox { alignment: center; Text { text: root.telemetry_chart_placeholder; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
             }
         }
 

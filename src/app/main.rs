@@ -4206,6 +4206,125 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
+    fn test_e2e_telemetry_visualization_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Validate initial values match the wireframe requirements
+        assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "84%");
+        assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "120ms");
+        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
+        assert!(dashboard_ui.get_show_telemetry_visualization());
+    }
+
+    #[test]
+    fn test_e2e_telemetry_visualization_initial_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        // verify it is displayed by default
+        assert!(dashboard_ui.get_show_telemetry_visualization());
+    }
+
+    #[test]
+    fn test_e2e_telemetry_visualization_update_data() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_telemetry_cache_hits("92%".into());
+        assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "92%");
+
+        dashboard_ui.set_telemetry_rag_latency("105ms".into());
+        assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "105ms");
+    }
+
+    #[test]
+    fn test_e2e_telemetry_visualization_update_chart() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_telemetry_chart_placeholder("Rendering custom chart data...".into());
+        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "Rendering custom chart data...");
+    }
+
+    #[test]
+    fn test_e2e_telemetry_visualization_visibility_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        assert!(dashboard_ui.get_show_telemetry_visualization());
+
+        dashboard_ui.set_show_telemetry_visualization(false);
+        assert!(!dashboard_ui.get_show_telemetry_visualization());
+    }
+
+    #[test]
     fn test_e2e_onboarding_wizard_data_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
