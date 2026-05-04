@@ -13,14 +13,14 @@ use opentelemetry::metrics::Counter;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
-    embedded_counter: Counter<u64>,
+    _embedded_counter: Counter<u64>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
         let meter = global::meter("ohc.autodream");
         let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
-        AutoDreamWorker { db, embedded_counter }
+        AutoDreamWorker { db, _embedded_counter: embedded_counter }
     }
 
 
