@@ -23,16 +23,21 @@ impl MyAgentManagerService {
     async fn get_snapshot(&self) -> Result<DashboardSnapshot, Status> {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
+        let hub3 = self.hub.clone();
+        let (agents_res, meetings_res, costs_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || {
+                let cost_auditor = hub3.get_cost_auditor();
+                let total_cost = cost_auditor.get_total_cost();
+                let total_tokens = cost_auditor.get_total_tokens();
+                let agent_costs_data = cost_auditor.get_agent_costs_snapshot();
+                (total_cost, total_tokens, agent_costs_data)
+            })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
-        let cost_auditor = self.hub.get_cost_auditor();
-        let total_cost = cost_auditor.get_total_cost();
-        let total_tokens = cost_auditor.get_total_tokens();
-        let agent_costs_data = cost_auditor.get_agent_costs_snapshot();
+        let (total_cost, total_tokens, agent_costs_data) = costs_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut agent_costs = Vec::new();
         for (name, cost, roi, efficiency) in agent_costs_data {
