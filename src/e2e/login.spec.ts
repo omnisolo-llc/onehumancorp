@@ -129,6 +129,31 @@ test.describe('Login Page', () => {
     await page.goto('/login');
     await expect(page.locator('text=Terms of Service')).toBeVisible();
   });
+
+  test('should not display the sparkling star emoji', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text=✨')).toHaveCount(0);
+  });
+
+  test('should show App Settings button', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('button:has-text("App Settings")')).toBeVisible();
+  });
+
+  test('should not show Fix Login Issues text', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text=⚙ Fix Login Issues')).toHaveCount(0);
+  });
+
+  test('should show main title One Human Corp', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text=One Human Corp')).toBeVisible();
+  });
+
+  test('should show subtitle Sign in to manage your business', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
+  });
 });
 
 test.describe('Login Authentication', () => {
