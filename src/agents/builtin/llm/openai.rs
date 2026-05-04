@@ -205,7 +205,7 @@ impl LlmClient for OpenAIClient {
 
         let max_tokens = if req.max_tokens == 0 { None } else { Some(req.max_tokens) };
 
-        let mut payload = OpenAIRequest {
+        let payload = OpenAIRequest {
             model: req.model.clone(),
             messages,
             max_tokens,
