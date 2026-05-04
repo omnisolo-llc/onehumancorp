@@ -46,6 +46,14 @@ export component Dashboard inherits Window {
     in property <string> milestone_message: "";
     callback dismiss_milestone();
 
+    // Callback to trigger checking if milestones are reached
+    callback check_milestones();
+
+    // Check milestones whenever new_orders_count is changed (e.g. from backend sync)
+    changed new_orders_count => {
+        check_milestones();
+    }
+
     callback open_help_center();
     callback open_ai_chat();
     callback open_interactive_walkthrough();

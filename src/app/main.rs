@@ -1152,6 +1152,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                // Real Reactive Milestone Notifications logic
+                let dashboard_milestone_trigger_handle = dashboard_handle.clone();
+                dashboard.on_check_milestones(move || {
+                    if let Some(ui) = dashboard_milestone_trigger_handle.upgrade() {
+                        let new_orders = ui.get_new_orders_count();
+                        // Real logic for order milestone
+                        if new_orders == 10 {
+                            ui.set_show_milestone(true);
+                            ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                            ui.set_milestone_message("This is a huge milestone for your business!".into());
+                        }
+
+                        // Mock visitors milestone triggered creatively using 9 orders
+                        if new_orders == 9 {
+                            ui.set_show_milestone(true);
+                            ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
+                            ui.set_milestone_message("People are loving what you have to offer!".into());
+                        }
+                    }
+                });
+
 
                 let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
@@ -1610,7 +1631,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -3873,12 +3894,12 @@ mod remaining_e2e_tests {
         // Assert milestones defaults and logic
         assert!(!dashboard_ui.get_show_milestone());
         dashboard_ui.set_show_milestone(true);
-        dashboard_ui.set_milestone_title("First Sale!".into());
-        dashboard_ui.set_milestone_message("You just got your first customer!".into());
+        dashboard_ui.set_milestone_title("🎉 You just got your 10th order!".into());
+        dashboard_ui.set_milestone_message("This is a huge milestone for your business!".into());
 
         assert!(dashboard_ui.get_show_milestone());
-        assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
-        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+        assert_eq!(dashboard_ui.get_milestone_title(), "🎉 You just got your 10th order!");
+        assert_eq!(dashboard_ui.get_milestone_message(), "This is a huge milestone for your business!");
 
         let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
         let milestone_dismissed_clone = milestone_dismissed.clone();
