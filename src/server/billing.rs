@@ -2,7 +2,7 @@
 #[allow(unused_imports)]
 pub use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
-use crate::integrations::stripe::client::StripeClient;
+use crate::integrations::stripe::client::{StripeClient, StripeSubscription};
 use redis::Client;
 use std::sync::Arc;
 
@@ -43,7 +43,7 @@ impl Tracker {
         }
     }
 
-    pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await
         } else {

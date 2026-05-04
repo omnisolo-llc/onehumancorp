@@ -12,6 +12,7 @@ name = "app"
 path = "main.rs"
 
 [dependencies]
+webbrowser = "0.8"
 slint = { version = "1.8.0", default-features = false, features = ["backend-winit", "renderer-software", "compat-1-2"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

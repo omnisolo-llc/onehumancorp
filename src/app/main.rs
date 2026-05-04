@@ -845,6 +845,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ui) = pricing_handle_select.upgrade() {
             let _ = ui.hide();
         }
+        let plan_str = plan.to_string();
+        tokio::spawn(async move {
+            if plan_str != "Free" {
+                let client = reqwest::Client::new();
+                let payload = serde_json::json!({
+                    "plan_id": plan_str,
+                    "customer_id": "cus_123"
+                });
+
+                let base_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                let endpoint = format!("{}/api/v1/billing/checkout", base_url);
+
+                match client.post(&endpoint)
+                    .json(&payload)
+                    .send()
+                    .await {
+                    Ok(res) if res.status().is_success() => {
+                        if let Ok(data) = res.json::<serde_json::Value>().await {
+                            if let Some(url) = data.get("url").and_then(|u| u.as_str()) {
+                                if let Err(e) = webbrowser::open(url) {
+                                    eprintln!("Failed to open browser: {}", e);
+                                }
+                            }
+                        }
+                    }
+                    Ok(res) => eprintln!("Stripe API Error: HTTP {}", res.status()),
+                    Err(e) => eprintln!("Network Error: {}", e),
+                }
+            }
+        });
         if let Some(ui) = my_plan_handle_select.upgrade() {
             ui.set_tier(format!("{} Tier", plan).into());
             let _ = ui.show();
@@ -1340,10 +1370,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("website_template".to_string(), website_template.to_string()),
+                ("product_name".to_string(), product_name.to_string()),
+                ("product_price".to_string(), product_price.to_string()),
+                ("domain_choice".to_string(), domain_choice.to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -1367,10 +1397,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = ui.get_website_template().to_string();
-            let req_first_product_name = ui.get_product_name().to_string();
-            let req_first_product_price = ui.get_product_price().to_string();
-            let req_domain_choice = ui.get_domain_choice().to_string();
+            let req_website_template = website_template.to_string();
+            let req_first_product_name = product_name.to_string();
+            let req_first_product_price = product_price.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {

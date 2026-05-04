@@ -1029,9 +1029,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let stripe_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+    let stripe_client = std::sync::Arc::new(crate::integrations::stripe::client::StripeClient::new(stripe_key));
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/billing", api::billing::router(stripe_client.clone()))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
