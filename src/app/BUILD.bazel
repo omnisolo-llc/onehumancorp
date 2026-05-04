@@ -215,6 +215,7 @@ rust_shared_library(
     srcs = ["main.rs", "action_queue.rs"],
     data = glob(["*.slint"]),
     edition = "2024",
+    crate_root = "main.rs",
     target_compatible_with = ["@platforms//cpu:wasm32"],
     deps = [
         ":build_script_wasm",

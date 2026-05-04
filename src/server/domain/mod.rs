@@ -8,3 +8,4 @@ pub mod compute;
 pub mod sre;
 
 pub mod unified_tenant_test;
+pub mod agent_department;
