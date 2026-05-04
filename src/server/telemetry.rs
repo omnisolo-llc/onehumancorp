@@ -89,6 +89,8 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::String(s) => {
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
+            } else if is_phone(&s) {
+                Value::String("[PHONE_REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
@@ -105,9 +107,22 @@ fn is_sensitive_key(key: &str) -> bool {
     k.contains("token") ||
     k.contains("auth") ||
     k.contains("cookie") ||
-    k.contains("credential")
+    k.contains("credential") ||
+    k.contains("phone") ||
+    k.contains("user_id")
 }
 
 fn is_email(s: &str) -> bool {
     s.contains('@') && s.contains('.')
+}
+
+fn is_phone(s: &str) -> bool {
+    // Basic heuristic for phone number matching: mostly digits, may contain +-() spaces
+    let digits = s.chars().filter(|c| c.is_ascii_digit()).count();
+    let total = s.len();
+    if total < 7 || total > 20 {
+        return false;
+    }
+    // High ratio of digits implies it's likely a phone number
+    (digits as f64 / total as f64) > 0.6
 }

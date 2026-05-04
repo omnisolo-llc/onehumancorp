@@ -37,6 +37,32 @@ mod tests {
     }
 
     #[test]
+    fn test_redact_pii_phone() {
+        let input = json!({
+            "contact": "+1 (555) 123-4567",
+            "other": "123"
+        });
+        let expected = json!({
+            "contact": "[PHONE_REDACTED]",
+            "other": "123"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
+    fn test_redact_pii_user_id() {
+        let input = json!({
+            "user_id": "12345",
+            "other": "val"
+        });
+        let expected = json!({
+            "user_id": "[REDACTED]",
+            "other": "val"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
     fn test_redact_pii_array() {
         let input = json!([
             {"token": "token1"},
@@ -137,6 +163,10 @@ mod tests {
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
                                lower_line.contains("session_id") ||
+                               lower_line.contains("email") ||
+                               lower_line.contains("password") ||
+                               lower_line.contains("user_id") ||
+                               lower_line.contains("phone") ||
                                lower_line.contains("payload") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
