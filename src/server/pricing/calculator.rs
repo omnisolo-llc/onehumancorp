@@ -42,6 +42,11 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "minimax-m2.7" => ModelPricing { input_cost: 1.00, output_cost: 1.00, cached_cost: 0.0 },
         "minimax-m2.7-turbo" => ModelPricing { input_cost: 0.50, output_cost: 0.50, cached_cost: 0.0 },
         // Fallback to average pricing if unknown
+        m if m.contains("ollama") || m.contains("local") => ModelPricing {
+            input_cost: 0.0,
+            output_cost: 0.0,
+            cached_cost: 0.0,
+        },
         _ => ModelPricing {
             input_cost: 3.00,
             output_cost: 15.00,
@@ -129,6 +134,13 @@ mod tests {
         // Test with unknown model (fallback)
         let cost = calculate_cost("unknown-model", 1000000, 1000000, 1000000);
         assert_eq!(cost, 3.00 + 15.00 + 1.50);
+
+        // Test with zero cost models
+        let cost = calculate_cost("ollama-llama3", 1000000, 1000000, 1000000);
+        assert_eq!(cost, 0.0);
+
+        let cost = calculate_cost("local-model", 1000000, 1000000, 1000000);
+        assert_eq!(cost, 0.0);
     }
 
     #[test]
