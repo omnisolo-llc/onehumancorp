@@ -141,10 +141,22 @@ impl IpcTransport {
             "CREATE TABLE IF NOT EXISTS mesh_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 topic TEXT NOT NULL,
+                msg_id TEXT,
                 payload BLOB NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        // Safe migration: check if column exists before altering
+        let has_column: bool = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('mesh_messages') WHERE name='msg_id'"
+        ).fetch_one(&pool).await.unwrap_or(0) > 0;
+
+        if !has_column {
+            sqlx::query(
+                "ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT"
+            ).execute(&pool).await.map_err(|e| e.to_string())?;
+        }
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
@@ -175,18 +187,21 @@ impl IpcTransport {
         let mut last_id = 0;
         loop {
             // Poll for new messages
-            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+            let rows: Result<Vec<(i64, String, Option<String>, Vec<u8>)>, _> = sqlx::query_as(
+                "SELECT id, topic, msg_id, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
             )
             .bind(last_id)
             .fetch_all(&pool)
             .await;
 
             if let Ok(rows) = rows {
-                for (id, topic, payload) in rows {
+                for (id, topic, msg_id, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
+                        if let Ok(mut message) = Message::decode(&payload[..]) {
+                            if let Some(msg_id) = msg_id {
+                                message.msg_id = msg_id;
+                            }
                             let _ = tx.send(message);
                         }
                     }
@@ -210,8 +225,9 @@ impl MeshTransport for IpcTransport {
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (topic, msg_id, payload) VALUES (?, ?, ?)")
             .bind(topic)
+            .bind(&message.msg_id)
             .bind(buf)
             .execute(&self.pool)
             .await
@@ -516,6 +532,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            msg_id: "test_msg_id_1".to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -569,6 +586,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: "test_msg_id_2".to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +711,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            msg_id: "test_msg_id_3".to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();

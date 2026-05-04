@@ -9,6 +9,7 @@ use opentelemetry::KeyValue;
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
@@ -39,7 +40,49 @@ impl TeammateMesh for CentrifugeNode {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await
+    }
+
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
+
+        let ack_received = std::sync::Arc::new(tokio::sync::Notify::new());
+        let ack_clone = ack_received.clone();
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            ack_clone.notify_one();
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            self.transport.publish(topic, TeammateMeshEvent {
+                agent_id: "sys".to_string(),
+                action: topic.to_string(),
+                status: "pending".to_string(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            }).await?;
+
+            let wait_result = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), ack_received.notified()).await;
+
+            if wait_result.is_ok() {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -88,7 +131,49 @@ impl TeammateMesh for RueidisMapping {
             action: topic.to_string(),
             status: "ok".to_string(),
             payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await
+    }
+
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
+
+        let ack_received = std::sync::Arc::new(tokio::sync::Notify::new());
+        let ack_clone = ack_received.clone();
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            ack_clone.notify_one();
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            self.transport.publish(topic, TeammateMeshEvent {
+                agent_id: "sys".to_string(),
+                action: topic.to_string(),
+                status: "pending".to_string(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            }).await?;
+
+            let wait_result = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), ack_received.notified()).await;
+
+            if wait_result.is_ok() {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -137,14 +222,23 @@ mod tests {
     #[tokio::test]
     async fn test_centrifuge_node_pubsub() {
         let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let t_clone = transport.clone();
         let node = CentrifugeNode::new(transport);
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
-
         let _cancel = node.subscribe("test_topic", Box::new(move |msg: Message| {
             if msg.payload == b"hello world" {
                 received_clone.store(true, Ordering::SeqCst);
+                if !msg.msg_id.is_empty() {
+                    let mut ack_msg = msg.clone();
+                    ack_msg.action = format!("mesh:ack:{}", msg.msg_id);
+                    let action = ack_msg.action.clone();
+                    let t_inner = t_clone.clone();
+                    tokio::spawn(async move {
+                        let _ = t_inner.publish(&action, ack_msg).await;
+                    });
+                }
             }
         })).await.unwrap();
 

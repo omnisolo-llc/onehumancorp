@@ -62,6 +62,14 @@ impl HandoffManager {
                             }
                         }
                         let _ = transport.release_lock(&lock_key, "handoff_manager").await;
+
+                        // Send an explicit acknowledgement AFTER successfully processing
+                        if !msg.msg_id.is_empty() {
+                            let mut ack_msg = msg.clone();
+                            ack_msg.action = format!("mesh:ack:{}", msg.msg_id);
+                            let action = ack_msg.action.clone();
+                            let _ = transport.publish(&action, ack_msg).await;
+                        }
                     }
                 });
             }
@@ -87,6 +95,7 @@ impl HandoffManager {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         self.transport.publish("mesh:coordination:handoff", msg).await
@@ -157,6 +166,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg).await.unwrap();
@@ -187,6 +197,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_older,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -213,6 +224,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_newer,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -241,6 +253,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf2,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg2).await.unwrap();
