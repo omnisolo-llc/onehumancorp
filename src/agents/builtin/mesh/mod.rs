@@ -56,11 +56,10 @@ impl TeammateMesh for TeammateMeshClient {
         let msg_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("mesh:ack:{}", msg_id);
 
-        let ack_received = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let ack_clone = ack_received.clone();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
 
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
-            ack_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            let _ = tx.try_send(());
         })).await?;
 
         let mut retries = 0;
@@ -82,11 +81,12 @@ impl TeammateMesh for TeammateMeshClient {
 
             // In a real implementation we would attach the msg_id to the event,
             // but the proto might not have it. Let's send it anyway.
-            self.transport.publish(topic, event).await?;
+            if let Err(e) = self.transport.publish(topic, event).await {
+                cancel();
+                return Err(e);
+            }
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
-
-            if ack_received.load(std::sync::atomic::Ordering::SeqCst) {
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
                 cancel();
                 return Ok(());
             }
