@@ -67,12 +67,12 @@ async fn test_task_decomposition_service() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until DATETIME,
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -84,7 +84,7 @@ async fn test_task_decomposition_service() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             )
@@ -202,12 +202,12 @@ async fn test_task_decomposition_dag_blocked() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until DATETIME,
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -336,12 +336,12 @@ async fn test_task_decomposition_service_fail_task() {
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
-                    locked_until DATETIME,
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
                     deliberation_log TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
@@ -353,7 +353,7 @@ async fn test_task_decomposition_service_fail_task() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
