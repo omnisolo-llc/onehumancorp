@@ -308,6 +308,15 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS referrals (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        referral_code TEXT UNIQUE NOT NULL,
+                        clicks INTEGER DEFAULT 0,
+                        conversions INTEGER DEFAULT 0,
+                        created_at_unix BIGINT NOT NULL
+                    );
                     CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
