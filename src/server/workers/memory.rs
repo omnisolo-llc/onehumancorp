@@ -1,7 +1,8 @@
+use chrono::Utc;
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 
-use chrono::Utc;
+
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 pub struct MemoryConsolidationWorker {

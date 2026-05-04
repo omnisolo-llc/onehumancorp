@@ -1,5 +1,5 @@
 use sqlx::{postgres::PgPoolOptions, Row};
-use std::env;
+
 
 #[cfg(test)]
 mod tests {
@@ -14,7 +14,7 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
-        if env::var("CI").is_ok() {
+        if std::env::var("CI").is_ok() {
             // We just ensure it compiles locally
             return;
         }
