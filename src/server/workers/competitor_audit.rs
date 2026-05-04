@@ -98,6 +98,7 @@ impl CompetitorAuditWorker {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(test)]
     use super::*;
 
     #[tokio::test]

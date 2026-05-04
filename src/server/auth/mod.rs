@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
+#[cfg(test)]
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use tonic::{Request, Response, Status};
 
@@ -90,7 +91,9 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>, // key -> user_id
     by_oidc: RwLock<HashMap<TenantKey, String>>,  // key -> user_id
     revoked: RwLock<HashMap<String, DateTime<Utc>>>, // jti -> expiry
+    #[allow(dead_code)]
     secret: Vec<u8>,
+    #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
 }
 
@@ -362,7 +365,7 @@ impl Store {
         false
     }
 
-    pub fn issue_token(&self, user: &User) -> Result<String, String> {
+    pub fn issue_token(&self, _user: &User) -> Result<String, String> {
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
@@ -374,11 +377,11 @@ impl Store {
         {
             let now = chrono::Utc::now();
             let claims = Claims {
-                sub: user.id.clone(),
-                username: user.username.clone(),
-                email: user.email.clone(),
-                roles: user.roles.clone(),
-                organization_id: user.organization_id.clone(),
+                sub: _user.id.clone(),
+                username: _user.username.clone(),
+                email: _user.email.clone(),
+                roles: _user.roles.clone(),
+                organization_id: _user.organization_id.clone(),
                 session_id: None,
                 iat: now.timestamp(),
                 exp: (now + chrono::Duration::hours(24)).timestamp(),
