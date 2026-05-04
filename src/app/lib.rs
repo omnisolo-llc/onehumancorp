@@ -20,23 +20,27 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-fn open_url(url: &str) {
+#[allow(dead_code)]
+fn open_url(_url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(window) = web_sys::window() {
-            let _ = window.open_with_url_and_target(url, "_blank");
+            let _ = window.open_with_url_and_target(_url, "_blank");
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
         #[cfg(target_os = "windows")]
-        let _ = std::process::Command::new("cmd").args(["/C", "start", url]).spawn();
+        let _ = std::process::Command::new("cmd").args(["/C", "start", _url]).spawn();
         #[cfg(target_os = "macos")]
-        let _ = std::process::Command::new("open").arg(url).spawn();
+        let _ = std::process::Command::new("open").arg(_url).spawn();
         #[cfg(target_os = "linux")]
-        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+        let _ = std::process::Command::new("xdg-open").arg(_url).spawn();
     }
 }
+
+
+
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
@@ -80,7 +84,7 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run_app() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     // Start bundled server if in standalone mode
@@ -2983,7 +2987,7 @@ mod docs_tests {
 
         ui.on_save_state(|| {});
 
-        ui.on_execute(move |strategy| {
+        ui.on_execute(move |strategy, _kpi| {
             assert_eq!(strategy, "Add 5 more products");
             *execute_success_clone.borrow_mut() = true;
         });
@@ -2998,7 +3002,7 @@ mod docs_tests {
         ui.set_step(1);
         assert_eq!(ui.get_step(), 1);
 
-        ui.invoke_execute(ui.get_selected_strategy());
+        ui.invoke_execute(ui.get_selected_strategy(), slint::SharedString::from("test"));
 
         assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
         assert!(*execute_success.borrow());

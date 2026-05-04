@@ -1,5 +1,5 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test", "rust_shared_library", "rust_library")
 load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 cargo_build_script(
@@ -25,12 +25,43 @@ cargo_build_script(
     ],
 )
 
-rust_binary(
-    name = "app",
+
+
+rust_library(
+    name = "app_lib",
     srcs = [
-        "main.rs",
+        "lib.rs",
         "action_queue.rs",
     ],
+    crate_root = "lib.rs",
+    compile_data = ["tooltips.json"],
+    data = glob(["*.slint"]) + ["tooltips.json"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:hub_tonic",
+        "//src/server:server_lib",
+        ":build_script",
+        "@crates//:chrono",
+        "@crates//:copypasta",
+        "@crates//:futures",
+        "@crates//:prost",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:serde_yaml",
+        "@crates//:slint",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:sqlx",
+        "//src/proto:billing_tonic",
+    ],
+)
+
+rust_binary(
+    name = "app",
+    srcs = ["main.rs"],
+
     compile_data = ["tooltips.json"],
     data = [
         "agent_config.slint",
@@ -91,24 +122,7 @@ rust_binary(
     ],
     edition = "2024",
     visibility = ["//visibility:public"],
-    deps = [
-        "//src/proto:hub_tonic",
-        "//src/server:server_lib",
-        ":build_script",
-        "@crates//:chrono",
-        "@crates//:copypasta",
-        "@crates//:futures",
-        "@crates//:prost",
-        "@crates//:reqwest",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:serde_yaml",
-        "@crates//:slint",
-        "@crates//:tokio",
-        "@crates//:tonic",
-        "@crates//:sqlx",
-        "//src/proto:billing_tonic",
-    ],
+    deps = [":app_lib", "@crates//:tokio"],
 )
 
 exports_files([
@@ -119,12 +133,9 @@ exports_files([
 rust_test(
     name = "app_test",
     size = "large",
-    srcs = [
-        "main.rs",
-        "action_queue.rs",
-    ] + glob(["ui_tests/**/*.rs"]),
+    srcs = ["lib.rs", "action_queue.rs"] + glob(["ui_tests/**/*.rs"]),
     compile_data = ["tooltips.json"],
-    crate_root = "main.rs",
+    crate_root = "lib.rs",
     data = [
         "agent_config.slint",
         "walkthrough.slint",
@@ -214,8 +225,8 @@ rust_test(
 # Note: Build bindings with: bazel build //src/app:app_web_bindgen
 rust_shared_library(
     name = "app_web",
-    srcs = ["main.rs", "action_queue.rs"],
-    crate_root = "main.rs",
+    srcs = ["lib.rs", "action_queue.rs"],
+    crate_root = "lib.rs",
     data = glob(["*.slint"]),
     edition = "2024",
     target_compatible_with = ["@platforms//cpu:wasm32"],

@@ -8,5 +8,5 @@ details:
   - "Updated deprecated get_async_connection to get_multiplexed_async_connection in src/server/orchestration/state/cloud.rs"
   - "Fixed PermissionsExt unused import via cfg in src/server/utils/fs.rs"
   - "Added #[cfg(test)] for orchestration_test in src/server/orchestration/mod.rs"
-  - "Fixed unused variables in setup_wizard_ui closure in src/app/main.rs"
+  - "Fixed cargo warning about src/app/main.rs being in multiple build targets by correctly structuring it into a library and binary target"
   - "All tests pass successfully."
