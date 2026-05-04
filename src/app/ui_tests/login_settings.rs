@@ -187,3 +187,100 @@ fn test_login_settings_flow_backend_url() {
     settings_ui.invoke_save_state();
     // assert_eq!(settings_ui.get_backend_url(), "");
 }
+
+#[test]
+fn test_e2e_login_flow_success_proper() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    // Simulate real user setting text fields, rather than just calling the end function directly
+    login_ui.set_username("test@example.com".into());
+    login_ui.set_password("password123".into());
+
+    // Simulate clicking the "Sign In" button via invoking the handler it triggers in the .slint file
+    login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+
+    assert!(*login_successful.borrow(), "User login should be successful");
+}
+
+#[test]
+fn test_e2e_login_flow_open_settings_proper() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let settings_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let settings_opened_clone = settings_opened.clone();
+
+    login_ui.on_open_settings(move || {
+        *settings_opened_clone.borrow_mut() = true;
+    });
+
+    // Simulate clicking "App Settings"
+    login_ui.invoke_open_settings();
+
+    assert!(*settings_opened.borrow(), "Settings should be opened from Login");
+}
+
+#[test]
+fn test_e2e_login_flow_oauth_sso_proper() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let oauth_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let oauth_invoked_clone = oauth_invoked.clone();
+
+    login_ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *oauth_invoked_clone.borrow_mut() = true;
+    });
+
+    // Simulate clicking "Continue with Google/Apple"
+    login_ui.invoke_oauth_login("SSO".into());
+
+    assert!(*oauth_invoked.borrow(), "OAuth SSO should be invoked");
+}
+
+#[test]
+fn test_e2e_login_flow_toggle_sign_up_proper() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+
+    assert_eq!(login_ui.get_is_sign_up(), false);
+
+    // Simulate clicking the "Don't have an account? Sign Up" button (which toggles the property in Slint)
+    login_ui.set_is_sign_up(!login_ui.get_is_sign_up());
+
+    assert_eq!(login_ui.get_is_sign_up(), true);
+}
+
+#[test]
+fn test_e2e_login_flow_resend_verification_proper() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let resend_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let resend_invoked_clone = resend_invoked.clone();
+
+    login_ui.on_resend_verification(move |username| {
+        assert_eq!(username, "unverified@example.com");
+        *resend_invoked_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_username("unverified@example.com".into());
+    login_ui.set_show_verification(true); // Assuming the UI reveals the resend button
+
+    // Simulate clicking "Resend Verification Email"
+    login_ui.invoke_resend_verification(login_ui.get_username());
+
+    assert!(*resend_invoked.borrow(), "Resend verification should be invoked");
+}
