@@ -2,6 +2,16 @@ use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
+use once_cell::sync::Lazy;
+use opentelemetry::metrics::Meter;
+use opentelemetry::metrics::Counter;
+
+
+static AGENT_METER: Lazy<Meter> = Lazy::new(|| global::meter("ohc_agent"));
+static TOKEN_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| AGENT_METER.u64_counter("ohc_agent_token_usage_total").build());
+static COST_COUNTER: Lazy<Counter<f64>> = Lazy::new(|| AGENT_METER.f64_counter("ohc_agent_cost_estimate_usd").build());
+static TOOL_CALL_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| AGENT_METER.u64_counter("ohc_agent_tool_execution_total").build());
+
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailConfig;
@@ -228,9 +238,6 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
-        let meter = global::meter("ohc_agent");
-        let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
-        let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
@@ -403,8 +410,8 @@ impl Agent {
             // Telemetry: Record token usage
             let model_label = KeyValue::new("model", cfg.model.clone());
             let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
-            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
-            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+            TOKEN_COUNTER.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
+            TOKEN_COUNTER.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
             // Unified Cost Calculation Mechanic
             // Note: We use the local pricing calculator logic to avoid a direct
@@ -434,7 +441,7 @@ impl Agent {
                             (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
 
             if turn_cost > 0.0 {
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
+                COST_COUNTER.add(turn_cost, &[model_label, agent_label]);
             }
 
             let stop_reason = resp.stop_reason.as_str();
@@ -476,9 +483,8 @@ impl Agent {
             messages.push(resp.message.clone());
 
             // Telemetry: track individual tool executions
-            let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
             for tc in &tool_calls {
-                tool_call_counter.add(1, &[
+                TOOL_CALL_COUNTER.add(1, &[
                     KeyValue::new("agent_id", cfg.agent_id.clone()),
                     KeyValue::new("tool_name", tc.name.clone())
                 ]);

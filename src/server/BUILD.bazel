@@ -16,6 +16,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:once_cell",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
@@ -66,6 +67,7 @@ rust_binary(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:once_cell",
         ":server_lib",
         "@crates//:tokio",
     ],
@@ -88,6 +90,7 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "@crates//:once_cell",
         "@crates//:tempfile",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",

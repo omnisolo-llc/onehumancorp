@@ -2,9 +2,17 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use crate::ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+use once_cell::sync::Lazy;
+use opentelemetry::metrics::Meter;
 use std::sync::Arc;
 use async_trait::async_trait;
 use opentelemetry::KeyValue;
+
+
+static MESH_METER: Lazy<Meter> = Lazy::new(|| global::meter("ohc.orchestration.mesh"));
+static CENTRIFUGE_PUBLISH_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| MESH_METER.u64_counter("mesh.messages.published").build());
+static CENTRIFUGE_RECEIVE_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| MESH_METER.u64_counter("mesh.messages.received").build());
+static RUEIDIS_PUBLISH_COUNTER: Lazy<Counter<u64>> = Lazy::new(|| MESH_METER.u64_counter("mesh.rueidis.published").build());
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
@@ -17,23 +25,18 @@ pub trait TeammateMesh: Send + Sync {
 
 pub struct CentrifugeNode {
     transport: Arc<dyn MeshTransport>,
-    publish_counter: Counter<u64>,
-    receive_counter: Counter<u64>,
 }
 
 impl CentrifugeNode {
     pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
-        let meter = global::meter("ohc.orchestration.mesh");
-        let publish_counter = meter.u64_counter("mesh.messages.published").build();
-        let receive_counter = meter.u64_counter("mesh.messages.received").build();
-        Self { transport, publish_counter, receive_counter }
+        Self { transport }
     }
 }
 
 #[async_trait]
 impl TeammateMesh for CentrifugeNode {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
-        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
+        CENTRIFUGE_PUBLISH_COUNTER.add(1, &[KeyValue::new("topic", topic.to_string())]);
         self.transport.publish(topic, TeammateMeshEvent {
             agent_id: "sys".to_string(),
             action: topic.to_string(),
@@ -44,11 +47,10 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let receive_counter = self.receive_counter.clone();
-        let topic_str = topic.to_string();
+                let topic_str = topic.to_string();
 
         let wrapped_handler = Box::new(move |msg: Message| {
-            receive_counter.add(1, &[KeyValue::new("topic", topic_str.clone())]);
+            CENTRIFUGE_RECEIVE_COUNTER.add(1, &[KeyValue::new("topic", topic_str.clone())]);
             handler(msg);
         });
 
@@ -69,21 +71,18 @@ impl TeammateMesh for CentrifugeNode {
 // utilizing the closest available equivalent (`redis::Client`).
 pub struct RueidisMapping {
     transport: Arc<ohc_builtin_agent::mesh::transport::RedisTransport>,
-    publish_counter: Counter<u64>,
 }
 
 impl RueidisMapping {
     pub fn new(transport: Arc<ohc_builtin_agent::mesh::transport::RedisTransport>) -> Self {
-        let meter = global::meter("ohc.orchestration.mesh");
-        let publish_counter = meter.u64_counter("mesh.rueidis.published").build();
-        Self { transport, publish_counter }
+        Self { transport }
     }
 }
 
 #[async_trait]
 impl TeammateMesh for RueidisMapping {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
-        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
+        RUEIDIS_PUBLISH_COUNTER.add(1, &[KeyValue::new("topic", topic.to_string())]);
         self.transport.publish(topic, TeammateMeshEvent {
             agent_id: "sys".to_string(),
             action: topic.to_string(),
