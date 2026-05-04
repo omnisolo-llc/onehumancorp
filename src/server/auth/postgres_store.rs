@@ -22,7 +22,7 @@ impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
@@ -58,7 +58,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id.is_empty() {
@@ -94,7 +94,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id.is_empty() {
@@ -129,7 +129,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id.is_empty() {
@@ -164,7 +164,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id.is_empty() {
@@ -198,7 +198,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let rows = if org_id.is_empty() {
@@ -246,7 +246,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let res = if org_id.is_empty() {
@@ -295,7 +295,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = if org_id.is_empty() { "system" } else { org_id };
+        let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let res = if org_id.is_empty() {
