@@ -31,6 +31,7 @@ impl HandoffManager {
 
                 let db_clone = db.clone();
                 let transport = transport_clone.clone();
+                let msg_id_for_ack = msg.msg_id.clone();
 
                 tokio::spawn(async move {
                     let lock_key = format!("handoff:{}:{}", handoff.tenant_id, handoff.state_id);
@@ -63,6 +64,18 @@ impl HandoffManager {
                         }
                         let _ = transport.release_lock(&lock_key, "handoff_manager").await;
                     }
+
+                    if !msg_id_for_ack.is_empty() {
+                        let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
+                        let ack_msg = MeshMessage {
+                            agent_id: "handoff".to_string(),
+                            action: ack_topic.clone(),
+                            status: "ok".to_string(),
+                            payload: vec![],
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+                        let _ = transport.publish(&ack_topic, ack_msg).await;
+                    }
                 });
             }
         });
@@ -87,6 +100,7 @@ impl HandoffManager {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         self.transport.publish("mesh:coordination:handoff", msg).await
@@ -157,6 +171,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg).await.unwrap();
@@ -187,6 +202,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_older,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -213,6 +229,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_newer,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -241,6 +258,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf2,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg2).await.unwrap();

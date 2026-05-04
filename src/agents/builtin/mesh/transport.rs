@@ -142,9 +142,21 @@ impl IpcTransport {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                msg_id TEXT
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        // Attempt to add the column, ignoring error if it already exists (e.g. duplicate column name)
+        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await {
+            Ok(_) => {},
+            Err(e) => {
+                let err_str = e.to_string();
+                if !err_str.contains("duplicate column name") {
+                    return Err(format!("Failed to migrate mesh_messages: {}", err_str));
+                }
+            }
+        }
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
@@ -210,9 +222,16 @@ impl MeshTransport for IpcTransport {
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        let msg_id = if message.msg_id.is_empty() {
+            None
+        } else {
+            Some(message.msg_id.clone())
+        };
+
+        sqlx::query("INSERT INTO mesh_messages (topic, payload, msg_id) VALUES (?, ?, ?)")
             .bind(topic)
             .bind(buf)
+            .bind(msg_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -516,6 +535,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -569,6 +589,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +714,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();
