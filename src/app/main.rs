@@ -4698,6 +4698,29 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
+    fn test_e2e_wizard_flow_step_4_payment_skip() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(4);
+        ui.invoke_select_payment_pref("skip".into());
+        assert_eq!(ui.get_step(), 5);
+        assert_eq!(ui.get_payment_pref(), "skip");
+    }
+
+
+    #[test]
+    fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(6);
+        ui.set_product_name("Custom Handyman Job".into());
+        ui.set_price_type("request_quote".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_price_type(), "request_quote");
+    }
+
+    #[test]
     fn test_e2e_wizard_flow_step_6_product_details() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
