@@ -1757,6 +1757,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             });
                         }
                     });
+
+                    let dashboard_handle_for_edit = dashboard_handle.clone();
+                    let action_queue_for_edit = action_queue.clone();
+                    dashboard.on_edit_task(move |task_id| {
+                        if let Some(_ui) = dashboard_handle_for_edit.upgrade() {
+                            let action_queue_clone = action_queue_for_edit.clone();
+                            let task_id_str = task_id.to_string();
+                            tokio::spawn(async move {
+                                let payload = format!(r#"{{"task_id": "{}"}}"#, task_id_str);
+                                let _ = action_queue_clone.enqueue("edit_draft", &payload).await;
+                            });
+                        }
+                    });
                 }
 
                 let _ = dashboard.show();
@@ -2513,10 +2526,21 @@ mod e2e_tests {
             }
         });
 
+        let was_edited = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let was_edited_clone = was_edited.clone();
+
+        ui.on_edit_task(move |task_id| {
+            if task_id == "test-task-123" {
+                *was_edited_clone.borrow_mut() = true;
+            }
+        });
+
         // Programmatically invoke the callback as if the user clicked the button
         ui.invoke_approve_task("test-task-123".into());
+        ui.invoke_edit_task("test-task-123".into());
 
         assert_eq!(*was_approved.borrow(), true);
+        assert_eq!(*was_edited.borrow(), true);
     }
 
     #[test]
