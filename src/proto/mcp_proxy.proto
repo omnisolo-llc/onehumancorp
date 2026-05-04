@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ohc.mcp_proxy;
+
+// A message from the Cloud Server to the Local Proxy
+message ServerToProxy {
+  string request_id = 1;
+  oneof payload {
+    InvokeCommandRequest invoke_request = 2;
+    // Add ping or other control messages here if needed
+  }
+}
+
+// A message from the Local Proxy back to the Cloud Server
+message ProxyToServer {
+  string request_id = 1;
+  oneof payload {
+    RegisterProxyRequest register = 2;
+    InvokeCommandResponse invoke_response = 3;
+    // Add pong or other status messages here if needed
+  }
+}
+
+// Initial registration to identify the local proxy's tenant and capabilities
+message RegisterProxyRequest {
+  string spiffe_id = 1;
+  repeated string supported_tools = 2; // e.g., ["shell", "fs_read", "fs_write"]
+}
+
+// Instruction to invoke a specific tool locally
+message InvokeCommandRequest {
+  string tool_id = 1;
+  string params = 2;
+}
+
+// The result of the local tool invocation
+message InvokeCommandResponse {
+  bool success = 1;
+  string result = 2; // Output or error message
+  string error_details = 3;
+}
+
+service McpReverseTunnelService {
+  // A bidirectional stream where the Local Proxy initiates the connection,
+  // identifies itself, and then the Cloud Server can push requests to it.
+  rpc EstablishTunnel(stream ProxyToServer) returns (stream ServerToProxy);
+}

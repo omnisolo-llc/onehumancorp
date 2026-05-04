@@ -1,0 +1,54 @@
+use crate::ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
+use crate::ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
+use tonic::{Request, Response, Status, Streaming};
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tracing::{info, warn, error};
+use std::sync::Arc;
+use sqlx::PgPool;
+
+pub struct ReverseTunnelServer {
+    pub pool: Arc<PgPool>,
+}
+
+#[tonic::async_trait]
+impl McpReverseTunnelService for ReverseTunnelServer {
+    type EstablishTunnelStream = ReceiverStream<Result<ServerToProxy, Status>>;
+
+    async fn establish_tunnel(
+        &self,
+        request: Request<Streaming<ProxyToServer>>,
+    ) -> Result<Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>, Status> {
+        let mut in_stream = request.into_inner();
+
+        let (tx, rx) = mpsc::channel(128);
+        let pool = self.pool.clone();
+
+        tokio::spawn(async move {
+            let mut active_spiffe_id: Option<String> = None;
+
+            while let Ok(Some(msg)) = in_stream.message().await {
+                if let Some(payload) = msg.payload {
+                    match payload {
+                        crate::ohc::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
+                            info!("Registered local proxy with SPIFFE ID: {}", reg.spiffe_id);
+                            active_spiffe_id = Some(reg.spiffe_id.clone());
+                            let _ = crate::telemetry::record_mcp_proxy_connections_active(&pool, &reg.spiffe_id, 1.0).await;
+                        }
+                        crate::ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
+                            info!("Received response for {}: success={}", msg.request_id, res.success);
+                        }
+                    }
+                }
+            }
+
+            if let Some(spiffe_id) = active_spiffe_id {
+                let _ = crate::telemetry::record_mcp_proxy_connections_active(&pool, &spiffe_id, -1.0).await;
+            }
+
+            info!("Tunnel connection closed.");
+        });
+
+        Ok(Response::new(ReceiverStream::new(rx)))
+    }
+}
