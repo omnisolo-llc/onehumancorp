@@ -994,6 +994,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    let autodream_pipeline_worker = Arc::new(autodream_pipeline::pipeline::AutoDreamPipeline::new(db.clone(), Arc::new(autodream_pipeline::llm_client::DefaultLLMClient::new())));
+    autodream_pipeline_worker.start_worker();
+
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
@@ -1018,6 +1021,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     content TEXT NOT NULL,
                     embedding VECTOR(1536),
                     source_type TEXT NOT NULL,
+                    task_id TEXT,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     reference_count INTEGER DEFAULT 0,

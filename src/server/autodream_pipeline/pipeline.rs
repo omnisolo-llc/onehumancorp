@@ -24,6 +24,9 @@ impl AutoDreamPipeline {
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     println!("AutoDreamPipeline worker error: {}", e);
                 }
+                if let Err(e) = pipeline.process_agent_task_memory().await {
+                    println!("AutoDreamPipeline worker process_agent_task_memory error: {}", e);
+                }
                 sleep(Duration::from_secs(60)).await;
             }
         });
@@ -114,6 +117,59 @@ impl AutoDreamPipeline {
 
         Ok(())
     }
+
+    pub async fn process_agent_task_memory(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let memory_dir = std::path::Path::new(".agent-task/memory");
+
+        if !memory_dir.exists() {
+            return Ok(());
+        }
+
+        let mut entries = tokio::fs::read_dir(memory_dir).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+        while let Some(entry) = entries.next_entry().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)? {
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
+                let content = tokio::fs::read_to_string(&path).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+                match self.llm_client.generate_embedding(&content).await {
+                    Ok(embedding) => {
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let mem_id = uuid::Uuid::new_v4().to_string();
+
+                        match &self.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                                    .bind(&mem_id)
+                                    .bind("system")
+                                    .bind("system_agent")
+                                    .bind(&content)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .execute(pool).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                            }
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                                    .bind(&mem_id)
+                                    .bind("system")
+                                    .bind("system_agent")
+                                    .bind(&content)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .execute(&self.db.pool).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                            }
+                        }
+
+                        tokio::fs::remove_file(&path).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                    }
+                    Err(e) => {
+                        println!("AutoDreamPipeline: Failed to embed agent-task memory {:?}: {}", path, e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -166,6 +222,43 @@ mod tests {
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
             .bind(task_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_process_agent_task_memory() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
+        let mock_llm = Arc::new(MockLLMClient {
+            embedding: vec![0.1, 0.2, 0.3],
+        });
+
+        // Clean up
+        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+
+        // Create dummy memory dir and file
+        let _ = tokio::fs::create_dir_all(".agent-task/memory").await;
+        let file_path = ".agent-task/memory/test_mem.yml";
+        let _ = tokio::fs::write(file_path, "dummy content").await;
+
+        let pipeline = AutoDreamPipeline::new(db.clone(), mock_llm);
+        let res = pipeline.process_agent_task_memory().await;
+        assert!(res.is_ok());
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'dummy content'")
             .fetch_one(&pool)
             .await
             .unwrap();
