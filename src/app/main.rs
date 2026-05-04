@@ -680,7 +680,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     referrals_ui.on_send_invite_message({
         let ui_handle = referrals_handle.clone();
         move |link| {
-            let pre_filled_msg = format!("Hey! I started my business on OneHumanCorp. Sign up using my link, and we BOTH get 1 month of Pro for free! {}", link);
+            let pre_filled_msg = format!("Share OHC with a friend, both get 1 month free Pro. {}", link);
             CLIPBOARD.with(|cb| {
                 if let Some(ctx) = cb.borrow_mut().as_mut() {
                     if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
@@ -1944,6 +1944,15 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
+        // Test send invite message mock
+        let ref_handle_clone_for_msg = referrals_ui.as_weak();
+        referrals_ui.on_send_invite_message(move |link| {
+            assert_eq!(link, "ohc://join?ref=DEFAULT");
+            if let Some(ui) = ref_handle_clone_for_msg.upgrade() {
+                ui.set_invite_copy_status("Invite message copied!".into());
+            }
+        });
+
         // Set up mock stats for test
         referrals_ui.set_total_referrals(5);
         referrals_ui.set_click_count(100);
@@ -1967,6 +1976,9 @@ mod growth_e2e_tests {
 
         referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
         assert!(*link_shared.borrow(), "share_link should be invoked");
+
+        referrals_ui.invoke_send_invite_message(referrals_ui.get_my_referral_link());
+        assert_eq!(referrals_ui.get_invite_copy_status(), "Invite message copied!");
     }
 
     #[test]
