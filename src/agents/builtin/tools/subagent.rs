@@ -94,14 +94,68 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "teammate" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let mailbox_dir = format!(".agent-mailboxes/subagent-{}", task_id);
+            if let Err(e) = tokio::fs::create_dir_all(&mailbox_dir).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to create mailbox directory: {}", e)));
+            }
+
+            let inbox_path = format!("{}/inbox.txt", mailbox_dir);
+            let outbox_path = format!("{}/outbox.txt", mailbox_dir);
+
+            if let Err(e) = tokio::fs::write(&inbox_path, task).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to write to inbox: {}", e)));
+            }
+
+            let teammate_task = format!(
+                "You are a teammate subagent. Your task is: {}\nWhen finished or if you need to report progress, write your final summary to {}. To receive further instructions, read from {}.",
+                task, outbox_path, inbox_path
+            );
+
+            let mut req = SubAgentRequest::default();
+            req.task = teammate_task;
+
+            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+
+            // Spawn the gRPC call in the background
+            let outbox_path_clone = outbox_path.clone();
+            tokio::spawn(async move {
+                let channel_res = tonic::transport::Channel::from_shared(format!("http://{}", addr))
+                    .map_err(|e| format!("invalid sub-agent address: {}", e));
+
+                let res = match channel_res {
+                    Ok(endpoint) => {
+                        match endpoint.connect().await {
+                            Ok(channel) => {
+                                let mut client = AgentServiceClient::new(channel);
+                                match client.dispatch_to_sub_agent(req).await {
+                                    Ok(resp) => {
+                                        let inner = resp.into_inner();
+                                        if !inner.error.is_empty() {
+                                            format!("Subagent error: {}", inner.error)
+                                        } else {
+                                            inner.result
+                                        }
+                                    }
+                                    Err(e) => format!("Subagent failed: {}", e),
+                                }
+                            }
+                            Err(e) => format!("Subagent failed to connect: {}", e),
+                        }
+                    }
+                    Err(e) => e,
+                };
+
+                use tokio::io::AsyncWriteExt;
+                if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
+                    let _ = file.write_all(format!("\n[System: Subagent Process Terminated]\nFinal Result: {}", res).as_bytes()).await;
+                }
+            });
+
+            Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
         } else {
-            // For teammate, we return the demonstration message for now as it isn't fully implemented in Rust yet.
-            let summary = match mode {
-                "teammate" => format!("[Subagent (Teammate)] Completed task: {}. Summary: I successfully worked in parallel and updated the required systems.", task),
-                _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
-            };
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            Ok(summary)
+            return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
     }
 }
@@ -174,4 +228,55 @@ mod tests {
 
     // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
     // to 127.0.0.1:50051 which will fail in the sandboxed test environment unless mocked.
+
+    #[tokio::test]
+    async fn test_subagent_teammate_mode() {
+        // We set the address to something invalid to quickly trigger connection failure for the background task
+        unsafe { std::env::set_var("OHC_AGENT_ADDRESS", "127.0.0.1:0"); }
+
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "Do this teammate task",
+            "mode": "teammate"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for teammate mode");
+        let msg = result.unwrap();
+
+        assert!(msg.contains("Teammate subagent spawned. Communicate via"), "Message should contain success notification");
+
+        let parts: Vec<&str> = msg.split("Communicate via ").collect();
+        assert_eq!(parts.len(), 2);
+
+        let path_parts: Vec<&str> = parts[1].split(" and ").collect();
+        assert_eq!(path_parts.len(), 2);
+
+        let inbox_path = path_parts[0];
+        let outbox_path = path_parts[1];
+
+        assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
+
+        // Wait for the background task to fail to connect and write the error to the outbox.
+        let mut attempts = 0;
+        let mut found = false;
+        while attempts < 20 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
+                if content.contains("[System: Subagent Process Terminated]") {
+                    found = true;
+                    // It should contain the connection failure error because it's an invalid port
+                    assert!(content.contains("Subagent failed to connect"), "Should contain connection error");
+                    break;
+                }
+            }
+            attempts += 1;
+        }
+
+        assert!(found, "Background task should have written to outbox");
+
+        let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
+        let _ = tokio::fs::remove_dir_all(parent_dir).await;
+    }
 }
