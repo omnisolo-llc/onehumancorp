@@ -61,6 +61,29 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
+        // Extract feature flags logic
+        let mut flags = serde_json::Map::new();
+        if business_type == "Service Business" || business_type == "Service" {
+            flags.insert("enable_booking".to_string(), json!(true));
+        }
+        if business_type == "Food Cart" {
+            flags.insert("enable_menu".to_string(), json!(true));
+        }
+
+        let flags_json = serde_json::Value::Object(flags);
+
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(&org_id)
+        .bind(&org_id)
+        .bind(&user_id)
+        .bind(1)
+        .bind(flags_json)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
@@ -241,5 +264,78 @@ mod tests {
         assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
         assert_eq!(users[0].get::<String, _>("username"), "Admin User");
         assert!(users[0].get::<String, _>("roles").contains("admin"));
+    }
+
+    #[tokio::test]
+    async fn test_start_onboarding_feature_flags_service_and_food_cart() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let agent = OnboardingAgent::new(db.clone());
+
+        // Test Service Business
+        let req_service = StartOnboardingRequest {
+            business_type: "Service Business".to_string(),
+            company_name: "Test Service".to_string(),
+            company_description: "A test service".to_string(),
+            selling_categories: vec![],
+            payment_pref: "online".to_string(),
+            admin_email: "service@test.com".to_string(),
+            admin_name: "Service Admin".to_string(),
+            admin_password: "password123".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Consultation".to_string(),
+            first_product_price: "100.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+        };
+
+        let res_service = agent.start_onboarding(req_service).await.unwrap();
+        let org_id_service = res_service.organization_id;
+
+        use sqlx::Row;
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+            .bind(&org_id_service)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+
+        let state_json_service: serde_json::Value = row_service.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+        assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
+
+        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
+            .bind(&org_id_service)
+            .fetch_all(&agent.db.pool)
+            .await
+            .unwrap();
+        assert_eq!(agents_service.len(), 1);
+
+        // Test Food Cart
+        let req_food = StartOnboardingRequest {
+            business_type: "Food Cart".to_string(),
+            company_name: "Test Food".to_string(),
+            company_description: "A test food cart".to_string(),
+            selling_categories: vec![],
+            payment_pref: "online".to_string(),
+            admin_email: "food@test.com".to_string(),
+            admin_name: "Food Admin".to_string(),
+            admin_password: "password123".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Taco".to_string(),
+            first_product_price: "5.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+        };
+
+        let res_food = agent.start_onboarding(req_food).await.unwrap();
+        let org_id_food = res_food.organization_id;
+
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+            .bind(&org_id_food)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+
+        let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+        assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
     }
 }
