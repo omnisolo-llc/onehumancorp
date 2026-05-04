@@ -27,6 +27,16 @@ export component WebsiteBuilder inherits Window {
     in-out property <bool> is_advanced: false;
     in-out property <bool> is_publishing: false;
 
+    in-out property <[string]> blocks: ["Hero", "Product Grid", "Booking Calendar", "Contact Form"];
+    callback move_block_up(int);
+    callback move_block_down(int);
+    callback save_draft();
+
+    in-out property <int> editing_block_index: -1;
+    callback start_edit_block(int);
+    callback finish_edit_block();
+
+
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
@@ -243,6 +253,16 @@ export component WebsiteBuilder inherits Window {
                 }
             }
 
+
+            GlassCard {
+                height: 44px;
+                background: rgba(168, 85, 247, 0.4);
+                VerticalBox { alignment: center; padding: 12px;
+                    Text { text: "💾 Save Draft"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                }
+                TouchArea { clicked => { root.save_draft(); } }
+            }
+
             if (is_publishing) : GlassCard {
                 VerticalBox {
                     padding: 16px;
@@ -274,12 +294,64 @@ export component WebsiteBuilder inherits Window {
             }
         }
 
+
+        // Step 5: Drag and Drop Builder
+        if (step == 5) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Builder Dashboard"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+            Text { text: "Reorder blocks to build your mobile storefront."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+            for block[i] in blocks : GlassCard {
+                height: 60px;
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                HorizontalBox {
+                    padding: 12px;
+                    alignment: space-between;
+                    Text { text: "☰  " + block; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; vertical-alignment: center;}
+                    HorizontalBox {
+                        spacing: 8px;
+                        TouchArea { width: 30px; clicked => { root.move_block_up(i); } Text { text: "↑"; color: white; vertical-alignment: center; horizontal-alignment: center; } }
+                        TouchArea { width: 30px; clicked => { root.move_block_down(i); } Text { text: "↓"; color: white; vertical-alignment: center; horizontal-alignment: center; } }
+                        TouchArea { clicked => { root.start_edit_block(i); } Text { text: "Edit >"; font-family: "Inter"; font-size: 14px; color: #a855f7; vertical-alignment: center;} }
+                    }
+                }
+            }
+        }
+
+        // Step 6: Block Editor
+        if (step == 6) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Edit Block"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+            Text { text: "Customize this specific content block."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+            Text { text: "Block Content (Simulated)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+            LineEdit { placeholder-text: "Enter your custom text here..."; height: 44px; }
+
+            GlassCard {
+                height: 44px;
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                VerticalBox { alignment: center; padding: 12px;
+                    Text { text: "📷 Upload Image to Block"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                }
+                TouchArea { clicked => { root.upload_photo(); } }
+            }
+
+            GlassCard {
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; padding: 12px;
+                    Text { text: "Done Editing"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                }
+                TouchArea { clicked => { root.finish_edit_block(); } }
+            }
+        }
+
         Rectangle {} // Spacer
 
         // Navigation
         HorizontalBox {
             alignment: space-between;
-            if (step > 0 && !is_publishing) : GlassCard {
+            if (step > 0 && step != 6 && !is_publishing) : GlassCard {
                 width: 80px;
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
@@ -287,13 +359,13 @@ export component WebsiteBuilder inherits Window {
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 
-            if (!is_publishing) : GlassCard {
+            if (step != 6 && !is_publishing) : GlassCard {
                 width: 120px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: step == 4 ? "Publish →" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: step == 4 ? "Publish →" : (step == 5 ? "Finish" : (step == 6 ? "" : "Next →")); font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
-                    if (step < 4) {
+                    if (step < 5) {
                         step += 1;
                     } else {
                         is_publishing = true;

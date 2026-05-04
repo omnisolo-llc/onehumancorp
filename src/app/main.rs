@@ -506,6 +506,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    website_builder_ui.on_publish_site({
+        let ui_handle = website_builder_handle.clone();
+        move |template, color, product, price, description, domain| {
+            let _ui = ui_handle.unwrap();
+            let template_str = template.to_string();
+            let color_str = color.to_string();
+            let product_str = product.to_string();
+            let price_str = price.to_string();
+            let description_str = description.to_string();
+            let domain_str = domain.to_string();
+            let _blocks: Vec<String> = slint::Model::iter(&_ui.get_blocks()).map(|s| s.to_string()).collect();
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
+                        template: template_str,
+                        primary_color: color_str,
+                        product_name: product_str,
+                        product_price: price_str,
+                        product_description: description_str,
+                        domain_choice: domain_str,
+                        is_draft: false,
+                        blocks: _blocks,
+                    });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    request.metadata_mut().insert("organization_id", "demo-org".parse().unwrap());
+                    let _ = client.publish_site(request).await;
+                }
+            });
+        }
+    });
+
+    website_builder_ui.on_save_draft({
+        let ui_handle = website_builder_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let template_str = ui.get_selected_template().to_string();
+            let color_str = ui.get_primary_color().to_string();
+            let product_str = ui.get_product_name().to_string();
+            let price_str = ui.get_product_price().to_string();
+            let description_str = ui.get_product_description().to_string();
+            let domain_str = ui.get_domain_choice().to_string();
+            let _blocks: Vec<String> = slint::Model::iter(&ui.get_blocks()).map(|s| s.to_string()).collect();
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
+                        template: template_str,
+                        primary_color: color_str,
+                        product_name: product_str,
+                        product_price: price_str,
+                        product_description: description_str,
+                        domain_choice: domain_str,
+                        is_draft: true,
+                        blocks: _blocks,
+                    });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    request.metadata_mut().insert("organization_id", "demo-org".parse().unwrap());
+                    let _ = client.publish_site(request).await;
+                }
+            });
+        }
+    });
+
+    website_builder_ui.on_move_block_up({
+        let ui_handle = website_builder_handle.clone();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            let mut blocks: Vec<slint::SharedString> = slint::Model::iter(&ui.get_blocks()).collect();
+            let idx = index as usize;
+            if idx > 0 && idx < blocks.len() {
+                blocks.swap(idx, idx - 1);
+                let model = std::rc::Rc::new(slint::VecModel::from(blocks));
+                ui.set_blocks(model.into());
+            }
+        }
+    });
+
+    website_builder_ui.on_move_block_down({
+        let ui_handle = website_builder_handle.clone();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            let mut blocks: Vec<slint::SharedString> = slint::Model::iter(&ui.get_blocks()).collect();
+            let idx = index as usize;
+            if idx < blocks.len() - 1 {
+                blocks.swap(idx, idx + 1);
+                let model = std::rc::Rc::new(slint::VecModel::from(blocks));
+                ui.set_blocks(model.into());
+            }
+        }
+    });
+
+    website_builder_ui.on_start_edit_block({
+        let ui_handle = website_builder_handle.clone();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            ui.set_editing_block_index(index);
+            ui.set_step(6);
+        }
+    });
+
+    website_builder_ui.on_finish_edit_block({
+        let ui_handle = website_builder_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_editing_block_index(-1);
+            ui.set_step(5);
+        }
+    });
+
     let grow_business_ui = app::GrowBusiness::new()?;
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let grow_business_handle = grow_business_ui.as_weak();
@@ -2195,7 +2306,6 @@ mod tests {
     fn test_upgrade_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Upgrade::new().unwrap();
-    }
     #[test]
     fn test_billing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -3724,3 +3834,4 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
     }
+}

@@ -135,3 +135,90 @@ fn create_verify_product_price() {
     ui.set_product_price("p22".into());
     assert_eq!(ui.get_product_price(), "p22");
 }
+
+
+#[test]
+fn test_drag_and_drop_blocks() {
+    let ui = create();
+
+    // Simulate reordering
+    let blocks: Vec<String> = slint::Model::iter(&ui.get_blocks()).map(|s| s.to_string()).collect();
+    assert_eq!(blocks[0], "Hero");
+    assert_eq!(blocks[1], "Product Grid");
+
+    // Set UI to step 5 to mimic dashboard
+    ui.set_step(5);
+
+    ui.on_move_block_up({
+        use slint::ComponentHandle;
+        let ui_handle = ui.as_weak();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            let mut blocks: Vec<slint::SharedString> = slint::Model::iter(&ui.get_blocks()).collect();
+            let idx = index as usize;
+            if idx > 0 && idx < blocks.len() {
+                blocks.swap(idx, idx - 1);
+                let model = std::rc::Rc::new(slint::VecModel::from(blocks));
+                ui.set_blocks(model.into());
+            }
+        }
+    });
+
+    ui.on_move_block_down({
+        use slint::ComponentHandle;
+        let ui_handle = ui.as_weak();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            let mut blocks: Vec<slint::SharedString> = slint::Model::iter(&ui.get_blocks()).collect();
+            let idx = index as usize;
+            if idx < blocks.len() - 1 {
+                blocks.swap(idx, idx + 1);
+                let model = std::rc::Rc::new(slint::VecModel::from(blocks));
+                ui.set_blocks(model.into());
+            }
+        }
+    });
+
+    ui.invoke_move_block_up(1);
+    let blocks_after: Vec<String> = slint::Model::iter(&ui.get_blocks()).map(|s| s.to_string()).collect();
+    assert_eq!(blocks_after[0], "Product Grid");
+    assert_eq!(blocks_after[1], "Hero");
+
+    ui.invoke_move_block_down(0);
+    let blocks_down: Vec<String> = slint::Model::iter(&ui.get_blocks()).map(|s| s.to_string()).collect();
+    assert_eq!(blocks_down[0], "Hero");
+    assert_eq!(blocks_down[1], "Product Grid");
+}
+
+#[test]
+fn test_block_editor() {
+    let ui = create();
+
+    ui.on_start_edit_block({
+        use slint::ComponentHandle;
+        let ui_handle = ui.as_weak();
+        move |index| {
+            let ui = ui_handle.unwrap();
+            ui.set_editing_block_index(index);
+            ui.set_step(6);
+        }
+    });
+
+    ui.on_finish_edit_block({
+        use slint::ComponentHandle;
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            ui.set_editing_block_index(-1);
+            ui.set_step(5);
+        }
+    });
+
+    ui.invoke_start_edit_block(2);
+    assert_eq!(ui.get_step(), 6);
+    assert_eq!(ui.get_editing_block_index(), 2);
+
+    ui.invoke_finish_edit_block();
+    assert_eq!(ui.get_step(), 5);
+    assert_eq!(ui.get_editing_block_index(), -1);
+}

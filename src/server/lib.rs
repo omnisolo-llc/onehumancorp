@@ -444,6 +444,70 @@ impl HubService for MyHubService {
         }
     }
 
+    async fn publish_site(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::PublishSiteRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::PublishSiteResponse>, tonic::Status> {
+        let org_id = match request.metadata().get("organization_id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
+        };
+        let user_id = match request.metadata().get("x-spiffe-id") {
+            Some(v) => v.to_str().unwrap_or("").to_string(),
+            None => return Err(tonic::Status::unauthenticated("Missing x-spiffe-id")),
+        };
+
+        let req = request.into_inner();
+        let tenant_id = org_id.clone();
+
+        let status = if req.is_draft { "draft" } else { "published" };
+        let blocks_json = serde_json::to_string(&req.blocks).unwrap_or_else(|_| "[]".to_string());
+
+        // AI Agent: The Promoter generates SEO metadata
+        let mut seo_metadata = "".to_string();
+        if !req.is_draft {
+            let llm = crate::minimax::LocalLLMClient::new();
+            seo_metadata = llm.reason(&format!("You are 'The Promoter' AI agent. Generate SEO metadata (title and brief description) for a business selling '{}'. Return only the metadata.", req.product_name)).await.unwrap_or_else(|_| "Generated SEO Metadata".to_string());
+        }
+
+        sqlx::query(
+            "INSERT INTO storefronts (tenant_id, organization_id, user_id, template, primary_color, product_name, product_price, product_description, domain_choice, status, seo_metadata, blocks) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             SET template = EXCLUDED.template, \
+                 primary_color = EXCLUDED.primary_color, \
+                 product_name = EXCLUDED.product_name, \
+                 product_price = EXCLUDED.product_price, \
+                 product_description = EXCLUDED.product_description, \
+                 domain_choice = EXCLUDED.domain_choice, \
+                 status = EXCLUDED.status, \
+                 seo_metadata = EXCLUDED.seo_metadata, \
+                 blocks = EXCLUDED.blocks, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(&tenant_id)
+        .bind(&org_id)
+        .bind(&user_id)
+        .bind(&req.template)
+        .bind(&req.primary_color)
+        .bind(&req.product_name)
+        .bind(&req.product_price)
+        .bind(&req.product_description)
+        .bind(&req.domain_choice)
+        .bind(status)
+        .bind(&seo_metadata)
+        .bind(&blocks_json)
+        .execute(&self.hub.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(tonic::Response::new(crate::ohc::orchestration::PublishSiteResponse {
+            success: true,
+            message: "Storefront published successfully".to_string(),
+        }))
+    }
+
+
     async fn diagnostics(
         &self,
         _request: tonic::Request<DiagnosticsRequest>,

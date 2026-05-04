@@ -253,6 +253,7 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc PublishSite(PublishSiteRequest) returns (PublishSiteResponse);
 }
 
 message StartOnboardingRequest {
@@ -1562,4 +1563,20 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+message PublishSiteRequest {
+  string template = 1;
+  string primary_color = 2;
+  string product_name = 3;
+  string product_price = 4;
+  string product_description = 5;
+  string domain_choice = 6;
+  bool is_draft = 7;
+  repeated string blocks = 8;
+}
+
+message PublishSiteResponse {
+  bool success = 1;
+  string message = 2;
 }
