@@ -1,4 +1,3 @@
-use std::time::Duration;
 
 pub struct ChaosEngine {}
 
@@ -10,6 +9,7 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
@@ -62,6 +62,7 @@ mod tests {
     #[tokio::test]
     async fn test_sipdb_cuj_stress_verification() {
         use std::sync::Arc;
+use std::time::Duration;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let pool = sqlx::sqlite::SqlitePoolOptions::new()

@@ -1,4 +1,6 @@
+#[cfg(test)]
 use sqlx::{postgres::PgPoolOptions, Row};
+#[cfg(test)]
 use std::env;
 
 #[cfg(test)]
