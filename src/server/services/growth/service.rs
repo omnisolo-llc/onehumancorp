@@ -532,6 +532,117 @@ impl GrowthService for MyGrowthService {
         
         Ok(Response::new(entry))
     }
+
+    async fn execute_growth_strategy(
+        &self,
+        request: Request<ExecuteGrowthStrategyRequest>,
+    ) -> Result<Response<GrowthStrategyResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Generate a task in shared_tasks for the AI Agent to execute
+        let task_id = format!("task_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let title = format!("Execute Growth Strategy: {}", req.strategy);
+        let assigned_agent = if req.strategy.contains("Instagram") || req.strategy.contains("email") {
+            "Marketing & Advertising"
+        } else {
+            "Operations"
+        };
+
+        sqlx::query("INSERT INTO shared_tasks (id, title, status, assigned_agent, organization_id) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&task_id)
+            .bind(&title)
+            .bind("pending")
+            .bind(assigned_agent)
+            .bind(&org_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        println!("Executing growth strategy: {}", req.strategy);
+        Ok(Response::new(GrowthStrategyResponse {
+            success: true,
+            message: format!("Successfully initiated strategy: {}", req.strategy),
+        }))
+    }
+
+    async fn get_milestones(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<MilestonesResponse>, Status> {
+        // Return some dummy milestones for the UI to display
+        let milestones = vec![
+            Milestone {
+                id: "m_1".to_string(),
+                title: "10th Order!".to_string(),
+                description: "Congratulations, you've received your 10th order.".to_string(),
+                icon: "🎉".to_string(),
+            },
+            Milestone {
+                id: "m_2".to_string(),
+                title: "100 Visitors".to_string(),
+                description: "Your store had 100 visitors today.".to_string(),
+                icon: "🚀".to_string(),
+            },
+        ];
+        Ok(Response::new(MilestonesResponse { milestones }))
+    }
+
+    async fn dismiss_milestone(
+        &self,
+        request: Request<GrowthIdRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let req = request.into_inner();
+        println!("Dismissing milestone: {}", req.id);
+        Ok(Response::new(EmptyResponse {}))
+    }
+
+    async fn share_business(
+        &self,
+        request: Request<ShareBusinessRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Generate a task in shared_tasks for the AI Agent to execute the auto-posting
+        let task_id = format!("task_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let title = format!("Share business via {}", req.platform);
+        let assigned_agent = "Marketing & Advertising";
+
+        sqlx::query("INSERT INTO shared_tasks (id, title, status, assigned_agent, organization_id) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&task_id)
+            .bind(&title)
+            .bind("pending")
+            .bind(assigned_agent)
+            .bind(&org_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Also track as a usage event
+        let event_id = format!("evt_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let event_type = format!("share_{}", req.platform);
+        sqlx::query("INSERT INTO usage_events (id, organization_id, event_type, quantity, timestamp) VALUES ($1, $2, $3, 1, CURRENT_TIMESTAMP)")
+            .bind(&event_id)
+            .bind(&org_id)
+            .bind(&event_type)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        println!("Sharing business to platform: {}", req.platform);
+        Ok(Response::new(EmptyResponse {}))
+    }
 }
 
 #[cfg(test)]

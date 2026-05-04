@@ -776,6 +776,35 @@ service GrowthService {
   
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+
+  rpc ExecuteGrowthStrategy(ExecuteGrowthStrategyRequest) returns (GrowthStrategyResponse);
+  rpc GetMilestones(EmptyRequest) returns (MilestonesResponse);
+  rpc DismissMilestone(GrowthIdRequest) returns (EmptyResponse);
+  rpc ShareBusiness(ShareBusinessRequest) returns (EmptyResponse);
+}
+
+message ExecuteGrowthStrategyRequest {
+  string strategy = 1;
+}
+
+message GrowthStrategyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Milestone {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string icon = 4;
+}
+
+message MilestonesResponse {
+  repeated Milestone milestones = 1;
+}
+
+message ShareBusinessRequest {
+  string platform = 1;
 }
 
 message ApprovalRequest {
