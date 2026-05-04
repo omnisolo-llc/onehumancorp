@@ -1,4 +1,5 @@
 use axum::{
+    extract::Extension,
     extract::{Path, State},
     response::IntoResponse,
     Json,
@@ -43,12 +44,12 @@ pub struct StatusResponse {
 }
 
 pub async fn escalate_mission(
-    parts: axum::http::request::Parts,
+    Extension(claims): axum::extract::Extension<crate::auth::Claims>,
     State(state): State<Arc<MissionSyncState>>,
     Json(payload): Json<EscalateRequest>,
 ) -> impl IntoResponse {
-    let claims = parts.extensions.get::<crate::auth::Claims>();
-    let tenant_id = match claims.and_then(|c| c.organization_id.clone()) {
+
+    let tenant_id = match claims.organization_id.clone() {
         Some(org_id) => org_id,
         None => return (
             axum::http::StatusCode::UNAUTHORIZED,
@@ -97,12 +98,12 @@ pub async fn escalate_mission(
 }
 
 pub async fn get_mission_status(
-    parts: axum::http::request::Parts,
+    Extension(claims): axum::extract::Extension<crate::auth::Claims>,
     State(state): State<Arc<MissionSyncState>>,
     Path(cloud_id): Path<String>,
 ) -> impl IntoResponse {
-    let claims = parts.extensions.get::<crate::auth::Claims>();
-    let tenant_id = match claims.and_then(|c| c.organization_id.clone()) {
+
+    let tenant_id = match claims.organization_id.clone() {
         Some(org_id) => org_id,
         None => return (
             axum::http::StatusCode::UNAUTHORIZED,
@@ -168,6 +169,7 @@ pub fn router(state: Arc<MissionSyncState>) -> Router {
 mod tests {
     use std::sync::Arc;
     use axum::{
+    extract::Extension,
         extract::{Path, State},
         Json,
     };
@@ -205,14 +207,8 @@ mod tests {
             },
         };
 
-        let parts = axum::http::request::Request::builder()
-            .extension(claims.clone())
-            .body(())
-            .unwrap()
-            .into_parts()
-            .0;
 
-        let _f = escalate_mission(parts.clone(), State(state.clone()), Json(req));
-        let _g = get_mission_status(parts, State(state), Path("id".to_string()));
+        let _f = escalate_mission(Extension(claims.clone()), State(state.clone()), Json(req)).await;
+        let _g = get_mission_status(Extension(claims.clone()), State(state), Path("id".to_string())).await;
     }
 }
