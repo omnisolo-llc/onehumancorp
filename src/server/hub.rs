@@ -530,38 +530,46 @@ impl Hub {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
             loop {
                 interval.tick().await;
-                self.calculate_token_burn_rate();
+                self.calculate_token_burn_rate().await;
             }
         });
     }
 
-    fn calculate_token_burn_rate(&self) {
+    async fn calculate_token_burn_rate(&self) {
         if let Some(ref get_usage) = self.get_token_usage {
             let usages = get_usage();
+            let mut forecasts_to_record = Vec::new();
             
-            let mut history = self.token_usage_history.write().unwrap();
-            let mut active_orgs = HashMap::new();
-            
-            for (org_id, total_tokens) in usages {
-                active_orgs.insert(org_id.clone(), true);
-                if total_tokens > 0 {
-                    let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
-                    hist.push(total_tokens);
-                    
-                    if hist.len() > 5 {
-                        hist.remove(0);
+            {
+                let mut history = self.token_usage_history.write().unwrap();
+                let mut active_orgs = HashMap::new();
+
+                for (org_id, total_tokens) in usages {
+                    active_orgs.insert(org_id.clone(), true);
+                    if total_tokens > 0 {
+                        let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                        hist.push(total_tokens);
+
+                        if hist.len() > 5 {
+                            hist.remove(0);
+                        }
+
+                        if hist.len() > 1 {
+                            let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
+                            let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
+                            forecasts_to_record.push((org_id.clone(), forecast as f32));
+                        }
+                    } else {
+                        history.remove(&org_id);
                     }
-                    
-                    if hist.len() > 1 {
-                        let _rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        // Removed noisy log for signal hygiene
-                    }
-                } else {
-                    history.remove(&org_id);
                 }
+
+                history.retain(|org_id, _| active_orgs.contains_key(org_id));
             }
             
-            history.retain(|org_id, _| active_orgs.contains_key(org_id));
+            for (org_id, forecast) in forecasts_to_record {
+                let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
+            }
         }
     }
 
