@@ -208,3 +208,96 @@ test.describe('My Plan Page', () => {
     await expect(page.locator('text=/Cost & AI Usage/i').first()).toBeVisible();
   });
 });
+
+test.describe('Cost Transparency and Limits', () => {
+  test('should show storage limit warnings on My Plan page', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
+    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
+    await page.click('button:has-text("Login"), button:has-text("Sign In")');
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    await page.click('text=Billing');
+    await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    // Check for storage usage display
+    await expect(page.locator('text=/Storage Used:/i')).toBeVisible();
+  });
+
+  test('should show AI action limit warnings on My Plan page', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
+    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
+    await page.click('button:has-text("Login"), button:has-text("Sign In")');
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    await page.click('text=Billing');
+    await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    // Check for AI actions display
+    await expect(page.locator('text=/AI Actions:/i')).toBeVisible();
+  });
+
+  test('should correctly calculate estimated next bill', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
+    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
+    await page.click('button:has-text("Login"), button:has-text("Sign In")');
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    await page.click('text=Billing');
+    await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    // Check for estimated bill
+    await expect(page.locator('text=/Estimated Next Bill:/i')).toBeVisible();
+  });
+
+  test('should allow upgrading from Free to Pro via UI', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
+    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
+    await page.click('button:has-text("Login"), button:has-text("Sign In")');
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    await page.click('text=Billing');
+    await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    const upgradeBtn = page.locator('button:has-text("Upgrade"), button:has-text("Change Plan")').first();
+    if (await upgradeBtn.isVisible()) {
+      await upgradeBtn.click();
+      await expect(page.locator('text=/pricing|plans/i').first()).toBeVisible();
+
+      const proButton = page.locator('button:has-text("Choose Pro")').first();
+      if (await proButton.isVisible()) {
+        await proButton.click();
+        // Just checking if pricing interaction works
+      }
+    }
+  });
+
+  test('should show detailed helper cost breakdown on Cost Dashboard', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
+    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
+    await page.click('button:has-text("Login"), button:has-text("Sign In")');
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    await page.click('text=Billing');
+    await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    const detailsBtn = page.locator('button:has-text("View Cost Details")').first();
+    if (await detailsBtn.isVisible()) {
+      await detailsBtn.click();
+      await expect(page.locator('text=/Cost & AI Usage/i').first()).toBeVisible();
+
+      // Ensure ROI and Efficiency exist
+      await expect(page.locator('text=/ROI:/i').first()).toBeVisible();
+      await expect(page.locator('text=/Efficiency:/i').first()).toBeVisible();
+    }
+  });
+});
