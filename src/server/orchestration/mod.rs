@@ -5,3 +5,4 @@ pub mod handoff;
 pub mod state;
 pub mod mesh;
 pub mod health;
+pub mod autodream_worker;
