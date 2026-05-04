@@ -6,11 +6,12 @@ use std::sync::Arc;
 
 pub struct MyBillingService {
     auditor: Arc<CostAuditor>,
+    tracker: crate::billing::Tracker,
 }
 
 impl MyBillingService {
-    pub fn new(auditor: Arc<CostAuditor>) -> Self {
-        Self { auditor }
+    pub fn new(auditor: Arc<CostAuditor>, tracker: crate::billing::Tracker) -> Self {
+        Self { auditor, tracker }
     }
 }
 
@@ -46,13 +47,30 @@ impl BillingService for MyBillingService {
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();
-        for (agent_id, cost, _roi, _eff) in self.auditor.get_agent_costs_snapshot() {
+        for (agent_id, cost, roi, eff) in self.auditor.get_agent_costs_snapshot() {
+            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agents.push(AgentCostSummary {
                 agent_id,
                 cost_usd: cost,
                 token_used: 0, // Need to update Auditor to return tokens per agent too if needed
+                roi,
+                efficiency: eff,
+                pct,
             });
         }
+
+        let tier = self.tracker.get_tenant_tier(&org_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
+        let tier_name = match tier {
+            crate::pricing::rate_limit::PlanTier::Free => "Free",
+            crate::pricing::rate_limit::PlanTier::Starter => "Starter",
+            crate::pricing::rate_limit::PlanTier::Pro => "Pro",
+            crate::pricing::rate_limit::PlanTier::Business => "Business",
+        }.to_string();
+
+        let action_limit = tier.monthly_action_limit().map(|l| l as i64).unwrap_or(-1);
+        let storage_limit_bytes = tier.storage_limit_mb().map(|l| (l as i64) * 1024 * 1024).unwrap_or(-1);
+
+        let (_actions_used, storage_used_bytes) = self.tracker.get_tenant_usage_stats(&org_id).await.unwrap_or((0, 0));
 
         Ok(Response::new(CostSummary {
             organization_id: org_id,
@@ -60,6 +78,12 @@ impl BillingService for MyBillingService {
             total_tokens: total_tokens,
             projected_monthly_usd: total_cost * 30.0, // Rough estimate
             agents,
+            current_plan: tier_name,
+            action_limit,
+            storage_used_bytes,
+            storage_limit_bytes,
+            plan_status: "Active".to_string(), // Would come from Stripe
+            renewal_date: "Next Month".to_string(), // Would come from Stripe
         }))
     }
 }

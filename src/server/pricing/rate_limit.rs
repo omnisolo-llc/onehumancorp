@@ -144,6 +144,18 @@ impl RedisRateLimiter {
         })
     }
 
+    pub async fn get_tenant_usage_stats(&self, tenant_id: &str) -> Result<(u32, i64), String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+
+        let tenant_key = format!("tenant:{}:actions_used", tenant_id);
+        let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+
+        let actions_used: u32 = conn.get(&tenant_key).await.unwrap_or(0);
+        let storage_used: i64 = conn.get(&storage_key).await.unwrap_or(0);
+
+        Ok((actions_used, storage_used))
+    }
+
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let tier = self.get_tenant_tier(tenant_id).await?;

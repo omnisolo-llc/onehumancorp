@@ -1078,9 +1078,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             app::UiAgentCost {
                                 name: ac.agent_id.into(),
                                 cost: format!("${:.2}", ac.cost_usd).into(),
-                                roi: "0.0%".into(), // roi and efficiency need more backend data
-                                efficiency: "0.0 tok/$".into(),
-                                pct: 0.0,
+                                roi: format!("{:.1}%", ac.roi).into(),
+                                efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                pct: ac.pct,
                             }
                         }).collect();
 
@@ -1090,6 +1090,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(ui) = my_plan_handle_fetch.upgrade() {
                         ui.set_total_actions(format!("{}", summary.total_tokens).into()); // tokens as a proxy for actions for now
                         ui.set_estimated_bill(format!("${:.2}", summary.projected_monthly_usd).into());
+                        ui.set_tier(summary.current_plan.into());
+                        ui.set_action_limit(if summary.action_limit < 0 { "Unlimited".into() } else { format!("{}", summary.action_limit).into() });
+                        ui.set_used_storage(format!("{:.1} MB", summary.storage_used_bytes as f64 / 1024.0 / 1024.0).into());
+                        ui.set_limit_storage(if summary.storage_limit_bytes < 0 { "Unlimited".into() } else { format!("{:.1} GB", summary.storage_limit_bytes as f64 / 1024.0 / 1024.0 / 1024.0).into() });
+                        ui.set_plan_status(summary.plan_status.into());
+                        ui.set_renewal_date(summary.renewal_date.into());
                     }
                 }).unwrap();
             }

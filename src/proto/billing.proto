@@ -21,12 +21,21 @@ message CostSummary {
   int64 total_tokens = 3;
   double projected_monthly_usd = 4;
   repeated AgentCostSummary agents = 5;
+  string current_plan = 6;
+  int64 action_limit = 7;
+  int64 storage_used_bytes = 8;
+  int64 storage_limit_bytes = 9;
+  string plan_status = 10;
+  string renewal_date = 11;
 }
 
 message AgentCostSummary {
   string agent_id = 1;
   double cost_usd = 2;
   int64 token_used = 3;
+  double roi = 4;
+  double efficiency = 5;
+  float pct = 6;
 }
 
 message BudgetAlert {
