@@ -1448,15 +1448,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
-                let ai_chat_ui = app::AiHelpChat::new().unwrap();
-                let ai_chat_handle = ai_chat_ui.as_weak();
-
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
@@ -1466,6 +1457,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
+
+                let ai_chat_ui = app::AiHelpChat::new().unwrap();
+                let ai_chat_handle = ai_chat_ui.as_weak();
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
