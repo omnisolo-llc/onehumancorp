@@ -24,5 +24,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     ).into_integration_provider();
     catalog.push(nats_provider);
 
+    let restic_provider = crate::integrations::restic::provider::ResticProvider::new().into_integration_provider();
+    catalog.push(restic_provider);
+
     catalog
 }

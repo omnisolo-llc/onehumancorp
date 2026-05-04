@@ -56,7 +56,11 @@ impl McpService for MyMcpService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<McpToolsResponse>, Status> {
-        let tools = self.dynamic_tools.read().unwrap();
+        let mut tools = self.dynamic_tools.read().unwrap().clone();
+
+        let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
+        tools.extend(restic_provider.get_tools());
+
         Ok(Response::new(McpToolsResponse {
             tools: tools.clone(),
         }))
@@ -73,6 +77,12 @@ impl McpService for MyMcpService {
         }
 
         return match req.tool_id.as_str() {
+
+            "restic_snapshot" | "restic_restore" | "restic_status" => {
+                let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
+                return restic_provider.invoke_tool(&req).await.map(|resp| Response::new(resp));
+            }
+
             "telegram-mcp" | "slack-mcp" | "teams-mcp" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
