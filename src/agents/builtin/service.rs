@@ -725,6 +725,7 @@ pub async fn start_builtin_agent(
                                         action: "agent_events".to_string(),
                                         status: "ok".to_string(),
                                         payload: buf,
+                                        msg_id: "".to_string(),
                                     }).await;
                                 }
                             }

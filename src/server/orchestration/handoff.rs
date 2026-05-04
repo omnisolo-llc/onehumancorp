@@ -80,14 +80,52 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        let msg = TeammateMeshEvent {
-            agent_id: "handoff".to_string(),
-            action: "mesh:coordination:handoff".to_string(),
-            status: "ok".to_string(),
-            payload: buf,
-        };
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("mesh:ack:{}", msg_id);
 
-        self.transport.publish("mesh:coordination:handoff", msg).await
+        let ack_received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let ack_clone = ack_received.clone();
+
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            ack_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 100;
+
+        loop {
+            if retries > 3 {
+                cancel();
+                // Instead of failing the handoff, log it and return Ok to avoid breaking offline behavior
+                eprintln!("Warning: Handoff sync ack not received after 3 retries (offline or partition)");
+                return Ok(());
+            }
+
+            let msg = TeammateMeshEvent {
+                agent_id: "handoff".to_string(),
+                action: "mesh:coordination:handoff".to_string(),
+                status: "pending".to_string(),
+                payload: buf.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.transport.publish("mesh:coordination:handoff", msg).await {
+                cancel();
+                return Err(e);
+            }
+
+            let start = std::time::Instant::now();
+            while start.elapsed().as_millis() < backoff as u128 {
+                if ack_received.load(std::sync::atomic::Ordering::SeqCst) {
+                    cancel();
+                    return Ok(());
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            }
+
+            retries += 1;
+            backoff *= 2;
+        }
     }
 }
 
@@ -155,6 +193,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg).await.unwrap();
@@ -187,6 +226,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf2,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg2).await.unwrap();

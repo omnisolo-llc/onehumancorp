@@ -37,6 +37,7 @@ impl PubSubManager {
             action: "publish".to_string(),
             status: "ok".to_string(),
             payload: payload.clone(),
+            msg_id: "".to_string(),
         };
         let mut buf = Vec::new();
         let _ = event.encode(&mut buf);
@@ -46,6 +47,7 @@ impl PubSubManager {
             action: formatted_topic.clone(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
         self.transport.publish(&formatted_topic, message).await
     }

@@ -31,6 +31,7 @@ impl TeammateMesh for TeammateMeshClient {
             action: "mesh:tasks".to_string(),
             status: "ok".to_string(),
             payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
@@ -40,15 +41,52 @@ impl TeammateMesh for TeammateMeshClient {
             action: "mesh:coordination".to_string(),
             status: "ok".to_string(),
             payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:tasks", handler).await
+        let transport_clone = self.transport.clone();
+        let wrapped_handler = Box::new(move |msg: Message| {
+            let msg_id = msg.msg_id.clone();
+            handler(msg);
+            if !msg_id.is_empty() {
+                let ack_topic = format!("mesh:ack:{}", msg_id);
+                let transport = transport_clone.clone();
+                tokio::spawn(async move {
+                    let _ = transport.publish(&ack_topic, Message {
+                        agent_id: "agent".to_string(),
+                        action: ack_topic.clone(),
+                        status: "ok".to_string(),
+                        payload: vec![],
+                        msg_id: "".to_string(),
+                    }).await;
+                });
+            }
+        });
+        self.transport.subscribe("mesh:tasks", wrapped_handler).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:coordination", handler).await
+        let transport_clone = self.transport.clone();
+        let wrapped_handler = Box::new(move |msg: Message| {
+            let msg_id = msg.msg_id.clone();
+            handler(msg);
+            if !msg_id.is_empty() {
+                let ack_topic = format!("mesh:ack:{}", msg_id);
+                let transport = transport_clone.clone();
+                tokio::spawn(async move {
+                    let _ = transport.publish(&ack_topic, Message {
+                        agent_id: "agent".to_string(),
+                        action: ack_topic.clone(),
+                        status: "ok".to_string(),
+                        payload: vec![],
+                        msg_id: "".to_string(),
+                    }).await;
+                });
+            }
+        });
+        self.transport.subscribe("mesh:coordination", wrapped_handler).await
     }
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         let msg_id = uuid::Uuid::new_v4().to_string();
@@ -70,22 +108,26 @@ impl TeammateMesh for TeammateMeshClient {
                 return Err("Failed to receive ack after retries".to_string());
             }
 
-            let mut event = Message {
+            let event = Message {
                 agent_id: "agent".to_string(),
                 action: topic.to_string(),
                 status: "pending".to_string(),
                 payload: payload.clone(),
+                msg_id: msg_id.clone(),
             };
 
-            // In a real implementation we would attach the msg_id to the event,
-            // but the proto might not have it. Let's send it anyway.
-            self.transport.publish(topic, event).await?;
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
-
-            if ack_received.load(std::sync::atomic::Ordering::SeqCst) {
+            if let Err(e) = self.transport.publish(topic, event).await {
                 cancel();
-                return Ok(());
+                return Err(e);
+            }
+
+            let start = std::time::Instant::now();
+            while start.elapsed().as_millis() < backoff as u128 {
+                if ack_received.load(std::sync::atomic::Ordering::SeqCst) {
+                    cancel();
+                    return Ok(());
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             }
 
             retries += 1;

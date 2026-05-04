@@ -142,6 +142,7 @@ impl IpcTransport {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
+                msg_id TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
@@ -174,18 +175,19 @@ impl IpcTransport {
         let mut last_id = 0;
         loop {
             // Poll for new messages
-            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+            let rows: Result<Vec<(i64, String, Vec<u8>, Option<String>)>, _> = sqlx::query_as(
+                "SELECT id, topic, payload, msg_id FROM mesh_messages WHERE id > ? ORDER BY id ASC"
             )
             .bind(last_id)
             .fetch_all(&pool)
             .await;
 
             if let Ok(rows) = rows {
-                for (id, topic, payload) in rows {
+                for (id, topic, payload, msg_id_opt) in rows {
                     last_id = id;
+                    let msg_id = msg_id_opt.unwrap_or_default();
                     if let Some(tx) = subs.get(&topic) {
-                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload });
+                        let _ = tx.send(Message { agent_id: "ipc".to_string(), action: topic.clone(), status: "ok".to_string(), payload, msg_id });
                     }
                 }
             }
@@ -203,9 +205,10 @@ impl IpcTransport {
 #[async_trait]
 impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (topic, payload, msg_id) VALUES (?, ?, ?)")
             .bind(topic)
             .bind(&message.payload)
+            .bind(&message.msg_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -515,6 +518,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -568,6 +572,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -692,6 +697,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();
