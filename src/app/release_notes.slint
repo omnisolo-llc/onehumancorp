@@ -9,6 +9,7 @@ export component ReleaseNotes inherits Window {
     background: #0f172a;
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
+    callback open_full_changelog();
 
     HorizontalBox {
         alignment: center;
@@ -77,6 +78,12 @@ export component ReleaseNotes inherits Window {
                         }
                     }
                 }
+            }
+
+            Button {
+                text: "View full changelog on website ->";
+                height: 44px;
+                clicked => { root.open_full_changelog(); }
             }
         }
     }

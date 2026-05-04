@@ -1,6 +1,12 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct UiHelpChatMessage {
+    is_user: bool,
+    text: string,
+    link: string,
+}
+
 export component AiHelpChat inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
@@ -9,6 +15,7 @@ export component AiHelpChat inherits Window {
     background: #0f172a;
 
     in-out property <string> user_input: "";
+    in property <[UiHelpChatMessage]> messages;
     callback send_message();
 
     HorizontalBox {
@@ -31,7 +38,28 @@ export component AiHelpChat inherits Window {
             }
 
             ScrollView {
-                // Chat history would go here
+                VerticalBox {
+                    spacing: 12px;
+                    for msg in messages : HorizontalBox {
+                        alignment: msg.is_user ? end : start;
+                        GlassCard {
+                            max-width: 400px;
+                            VerticalBox {
+                                padding: 12px;
+                                spacing: 8px;
+                                Text {
+                                    text: msg.text;
+                                    color: white;
+                                    wrap: word-wrap;
+                                }
+                                if (msg.link != "") : Text {
+                                    text: "Read the full article ->";
+                                    color: #3b82f6;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             HorizontalBox {

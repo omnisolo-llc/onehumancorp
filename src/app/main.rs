@@ -1609,6 +1609,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
 
+                let messages = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+                ai_chat_ui.set_messages(slint::ModelRc::new(slint::VecModel::from(messages.borrow().clone())));
+
+                ai_chat_ui.on_send_message({
+                    let chat_handle = ai_chat_handle.clone();
+                    let messages = messages.clone();
+                    move || {
+                        if let Some(ui) = chat_handle.upgrade() {
+                            let input = ui.get_user_input();
+                            let mut current_msgs = messages.borrow_mut();
+
+                            current_msgs.push(app::UiHelpChatMessage {
+                                is_user: true,
+                                text: input.clone(),
+                                link: "".into(),
+                            });
+
+                            let response_text = format!("Here is what I found about '{}'.", input);
+                            current_msgs.push(app::UiHelpChatMessage {
+                                is_user: false,
+                                text: response_text.into(),
+                                link: "https://ohc.help/articles".into(),
+                            });
+
+                            ui.set_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs.clone())));
+                            ui.set_user_input("".into());
+                        }
+                    }
+                });
+                Box::leak(Box::new(ai_chat_ui));
+
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
@@ -1627,6 +1658,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+
+                let videos = vec![
+                    app::UiVideoMetadata { title: "How to add your first product".into(), description: "A quick 60-second guide to listing items in your store.".into() },
+                    app::UiVideoMetadata { title: "Setting up AI Helpers".into(), description: "Learn how to let AI handle your customer emails and social media.".into() },
+                ];
+                video_tutorials_ui.set_videos(slint::ModelRc::new(slint::VecModel::from(videos)));
+
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
                 Box::leak(Box::new(video_tutorials_ui));
 
@@ -1638,18 +1676,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let release_notes_handle = release_notes_ui.as_weak();
                 Box::leak(Box::new(release_notes_ui));
 
-                ai_chat_ui.on_send_message({
-                    let chat_handle = ai_chat_handle.clone();
-                    move || {
-                        if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
-                            ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
-                        }
-                    }
-                });
-                Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {
                     if let Some(ui) = help_center_handle.upgrade() {
@@ -3444,20 +3470,50 @@ mod docs_tests {
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
 
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        let messages = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        ai_chat.set_messages(slint::ModelRc::new(slint::VecModel::from(messages.borrow().clone())));
+
+        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_called_clone = send_called.clone();
+
+        let ai_chat_handle_test = ai_chat.as_weak();
+        let messages_test = messages.clone();
+        ai_chat.on_send_message(move || {
+            *send_called_clone.borrow_mut() = true;
+            if let Some(ui) = ai_chat_handle_test.upgrade() {
+                let input = ui.get_user_input();
+                let mut current_msgs = messages_test.borrow_mut();
+                current_msgs.push(app::UiHelpChatMessage { is_user: true, text: input.clone(), link: "".into() });
+                current_msgs.push(app::UiHelpChatMessage { is_user: false, text: "Mock response".into(), link: "link".into() });
+                ui.set_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs.clone())));
+            }
+        });
+
+        let ai_chat_handle = ai_chat.as_weak();
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
+            if let Some(ui) = ai_chat_handle.upgrade() {
+                let _ = ui.show();
+            }
         });
 
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
 
-        let ai_chat = app::AiHelpChat::new().unwrap();
         ai_chat.set_user_input("How do I sell a product?".into());
-        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let send_called_clone = send_called.clone();
-        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+
+        use slint::Model;
+        assert_eq!(ai_chat.get_messages().row_count(), 2);
+        let first_msg = ai_chat.get_messages().row_data(0).unwrap();
+        assert_eq!(first_msg.text, "How do I sell a product?");
+        assert_eq!(first_msg.is_user, true);
+
+        let second_msg = ai_chat.get_messages().row_data(1).unwrap();
+        assert_eq!(second_msg.is_user, false);
+        assert_eq!(second_msg.link, "link");
     }
 
     #[test]
@@ -3523,6 +3579,89 @@ mod docs_tests {
         assert_eq!(help_center.get_articles().row_count(), 1, "Articles should be filtered by search query");
 
         // Assert InteractiveWalkthrough creation/state behavior is validated elsewhere
+    }
+
+    #[test]
+    fn test_ai_help_chat_history_updates() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ai_chat = app::AiHelpChat::new().unwrap();
+        let messages = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        ai_chat.set_messages(slint::ModelRc::new(slint::VecModel::from(messages.borrow().clone())));
+
+        ai_chat.set_user_input("What is this?".into());
+        let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_called_clone = send_called.clone();
+
+        let ai_chat_handle_test = ai_chat.as_weak();
+        let messages_test = messages.clone();
+        ai_chat.on_send_message(move || {
+            *send_called_clone.borrow_mut() = true;
+            if let Some(ui) = ai_chat_handle_test.upgrade() {
+                let input = ui.get_user_input();
+                let mut current_msgs = messages_test.borrow_mut();
+                current_msgs.push(app::UiHelpChatMessage { is_user: true, text: input.clone(), link: "".into() });
+                current_msgs.push(app::UiHelpChatMessage { is_user: false, text: "Mock response".into(), link: "link".into() });
+                ui.set_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs.clone())));
+            }
+        });
+
+        ai_chat.invoke_send_message();
+
+        use slint::Model;
+        assert_eq!(ai_chat.get_messages().row_count(), 2);
+    }
+
+    #[test]
+    fn test_video_tutorials_metadata_loading() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let video_tutorials = app::VideoTutorials::new().unwrap();
+
+        let videos = vec![
+            app::UiVideoMetadata { title: "Title 1".into(), description: "Desc 1".into() },
+            app::UiVideoMetadata { title: "Title 2".into(), description: "Desc 2".into() },
+        ];
+        video_tutorials.set_videos(slint::ModelRc::new(slint::VecModel::from(videos)));
+
+        use slint::Model;
+        assert_eq!(video_tutorials.get_videos().row_count(), 2);
+        assert_eq!(video_tutorials.get_videos().row_data(1).unwrap().title, "Title 2");
+    }
+
+    #[test]
+    fn test_release_notes_changelog_link() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::ReleaseNotes::new().unwrap();
+        let changelog_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let changelog_opened_clone = changelog_opened.clone();
+        ui.on_open_full_changelog(move || {
+            *changelog_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_open_full_changelog();
+        assert!(*changelog_opened.borrow());
+    }
+
+    #[test]
+    fn test_interactive_walkthrough_navigation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+        assert_eq!(walkthrough.get_current_step(), 0);
+        walkthrough.set_current_step(1);
+        assert_eq!(walkthrough.get_current_step(), 1);
+    }
+
+    #[test]
+    fn test_tooltip_registry_display() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            if id == "ask_ai" { "Ask AI text".into() } else { "".into() }
+        });
+
+        let tr = dashboard_ui.global::<app::TooltipRegistry>();
+        tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
+        assert_eq!(tr.get_is_visible(), true);
+        assert_eq!(tr.get_active_text(), "Ask AI text");
     }
 
 #[test]
@@ -3715,20 +3854,33 @@ mod docs_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+        let video_tutorials = app::VideoTutorials::new().unwrap();
+        let videos = vec![
+            app::UiVideoMetadata { title: "How to add your first product".into(), description: "A quick 60-second guide to listing items in your store.".into() },
+            app::UiVideoMetadata { title: "Setting up AI Helpers".into(), description: "Learn how to let AI handle your customer emails and social media.".into() },
+        ];
+        video_tutorials.set_videos(slint::ModelRc::new(slint::VecModel::from(videos)));
+
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
+        let video_tutorials_handle = video_tutorials.as_weak();
         dashboard_ui.on_open_video_tutorials(move || {
             *videos_opened_clone.borrow_mut() = true;
+            if let Some(ui) = video_tutorials_handle.upgrade() {
+                let _ = ui.show();
+            }
         });
 
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
 
-        let video_tutorials = app::VideoTutorials::new().unwrap();
-
         // Initial state assertions
         assert_eq!(video_tutorials.get_selected_video_title(), "");
         assert_eq!(video_tutorials.get_is_playing(), false);
+
+        use slint::Model;
+        assert_eq!(video_tutorials.get_videos().row_count(), 2);
+        assert_eq!(video_tutorials.get_videos().row_data(0).unwrap().title, "How to add your first product");
 
         // Simulate selecting and playing a video
         video_tutorials.set_selected_video_title("How to add your first product".into());
@@ -5453,16 +5605,30 @@ fn test_business_share_flow() {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
+        let ui = app::ReleaseNotes::new().unwrap();
+
+        let changelog_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let changelog_opened_clone = changelog_opened.clone();
+        ui.on_open_full_changelog(move || {
+            *changelog_opened_clone.borrow_mut() = true;
+        });
+
         let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let release_notes_opened_clone = release_notes_opened.clone();
+        let release_notes_handle = ui.as_weak();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
+            if let Some(ui) = release_notes_handle.upgrade() {
+                let _ = ui.show();
+            }
         });
 
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes UI should be opened");
 
-        let ui = app::ReleaseNotes::new().unwrap();
         assert_eq!(ui.get_current_version(), "v0.3.4");
         assert_eq!(ui.get_show_latest_only(), false);
+
+        ui.invoke_open_full_changelog();
+        assert!(*changelog_opened.borrow(), "Release Notes should trigger open_full_changelog");
     }
