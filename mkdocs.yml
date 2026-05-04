@@ -70,6 +70,9 @@ nav:
       - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
       - walkthroughs/index.md
+      - End-to-End Business Journey: features/End-to-End-Business-Journey-Design/cuj.md
+      - End-to-End Business Journey Design: features/End-to-End-Business-Journey-Design/design-doc.md
+      - End-to-End Business Journey Test Plan: features/End-to-End-Business-Journey-Design/test-plan.md
   - Operations:
       - operations/index.md
       - Task Tracking: operations/task-tracking.md

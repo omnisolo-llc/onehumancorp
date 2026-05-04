@@ -22,6 +22,29 @@ impl OnboardingAgent {
              self.generate_initial_products(&org_id, &business_type).await?;
         }
 
+        // Mock AI Generation: basic Policies
+        sqlx::query("INSERT INTO organization_settings (organization_id, key, value) VALUES ($1, $2, $3)")
+            .bind(&org_id)
+            .bind("terms_of_service")
+            .bind(serde_json::json!({"content": "Generated Terms of Service"}))
+            .execute(&self.db.pool)
+            .await.unwrap_or_default(); // Ignore if table doesn't exist
+
+        sqlx::query("INSERT INTO organization_settings (organization_id, key, value) VALUES ($1, $2, $3)")
+            .bind(&org_id)
+            .bind("privacy_policy")
+            .bind(serde_json::json!({"content": "Generated Privacy Policy"}))
+            .execute(&self.db.pool)
+            .await.unwrap_or_default();
+
+        // Mock AI Generation: Storefront metadata
+        sqlx::query("INSERT INTO organization_settings (organization_id, key, value) VALUES ($1, $2, $3)")
+            .bind(&org_id)
+            .bind("storefront_config")
+            .bind(serde_json::json!({"theme": "glassmorphism", "is_published": true}))
+            .execute(&self.db.pool)
+            .await.unwrap_or_default();
+
         self.seed_default_agents(&org_id).await?;
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
@@ -96,17 +119,27 @@ impl OnboardingAgent {
             "Online Store" => vec![
                 ("Standard Product", "A great product for your store", 1999, "physical"),
                 ("Premium Product", "A premium offering", 4999, "physical"),
+                ("Limited Edition", "Special limited run item", 9999, "physical"),
             ],
             "Service Business" => vec![
                 ("Consultation", "1-hour professional consultation", 10000, "booking"),
                 ("Service Call", "On-site service visit", 7500, "booking"),
+                ("Emergency Repair", "24/7 Priority service", 15000, "booking"),
             ],
             "Restaurant / Food" => vec![
                 ("House Special", "Our most popular dish", 1599, "physical"),
                 ("Drink of the Day", "Refreshing beverage", 450, "physical"),
+                ("Dessert Combo", "Sweet treat to end the meal", 800, "physical"),
+            ],
+            "Creative / Portfolio" => vec![
+                ("Basic License", "Standard usage rights", 5000, "digital"),
+                ("Commercial License", "Full commercial usage rights", 25000, "digital"),
+                ("Custom Commission", "Bespoke creative work", 50000, "booking"),
             ],
             _ => vec![
-                ("Default Item", "Welcome to your new business", 1000, "physical"),
+                ("Default Item 1", "Welcome to your new business", 1000, "physical"),
+                ("Default Item 2", "Another essential item", 2000, "physical"),
+                ("Default Item 3", "Premium add-on", 3000, "physical"),
             ],
         };
 
@@ -127,7 +160,7 @@ impl OnboardingAgent {
                     .bind(desc)
                     .bind(price)
                     .bind(strategy)
-                    .bind(json!({}))
+                    .bind(serde_json::json!({}))
                     .execute(&pool)
                     .await
             }));

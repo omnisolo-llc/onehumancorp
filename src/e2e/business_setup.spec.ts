@@ -324,3 +324,70 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 }).catch(() => {});
   });
 });
+
+
+test.describe('End-to-End Business Journey Design (Instant Build)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.click("button:has-text(\"Don't have an account? Sign Up\")");
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+  });
+
+  test('Persona: Maya (Baker) via Instant Setup', async ({ page }) => {
+    await page.click('text=Instant Setup (AI) ⚡');
+    await page.fill("input[placeholder=\"e.g. I run a local bakery called Maya's Cakes...\"]", 'I bake custom vegan cakes in Brooklyn');
+    await page.click('text=Generate My Business ✨');
+
+    // AI resolves the extraction, we land on Launch screen
+    await expect(page.locator('text=Launch My Business →')).toBeVisible({ timeout: 10000 });
+
+    // Launch creates the tenant
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+
+    // Verify Share Link CTA is present
+    await expect(page.locator('text="Share Link"')).toBeVisible();
+  });
+
+  test('Persona: Carlos (Handyman) via Instant Setup', async ({ page }) => {
+    await page.click('text=Instant Setup (AI) ⚡');
+    await page.fill("input[placeholder=\"e.g. I run a local bakery called Maya's Cakes...\"]", 'I fix plumbing and do home repairs in Austin');
+    await page.click('text=Generate My Business ✨');
+
+    await expect(page.locator('text=Launch My Business →')).toBeVisible({ timeout: 10000 });
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('Persona: Priya (Boutique) via Instant Setup', async ({ page }) => {
+    await page.click('text=Instant Setup (AI) ⚡');
+    await page.fill("input[placeholder=\"e.g. I run a local bakery called Maya's Cakes...\"]", 'I run a clothing boutique selling dresses');
+    await page.click('text=Generate My Business ✨');
+
+    await expect(page.locator('text=Launch My Business →')).toBeVisible({ timeout: 10000 });
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('Persona: Leo (Tutor) via Instant Setup', async ({ page }) => {
+    await page.click('text=Instant Setup (AI) ⚡');
+    await page.fill("input[placeholder=\"e.g. I run a local bakery called Maya's Cakes...\"]", 'I teach guitar lessons online and in person');
+    await page.click('text=Generate My Business ✨');
+
+    await expect(page.locator('text=Launch My Business →')).toBeVisible({ timeout: 10000 });
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('Persona: Fatima (Food Cart) via Instant Setup', async ({ page }) => {
+    await page.click('text=Instant Setup (AI) ⚡');
+    await page.fill("input[placeholder=\"e.g. I run a local bakery called Maya's Cakes...\"]", 'Halal food cart menu for pre-orders');
+    await page.click('text=Generate My Business ✨');
+
+    await expect(page.locator('text=Launch My Business →')).toBeVisible({ timeout: 10000 });
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+  });
+});

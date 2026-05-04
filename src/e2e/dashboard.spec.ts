@@ -36,6 +36,13 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Active Help')).toBeVisible();
   });
 
+
+  test('Share Link CTA is present on dashboard', async ({ page }) => {
+    // Basic test to verify the Share Link CTA added to dashboard.slint is visible
+    await expect(page.locator('text="🎉 Your business is live!"')).toBeVisible();
+    await expect(page.locator('text="Share Link"')).toBeVisible();
+  });
+
   test('should show quick actions section', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Quick Actions')).toBeVisible();
