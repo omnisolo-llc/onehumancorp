@@ -255,8 +255,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -274,6 +273,49 @@ impl VectorRepository {
             }
         }
         Ok(())
+    }
+
+    pub async fn resolve_conflict(&self, winner: &EmbeddingRecord, loser: &EmbeddingRecord) -> Result<(), String> {
+        self.delete(&loser.id).await?;
+        let mut updated_winner = winner.clone();
+        updated_winner.reference_count += loser.reference_count + 1;
+        updated_winner.last_referenced_at = chrono::Utc::now();
+        self.upsert(&updated_winner).await?;
+        Ok(())
+    }
+
+    pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
+        let conflicts = self.get_conflicting_pairs().await?;
+        let mut resolved_count = 0;
+
+        for (a, b) in conflicts {
+            let (winner, loser) = if a.owner_override != b.owner_override {
+                if a.owner_override {
+                    (&a, &b)
+                } else {
+                    (&b, &a)
+                }
+            } else if a.reliability_score != b.reliability_score {
+                if a.reliability_score > b.reliability_score {
+                    (&a, &b)
+                } else {
+                    (&b, &a)
+                }
+            } else if a.last_referenced_at != b.last_referenced_at {
+                if a.last_referenced_at > b.last_referenced_at {
+                    (&a, &b)
+                } else {
+                    (&b, &a)
+                }
+            } else {
+                (&a, &b) // Fallback, just pick 'a'
+            };
+
+            self.resolve_conflict(winner, loser).await?;
+            resolved_count += 1;
+        }
+
+        Ok(resolved_count)
     }
 
 
@@ -845,6 +887,152 @@ mod get_conflicts_tests {
     use super::*;
     use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
     use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        // 1. Conflict resolved by owner_override
+        let r1 = EmbeddingRecord {
+            id: "rec1_a".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        let r2 = EmbeddingRecord {
+            id: "rec1_b".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world override".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 40,
+            owner_override: true, // Should win
+            metadata: None,
+        };
+
+        // 2. Conflict resolved by reliability_score
+        let r3 = EmbeddingRecord {
+            id: "rec2_a".to_string(),
+            tenant_id: "org2".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "foo bar".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 5,
+            reliability_score: 80, // Should win
+            owner_override: false,
+            metadata: None,
+        };
+        let r4 = EmbeddingRecord {
+            id: "rec2_b".to_string(),
+            tenant_id: "org2".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "foo bar low".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 3,
+            reliability_score: 60,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // 3. Conflict resolved by recency
+        let older = now - chrono::Duration::hours(1);
+        let r5 = EmbeddingRecord {
+            id: "rec3_a".to_string(),
+            tenant_id: "org3".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "baz".to_string(),
+            embedding: vec![0.1, 0.1, 0.1],
+            source_type: "SUMMARY".to_string(),
+            created_at: older,
+            last_referenced_at: older,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        let r6 = EmbeddingRecord {
+            id: "rec3_b".to_string(),
+            tenant_id: "org3".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "baz newer".to_string(),
+            embedding: vec![0.1, 0.1, 0.1],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now, // Should win
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r1).await.unwrap();
+        repo.upsert(&r2).await.unwrap();
+        repo.upsert(&r3).await.unwrap();
+        repo.upsert(&r4).await.unwrap();
+        repo.upsert(&r5).await.unwrap();
+        repo.upsert(&r6).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 3); // 3 conflicts resolved
+
+        let query = "SELECT id, reference_count FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        let mut results = std::collections::HashMap::new();
+        for row in rows {
+            use sqlx::Row;
+            let id: String = row.get("id");
+            let ref_count: i32 = row.get("reference_count");
+            results.insert(id, ref_count);
+        }
+
+        assert_eq!(results.len(), 3);
+        assert_eq!(results.get("rec1_b"), Some(&4));
+        assert_eq!(results.get("rec2_a"), Some(&9));
+        assert_eq!(results.get("rec3_b"), Some(&2));
+    }
 
     #[tokio::test]
     async fn test_get_conflicting_pairs_and_prune() {
