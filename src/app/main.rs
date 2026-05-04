@@ -776,10 +776,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    let email_marketing_ui = app::EmailMarketing::new()?;
+    let email_marketing_handle = email_marketing_ui.as_weak();
+
+    email_marketing_ui.on_generate_template({
+        let ui_handle = email_marketing_handle.clone();
+        move |template| {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_preview_text(format!("Generated AI content for: {}", template).into());
+            }
+        }
+    });
+
+    email_marketing_ui.on_send_campaign({
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_emails_sent(150);
+                ui.set_open_rate("32%".into());
+                ui.set_status_message("Sent!".into());
+            }
+        }
+    });
+
+    email_marketing_ui.on_close({
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    let em_handle_for_gb = email_marketing_handle.clone();
+    grow_business_ui.on_execute({
+        move |strategy, _kpi| {
+            if strategy == "Run your first email campaign" {
+                if let Some(ui) = em_handle_for_gb.upgrade() {
+                    let _ = ui.show();
+                }
+            }
+        }
+    });
+
     Box::leak(Box::new(agent_config_ui));
     Box::leak(Box::new(prompt_tuning_ui));
     Box::leak(Box::new(website_builder_ui));
     Box::leak(Box::new(grow_business_ui));
+    Box::leak(Box::new(email_marketing_ui));
 
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
@@ -3509,6 +3554,106 @@ mod docs_tests {
         assert_eq!(ui.get_current_step(), 2);
         ui.set_current_step(3);
         assert_eq!(ui.get_current_step(), 3);
+    }
+
+
+    #[test]
+    fn test_e2e_email_marketing_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let grow_business_opened_clone = grow_business_opened.clone();
+
+        dashboard_ui.on_action_grow_business(move || {
+            *grow_business_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_grow_business();
+        assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+
+        let gb_ui = app::GrowBusiness::new().unwrap();
+        let em_ui = app::EmailMarketing::new().unwrap();
+
+        let em_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let em_shown_clone = em_shown.clone();
+
+        // Mock wiring for testing purposes since it is hidden in the `main`
+        let em_handle_for_gb = em_ui.as_weak();
+        gb_ui.on_execute(move |strategy, _kpi| {
+            if strategy == "Run your first email campaign" {
+                if let Some(ui) = em_handle_for_gb.upgrade() {
+                    let _ = ui.show();
+                    *em_shown_clone.borrow_mut() = true;
+                }
+            }
+        });
+
+        gb_ui.invoke_select_strategy("Run your first email campaign".into());
+        gb_ui.invoke_next_step();
+        assert_eq!(gb_ui.get_step(), 1);
+
+        gb_ui.invoke_execute(gb_ui.get_selected_strategy(), gb_ui.get_kpi_target());
+        gb_ui.invoke_next_step();
+
+        assert_eq!(gb_ui.get_step(), 2);
+        assert!(*em_shown.borrow(), "Email Marketing should be opened from Grow Business");
+
+        // Verify EmailMarketing Flow
+        let template_generated = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let template_generated_clone = template_generated.clone();
+
+        let em_handle = em_ui.as_weak();
+        em_ui.on_generate_template(move |template| {
+            *template_generated_clone.borrow_mut() = template.to_string();
+            if let Some(ui) = em_handle.upgrade() {
+                ui.set_preview_text(format!("Generated AI content for: {}", template).into());
+            }
+        });
+
+        em_ui.invoke_generate_template("Flash sale".into());
+        assert_eq!(*template_generated.borrow(), "Flash sale");
+        assert_eq!(em_ui.get_preview_text(), "Generated AI content for: Flash sale");
+
+        let campaign_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let campaign_sent_clone = campaign_sent.clone();
+        let em_handle_send = em_ui.as_weak();
+        em_ui.on_send_campaign(move || {
+            *campaign_sent_clone.borrow_mut() = true;
+            if let Some(ui) = em_handle_send.upgrade() {
+                ui.set_emails_sent(150);
+                ui.set_open_rate("32%".into());
+                ui.set_status_message("Sent!".into());
+            }
+        });
+
+        em_ui.invoke_send_campaign();
+        assert!(*campaign_sent.borrow());
+        assert_eq!(em_ui.get_emails_sent(), 150);
+        assert_eq!(em_ui.get_open_rate(), "32%");
+        assert_eq!(em_ui.get_status_message(), "Sent!");
+
+        let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let close_called_clone = close_called.clone();
+        em_ui.on_close(move || {
+            *close_called_clone.borrow_mut() = true;
+        });
+
+        em_ui.invoke_close();
+        assert!(*close_called.borrow());
     }
 
     #[test]
