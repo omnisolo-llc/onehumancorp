@@ -3046,6 +3046,48 @@ mod docs_tests {
     }
 
     #[test]
+    fn test_e2e_video_tutorials_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let videos_opened_clone = videos_opened.clone();
+        dashboard_ui.on_open_video_tutorials(move || {
+            *videos_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_video_tutorials();
+        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+
+        let video_tutorials = app::VideoTutorials::new().unwrap();
+
+        // Initial state assertions
+        assert_eq!(video_tutorials.get_selected_video_title(), "");
+        assert_eq!(video_tutorials.get_is_playing(), false);
+
+        // Simulate selecting and playing a video
+        video_tutorials.set_selected_video_title("How to add your first product".into());
+        video_tutorials.set_is_playing(true);
+
+        assert_eq!(video_tutorials.get_selected_video_title(), "How to add your first product");
+        assert_eq!(video_tutorials.get_is_playing(), true);
+    }
+
+    #[test]
     fn test_e2e_interactive_walkthrough_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
@@ -3062,15 +3104,26 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let ui = app::InteractiveWalkthrough::new().unwrap();
+        let dashboard_ui = app::Dashboard::new().unwrap();
 
-        assert_eq!(ui.get_current_step(), 0);
-        ui.set_current_step(1);
-        assert_eq!(ui.get_current_step(), 1);
-        ui.set_current_step(2);
-        assert_eq!(ui.get_current_step(), 2);
-        ui.set_current_step(3);
-        assert_eq!(ui.get_current_step(), 3);
+        let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let walkthrough_opened_clone = walkthrough_opened.clone();
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_open_interactive_walkthrough();
+        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+
+        let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+
+        assert_eq!(walkthrough.get_current_step(), 0);
+        walkthrough.set_current_step(1);
+        assert_eq!(walkthrough.get_current_step(), 1);
+        walkthrough.set_current_step(2);
+        assert_eq!(walkthrough.get_current_step(), 2);
+        walkthrough.set_current_step(3);
+        assert_eq!(walkthrough.get_current_step(), 3);
     }
 
     #[test]
