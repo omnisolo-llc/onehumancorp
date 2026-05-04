@@ -709,6 +709,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("Failed to copy to clipboard: {:?}", e);
                         } else {
                             println!("Share link copied to clipboard");
+                            ui.set_link_copy_status("Copied!".into());
+                            let weak_ui = ui.as_weak();
+                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
+                                if let Some(ui) = weak_ui.upgrade() {
+                                    ui.set_link_copy_status("".into());
+                                }
+                            });
                         }
                     } else {
                         println!("Clipboard not initialized, failed to copy share link");
