@@ -398,8 +398,16 @@ impl Store {
         {
             // ZERO SECRETS ENFORCEMENT:
             // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+            // OHC strictly requires SPIFFE/SPIRE mTLS identities or OIDC for Thin Clients.
+            let oidc_config = {
+                let cfg = self.oidc_cfg.read().unwrap();
+                crate::oidc::OIDCConfig {
+                    issuer_url: cfg.issuer_url.clone(),
+                    client_id: cfg.client_id.clone(),
+                    enabled: cfg.enabled,
+                }
+            };
+            return crate::oidc::validate_oidc_token(token, &oidc_config).await;
         }
         #[cfg(test)]
         {
