@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::billing::Tracker;
 use super::provider::{BlobMetadata, Provider};
 
+#[allow(dead_code)]
 pub struct LocalProvider {
     base_path: PathBuf,
     tracker: Tracker,
