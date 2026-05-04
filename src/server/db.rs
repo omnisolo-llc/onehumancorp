@@ -227,61 +227,66 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
-                        tenant_id TEXT PRIMARY KEY,
-                        owner_id TEXT,
-                        business_name TEXT,
-                        tier TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    );
-                    CREATE TABLE IF NOT EXISTS customers (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        email TEXT,
-                        phone TEXT,
-                        name TEXT,
-                        preferences TEXT DEFAULT '{}'
-                    );
-                    CREATE TABLE IF NOT EXISTS orders (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        customer_id TEXT,
-                        total_amount REAL,
-                        status TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    );
-                    CREATE TABLE IF NOT EXISTS order_items (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        order_id TEXT,
-                        product_id TEXT,
-                        quantity INTEGER,
-                        price REAL
-                    );
-                    CREATE TABLE IF NOT EXISTS bookings (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        customer_id TEXT,
-                        service_id TEXT,
-                        start_time TEXT,
-                        end_time TEXT,
-                        status TEXT
+                        business_name TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        subscription_tier TEXT NOT NULL DEFAULT 'free',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS products (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        organization_id TEXT,
-                        name TEXT,
-                        description TEXT,
-                        price_cents INTEGER,
-                        currency TEXT,
-                        fulfillment_strategy TEXT,
-                        metadata TEXT DEFAULT '{}',
-                        type TEXT,
-                        title TEXT,
-                        price REAL,
-                        inventory_count INTEGER,
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        price_cents INTEGER NOT NULL DEFAULT 0,
+                        stock_level INTEGER NOT NULL DEFAULT 0,
+                        is_active BOOLEAN DEFAULT 1,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id)
+                    );
+                    CREATE TABLE IF NOT EXISTS customers (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        email TEXT,
+                        phone TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id)
+                    );
+                    CREATE TABLE IF NOT EXISTS order_bookings (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        total_amount_cents INTEGER NOT NULL DEFAULT 0,
+                        scheduled_for TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id)
+                    );
+                    CREATE TABLE IF NOT EXISTS order_items (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        order_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1,
+                        unit_price_cents INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id)
                     );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
@@ -307,6 +312,18 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS ai_agent_memories (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        context_summary TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id)
                     );
                     CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
@@ -528,19 +545,19 @@ pub async fn insert_autodream_memory(
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                let query = if table == \"swarm_tasks\" {
+                    \"UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?\"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                    \"UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?\"
                 };
                 sqlx::query(query).bind(task_id).execute(sqlite_pool).await?;
             },
             DbStore::Postgres => {
-                let query = if table == "swarm_tasks" {
+                let query = if table == \"swarm_tasks\" {
                     // swarm_tasks uses UUID primary key
-                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+                    \"UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid\"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
+                    \"UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1\"
                 };
                 sqlx::query(query).bind(task_id).execute(&self.pool).await?;
             }
@@ -557,7 +574,7 @@ mod tests {
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
         // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
+        unsafe { std::env::set_var(\"DATABASE_URL\", \"postgres://localhost:54321/nonexistent\") }
         let db = DB::new().await;
         assert!(db.is_err());
     }
@@ -569,13 +586,13 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var(\"DATABASE_URL\").is_err() {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = \"postgres://postgres:postgres@localhost:5432/test\";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute(\"RESET app.current_tenant\").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -592,12 +609,12 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var(\"DATABASE_URL\").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = \"postgres://postgres:postgres@localhost:5432/test\";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute(\"RESET app.current_tenant\").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -608,19 +625,19 @@ mod autodream_db_tests {
             store: DbStore::Postgres,
         };
 
-        let id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d";
-        let org_id = "test_org";
-        let agent_id = "test_agent";
-        let task_id = "test_task";
-        let content = "knowledge base content";
-        let embedding = "[0.0, 0.1, 0.2]";
-        let source_type = "test";
+        let id = \"a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d\";
+        let org_id = \"test_org\";
+        let agent_id = \"test_agent\";
+        let task_id = \"test_task\";
+        let content = \"knowledge base content\";
+        let embedding = \"[0.0, 0.1, 0.2]\";
+        let source_type = \"test\";
 
         let result = db.insert_knowledge_embedding(id, org_id, agent_id, task_id, content, embedding, source_type).await;
         assert!(result.is_ok() || result.is_err()); // test db may not be migrated
 
         // Cleanup
-        let _ = sqlx::query("DELETE FROM knowledge_embeddings WHERE id = $1")
+        let _ = sqlx::query(\"DELETE FROM knowledge_embeddings WHERE id = $1\")
             .bind(uuid::Uuid::parse_str(id).unwrap())
             .execute(&db.pool)
             .await;
@@ -628,12 +645,12 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var(\"DATABASE_URL\").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = \"postgres://postgres:postgres@localhost:5432/test\";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute(\"RESET app.current_tenant\").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -663,10 +680,10 @@ mod security_tests_final {
         let _lock = ENV_MUTEX.lock().unwrap();
         // Run with a temporary directory
         let temp_dir = tempfile::tempdir().unwrap();
-        let db_path = temp_dir.path().join("secure_test_dir/test.db");
-        let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
+        let db_path = temp_dir.path().join(\"secure_test_dir/test.db\");
+        let database_url = format!(\"sqlite://{}\", db_path.to_str().unwrap());
 
-        unsafe { std::env::set_var("DATABASE_URL", &database_url) };
+        unsafe { std::env::set_var(\"DATABASE_URL\", &database_url) };
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
@@ -708,11 +725,11 @@ mod security_tests_final {
         }
 
         let parent_dir = db_path.parent().unwrap();
-        assert!(parent_dir.exists(), "Secure directory should be created");
+        assert!(parent_dir.exists(), \"Secure directory should be created\");
 
         let meta = fs::metadata(&db_path).unwrap();
         let mode = meta.permissions().mode();
-        assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+        assert_eq!(mode & 0o777, 0o600, \"File permissions should be 0600\");
     }
 }
 
@@ -722,18 +739,18 @@ mod e2e_tenant_isolation_tests {
 
     #[tokio::test]
     async fn test_tenant_data_isolation() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var(\"DATABASE_URL\").is_err() {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = \"postgres://postgres:postgres@localhost:5432/test\";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute(\"RESET app.current_tenant\").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'tenant_1'").await?;
+                    conn.execute(\"SET app.current_tenant = 'tenant_1'\").await?;
                     Ok(true)
                 })
             })
@@ -741,12 +758,12 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let pool2 = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute(\"RESET app.current_tenant\").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'tenant_2'").await?;
+                    conn.execute(\"SET app.current_tenant = 'tenant_2'\").await?;
                     Ok(true)
                 })
             })
