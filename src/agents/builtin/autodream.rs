@@ -8,13 +8,19 @@ use tokio::time::{sleep, Duration};
 use chrono::Utc;
 use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 
+use opentelemetry::global;
+use opentelemetry::metrics::Counter;
+
 pub struct AutoDreamWorker {
     db: Arc<DB>,
+    embedded_counter: Counter<u64>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
-        AutoDreamWorker { db }
+        let meter = global::meter("ohc.autodream");
+        let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
+        AutoDreamWorker { db, embedded_counter }
     }
 
 
