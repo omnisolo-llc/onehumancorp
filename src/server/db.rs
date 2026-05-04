@@ -376,17 +376,33 @@ pub async fn insert_autodream_memory(
 
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let query = if table == "swarm_tasks" {
-            // swarm_tasks uses UUID primary key
-            "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
-        } else {
-            "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
-        };
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let query = if table == "swarm_tasks" {
+                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                } else {
+                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                };
 
-        sqlx::query(query)
-            .bind(task_id)
-            .execute(&self.pool)
-            .await?;
+                sqlx::query(query)
+                    .bind(task_id)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                let query = if table == "swarm_tasks" {
+                    // swarm_tasks uses UUID primary key
+                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+                } else {
+                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
+                };
+
+                sqlx::query(query)
+                    .bind(task_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
 
         Ok(())
     }

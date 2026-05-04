@@ -175,7 +175,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <-> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <-> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
