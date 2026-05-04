@@ -1030,9 +1030,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+            if let Ok(builder) = app::WebsiteBuilder::new() {
+                builder.show().unwrap();
+                Box::leak(Box::new(builder));
             }
         }
     });
@@ -1043,9 +1043,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+            if let Ok(grow_business) = app::GrowBusiness::new() {
+                grow_business.show().unwrap();
+                Box::leak(Box::new(grow_business));
             }
         }
     });
@@ -1713,8 +1713,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // In a real flow, this might jump to a specific product adding UI
+            if let Ok(dashboard) = app::WebsiteBuilder::new() {
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1727,8 +1726,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                // Similarly, jump to integrations or marketing
+            if let Ok(dashboard) = app::GrowBusiness::new() {
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
