@@ -645,11 +645,6 @@ mod autodream_db_tests {
 
 
 #[cfg(test)]
-
-#[cfg(test)]
-
-
-#[cfg(test)]
 mod security_tests_final {
     use super::*;
     use std::fs;
@@ -718,7 +713,6 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
-    use super::*;
 
     #[tokio::test]
     async fn test_tenant_data_isolation() {
@@ -727,7 +721,7 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
@@ -740,7 +734,7 @@ mod e2e_tenant_isolation_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let pool2 = sqlx::postgres::PgPoolOptions::new()
+        let _pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {

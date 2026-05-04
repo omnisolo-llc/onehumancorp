@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 pub struct ChaosEngine {}
 
 impl ChaosEngine {
@@ -10,7 +8,7 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
     use ohc_builtin_agent::legacy_mesh::DistributedLock;
@@ -133,7 +131,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_lock_contention_resilience() {
-        use redis::AsyncCommands;
         // Start a local redis instance for testing or mock the behavior. Since we may not have a redis server running that we can corrupt,
         // we'll simulate the lock contention logic locally.
 
