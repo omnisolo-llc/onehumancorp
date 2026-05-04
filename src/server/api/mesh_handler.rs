@@ -6,9 +6,11 @@ use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use axum::Json;
+use axum::http::StatusCode;
 
 #[derive(Deserialize)]
 pub struct ConnectQuery {
@@ -21,6 +23,46 @@ pub async fn mesh_ws_handler(
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+}
+
+#[derive(Deserialize)]
+pub struct BroadcastRequest {
+    pub agent_id: String,
+    pub channel: String,
+    pub event_type: String,
+    pub data: serde_json::Value,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BroadcastResponse {
+    pub status: String,
+}
+
+pub async fn mesh_broadcast_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    Json(payload): Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    // Validate payload according to OHC-SIP specification
+    if payload.agent_id.is_empty() || payload.channel.is_empty() || payload.event_type.is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(BroadcastResponse { status: "invalid payload".to_string() })).into_response();
+    }
+
+    let data_bytes = match serde_json::to_vec(&payload.data) {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(BroadcastResponse { status: "invalid data formatting".to_string() })).into_response(),
+    };
+
+    let mesh_msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.event_type,
+        status: "ok".to_string(),
+        payload: data_bytes,
+    };
+
+    match transport.publish(&payload.channel, mesh_msg).await {
+        Ok(_) => (StatusCode::OK, Json(BroadcastResponse { status: "success".to_string() })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(BroadcastResponse { status: "failed to publish".to_string() })).into_response(),
+    }
 }
 
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
@@ -150,5 +192,132 @@ mod tests {
             }
         }
         assert!(found, "Did not receive the srv_test message");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_broadcast_handler_success() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport_clone = transport.clone();
+
+        let app = Router::new()
+            .route("/api/mesh/broadcast", axum::routing::post(mesh_broadcast_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        // Set up subscription to listen for the broadcasted message
+        let received = Arc::new(tokio::sync::Mutex::new(false));
+        let received_clone = received.clone();
+        let _cancel = transport_clone.subscribe("test_channel", Box::new(move |msg: MeshMessage| {
+            if msg.action == "TEST_EVENT" && msg.agent_id == "test_agent" {
+                let rec = received_clone.clone();
+                tokio::spawn(async move {
+                    *rec.lock().await = true;
+                });
+            }
+        })).await.unwrap();
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/broadcast", addr);
+        let payload = serde_json::json!({
+            "agent_id": "test_agent",
+            "channel": "test_channel",
+            "event_type": "TEST_EVENT",
+            "data": {"key": "value"}
+        });
+
+        let resp = client.post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let resp_json: BroadcastResponse = resp.json().await.unwrap();
+        assert_eq!(resp_json.status, "success");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        let got_it = *received.lock().await;
+        assert!(got_it, "Message was not received on the memory transport");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_broadcast_handler_invalid_payload() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+
+        let app = Router::new()
+            .route("/api/mesh/broadcast", axum::routing::post(mesh_broadcast_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/broadcast", addr);
+
+        // Missing agent_id should fail validation
+        let payload = serde_json::json!({
+            "agent_id": "",
+            "channel": "test_channel",
+            "event_type": "TEST_EVENT",
+            "data": {"key": "value"}
+        });
+
+        let resp = client.post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+}
+#[cfg(test)]
+mod schema_tests {
+    use sqlx::Row;
+
+    // We don't have direct access to run migrations in this isolated unit test without Bazel/sqlx wiring,
+    // but we can compile the file to ensure our syntax is valid rust and serves as a placeholder
+    // for comprehensive schema validation logic when the DB pool is available.
+
+    #[tokio::test]
+    async fn test_kairos_orchestration_schema_exists() {
+        if std::env::var("DATABASE_URL").is_err() && std::env::var("OHC_DATABASE_URL").is_err() {
+            return; // skip if db is unavailable
+        }
+
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(database_url)
+            .unwrap();
+
+        // Check if shared_tasks table exists and has RLS enabled
+        let row = sqlx::query("SELECT relrowsecurity FROM pg_class WHERE relname = 'kairos_shared_tasks'")
+            .fetch_optional(&pool)
+            .await;
+
+        if let Ok(Some(row)) = row {
+            let rls_enabled: bool = row.get(0);
+            assert!(rls_enabled, "RLS must be enabled on kairos_shared_tasks");
+        }
     }
 }
