@@ -95,7 +95,7 @@ async fn test_task_decomposition_service() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -218,7 +218,7 @@ async fn test_task_decomposition_dag_blocked() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -361,7 +361,7 @@ async fn test_task_decomposition_service_fail_task() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
 
     let now = Utc::now();
     let main_task = SharedTask {
