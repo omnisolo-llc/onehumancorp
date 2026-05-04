@@ -1028,6 +1028,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .route("/api/v1/health", axum::routing::get(crate::api::health::check_health_wrapper).with_state(hub.clone()))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
@@ -1064,8 +1065,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cloud_sync_clone = cloud_sync.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+            let pool_for_sip = db.pool.clone();
+            let sip_db = crate::sip::SipDB::new(pool_for_sip, "system".to_string());
             loop {
                 interval.tick().await;
+                if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::hours(1)).await {
+                    eprintln!("failed to prune stale missions: {}", e);
+                }
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
                     eprintln!("failed to push pending missions: {}", e);
                 }
