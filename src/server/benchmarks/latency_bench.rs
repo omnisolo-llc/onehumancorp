@@ -22,7 +22,7 @@ pub async fn bench_queue_latency() {
                     Ok(true)
                 })
             })
-            .connect(&database_url).await;
+            .connect_lazy(&database_url);
 
         if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
@@ -60,7 +60,7 @@ pub async fn bench_dashboard_snapshot() {
                 Ok(true)
             })
         })
-        .connect(&database_url).await;
+        .connect_lazy(&database_url);
 
     let pg_pool = match pool_res {
         Ok(p) => p,

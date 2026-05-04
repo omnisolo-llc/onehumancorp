@@ -11,8 +11,7 @@ async fn setup_db() -> Arc<DB> {
     let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
     let sqlite_pool = SqlitePoolOptions::new()
         .max_connections(1)
-        .connect(&uri)
-        .await
+        .connect_lazy(&uri)
         .unwrap();
 
     sqlx::query(
