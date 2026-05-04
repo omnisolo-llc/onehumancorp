@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-
-use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
+#[allow(unused_imports)]
+use chrono::Utc;
 
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
@@ -195,7 +195,7 @@ mod tests {
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
 
-        let now = Utc::now();
+        let _now = Utc::now();
         let mut a = create_dummy_record("a", true, 50, 0); // wins due to override
         let mut b = create_dummy_record("b", false, 100, 100);
 
