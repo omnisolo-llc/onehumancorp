@@ -48,6 +48,7 @@ nav:
       - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
+      - Core Tool Integrations: research/core_tool_integrations_research.md
       - features/index.md
       - KAIROS Orchestration: features/kairos_orchestration.md
       - KAIROS Sub-Agent Queue: features/kairos/sub_agent_queue.md
