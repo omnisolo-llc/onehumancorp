@@ -116,6 +116,12 @@ export component Login inherits Window {
                 
                 Button {
                     height: 44px;
+                    text: "🚀 Start Business Setup";
+                    clicked => { start_setup_wizard(); }
+                }
+
+                Button {
+                    height: 44px;
                     text: "⚙ Advanced Options";
                     clicked => { open_settings(); }
                 }
