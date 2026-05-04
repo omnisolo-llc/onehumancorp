@@ -50,6 +50,37 @@ fn create_c() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboar
 
 // --- Unique Scenarios with Verification ---
 
+// --- Billing Action Tests ---
+#[tokio::test]
+async fn test_billing_actions_cancel() {
+    let ui = create_m();
+    ui.invoke_cancel_subscription();
+}
+
+#[tokio::test]
+async fn test_billing_actions_update_payment() {
+    let ui = create_m();
+    ui.invoke_update_payment();
+}
+
+#[tokio::test]
+async fn test_billing_actions_download_invoice() {
+    let ui = create_m();
+    ui.invoke_download_invoice();
+}
+
+#[tokio::test]
+async fn test_billing_actions_view_history() {
+    let ui = create_m();
+    ui.invoke_view_history();
+}
+
+#[tokio::test]
+async fn test_billing_actions_view_details() {
+    let ui = create_m();
+    ui.invoke_view_details();
+}
+
 // --- Consolidated Verified Tests ---
 
 #[test]

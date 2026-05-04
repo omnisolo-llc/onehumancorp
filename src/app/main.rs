@@ -806,6 +806,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
     let my_plan_ui = app::MyPlan::new().unwrap();
+    my_plan_ui.set_customer_id(std::env::var("OHC_CUSTOMER_ID").unwrap_or_else(|_| "cus_123".to_string()).into());
+    my_plan_ui.set_subscription_id(std::env::var("OHC_SUBSCRIPTION_ID").unwrap_or_else(|_| "sub_123_cus_123".to_string()).into());
     let my_plan_handle = my_plan_ui.as_weak();
 
     let pricing_ui = app::Pricing::new().unwrap();
@@ -850,19 +852,120 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     my_plan_ui.on_view_history(move || {
-        // Handle view history (e.g. open an invoice history modal or trigger backend flow)
+        println!("View history triggered");
     });
 
+    let my_plan_handle_cancel = my_plan_handle.clone();
     my_plan_ui.on_cancel_subscription(move || {
-        // Handle cancel subscription (e.g. Stripe API call)
+        println!("Cancel subscription triggered");
+        let handle = my_plan_handle_cancel.clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let sub_id = handle.upgrade().map(|ui| ui.get_subscription_id().to_string()).unwrap_or_default();
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let payload = serde_json::json!({
+                    "subscription_id": sub_id
+                });
+                let backend_url = std::env::var("OHC_BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                let token = std::env::var("OHC_API_TOKEN").unwrap_or_else(|_| "cus_123".to_string());
+                match client.post(format!("{}/api/v1/billing/cancel", backend_url))
+                    .header("Authorization", format!("Bearer {}", token))
+                    .json(&payload)
+                    .send()
+                    .await {
+                    Ok(res) if res.status().is_success() => {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = handle.upgrade() {
+                                ui.set_plan_status("Canceled".into());
+                            }
+                        });
+                    }
+                    Ok(res) => println!("Failed to cancel subscription: {}", res.status()),
+                    Err(e) => println!("Error canceling subscription: {}", e),
+                }
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            println!("Mock cancel for WASM");
+            if let Some(ui) = handle.upgrade() {
+                ui.set_plan_status("Canceled".into());
+            }
+        }
     });
 
+    let my_plan_handle_update = my_plan_handle.clone();
     my_plan_ui.on_update_payment(move || {
-        // Handle update payment method
+        println!("Securely updating payment method...");
+        let handle = my_plan_handle_update.clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let cus_id = handle.upgrade().map(|ui| ui.get_customer_id().to_string()).unwrap_or_default();
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let payload = serde_json::json!({
+                    "price_id": "price_update",
+                    "customer_id": cus_id
+                });
+                let backend_url = std::env::var("OHC_BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                let token = std::env::var("OHC_API_TOKEN").unwrap_or_else(|_| "cus_123".to_string());
+                match client.post(format!("{}/api/v1/billing/checkout", backend_url))
+                    .header("Authorization", format!("Bearer {}", token))
+                    .json(&payload).send().await {
+                    Ok(res) if res.status().is_success() => {
+                        if let Ok(json) = res.json::<serde_json::Value>().await {
+                            if let Some(url) = json.get("url").and_then(|u| u.as_str()) {
+                                crate::open_url(url);
+                            }
+                        }
+                    },
+                    _ => println!("Update payment failed"),
+                }
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            println!("Mock checkout for WASM");
+        }
     });
 
+    let my_plan_handle_invoice = my_plan_handle.clone();
     my_plan_ui.on_download_invoice(move || {
-        // Handle download invoice
+        println!("Downloading invoice PDF...");
+        let handle = my_plan_handle_invoice.clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let cus_id = handle.upgrade().map(|ui| ui.get_customer_id().to_string()).unwrap_or_default();
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let payload = serde_json::json!({
+                    "customer_id": cus_id
+                });
+                let backend_url = std::env::var("OHC_BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                let token = std::env::var("OHC_API_TOKEN").unwrap_or_else(|_| "cus_123".to_string());
+                match client.post(format!("{}/api/v1/billing/invoices", backend_url))
+                    .header("Authorization", format!("Bearer {}", token))
+                    .json(&payload).send().await {
+                    Ok(res) if res.status().is_success() => {
+                        if let Ok(json) = res.json::<serde_json::Value>().await {
+                            if let Some(invoices) = json.as_array() {
+                                if let Some(first) = invoices.first() {
+                                    if let Some(url) = first.get("invoice_pdf").and_then(|u| u.as_str()) {
+                                        crate::open_url(url);
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    _ => println!("Download invoice failed"),
+                }
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            println!("Mock invoice download for WASM");
+        }
     });
 
 

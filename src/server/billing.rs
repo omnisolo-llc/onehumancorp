@@ -51,6 +51,30 @@ impl Tracker {
         }
     }
 
+    pub async fn create_checkout_session(&self, price_id: &str, customer_id: &str) -> Result<String, String> {
+        if let Some(ref client) = self.stripe_client {
+            client.create_checkout_session(price_id, customer_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
+    pub async fn list_invoices(&self, customer_id: &str) -> Result<Vec<crate::integrations::stripe::client::StripeInvoice>, String> {
+        if let Some(ref client) = self.stripe_client {
+            client.list_invoices(customer_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
+    pub async fn cancel_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+        if let Some(ref client) = self.stripe_client {
+            client.cancel_subscription(subscription_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
         TokenSummary::default()
     }
@@ -64,5 +88,40 @@ pub struct TokenSummary {
 impl Default for Tracker {
     fn default() -> Self {
         Tracker::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_tracker_stripe_methods_without_client() {
+        let tracker = Tracker::new();
+
+        let res = tracker.create_checkout_session("price_123", "cus_123").await;
+        assert_eq!(res.unwrap_err(), "Stripe client not configured");
+
+        let res = tracker.list_invoices("cus_123").await;
+        assert_eq!(res.unwrap_err(), "Stripe client not configured");
+
+        let res = tracker.cancel_subscription("sub_123").await;
+        assert_eq!(res.unwrap_err(), "Stripe client not configured");
+    }
+
+    #[tokio::test]
+    async fn test_tracker_stripe_methods_with_client() {
+        let mut tracker = Tracker::new();
+        tracker.stripe_client = Some(Arc::new(StripeClient::new("sk_test_123".to_string())));
+
+        let session_url = tracker.create_checkout_session("price_123", "cus_123").await.unwrap();
+        assert!(session_url.starts_with("https://checkout.stripe.com"));
+
+        let invoices = tracker.list_invoices("cus_123").await.unwrap();
+        assert_eq!(invoices.len(), 1);
+        assert_eq!(invoices[0].status, "paid");
+
+        let sub = tracker.cancel_subscription("sub_123").await.unwrap();
+        assert_eq!(sub.status, "canceled");
     }
 }
