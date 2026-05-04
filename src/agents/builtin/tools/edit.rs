@@ -45,9 +45,69 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(path, &new_content)
+        fs::write(&actual_path, &new_content)
             .await
-            .map_err(|e| format!("edit: write {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        // Computational/Guides Verification Loop
+        let ext = actual_path.extension().and_then(|s| s.to_str()).unwrap_or("");
+
+        let mut verification_failed = false;
+        let mut error_msg = String::new();
+
+        if ext == "rs" {
+            // Find Cargo.toml by searching up
+            let mut current_dir = actual_path.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+            let mut cargo_toml_dir = None;
+            for _ in 0..5 {
+                if current_dir.join("Cargo.toml").exists() {
+                    cargo_toml_dir = Some(current_dir.clone());
+                    break;
+                }
+                if let Some(p) = current_dir.parent() {
+                    current_dir = p.to_path_buf();
+                } else {
+                    break;
+                }
+            }
+
+            if let Some(dir) = cargo_toml_dir {
+                let output = tokio::process::Command::new("cargo")
+                    .arg("check")
+                    .current_dir(&dir)
+                    .output()
+                    .await;
+
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        verification_failed = true;
+                        error_msg = format!("File edited, but `cargo check` failed:\n{}", stderr);
+                    }
+                }
+            }
+        } else if ext == "py" {
+            let output = tokio::process::Command::new("python3")
+                .arg("-m")
+                .arg("py_compile")
+                .arg(&actual_path)
+                .output()
+                .await;
+
+            if let Ok(out) = output {
+                if !out.status.success() {
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    verification_failed = true;
+                    error_msg = format!("File edited, but python syntax check failed:\n{}", stderr);
+                }
+            }
+        }
+
+        if verification_failed {
+            // Revert the file to its previous state
+            let _ = fs::write(&actual_path, content).await;
+            return Err(ToolError::LlmRecoverable(format!("{} The file has been reverted to its previous state.", error_msg)));
+        }
 
         Ok(format!("File edited: {}", path))
     }
@@ -57,7 +117,7 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Edit".to_string(),
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
-            The old_str must appear exactly once in the file."
+            The old_str must appear exactly once in the file. Automatically runs syntax checking (like cargo check or python py_compile) after editing, and reverts changes if syntax check fails."
             .to_string(),
         is_read_only: false,
         parameters: json!({
@@ -79,5 +139,45 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["path", "old_str", "new_str"]
         }),
         execute: Arc::new(EditExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_edit_tool_cargo_check_fail_reverts() {
+        let dir = tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+
+        fs::write(wd.join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n[dependencies]\n").await.unwrap();
+        fs::create_dir_all(wd.join("src")).await.unwrap();
+        let original_content = "fn main() { println!(\"Hello, world!\"); }";
+        fs::write(wd.join("src").join("main.rs"), original_content).await.unwrap();
+
+        let tool = edit_tool(Some(wd.clone()));
+
+        let args = json!({
+            "path": "src/main.rs",
+            "old_str": "println!(\"Hello, world!\");",
+            "new_str": "let x = 1; let y = x + \"string\";"
+        });
+
+        let result = tool.execute.execute(args).await;
+
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("cargo check` failed"));
+                assert!(msg.contains("reverted"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+
+        // Verify it was reverted
+        let current_content = fs::read_to_string(wd.join("src").join("main.rs")).await.unwrap();
+        assert_eq!(current_content, original_content);
     }
 }
