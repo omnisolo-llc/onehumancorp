@@ -46,7 +46,8 @@ impl ViolationStore {
             // Actually, in `sqlx`, to insert into a `JSONB` column without casting, one can use `sqlx::types::Json` or just cast it in the query `CAST($6 as JSONB)`. However, since SQLite doesn't have `JSONB`, casting breaks on SQLite.
             // Better to use `sqlx::types::Json`.
 
-            let json_value: sqlx::types::Json<Value> = sqlx::types::Json(details);
+            let redacted_details = crate::telemetry::redact_interface_pii(details);
+            let json_value: sqlx::types::Json<Value> = sqlx::types::Json(redacted_details);
 
             // Execute in an explicit transaction to set RLS correctly
             let mut tx = pool.begin().await?;
