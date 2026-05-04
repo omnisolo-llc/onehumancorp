@@ -164,20 +164,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
+                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
@@ -209,20 +197,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
+                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
@@ -2808,26 +2784,14 @@ mod docs_tests {
 
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            match id.as_str() {
-                "ask_ai" => "Ask the AI Assistant".into(),
-                "menu" => "Open Menu".into(),
-                "help_center" => "Help Center".into(),
-                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                "grow_business" => "Grow Business".into(),
-                "referrals" => "Referrals".into(),
-                "stats" => "Stats".into(),
-                "share" => "Share".into(),
-                "add_product" => "Add".into(),
-                "view_orders" => "Orders".into(),
-                "messages" => "Chat".into(),
-                _ => "".into(),
-            }
+            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
         });
 
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
         tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
         assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI Assistant");
+        assert_eq!(tr.get_active_text(), "Ask the AI assistant for help or to perform tasks.");
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
 
