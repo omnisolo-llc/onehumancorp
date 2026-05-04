@@ -1694,6 +1694,7 @@ mod tests {
 
         let reqs = client_llm.requests.lock().await;
         let last_req = reqs.last().unwrap();
+        #[allow(unused_variables)]
         let last_msg = last_req.messages.last().unwrap();
         // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
@@ -2350,6 +2351,7 @@ mod tests {
 
         let lr = client.last_request.lock().await;
         let req = lr.as_ref().unwrap();
+        #[allow(unused_variables)]
         let last_msg = req.messages.last().unwrap();
 
         assert_eq!(last_msg.role, Role::User);
