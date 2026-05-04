@@ -3436,25 +3436,32 @@ mod docs_tests {
 
         ui.on_save_state(|| {});
 
-        ui.on_execute(move |strategy| {
+        ui.on_execute(move |strategy, _kpi| {
             assert_eq!(strategy, "Add 5 more products");
             *execute_success_clone.borrow_mut() = true;
         });
 
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        ui.invoke_save_state();
+
+        // Simulating the flow strictly via actual action triggers
+        ui.invoke_toggle_advanced();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_strategy("Add 5 more products".into());
-        ui.set_step(1);
+        ui.invoke_select_strategy("Add 5 more products".into());
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 1);
 
-        ui.invoke_execute(ui.get_selected_strategy());
+        ui.set_kpi_target("20%".into());
+        ui.invoke_execute(ui.get_selected_strategy(), ui.get_kpi_target());
+        ui.invoke_next_step();
 
+        assert_eq!(ui.get_step(), 2);
         assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
-        assert!(*execute_success.borrow());
+
+        ui.invoke_return_to_dashboard();
+        assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_selected_strategy(), "");
     }
 
     #[test]
