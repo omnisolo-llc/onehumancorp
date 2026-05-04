@@ -87,6 +87,7 @@ impl HandoffManager {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         self.transport.publish("mesh:coordination:handoff", msg).await
@@ -157,6 +158,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg).await.unwrap();
@@ -187,6 +189,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_older,
+            msg_id: "".to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -213,6 +216,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf_newer,
+            msg_id: "".to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -241,6 +245,7 @@ mod tests {
             action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload: buf2,
+            msg_id: "".to_string(),
         };
 
         transport.publish("mesh:coordination:handoff", msg2).await.unwrap();

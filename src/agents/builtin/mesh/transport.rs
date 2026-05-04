@@ -140,11 +140,15 @@ impl IpcTransport {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                msg_id TEXT,
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
+
+        // Migration for existing tables
+        let _ = sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
@@ -175,15 +179,15 @@ impl IpcTransport {
         let mut last_id = 0;
         loop {
             // Poll for new messages
-            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+            let rows: Result<Vec<(i64, Option<String>, String, Vec<u8>)>, _> = sqlx::query_as(
+                "SELECT id, msg_id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
             )
             .bind(last_id)
             .fetch_all(&pool)
             .await;
 
             if let Ok(rows) = rows {
-                for (id, topic, payload) in rows {
+                for (id, _msg_id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
                         if let Ok(message) = Message::decode(&payload[..]) {
@@ -208,9 +212,11 @@ impl MeshTransport for IpcTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
+        let msg_id = message.msg_id.clone();
         message.encode(&mut buf).unwrap();
 
-        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (msg_id, topic, payload) VALUES (?, ?, ?)")
+            .bind(msg_id)
             .bind(topic)
             .bind(buf)
             .execute(&self.pool)
@@ -516,6 +522,7 @@ mod tests {
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"ipc_hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("ipc_test_topic", msg).await.unwrap();
@@ -569,6 +576,7 @@ mod tests {
             action: "test_topic".to_string(),
             status: "ok".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic", msg).await.unwrap();
@@ -693,6 +701,7 @@ mod tests {
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),
             payload: b"hello redis".to_vec(),
+            msg_id: "".to_string(),
         };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();
