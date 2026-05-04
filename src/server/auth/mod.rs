@@ -362,6 +362,7 @@ impl Store {
         false
     }
 
+    #[allow(unused_variables)]
     pub fn issue_token(&self, user: &User) -> Result<String, String> {
         #[cfg(not(test))]
         {
@@ -393,6 +394,7 @@ impl Store {
         }
     }
 
+    #[allow(unused_variables)]
     pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
         #[cfg(not(test))]
         {

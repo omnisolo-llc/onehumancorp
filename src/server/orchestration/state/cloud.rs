@@ -65,7 +65,7 @@ impl CloudStateManager {
     async fn transition_state_inner(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        #[allow(unused_variables)] tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -162,7 +162,7 @@ impl StateManager for CloudStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        #[allow(unused_variables)] tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
