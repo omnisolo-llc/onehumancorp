@@ -45,11 +45,128 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(path, &new_content)
+        fs::write(&actual_path, &new_content)
             .await
-            .map_err(|e| format!("edit: write {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        // Computational Guides: Verification loop
+        if let Some(ext) = actual_path.extension().and_then(|e| e.to_str()) {
+            if ext == "rs" {
+                let output = tokio::process::Command::new("rustfmt")
+                    .arg(&actual_path)
+                    .output()
+                    .await;
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        // Revert changes
+                        let _ = fs::write(&actual_path, &content).await;
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        let stdout = String::from_utf8_lossy(&out.stdout);
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Syntax validation failed (rustfmt). Changes reverted. Fix the syntax and try again.\nSTDOUT:\n{}\nSTDERR:\n{}",
+                            stdout, stderr
+                        )));
+                    }
+                }
+            } else if ext == "py" {
+                let output = tokio::process::Command::new("python3")
+                    .arg("-m")
+                    .arg("py_compile")
+                    .arg(&actual_path)
+                    .output()
+                    .await;
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        // Revert changes
+                        let _ = fs::write(&actual_path, &content).await;
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Syntax validation failed (py_compile). Changes reverted. Fix the syntax and try again.\nSTDERR:\n{}",
+                            stderr
+                        )));
+                    }
+                }
+            }
+        }
 
         Ok(format!("File edited: {}", path))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_edit_tool_success() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.txt");
+        tokio::fs::write(&file_path, "hello world").await.unwrap();
+
+        let tool = edit_tool(Some(dir.path().to_path_buf()));
+        let args = json!({
+            "path": "test.txt",
+            "old_str": "world",
+            "new_str": "rust"
+        });
+
+        let result = tool.execute.execute(args).await;
+        assert!(result.is_ok());
+        let content = tokio::fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "hello rust");
+    }
+
+    #[tokio::test]
+    async fn test_edit_tool_validation_failure_rs() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.rs");
+        tokio::fs::write(&file_path, "fn main() { let x = 1; }").await.unwrap();
+
+        let tool = edit_tool(Some(dir.path().to_path_buf()));
+        let args = json!({
+            "path": "test.rs",
+            "old_str": "1; }",
+            "new_str": "1;" // Missing closing brace
+        });
+
+        let result = tool.execute.execute(args).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Syntax validation failed (rustfmt)"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+
+        let content = tokio::fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "fn main() { let x = 1; }"); // Reverted
+    }
+
+    #[tokio::test]
+    async fn test_edit_tool_validation_failure_py() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.py");
+        tokio::fs::write(&file_path, "print('hello')").await.unwrap();
+
+        let tool = edit_tool(Some(dir.path().to_path_buf()));
+        let args = json!({
+            "path": "test.py",
+            "old_str": "('hello')",
+            "new_str": "('hello'" // Missing closing parenthesis
+        });
+
+        let result = tool.execute.execute(args).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Syntax validation failed (py_compile)"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+
+        let content = tokio::fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "print('hello')"); // Reverted
     }
 }
 
