@@ -10,6 +10,7 @@ pub mod ultraplan;
 pub mod autodream;
 pub mod tasks;
 pub mod settings;
+pub mod billing_interceptor;
 pub mod scheduler;
 pub mod msgbus;
 pub mod pipeline;
@@ -724,7 +725,7 @@ impl HubService for MyHubService {
         
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Ok(content) => Ok(Response::new(ReasonResponse { content: content.0 })),
             Err(e) => Err(Status::internal(e)),
         }
     }

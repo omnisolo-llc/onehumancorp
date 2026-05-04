@@ -73,6 +73,7 @@ struct MinimaxMessage {
 #[derive(Debug, Deserialize)]
 struct MinimaxResponse {
     choices: Vec<Choice>,
+    usage: Option<MinimaxUsage>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -85,6 +86,12 @@ struct MessageContent {
     content: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct MinimaxUsage {
+    prompt_tokens: i64,
+    completion_tokens: i64,
+}
+
 impl MinimaxClient {
     pub fn new(api_key: String) -> Self {
         MinimaxClient {
@@ -93,7 +100,7 @@ impl MinimaxClient {
         }
     }
 
-    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+    pub async fn reason(&self, prompt: &str) -> Result<(String, Option<(i64, i64)>), String> {
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
@@ -125,7 +132,12 @@ impl MinimaxClient {
                         let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
-                            return Ok(choice.message.content.clone());
+                            let usage = if let Some(u) = result.usage {
+                                Some((u.prompt_tokens, u.completion_tokens))
+                            } else {
+                                None
+                            };
+                            return Ok((choice.message.content.clone(), usage));
                         } else {
                             last_err = "empty response from minimax".to_string();
                             cb.record_failure();
@@ -241,7 +253,7 @@ impl LocalLLMClient {
         LocalLLMClient { endpoint, embed_endpoint, model }
     }
 
-    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+    pub async fn reason(&self, prompt: &str) -> Result<(String, Option<(i64, i64)>), String> {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
             "model": self.model,
@@ -261,7 +273,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
-        Ok(response.to_string())
+        Ok((response.to_string(), None))
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
@@ -303,7 +315,7 @@ impl ResilientClient {
         }
     }
 
-    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+    pub async fn reason(&self, prompt: &str) -> Result<(String, Option<(i64, i64)>), String> {
         match self.primary.reason(prompt).await {
             Ok(res) => Ok(res),
             Err(e) => {
