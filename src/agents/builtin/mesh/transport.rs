@@ -147,6 +147,13 @@ impl IpcTransport {
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_checkpoints (
+                subscriber_id TEXT PRIMARY KEY,
+                last_id INTEGER NOT NULL
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
         // Attempt to add the column, ignoring error if it already exists (e.g. duplicate column name)
         match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await {
             Ok(_) => {},
@@ -184,7 +191,14 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let mut last_id = 0;
+        let subscriber_id = "builtin_agent_node".to_string();
+        let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
+            .bind(&subscriber_id)
+            .fetch_optional(&pool)
+            .await
+            .unwrap_or(Some(0))
+            .unwrap_or(0);
+
         loop {
             // Poll for new messages
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
@@ -195,6 +209,7 @@ impl IpcTransport {
             .await;
 
             if let Ok(rows) = rows {
+                let has_rows = !rows.is_empty();
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
@@ -202,6 +217,14 @@ impl IpcTransport {
                             let _ = tx.send(message);
                         }
                     }
+                }
+
+                if has_rows {
+                    let _ = sqlx::query("INSERT INTO mesh_checkpoints (subscriber_id, last_id) VALUES (?, ?) ON CONFLICT(subscriber_id) DO UPDATE SET last_id = excluded.last_id")
+                        .bind(&subscriber_id)
+                        .bind(last_id)
+                        .execute(&pool)
+                        .await;
                 }
             }
 
@@ -618,6 +641,38 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst));
         cancel();
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transport_checkpoints() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_checkpoints_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let transport = IpcTransport::new(&db_url).await.unwrap();
+
+        let msg = Message {
+            agent_id: "test".to_string(),
+            action: "ipc_checkpoint_topic".to_string(),
+            status: "ok".to_string(),
+            payload: b"ipc_checkpoint".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+
+        transport.publish("ipc_checkpoint_topic", msg).await.unwrap();
+
+        let t_clone = transport.clone();
+        tokio::spawn(async move { t_clone.start_worker().await; });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+        let subscriber_id = "builtin_agent_node".to_string();
+        let last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
+            .bind(&subscriber_id)
+            .fetch_one(&transport.pool)
+            .await.unwrap();
+
+        assert!(last_id > 0);
     }
 
     #[tokio::test]
