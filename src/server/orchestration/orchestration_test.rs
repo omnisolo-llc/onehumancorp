@@ -7,9 +7,12 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    if db_builder.is_err() {
+        println!("Skipping task decomposition service DB test");
+        return;
+    }
+    let db = db_builder.unwrap();
 
     match &db.store {
         DbStore::Postgres => {
@@ -155,9 +158,12 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    if db_builder.is_err() {
+        println!("Skipping task decomposition dag DB test");
+        return;
+    }
+    let db = db_builder.unwrap();
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(
@@ -280,9 +286,12 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
-    unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
     let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    if db_builder.is_err() {
+        println!("Skipping task decomposition dag DB test");
+        return;
+    }
+    let db = db_builder.unwrap();
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(

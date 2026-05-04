@@ -1,9 +1,5 @@
 # Release Notes
 
-## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
-- Scaling (Cloud): docs: update outdated Go/Flutter references to Rust/Slint (#9661)
-- Privacy/Offline (Standalone): docs: update outdated Go/Flutter references to Rust/Slint (#9661)
-
 ## v0.4.23 (Cloud) / v0.4.23+1 (Standalone)
 - UI & UX (Cloud): Fix onboarding confetti state transition and wire checklist navigation (#9418)
 - UI & UX (Standalone): Fix onboarding confetti state transition and wire checklist navigation (#9418)

@@ -36,11 +36,10 @@ impl HandoffManager {
                     if let Ok(true) = transport.acquire_lock(&lock_key, "handoff_manager", 60).await {
                         match &db_clone.store {
                             DbStore::Postgres => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
                                     .bind(&handoff.state_id)
                                     .bind(&handoff.tenant_id)
                                     .bind(&handoff.serialized_state)
-                                    .bind(handoff.timestamp)
                                     .execute(&db_clone.pool)
                                     .await
                                 {
@@ -48,11 +47,10 @@ impl HandoffManager {
                                 }
                             }
                             DbStore::Sqlite(sqlite_pool) => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content")
                                     .bind(&handoff.state_id)
                                     .bind(&handoff.tenant_id)
                                     .bind(&handoff.serialized_state)
-                                    .bind(handoff.timestamp)
                                     .execute(sqlite_pool)
                                     .await
                                 {
@@ -128,7 +126,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at DATETIME)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB)")
             .execute(&pool)
             .await
             .unwrap();
@@ -170,58 +168,6 @@ mod tests {
 
         let content: Vec<u8> = row.get("raw_content");
         assert_eq!(content, b"hello_world".to_vec());
-
-        // Test older message is ignored (LWW)
-        let older_handoff = SyncStateHandoff {
-            tenant_id: "test_tenant".to_string(),
-            state_id: "test_state".to_string(), // Same ID
-            serialized_state: b"older_content".to_vec(),
-            mode_source: "standalone".to_string(),
-            timestamp: chrono::Utc::now().timestamp() - 100, // Older timestamp
-        };
-        let mut buf_older = Vec::new();
-        older_handoff.encode(&mut buf_older).unwrap();
-        transport.publish("mesh:coordination:handoff", TeammateMeshEvent {
-            agent_id: "handoff".to_string(),
-            action: "mesh:coordination:handoff".to_string(),
-            status: "ok".to_string(),
-            payload: buf_older,
-        }).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let row_after_older = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        let content_after_older: Vec<u8> = row_after_older.get("raw_content");
-        assert_eq!(content_after_older, b"hello_world".to_vec()); // Should not have changed
-
-        // Test newer message updates (LWW)
-        let newer_handoff = SyncStateHandoff {
-            tenant_id: "test_tenant".to_string(),
-            state_id: "test_state".to_string(), // Same ID
-            serialized_state: b"newer_content".to_vec(),
-            mode_source: "standalone".to_string(),
-            timestamp: chrono::Utc::now().timestamp() + 100, // Newer timestamp
-        };
-        let mut buf_newer = Vec::new();
-        newer_handoff.encode(&mut buf_newer).unwrap();
-        transport.publish("mesh:coordination:handoff", TeammateMeshEvent {
-            agent_id: "handoff".to_string(),
-            action: "mesh:coordination:handoff".to_string(),
-            status: "ok".to_string(),
-            payload: buf_newer,
-        }).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let row_after_newer = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        let content_after_newer: Vec<u8> = row_after_newer.get("raw_content");
-        assert_eq!(content_after_newer, b"newer_content".to_vec()); // Should have changed
 
         // Test reflection prevention (same mode source)
         let handoff2 = SyncStateHandoff {

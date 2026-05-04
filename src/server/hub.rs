@@ -620,18 +620,10 @@ impl Hub {
 
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
-
-        let ping_future = async {
-            match sqlx::query("SELECT 1").execute(&self.pool).await {
-                Ok(_) => start.elapsed().as_millis() as u64,
-                Err(_) => 0,
-            }
+        let db_ping = match sqlx::query("SELECT 1").execute(&self.pool).await {
+            Ok(_) => start.elapsed().as_millis() as u64,
+            Err(_) => 0,
         };
-        let backlog_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
-
-        let (db_ping, backlog_res) = tokio::join!(ping_future, backlog_future);
-
-        let mission_sync_backlog = backlog_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -642,6 +634,14 @@ impl Hub {
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
+
+        let mission_sync_backlog: i64 = match sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')")
+            .fetch_one(&self.pool)
+            .await
+        {
+            Ok(count) => count,
+            Err(_) => 0,
+        };
 
         Ok(serde_json::json!({
             "mode": mode,
