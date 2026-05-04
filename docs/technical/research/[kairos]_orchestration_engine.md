@@ -9,7 +9,7 @@ Current systems lack a unified orchestration layer to manage complex, multi-agen
   - A Shared Task List with deterministic transitions (`FOR UPDATE SKIP LOCKED` for Postgres, mutexed for SQLite).
   - A Teammate Mesh for real-time pub/sub (`CentrifugeNode`, Redis/Memory).
   - An AutoDream pipeline for long-term vector embeddings (`pgvector` / SQLite JSON).
-- **References:** KAIROS Master Design (`docs/features/kairos/master_design.md`), Shared Task List Design (`docs/features/kairos/shared_task_list_design.md`), State Machine Tracker (`docs/features/kairos/state_machine.md`), Sub-Agent Queue (`docs/features/kairos/sub_agent_queue.md`), AutoDream Pipeline (`docs/features/kairos/autodream_pipeline.md`).
+- **References:** KAIROS Master Design (`docs/features/kairos/master_design_doc.md`), Shared Task List Design (`docs/features/kairos/shared_task_list_design.md`), State Machine Tracker (`docs/features/kairos/distributed_state_machine.md`), Sub-Agent Queue (`docs/features/kairos/sub_agent_queue.md`), AutoDream Pipeline (`docs/features/kairos/autodream_pipelines.md`).
 
 ## Design Doc
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;">
