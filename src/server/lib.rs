@@ -306,14 +306,15 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<SaveWizardStateRequest>,
     ) -> Result<tonic::Response<SaveWizardStateResponse>, tonic::Status> {
-        let org_id = match request.metadata().get("organization_id") {
-            Some(v) => v.to_str().unwrap_or("").to_string(),
-            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
-        };
-        let user_id = match request.metadata().get("x-spiffe-id") {
-            Some(v) => v.to_str().unwrap_or("").to_string(),
-            None => return Err(tonic::Status::unauthenticated("Missing x-spiffe-id")),
-        };
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+
+        let org_id = auth_info.org_id.clone();
+        if org_id.is_empty() {
+             return Err(tonic::Status::permission_denied("Only tenants can modify wizard state"));
+        }
+
+        let user_id = auth_info.spiffe_id.clone();
 
         let req = request.into_inner();
         let state = req.state;
@@ -349,10 +350,13 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<GetWizardStateRequest>,
     ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
-        let org_id = match request.metadata().get("organization_id") {
-            Some(v) => v.to_str().unwrap_or("").to_string(),
-            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
-        };
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+
+        let org_id = auth_info.org_id.clone();
+        if org_id.is_empty() {
+             return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
+        }
         let tenant_id = org_id.clone();
 
         let row = sqlx::query(
@@ -388,10 +392,13 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<ResetWizardStateRequest>,
     ) -> Result<tonic::Response<ResetWizardStateResponse>, tonic::Status> {
-        let org_id = match request.metadata().get("organization_id") {
-            Some(v) => v.to_str().unwrap_or("").to_string(),
-            None => return Err(tonic::Status::unauthenticated("Missing organization_id")),
-        };
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+
+        let org_id = auth_info.org_id.clone();
+        if org_id.is_empty() {
+             return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
+        }
         let tenant_id = org_id.clone();
 
         sqlx::query(
