@@ -780,6 +780,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(website_builder_ui));
     Box::leak(Box::new(grow_business_ui));
 
+    let social_media_ui = app::SocialMediaAutoPost::new()?;
+    let social_media_handle = social_media_ui.as_weak();
+
+    social_media_ui.on_close({
+        let weak_ui = social_media_handle.clone();
+        move || {
+            if let Some(ui) = weak_ui.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    social_media_ui.on_approve_post({
+        let weak_ui = social_media_handle.clone();
+        move |_id| {
+            if let Some(ui) = weak_ui.upgrade() {
+                ui.set_approval_status("Post approved successfully! AI will schedule it.".into());
+            }
+        }
+    });
+
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
 
@@ -1211,6 +1232,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_open_referrals(move || {
                     if let Some(ui) = ref_handle_clone_for_open.upgrade() {
                         ui.invoke_refresh();
+                        let _ = ui.show();
+                    }
+                });
+
+                let sm_handle_for_dashboard = social_media_handle.clone();
+                dashboard.on_action_open_social_media_autopost(move || {
+                    if let Some(ui) = sm_handle_for_dashboard.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -3534,6 +3562,15 @@ mod docs_tests {
         dashboard_ui.on_action_grow_business(move || {
             *grow_business_opened_clone.borrow_mut() = true;
         });
+
+        let social_media_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let social_media_opened_clone = social_media_opened.clone();
+        dashboard_ui.on_action_open_social_media_autopost(move || {
+            *social_media_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_open_social_media_autopost();
+        assert!(*social_media_opened.borrow(), "Social Media Auto-Post should be opened from Dashboard");
 
         dashboard_ui.invoke_action_grow_business();
         assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");

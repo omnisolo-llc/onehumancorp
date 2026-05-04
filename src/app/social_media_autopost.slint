@@ -1,0 +1,131 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiScheduledPost {
+    id: string,
+    platform: string,
+    image_url: string,
+    caption: string,
+    scheduled_time: string,
+}
+
+export component SocialMediaAutoPost inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Social Media Auto-Posting";
+
+    background: #f8fafc;
+
+    in property <bool> instagram_connected: true;
+    in property <bool> facebook_connected: false;
+    in property <bool> x_connected: true;
+
+    in property <[UiScheduledPost]> scheduled_posts: [
+        { id: "1", platform: "Instagram", image_url: "Placeholder Image", caption: "Check out our new products!", scheduled_time: "Today, 5:00 PM" },
+        { id: "2", platform: "X", image_url: "Placeholder Image", caption: "Flash sale starts now!", scheduled_time: "Tomorrow, 12:00 PM" }
+    ];
+
+    in-out property <string> approval_status: "";
+
+    callback connect_instagram();
+    callback connect_facebook();
+    callback connect_x();
+    callback approve_post(string);
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Social Media Auto-Posting"; font-size: 24px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Connected Accounts"; font-weight: 700; color: #1e293b; font-size: 18px; }
+
+                HorizontalBox {
+                    spacing: 16px;
+
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "📷 Instagram"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Button {
+                            text: instagram_connected ? "Connected" : "Connect";
+                            enabled: !instagram_connected;
+                            clicked => { connect_instagram(); }
+                        }
+                    }
+
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "📘 Facebook"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Button {
+                            text: facebook_connected ? "Connected" : "Connect";
+                            enabled: !facebook_connected;
+                            clicked => { connect_facebook(); }
+                        }
+                    }
+
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "🐦 X"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Button {
+                            text: x_connected ? "Connected" : "Connect";
+                            enabled: !x_connected;
+                            clicked => { connect_x(); }
+                        }
+                    }
+                }
+            }
+        }
+
+        Text { text: "AI Generated Post Schedule"; font-weight: 700; color: #1e293b; font-size: 18px; }
+
+        if (approval_status != "") : Text {
+            text: approval_status;
+            color: #10b981;
+            font-size: 14px;
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            for post in scheduled_posts : GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    HorizontalBox {
+                        Text { text: post.platform; font-weight: 700; color: #a855f7; }
+                        Rectangle {}
+                        Text { text: post.scheduled_time; color: #64748b; font-size: 12px; }
+                    }
+
+                    Rectangle {
+                        height: 150px;
+                        background: #e2e8f0;
+                        border-radius: 8px;
+                        Text { text: post.image_url; horizontal-alignment: center; vertical-alignment: center; color: #94a3b8; }
+                    }
+
+                    Text { text: post.caption; color: #1e293b; wrap: word-wrap; }
+
+                    HorizontalBox {
+                        alignment: end;
+                        Button {
+                            text: "Approve";
+                            primary: true;
+                            height: 36px;
+                            clicked => { approve_post(post.id); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
