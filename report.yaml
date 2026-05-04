@@ -3,3 +3,4 @@ debt_report: |
   Cleaned up compiler warnings regarding unused variables in `src/app/main.rs` (by prefixing them with an underscore).
   Removed an unused import (`ToolIntegration`) from `src/agents/scout/tests.rs`.
   Removed unused `Arc` import from `src/server/orchestration/hub.rs`.
+  Removed unused imports (`std::rc::Rc` and `std::cell::RefCell`) from `src/app/ui_tests/setup_wizard_hero_test.rs`.
