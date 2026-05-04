@@ -104,6 +104,7 @@ pub fn all_tools(
         agent_tool::agent_status_tool(),
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
+        marketing::generative_visibility_tool(),
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),

@@ -912,7 +912,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
-                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+
+                let analytics_ui = app::Analytics::new().unwrap();
+                let analytics_handle = analytics_ui.as_weak();
+                analytics_ui.on_close(move || {
+                    if let Some(ui) = analytics_handle.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
+                let analytics_handle_for_dashboard = analytics_ui.as_weak();
+                Box::leak(Box::new(analytics_ui));
+
+                dashboard.on_action_see_analytics(move || {
+                    *see_analytics_called_clone.borrow_mut() = true;
+                    if let Some(ui) = analytics_handle_for_dashboard.upgrade() {
+                        // Populate with mock data for now
+                        ui.set_generative_score(85);
+                        ui.set_analysis_summary("Your website has strong basic schema but lacks specific service offerings in plain text. Overall AI visibility is good.".into());
+
+                        let steps = slint::ModelRc::new(slint::VecModel::from(vec![
+                            "Add a plain-language FAQ section to your homepage".into(),
+                            "Ensure pricing information is explicitly labeled".into(),
+                            "Add LocalBusiness schema markup".into(),
+                        ]));
+                        ui.set_actionable_steps(steps);
+
+                        let _ = ui.show();
+                    }
+                });
 
                 let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let share_store_called_clone = share_store_called.clone();

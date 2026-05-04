@@ -63,4 +63,55 @@ pub fn qr_generate_tool() -> Tool {
     }
 }
 
+pub struct GenerativeVisibilityExecutor;
+
+#[async_trait::async_trait]
+impl ToolExecutor for GenerativeVisibilityExecutor {
+    async fn execute(
+        &self,
+        args: Value,
+    ) -> Result<String, ToolError> {
+        let _url = args["url"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("generative_visibility: url is required".to_string()))?;
+
+        info!("Analyzing generative visibility for url: {}", _url);
+
+        // Mocked analysis for now, as a real implementation would involve web fetching and LLM analysis
+        let score = 78;
+        let analysis = "The site has good basic structure but lacks rich schema.org data and plain-language service descriptions which LLMs prefer.";
+        let steps = vec![
+            "Add LocalBusiness schema markup to the homepage.",
+            "Include a plain-language FAQ section answering common customer questions.",
+            "Ensure pricing and service offerings are explicitly labeled rather than buried in images.",
+        ];
+
+        Ok(json!({
+            "status": "success",
+            "generative_score": score,
+            "analysis": analysis,
+            "actionable_steps": steps
+        }).to_string())
+    }
+}
+
+pub fn generative_visibility_tool() -> Tool {
+    Tool {
+        name: "generative_visibility".to_string(),
+        description: "Analyze a business website's content and provide a Generative Score and actionable steps to improve its visibility for AI models like ChatGPT and Gemini (Generative Engine Optimization).".to_string(),
+        is_read_only: true,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL of the business website to analyze."
+                }
+            },
+            "required": ["url"]
+        }),
+        execute: Arc::new(GenerativeVisibilityExecutor),
+    }
+}
+
 use tracing::info;

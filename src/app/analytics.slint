@@ -1,0 +1,68 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component Analytics inherits Window {
+    width: 375px;
+    height: 700px;
+    title: "AI Visibility & GEO";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <int> generative_score: 0;
+    in property <string> analysis_summary: "Loading analysis...";
+    in property <[string]> actionable_steps: [];
+
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "AI Visibility Report"; font-size: 24px; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        GlassCard {
+            border-color: #a855f7;
+            border-width: 1px;
+            background: rgba(168, 85, 247, 0.1);
+
+            VerticalBox {
+                padding: 20px;
+                spacing: 12px;
+                alignment: center;
+
+                Text { text: "Generative Engine Optimization"; color: #cbd5e1; font-size: 14px; horizontal-alignment: center; }
+
+                HorizontalBox {
+                    alignment: center;
+                    Text { text: generative_score; font-size: 48px; font-weight: 700; color: white; }
+                    Text { text: "/ 100"; font-size: 24px; color: #cbd5e1; vertical-alignment: bottom; }
+                }
+
+                Text { text: analysis_summary; color: #cbd5e1; font-size: 14px; wrap: word-wrap; horizontal-alignment: center; }
+            }
+        }
+
+        Text { text: "Actionable Steps"; font-size: 20px; font-weight: 700; color: white; }
+
+        Flickable {
+            VerticalBox {
+                spacing: 12px;
+                for step in actionable_steps: Rectangle {
+                    border-radius: 8px;
+                    border-color: rgba(255, 255, 255, 0.1);
+                    border-width: 1px;
+                    background: rgba(0, 0, 0, 0.2);
+
+                    HorizontalBox {
+                        padding: 12px;
+                        Text { text: step; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+    }
+}
