@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
