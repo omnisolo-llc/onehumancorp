@@ -5,7 +5,7 @@ use rand::Rng;
 use rand::distributions::Alphanumeric;
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
-#[cfg(unix)]
+#[cfg(all(unix, test))]
 use std::os::unix::fs::PermissionsExt;
 
 /// WriteFileAtomic writes data to a file atomically by writing to a temporary file first
