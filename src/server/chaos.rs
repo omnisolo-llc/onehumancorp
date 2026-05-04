@@ -1,4 +1,4 @@
-use std::time::Duration;
+
 
 pub struct ChaosEngine {}
 
@@ -19,7 +19,7 @@ mod tests {
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
         let pool = PgPoolOptions::new()
-            .acquire_timeout(Duration::from_millis(50))
+            .acquire_timeout(std::time::Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
@@ -38,7 +38,7 @@ mod tests {
         let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
         let lock = DistributedLock::new(client, "test_chaos_lock");
 
-        let acquire_res = lock.acquire(Duration::from_millis(100), Duration::from_millis(500)).await;
+        let acquire_res = lock.acquire(std::time::Duration::from_millis(100), std::time::Duration::from_millis(500)).await;
         assert!(acquire_res.is_err());
 
         let release_res = lock.release().await;
@@ -49,9 +49,9 @@ mod tests {
     #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
         let result = tokio::time::timeout(
-            Duration::from_millis(50),
+            std::time::Duration::from_millis(50),
             async {
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 Ok::<(), String>(())
             }
         ).await;
@@ -94,7 +94,7 @@ mod tests {
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
                 let max_attempts = 10;
-                let mut backoff = Duration::from_millis(10);
+                let mut backoff = std::time::Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
                         .bind(format!("m_{}", i))
@@ -140,7 +140,7 @@ mod tests {
         let mut success = false;
         let mut attempt = 0;
         let max_attempts = 3;
-        let mut backoff = Duration::from_millis(10);
+        let mut backoff = std::time::Duration::from_millis(10);
 
         // This simulates a lock already being held by another process or dropping the connection
         let simulated_acquire = || async {
@@ -236,7 +236,7 @@ mod tests {
             .unwrap();
 
         let thin_client_url = "http://127.0.0.1:1/unreachable"; // Guaranteed to drop or timeout
-        let client = reqwest::Client::builder().timeout(Duration::from_millis(50)).build().unwrap();
+        let client = reqwest::Client::builder().timeout(std::time::Duration::from_millis(50)).build().unwrap();
         let res = client.get(thin_client_url).send().await;
 
         assert!(res.is_err(), "Network partition should return error without crashing");

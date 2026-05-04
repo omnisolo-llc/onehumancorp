@@ -20,6 +20,7 @@ pub enum AgentEvent {
     UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
+    HandoffInitiated { target_agent: String, context: String },
 }
 
 /// Configuration for a single agent run.
@@ -658,6 +659,10 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::HandoffRequested { target_agent, context }) => {
+                        on_event(AgentEvent::HandoffInitiated { target_agent: target_agent.clone(), context: context.clone() });
+                        return Ok(format!("[Handoff Initiated] To: {}\nContext: {}", target_agent, context));
+                    }
                 }
             }
 
@@ -759,6 +764,10 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        Err(ToolError::HandoffRequested { target_agent, context }) => {
+                            on_event(AgentEvent::HandoffInitiated { target_agent: target_agent.clone(), context: context.clone() });
+                            return Ok(format!("[Handoff Initiated] To: {}\nContext: {}", target_agent, context));
                         }
                     }
                 }
@@ -2425,5 +2434,54 @@ mod tests {
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+    use ohc_builtin_agent_llm::LlmClient;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_handoff_mechanic() {
+        struct MockLlmClientHandoff {}
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientHandoff {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Handoff to marketing".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_handoff_1".to_string(),
+                            name: "Handoff".to_string(),
+                            arguments: serde_json::json!({"target_agent": "Marketing", "context": "Needs SEO optimization"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                })
+            }
+        }
+
+        let client = Arc::new(MockLlmClientHandoff {});
+        let tools = vec![ohc_builtin_agent_tools::handoff::handoff_tool()];
+        let agent = Agent::new(client, tools);
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&AgentRunConfig::default(), "Do some marketing", &mut on_event).await;
+
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+        assert!(res_str.contains("[Handoff Initiated] To: Marketing"));
+
+        let handoff_event = events.iter().find(|e| matches!(e, AgentEvent::HandoffInitiated { .. }));
+        assert!(handoff_event.is_some());
     }
 }

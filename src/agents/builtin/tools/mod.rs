@@ -29,6 +29,7 @@ pub mod anthropic_memory;
 pub mod lazy_load;
 pub mod screenshot;
 pub mod generative_visibility;
+pub mod handoff;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -112,6 +113,7 @@ pub fn all_tools(
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone()),
         generative_visibility::generative_visibility_tool(),
+        handoff::handoff_tool(),
     ];
 
     if let Some(accessor) = memory_accessor {
