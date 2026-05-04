@@ -884,23 +884,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                 let dashboard_handle = dashboard.as_weak();
-                let product_count = std::rc::Rc::new(std::cell::RefCell::new(10)); // Mocking free tier limit reached
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
 
                 let dashboard_handle_clone_add_product = dashboard_handle.clone();
-                let product_count_clone = product_count.clone();
                 dashboard.on_action_add_product(move || {
                     *add_product_called_clone.borrow_mut() = true;
-
                     if let Some(ui) = dashboard_handle_clone_add_product.upgrade() {
-                        let count = *product_count_clone.borrow();
-                        if count >= 10 { // Free tier limit
-                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
-                            ui.set_show_upgrade_prompt(true);
-                        } else {
-                            *product_count_clone.borrow_mut() += 1;
-                        }
+                        ui.set_show_upgrade_prompt(false);
                     }
                 });
 
@@ -1135,18 +1126,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
 
     let agents_ui_handle = agents_ui.as_weak();
-    let agent_count = std::rc::Rc::new(std::cell::RefCell::new(1)); // Free tier starts with 1 agent, limit is 1
     let agent_hire_handle = agent_hire_ui.as_weak();
     agents_ui.on_hire_agent(move || {
-        if let Some(ui) = agents_ui_handle.upgrade() {
-            let count = *agent_count.borrow();
-            if count >= 1 {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
-                ui.set_show_upgrade_prompt(true);
-            } else {
-                if let Some(hire_ui) = agent_hire_handle.upgrade() {
-                    let _ = hire_ui.show();
-                }
+        if let Some(ui_ctx) = agents_ui_handle.upgrade() {
+            ui_ctx.set_show_upgrade_prompt(false);
+            if let Some(hire_ui) = agent_hire_handle.upgrade() {
+                let _ = hire_ui.show();
             }
         }
     });
