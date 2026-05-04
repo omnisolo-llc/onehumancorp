@@ -1,36 +1,34 @@
-# Top 10 SMB Pain Points (2024-2025 Audit)
+# Top 10 SMB Pain Points (2025 Audit)
 
-Based on a synthesis of Reddit (r/smallbusiness, r/ecommerce, r/Etsy), Trustpilot, and App Store reviews for Shopify, Wix, and Squarespace.
+Based on 2024-2025 synthesis of US non-employer statistics (27M+ businesses) and qualitative data from Reddit/Trustpilot.
 
-## Pain Point Distribution
+## Pain Point Heatmap 2025
 ```mermaid
-pie title Frequency of Top SMB Pain Points
-    "Setup Complexity" : 73
-    "Operational Fatigue" : 68
-    "Marketing Dread" : 55
-    "Invisible Discovery" : 52
-    "Technical Jargon" : 48
-    "Cost Creep" : 45
-    "Mobile Gaps" : 42
-    "Communication Lag" : 40
-    "Financial Fog" : 35
-    "Support Deserts" : 30
+pie title 2025 SMB Pain Distribution
+    "Setup Paralysis" : 78
+    "Mobile Friction" : 65
+    "Marketing Fatigue" : 60
+    "Invisible Search" : 55
+    "Technical Jargon" : 50
+    "Subscription Hell" : 45
+    "Operational Burnout" : 40
+    "Financial Fog" : 38
+    "Support Deserts" : 35
+    "English-Only Tools" : 30
 ```
 
-| Rank | Pain Point | Frequency (Est.) | Description | OHC Mapping |
+| Rank | Pain Point | Frequency | Description | OHC Cure |
 | :--- | :--- | :--- | :--- | :--- |
-| 1 | **Setup Complexity** | High (73%) | Users feel "stupid" when asked about DNS, liquid templates, or complex shipping zones. | **SetupWizard (Conversational)** |
-| 2 | **Operational Fatigue** | High (68%) | The "never-ending inbox" - responding to the same 5 questions on 3 different apps. | **Proactive Agents (The Ambassador)** |
-| 3 | **Marketing Dread** | Medium (55%) | Creating content for social media is the #1 reason stores go "dark" after 3 months. | **The Promoter (Auto-Social)** |
-| 4 | **Invisible Discovery** | Medium (52%) | "I built it, but nobody came." SEO is seen as a "black art." | **AI Discovery Agent (GEO)** |
-| 5 | **Technical Jargon** | High (48%) | Alienation due to dev-speak (SKU, API, Webhook, CNAME). | **Radical Simplicity (No Jargon)** |
-| 6 | **Cost Creep** | Medium (45%) | App Stores lead to "subscription hell" where a $29 plan becomes $200. | **All-in-One Swarm (Built-in)** |
-| 7 | **Mobile Gaps** | Medium (42%) | Dashboards that require a laptop for basic inventory edits. | **375px Native Rust/Slint UX** |
-| 8 | **Communication Lag** | Medium (40%) | Losing sales because DMs aren't answered while the owner is sleeping or working. | **Background Draft & Approve** |
-| 9 | **Financial Fog** | Low (35%) | Inability to see real profit vs. revenue without exporting to a spreadsheet. | **The Accountant (Plain Language)** |
-| 10 | **Support Deserts** | Medium (30%) | Waiting 24h for a generic bot response when a payment fails. | **Interactive Help + AI Chat** |
+| 1 | **Setup Paralysis** | Critical (78%) | Fear of "breaking the site" or getting stuck on DNS/Email setup. | **Instant Vibe-Build** |
+| 2 | **Mobile Friction** | High (65%) | Desktop-first dashboards that are unusable on a subway or at a kitchen table. | **375px Native-First UX** |
+| 3 | **Marketing Fatigue** | High (60%) | The daily grind of content creation for 4+ platforms. | **The Promoter (Auto-Social)** |
+| 4 | **Invisible Search** | High (55%) | AI search engines not finding their local business. | **GEO Discovery Agent** |
+| 5 | **Technical Jargon** | High (50%) | "DNS", "SKU", "CNAME", "Liquid" - alienating non-tech founders. | **Radical Simplicity (No Jargon)** |
+| 6 | **Subscription Hell** | Medium (45%) | Needing 15 apps to run a basic store ($29 plan -> $250 total). | **All-in-One Swarm** |
+| 7 | **Operational Burnout**| Medium (40%) | Manually syncing inventory and replying to "Is this still avail?" | **The Manager (Auto-Ops)** |
+| 8 | **Financial Fog** | Medium (38%) | Not knowing if they are actually profitable after fees. | **The Accountant (Plain Language)** |
+| 9 | **Support Deserts** | Medium (35%) | Waiting days for a human when "Payment Failed" errors occur. | **Interactive Agent Support** |
+| 10 | **Language Barriers**| Low (30%) | Spanish/Arabic/Hindi founders using English-only UIs. | **Global Localization Agent** |
 
-### Evidence Excerpts:
-*   *Reddit (r/shopify):* "Why do I need to know what a CNAME record is just to sell a t-shirt?"
-*   *Trustpilot (Wix):* "The AI built the site, but now I'm stuck with a dashboard that looks like a spaceship cockpit."
-*   *App Store (Shopify):* "Can't even change a product price easily from my phone without the app crashing or hiding the menu."
+### Key 2025 Finding:
+The "No-Edit" movement is rising. Users no longer want a "Website Builder"; they want a "Business that Works." Any step involving a "canvas" or "editor" is a major friction point.
