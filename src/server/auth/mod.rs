@@ -394,11 +394,23 @@ impl Store {
     }
 
     pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
+        let oidc_cfg = self.oidc_cfg.read().unwrap().clone();
+        if oidc_cfg.enabled {
+            let external_cfg = crate::oidc::OIDCConfig {
+                issuer_url: oidc_cfg.issuer_url.clone(),
+                client_id: oidc_cfg.client_id.clone(),
+                enabled: oidc_cfg.enabled,
+            };
+            if let Ok(claims) = crate::oidc::validate_oidc_token(token, &external_cfg).await {
+                return Ok(claims);
+            }
+        }
+
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
             // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+            // OHC strictly requires SPIFFE/SPIRE mTLS identities or dynamic OIDC tokens.
             return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
         }
         #[cfg(test)]
