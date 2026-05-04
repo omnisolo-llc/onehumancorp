@@ -289,6 +289,11 @@ impl OpsService for MyOpsService {
         &self,
         request: Request<ScaleRequest>,
     ) -> Result<Response<ScaleResponse>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
         let req = request.into_inner();
         if req.role.is_empty() {
             return Err(Status::invalid_argument("role is required"));
@@ -319,7 +324,7 @@ impl OpsService for MyOpsService {
                     id: id.clone(),
                     name: req.role.clone(),
                     role: req.role.clone(),
-                    organization_id: "system".to_string(),
+                    organization_id: org_id.clone(),
                     status: "IDLE".to_string(),
                     provider_type: "mock".to_string(),
                 };
@@ -363,9 +368,14 @@ impl OpsService for MyOpsService {
 
     async fn prune_missions(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), "system".to_string());
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
+        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), org_id);
 
         match sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
             Ok(_) => Ok(Response::new(PruneMissionsResponse {

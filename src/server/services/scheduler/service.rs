@@ -20,9 +20,14 @@ impl MySchedulerService {
 impl SchedulerService for MySchedulerService {
     async fn get_scheduled_tasks(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<ScheduledTasksResponse>, Status> {
-        let tasks = self.hub.scheduler().list_for_org("system");
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
+        let tasks = self.hub.scheduler().list_for_org(&org_id);
         let proto_tasks = tasks.into_iter().map(|t| convert_to_proto(t)).collect();
         Ok(Response::new(ScheduledTasksResponse { tasks: proto_tasks }))
     }
@@ -31,12 +36,17 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CreateScheduledTaskRequest>,
     ) -> Result<Response<ProtoTask>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
         let req = request.into_inner();
         let schedule = req.schedule.ok_or_else(|| Status::invalid_argument("schedule is required"))?;
         
         let task = Task {
             id: format!("task-{}", Utc::now().timestamp()),
-            organization_id: "system".to_string(),
+            organization_id: org_id,
             agent_id: req.agent_id,
             name: req.name,
             schedule: convert_from_proto_schedule(schedule),
@@ -57,8 +67,13 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CancelScheduledTaskRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+
         let req = request.into_inner();
-        self.hub.scheduler().cancel("system", &req.id)
+        self.hub.scheduler().cancel(&org_id, &req.id)
             .map_err(|e| Status::not_found(e))?;
             
         Ok(Response::new(EmptyResponse {}))
