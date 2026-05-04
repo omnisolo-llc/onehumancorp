@@ -178,7 +178,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
@@ -227,7 +228,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
                             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
                         });
                         dashboard.show().unwrap();
@@ -1610,7 +1612,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -3160,7 +3162,8 @@ mod docs_tests {
 
         // Setup the tooltip text requester
         dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
             tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
         });
 
@@ -4657,4 +4660,102 @@ fn test_business_share_flow() {
 
     dashboard_ui.invoke_action_share_store();
     assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+}
+
+#[test]
+fn test_e2e_api_docs_flow_full() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let docs_ui = app::ApiDocs::new().unwrap();
+    docs_ui.set_api_key("sk_test_123".into());
+    docs_ui.set_endpoint_url("http://localhost:8080".into());
+    assert_eq!(docs_ui.get_api_key(), "sk_test_123");
+    assert_eq!(docs_ui.get_endpoint_url(), "http://localhost:8080");
+}
+
+#[test]
+fn test_e2e_video_tutorials_flow_full() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+    login_ui.on_login(move |email, password| {
+        *login_successful_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let ui = app::VideoTutorials::new().unwrap();
+    ui.set_selected_video_title("How to Scale".into());
+    ui.set_is_playing(true);
+    assert_eq!(ui.get_selected_video_title(), "How to Scale");
+    assert!(ui.get_is_playing());
+}
+
+#[test]
+fn test_e2e_release_notes_flow_full() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+    login_ui.on_login(move |email, password| {
+        *login_successful_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let ui = app::ReleaseNotes::new().unwrap();
+    ui.set_current_version("v1.0.0".into());
+    ui.set_show_latest_only(true);
+    assert_eq!(ui.get_current_version(), "v1.0.0");
+    assert!(ui.get_show_latest_only());
+}
+
+#[test]
+fn test_e2e_interactive_walkthrough_flow_full() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+    login_ui.on_login(move |email, password| {
+        *login_successful_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let ui = app::InteractiveWalkthrough::new().unwrap();
+    ui.set_current_step(2);
+    assert_eq!(ui.get_current_step(), 2);
+}
+
+#[test]
+fn test_e2e_ai_help_chat_flow_full() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+    login_ui.on_login(move |email, password| {
+        *login_successful_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let ui = app::AiHelpChat::new().unwrap();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_send_message(move || { *c.borrow_mut() = true; });
+    ui.set_user_input("Help me please".into());
+    ui.invoke_send_message();
+    assert_eq!(ui.get_user_input(), "Help me please");
+    assert!(*called.borrow());
 }
