@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Landing inherits Window {
     width: 800px;
     height: 600px;
-    title: "One Human Corp";
+    title: "OneHumanCorp";
 
     in-out property <bool> is_variant_b: false;
 
@@ -19,7 +19,7 @@ export component Landing inherits Window {
         alignment: center;
 
         // Header
-        Text { text: "One Human Corp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+        Text { text: "OneHumanCorp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
         
         Text { 
             text: is_variant_b ? "The Cloud-Native Helper OS" : "The Hybrid Helper OS";
