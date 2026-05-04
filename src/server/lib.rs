@@ -939,6 +939,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     
+    // Start sandbox proxy
+    let pool_for_proxy = match &db.store {
+        db::DbStore::Postgres => Some(db.pool.clone()),
+        _ => None, // proxy requires PgPool for telemetry buffering right now
+    };
+    let _ = crate::harness::start_sandbox_proxy(pool_for_proxy, vec!["localhost".to_string(), "api.github.com".to_string()], 8080).await;
+
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
