@@ -215,6 +215,7 @@ rust_test(
 rust_shared_library(
     name = "app_web",
     srcs = ["main.rs", "action_queue.rs"],
+    crate_root = "main.rs",
     data = glob(["*.slint"]),
     edition = "2024",
     target_compatible_with = ["@platforms//cpu:wasm32"],
