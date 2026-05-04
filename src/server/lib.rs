@@ -1084,7 +1084,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let monitor_transport = mesh_transport.clone();
     let monitor_hub = hub.clone();
     tokio::spawn(async move {
-        crate::orchestration::health::run_health_monitor(monitor_transport, monitor_hub).await;
+        crate::orchestration::health::run_health_monitor(
+            monitor_transport,
+            monitor_hub,
+            is_cloud,
+            std::time::Duration::from_secs(30)
+        ).await;
     });
 
     // Start Builtin Agent
