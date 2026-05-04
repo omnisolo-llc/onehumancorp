@@ -101,17 +101,25 @@ impl StateManager for StandaloneStateManager {
         if to_state == "EXECUTING" {
             let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
-            for dep_id in dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = ?"
-                )
-                .bind(&dep_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            if !dependencies.is_empty() {
+                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                let query = format!(
+                    "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
+                    placeholders
+                );
 
-                if dep_status.as_deref() != Some("COMPLETED") {
-                    return Err(format!("Dependency {} is not COMPLETED", dep_id));
+                let mut db_query = sqlx::query_scalar::<_, i32>(&query);
+                for dep in &dependencies {
+                    db_query = db_query.bind(dep);
+                }
+
+                let completed_count: i32 = db_query
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if completed_count as usize != dependencies.len() {
+                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dependencies.len()));
                 }
             }
         }
@@ -194,18 +202,25 @@ impl StateManager for StandaloneStateManager {
 
             // Check dependencies again explicitly in Rust just to be perfectly safe
             let mut all_completed = true;
-            for dep_id in &dependencies {
-                let dep_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM swarm_tasks WHERE id = ?"
-                )
-                .bind(dep_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            if !dependencies.is_empty() {
+                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                let query = format!(
+                    "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
+                    placeholders
+                );
 
-                if dep_status.as_deref() != Some("COMPLETED") {
+                let mut db_query = sqlx::query_scalar::<_, i32>(&query);
+                for dep in &dependencies {
+                    db_query = db_query.bind(dep);
+                }
+
+                let completed_count: i32 = db_query
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if completed_count as usize != dependencies.len() {
                     all_completed = false;
-                    break;
                 }
             }
 
