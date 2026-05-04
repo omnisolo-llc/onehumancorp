@@ -99,6 +99,18 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
     assert_eq!(*counter.borrow(), 2);
 }
 
+#[test] fn login_callback_open_settings() {
+    let ui = create();
+    let flag = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let f = flag.clone();
+    ui.on_open_settings(move || {
+        *f.borrow_mut() = true;
+    });
+
+    ui.invoke_open_settings();
+    assert!(*flag.borrow());
+}
+
 // --- Unique Data Tests with Verification ---
 
 // --- Consolidated Verified Tests ---
