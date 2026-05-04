@@ -5058,13 +5058,47 @@ mod e2e_hybrid_blob_tests {
         assert_eq!(ui.get_step(), 0);
         ui.invoke_next_step();
 
-        // Proceed through steps
-        // This is a minimal simulated flow just to set and test the values
-        // Normally you'd call invoke_next_step multiple times
-        ui.set_website_template("Modern".into());
+        // Step 1: Business Type
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_step(), 2);
+
+        // Step 2: Name & Description
+        ui.set_company_name("Maya's Bakery".into());
+        ui.set_company_description("Delicious vegan cakes".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+
+        // Step 3: What do you sell
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 4);
+
+        // Step 4: Payments
+        ui.invoke_select_payment_pref("online".into());
+        assert_eq!(ui.get_step(), 5);
+
+        // Step 5: Admin Account
+        ui.set_admin_name("Maya".into());
+        ui.set_admin_email("maya@example.com".into());
+        ui.set_admin_password("securepassword".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+
+        // Step 6: Choose a Template
+        ui.invoke_select_template("Modern".into());
+        assert_eq!(ui.get_step(), 7);
+
+        // Step 7: Add your first product
         ui.set_product_name("Vegan Chocolate Cake".into());
         ui.set_product_price("45.00".into());
-        ui.set_domain_choice("custom".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 8);
+
+        // Step 8: Choose a Domain
+        ui.invoke_select_domain("custom".into());
+        assert_eq!(ui.get_step(), 9);
 
         // In a real E2E environment we would click through all the UI buttons
         // Here we just test the propagation mechanism by invoking the callback
