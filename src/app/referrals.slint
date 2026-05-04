@@ -27,6 +27,7 @@ export component Referrals inherits Window {
     in property <int> download_count: 0;
     in property <int> waitlist_position: 0;
     in-out property <string> invite_copy_status: "";
+    in-out property <string> link_copy_status: "";
 
     callback refresh();
     callback share_link(string);
@@ -78,6 +79,11 @@ export component Referrals inherits Window {
                 }
                 if (invite_copy_status != "") : Text {
                     text: invite_copy_status;
+                    color: #10b981;
+                    font-size: 14px;
+                }
+                if (link_copy_status != "") : Text {
+                    text: link_copy_status;
                     color: #10b981;
                     font-size: 14px;
                 }
