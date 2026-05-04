@@ -779,5 +779,29 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+
+        let pool1 = _pool;
+        let pool2 = _pool2;
+
+        // Regression test for multi-tenancy data leak exploit
+        // Even if an attacker can execute raw queries, RLS should prevent access
+        use sqlx::Executor;
+        pool1.execute("CREATE TABLE IF NOT EXISTS tenant_secret_data (id SERIAL PRIMARY KEY, tenant_id VARCHAR(255) DEFAULT current_setting('app.current_tenant', true), secret VARCHAR(255));").await.unwrap();
+        pool1.execute("ALTER TABLE tenant_secret_data ENABLE ROW LEVEL SECURITY;").await.unwrap();
+        // In real schema, this policy is applied. Using IF NOT EXISTS or dropping policy first is not supported natively in postgres, so we ignore error if it exists.
+        let _ = pool1.execute("DROP POLICY IF EXISTS tenant_isolation_policy ON tenant_secret_data;").await;
+        pool1.execute("CREATE POLICY tenant_isolation_policy ON tenant_secret_data USING (tenant_id = current_setting('app.current_tenant', true));").await.unwrap();
+
+        pool1.execute("INSERT INTO tenant_secret_data (secret) VALUES ('tenant_1_secret');").await.unwrap();
+
+        // pool2 belongs to tenant_2. Trying to access tenant_1's secret.
+        let rows: Vec<(String,)> = sqlx::query_as("SELECT secret FROM tenant_secret_data")
+            .fetch_all(&pool2)
+            .await
+            .unwrap();
+
+        assert!(rows.is_empty(), "Tenant 2 should not be able to read Tenant 1's secret data due to RLS");
+
+        pool1.execute("DROP TABLE IF EXISTS tenant_secret_data;").await.unwrap();
     }
 }
