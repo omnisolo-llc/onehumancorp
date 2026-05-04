@@ -490,7 +490,7 @@ impl AgentService for AgentServiceImpl {
                         ..Default::default()
                     },
                     AgentEvent::Handoff { target_agent } => RunTaskEvent {
-                        r#type: EventType::TaskComplete as i32,
+                        r#type: EventType::Handoff as i32,
                         content: format!("HANDOFF REQUESTED TO: {}", target_agent),
                         ..Default::default()
                     },
