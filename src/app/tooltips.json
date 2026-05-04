@@ -9,5 +9,9 @@
   "share": "Share your store link with others.",
   "add_product": "Add a new product to your store.",
   "view_orders": "View and manage your recent orders.",
-  "messages": "Check your customer messages."
+  "messages": "Check your customer messages.",
+  "billing": "Manage your subscription, invoices, and billing history.",
+  "api_docs": "Access the API documentation for custom integrations.",
+  "video_tutorials": "Watch short video guides to learn how to use OHC.",
+  "release_notes": "See the latest features and updates in OHC."
 }
