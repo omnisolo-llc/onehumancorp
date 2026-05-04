@@ -78,9 +78,121 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
+
+pub fn setup_dashboard_documentation(dashboard: &app::Dashboard) {
+    dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        match id.as_str() {
+            "ask_ai" => "Ask the AI Assistant".into(),
+            "menu" => "Open Menu".into(),
+            "help_center" => "Help Center".into(),
+            "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
+            "grow_business" => "Grow Business".into(),
+            "referrals" => "Referrals".into(),
+            "stats" => "Stats".into(),
+            "share" => "Share".into(),
+            "add_product" => "Add".into(),
+            "view_orders" => "Orders".into(),
+            "messages" => "Chat".into(),
+            _ => "".into(),
+        }
+    });
+}
+
+pub fn login_to_dashboard_or_wizard(login_ui_weak: slint::Weak<app::Login>, setup_wizard_weak: slint::Weak<app::SetupWizard>) {
+    tokio::spawn(async move {
+        let mut step = 0;
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                if let Some(step_str) = state.get("step") {
+                    if let Ok(s) = step_str.parse::<i32>() {
+                        step = s;
+                    }
+                }
+            }
+        }
+
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(ui) = login_ui_weak.upgrade() {
+                let _ = ui.hide();
+            }
+            if step < 10 {
+                if let Some(wizard) = setup_wizard_weak.upgrade() {
+                    let _ = wizard.show();
+                }
+            } else {
+                if let Ok(dashboard) = app::Dashboard::new() {
+                    setup_dashboard_documentation(&dashboard);
+                    dashboard.show().unwrap();
+                    Box::leak(Box::new(dashboard));
+                }
+            }
+        });
+    });
+}
+
+pub fn configure_login_handlers(login_ui: &app::Login, setup_wizard_handle: slint::Weak<app::SetupWizard>) {
+    let login_ui_handle = login_ui.as_weak();
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        let wizard_handle = setup_wizard_handle.clone();
+        move |email, _password| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("Login as {}...", email);
+                    login_to_dashboard_or_wizard(login_handle.clone(), wizard_handle.clone());
+                }
+            }
+        }
+    });
+
+    login_ui.on_resend_verification({
+        let login_handle = login_ui_handle.clone();
+        move |_email| {
+            if let Some(ui) = login_handle.upgrade() {
+                ui.invoke_start_setup_wizard();
+            }
+        }
+    });
+
+    login_ui.on_oauth_login({
+        let login_handle = login_ui_handle.clone();
+        let wizard_handle = setup_wizard_handle.clone();
+        move |provider| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    println!("OAuth Sign Up via {}...", provider);
+                    ui.invoke_start_setup_wizard();
+                } else {
+                    println!("OAuth Login via {}...", provider);
+                    login_to_dashboard_or_wizard(login_handle.clone(), wizard_handle.clone());
+                }
+            }
+        }
+    });
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     println!("App starting...");
 
     // Start bundled server if in standalone mode
@@ -148,87 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
-    login_ui.on_login({
-        let login_handle = login_ui_handle.clone();
-        move |email, _password| {
-            if let Some(ui) = login_handle.upgrade() {
-                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                } else {
-                    println!("Login as {}...", email);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
-                }
-            }
-        }
-    });
-
-    login_ui.on_resend_verification({
-        let login_handle = login_ui_handle.clone();
-        move |_email| {
-            if let Some(ui) = login_handle.upgrade() {
-                // Simulate email verified
-                ui.invoke_start_setup_wizard();
-            }
-        }
-    });
-
-    login_ui.on_oauth_login({
-        let login_handle = login_ui_handle.clone();
-        move |provider| {
-            if let Some(ui) = login_handle.upgrade() {
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                } else {
-                    println!("OAuth Login via {}...", provider);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            match id.as_str() {
-                                "ask_ai" => "Ask the AI Assistant".into(),
-                                "menu" => "Open Menu".into(),
-                                "help_center" => "Help Center".into(),
-                                "quick_actions_hint" => "These buttons are shortcuts to your most common daily tasks.".into(),
-                                "grow_business" => "Grow Business".into(),
-                                "referrals" => "Referrals".into(),
-                                "stats" => "Stats".into(),
-                                "share" => "Share".into(),
-                                "add_product" => "Add".into(),
-                                "view_orders" => "Orders".into(),
-                                "messages" => "Chat".into(),
-                                _ => "".into(),
-                            }
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                    }
-                }
-            }
-        }
-    });
+    configure_login_handlers(&login_ui, setup_wizard_handle.clone());
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {

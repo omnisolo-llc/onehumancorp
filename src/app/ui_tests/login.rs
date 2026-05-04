@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() }
 
@@ -145,4 +146,95 @@ fn create_verify_verification_message() {
     assert_eq!(ui.get_verification_message(), "Please enter the 6-digit code sent to your phone.");
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
+}
+
+
+#[test]
+fn login_flow_first_login_shows_verification() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Login::new().unwrap();
+    let wizard = app::SetupWizard::new().unwrap();
+    crate::configure_login_handlers(&ui, wizard.as_weak());
+
+    ui.set_is_sign_up(true);
+    ui.invoke_login("test@example.com".into(), "pass".into());
+
+    assert_eq!(ui.get_show_verification(), true);
+    assert_eq!(ui.get_verification_message(), "Please check your email to verify your account.");
+}
+
+#[test]
+fn login_flow_first_login_verified_redirect() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Login::new().unwrap();
+    let wizard = app::SetupWizard::new().unwrap();
+    crate::configure_login_handlers(&ui, wizard.as_weak());
+
+    ui.invoke_resend_verification("test@example.com".into());
+
+    assert!(!ui.window().is_visible());
+    // wizard visibility cannot be asserted easily without event loop iteration
+}
+
+#[test]
+fn login_flow_oauth_signup_redirect() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Login::new().unwrap();
+    let wizard = app::SetupWizard::new().unwrap();
+    crate::configure_login_handlers(&ui, wizard.as_weak());
+
+    ui.set_is_sign_up(true);
+    ui.invoke_oauth_login("Google".into());
+
+    assert!(!ui.window().is_visible());
+    assert_eq!(ui.get_show_verification(), false);
+}
+
+#[tokio::test]
+async fn login_flow_normal_login_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Login::new().unwrap();
+    let wizard = app::SetupWizard::new().unwrap();
+    crate::configure_login_handlers(&ui, wizard.as_weak());
+
+    ui.set_is_sign_up(false);
+
+    let timer = slint::Timer::default();
+    let ui_weak = ui.as_weak();
+    let wizard_weak = wizard.as_weak();
+    timer.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(500), move || {
+        if let Some(u) = ui_weak.upgrade() {
+            assert_eq!(u.get_show_verification(), false);
+        }
+        if let Some(w) = wizard_weak.upgrade() {
+            // It should default to showing wizard since backend fails in test mock
+            assert!(w.window().is_visible());
+        }
+        let _ = slint::quit_event_loop();
+    });
+
+    ui.invoke_login("user".into(), "pass".into());
+    let _ = ui.run();
+}
+
+#[tokio::test]
+async fn login_flow_normal_oauth_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Login::new().unwrap();
+    let wizard = app::SetupWizard::new().unwrap();
+    crate::configure_login_handlers(&ui, wizard.as_weak());
+
+    ui.set_is_sign_up(false);
+
+    let timer = slint::Timer::default();
+    let wizard_weak = wizard.as_weak();
+    timer.start(slint::TimerMode::SingleShot, std::time::Duration::from_millis(500), move || {
+        if let Some(w) = wizard_weak.upgrade() {
+            assert!(w.window().is_visible());
+        }
+        let _ = slint::quit_event_loop();
+    });
+
+    ui.invoke_oauth_login("Apple".into());
+    let _ = ui.run();
 }
