@@ -13,14 +13,14 @@ use opentelemetry::metrics::Counter;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
-    _embedded_counter: Counter<u64>,
+    embedded_counter: Counter<u64>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
         let meter = global::meter("ohc.autodream");
         let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
-        AutoDreamWorker { db, _embedded_counter: embedded_counter }
+        AutoDreamWorker { db, embedded_counter }
     }
 
 
@@ -28,10 +28,11 @@ impl AutoDreamWorker {
         info!("Starting AutoDream worker");
         
         let db = self.db.clone();
+        let counter = self.embedded_counter.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running pruning pipeline...");
-                if let Err(e) = Self::prune_stale_sessions(&db).await {
+                if let Err(e) = Self::prune_stale_sessions(&db, &counter).await {
                     debug!("AutoDream: pruning failed: {}", e);
                 }
                 sleep(Duration::from_secs(60)).await;
@@ -39,23 +40,24 @@ impl AutoDreamWorker {
         });
         
         let db = self.db.clone();
+        let counter = self.embedded_counter.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
-                if let Err(e) = Self::ingest_completed_tasks(&db).await {
+                if let Err(e) = Self::ingest_completed_tasks(&db, &counter).await {
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
                     println!("AutoDream: compress_session_contexts failed: {}", e);
                 }
-                if let Err(e) = Self::process_db_memories(&db).await {
+                if let Err(e) = Self::process_db_memories(&db, &counter).await {
                     debug!("AutoDream: DB memories processing failed: {}", e);
                 }
-                if let Err(e) = Self::process_fs_memories(&db).await {
+                if let Err(e) = Self::process_fs_memories(&db, &counter).await {
                     debug!("AutoDream: FS memories processing failed: {}", e);
                 }
-                if let Err(e) = Self::consolidate_agent_task_memories(&db).await {
+                if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter).await {
                     debug!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
@@ -77,7 +79,7 @@ impl AutoDreamWorker {
         });
     }
 
-    async fn prune_stale_sessions(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
@@ -91,7 +93,10 @@ impl AutoDreamWorker {
              let summary = format!("Summarized context from session {}: {}", id, data);
 
              let embedding = match client.generate_embedding(&summary).await {
-                Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
+                Ok(emb) => {
+                    counter.add(1, &[]);
+                    format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
+                },
                 Err(e) => {
                     println!("AutoDream: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
@@ -160,7 +165,7 @@ impl AutoDreamWorker {
         }
     }
 
-    async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
@@ -175,7 +180,10 @@ impl AutoDreamWorker {
             let mem_id = uuid::Uuid::new_v4().to_string();
             
             let embedding = match client.generate_embedding(&summary).await {
-                Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
+                Ok(emb) => {
+                    counter.add(1, &[]);
+                    format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
+                },
                 Err(e) => {
                     debug!("AutoDream: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
@@ -274,7 +282,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_db_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
@@ -293,6 +301,7 @@ impl AutoDreamWorker {
 
             match client.generate_embedding(&context_data).await {
                 Ok(embedding) => {
+                    counter.add(1, &[]);
                     let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = uuid::Uuid::new_v4().to_string();
                     
@@ -335,7 +344,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_fs_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
@@ -354,6 +363,7 @@ impl AutoDreamWorker {
                 
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
+                        counter.add(1, &[]);
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
                         
@@ -394,7 +404,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn consolidate_agent_task_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::path::Path::new(".agent-task/memory");
 
         if !memory_dir.exists() {
@@ -412,6 +422,7 @@ impl AutoDreamWorker {
 
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
+                        counter.add(1, &[]);
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
