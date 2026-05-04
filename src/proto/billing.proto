@@ -27,6 +27,9 @@ message AgentCostSummary {
   string agent_id = 1;
   double cost_usd = 2;
   int64 token_used = 3;
+  double roi = 4;
+  double efficiency = 5;
+  float pct = 6;
 }
 
 message BudgetAlert {

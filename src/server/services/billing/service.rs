@@ -46,11 +46,15 @@ impl BillingService for MyBillingService {
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();
-        for (agent_id, cost, _roi, _eff) in self.auditor.get_agent_costs_snapshot() {
+        for (agent_id, cost, roi, eff) in self.auditor.get_agent_costs_snapshot() {
+            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agents.push(AgentCostSummary {
                 agent_id,
                 cost_usd: cost,
                 token_used: 0, // Need to update Auditor to return tokens per agent too if needed
+                roi,
+                efficiency: eff,
+                pct,
             });
         }
 
