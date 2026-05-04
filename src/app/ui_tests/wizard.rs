@@ -1,3 +1,4 @@
+use slint::ComponentHandle;
 use crate::app;
 
 fn create() -> app::SetupWizard { crate::ui_tests::init(); app::SetupWizard::new().unwrap() }
@@ -253,3 +254,117 @@ fn wizard_template_preview_retention() {
     ui.set_website_template("Bold".into());
     assert_eq!(ui.get_website_template(), "Bold");
 }
+    #[test]
+    fn test_e2e_wizard_data_propagation_template() {
+        let ui = create();
+        ui.set_website_template("Dark Mode".into());
+        assert_eq!(ui.get_website_template(), "Dark Mode");
+    }
+
+    #[test]
+    fn test_e2e_wizard_data_propagation_product_name() {
+        let ui = create();
+        ui.set_product_name("Blue T-Shirt".into());
+        assert_eq!(ui.get_product_name(), "Blue T-Shirt");
+    }
+
+    #[test]
+    fn test_e2e_wizard_data_propagation_product_price() {
+        let ui = create();
+        ui.set_product_price("19.99".into());
+        assert_eq!(ui.get_product_price(), "19.99");
+    }
+
+    #[test]
+    fn test_e2e_wizard_data_propagation_domain_choice() {
+        let ui = create();
+        ui.set_domain_choice("my-cool-store".into());
+        assert_eq!(ui.get_domain_choice(), "my-cool-store");
+    }
+
+    #[test]
+    fn test_e2e_wizard_data_propagation_all_fields() {
+        let ui = create();
+        ui.set_website_template("Minimalist".into());
+        ui.set_product_name("Coffee Mug".into());
+        ui.set_product_price("12.50".into());
+        ui.set_domain_choice("coffee-shop".into());
+
+        assert_eq!(ui.get_website_template(), "Minimalist");
+        assert_eq!(ui.get_product_name(), "Coffee Mug");
+        assert_eq!(ui.get_product_price(), "12.50");
+        assert_eq!(ui.get_domain_choice(), "coffee-shop");
+    }
+    #[test]
+    fn test_e2e_setup_wizard_data_flow_to_backend_mock() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+
+        ui.invoke_select_template("Classic".into());
+        ui.set_product_name("My First Product".into());
+        ui.set_product_price("10.0".into());
+        ui.invoke_next_step();
+
+        ui.invoke_select_domain("subdomain".into());
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        let ui_weak = ui.as_weak();
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
+            assert_eq!(website_template, "Classic");
+            assert_eq!(product_name, "My First Product");
+            assert_eq!(product_price, "10.0");
+            assert_eq!(domain_choice, "subdomain");
+            *launch_called_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_launching(false);
+                u.set_step(10);
+            }
+        });
+
+        ui.set_launching(true);
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
+        );
+        assert!(*launch_called.borrow());
+        assert_eq!(ui.get_launching(), false);
+        assert_eq!(ui.get_step(), 10);
+    }
