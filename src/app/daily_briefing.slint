@@ -1,0 +1,64 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component DailyBriefing {
+    in property <[string]> bullets: [];
+    callback dismiss();
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6); // Dark overlay
+        TouchArea {} // Block interactions below
+
+        VerticalBox {
+            alignment: center;
+            padding: 24px;
+
+            GlassCard {
+                border-color: #3b82f6; // Blue border
+                border-width: 1px;
+                border-radius: 12px;
+
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 16px;
+
+                    HorizontalBox {
+                        alignment: center;
+                        Text {
+                            text: "Daily Business Briefing";
+                            font-size: 24px;
+                            font-weight: 700;
+                            font-family: "Outfit";
+                            color: white;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        background: rgba(255, 255, 255, 0.2);
+                    }
+
+                    VerticalBox {
+                        spacing: 12px;
+                        for bullet in bullets : HorizontalBox {
+                            spacing: 8px;
+                            alignment: start;
+                            Text { text: "•"; color: #3b82f6; font-size: 18px; font-weight: 700; vertical-alignment: top; }
+                            Text { text: bullet; color: #f8fafc; font-size: 16px; font-family: "Inter"; wrap: word-wrap; vertical-alignment: top; }
+                        }
+                    }
+
+                    Rectangle { height: 8px; } // Spacer
+
+                    Button {
+                        text: "Got it, thanks!";
+                        height: 48px;
+                        clicked => { dismiss(); }
+                    }
+                }
+            }
+        }
+    }
+}
