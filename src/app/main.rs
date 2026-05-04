@@ -14,7 +14,9 @@ pub mod ohc {
     }
 }
 
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Model};
+
+pub mod action_queue;
 
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
@@ -1120,6 +1122,65 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                #[cfg(not(target_arch = "wasm32"))]
+                let action_queue = tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        action_queue::ActionQueue::new().await.unwrap()
+                    })
+                });
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let action_queue_clone = action_queue.clone();
+                    tokio::spawn(async move {
+                        action_queue_clone.process_pending().await;
+                    });
+                }
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let dashboard_handle_for_ready = dashboard_handle.clone();
+                    let action_queue_for_ready = action_queue.clone();
+                    dashboard.on_action_mark_order_ready(move || {
+                        if let Some(ui) = dashboard_handle_for_ready.upgrade() {
+                            let current_count = ui.get_new_orders_count();
+                            if current_count > 0 {
+                                ui.set_new_orders_count(current_count - 1); // Optimistic UI Update
+
+                                let action_queue_clone = action_queue_for_ready.clone();
+                                tokio::spawn(async move {
+                                    let _ = action_queue_clone.enqueue("mark_order_ready", "{}").await;
+                                });
+                            }
+                        }
+                    });
+
+                    let dashboard_handle_for_approve = dashboard_handle.clone();
+                    let action_queue_for_approve = action_queue.clone();
+                    dashboard.on_approve_task(move |task_id| {
+                        if let Some(ui) = dashboard_handle_for_approve.upgrade() {
+                            let current_approvals = ui.get_pending_approvals();
+                            let mut remaining = Vec::new();
+                            for i in 0..current_approvals.row_count() {
+                                if let Some(item) = current_approvals.row_data(i) {
+                                    if item.task_id != task_id {
+                                        remaining.push(item);
+                                    }
+                                }
+                            }
+                            let remaining_model = slint::ModelRc::new(slint::VecModel::from(remaining));
+                            ui.set_pending_approvals(remaining_model.into()); // Optimistic UI Update
+
+                            let action_queue_clone = action_queue_for_approve.clone();
+                            let task_id_str = task_id.to_string();
+                            tokio::spawn(async move {
+                                let payload = format!(r#"{{"task_id": "{}"}}"#, task_id_str);
+                                let _ = action_queue_clone.enqueue("approve_draft", &payload).await;
+                            });
+                        }
+                    });
+                }
 
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
