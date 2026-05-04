@@ -20,6 +20,7 @@ pub enum AgentEvent {
     UserInterventionRequired { error: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
+    HandoffRequested { target_agent: String, context: String },
 }
 
 /// Configuration for a single agent run.
@@ -661,6 +662,13 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                    Err(ToolError::HandoffRequested { target_agent, context }) => {
+                        on_event(AgentEvent::HandoffRequested {
+                            target_agent: target_agent.clone(),
+                            context: context.clone(),
+                        });
+                        return Err(ToolError::HandoffRequested { target_agent, context }.into());
+                    }
                 }
             }
 
@@ -691,6 +699,13 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        ToolError::HandoffRequested { target_agent, context } => {
+                            on_event(AgentEvent::HandoffRequested {
+                                target_agent: target_agent.clone(),
+                                context: context.clone(),
+                            });
+                            return Err(ToolError::HandoffRequested { target_agent, context }.into());
                         }
                         _ => {
                             let err = format!("Fatal tool error: {:?}", e);
@@ -762,6 +777,13 @@ impl Agent {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
+                        Err(ToolError::HandoffRequested { target_agent, context }) => {
+                            on_event(AgentEvent::HandoffRequested {
+                                target_agent: target_agent.clone(),
+                                context: context.clone(),
+                            });
+                            return Err(ToolError::HandoffRequested { target_agent, context }.into());
                         }
                     }
                 }
@@ -2466,5 +2488,69 @@ mod tests {
             }
         }
         assert!(found_task_error);
+    }
+
+    #[tokio::test]
+    async fn test_handoff_requested_mechanic() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I need to handoff this task".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "handoff_call_1".to_string(),
+                            name: "handoff_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        struct HandoffToolExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for HandoffToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::HandoffRequested {
+                    target_agent: "BillingAgent".to_string(),
+                    context: "User asked about an invoice".to_string(),
+                })
+            }
+        }
+
+        let handoff_tool = Tool {
+            name: "handoff_tool".to_string(),
+            description: "Handoff to another agent".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(HandoffToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![handoff_tool]);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Can you check my invoice?", &mut on_event).await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "Handoff to BillingAgent requested: User asked about an invoice");
+
+        let mut found_handoff_event = false;
+        for e in events {
+            if let AgentEvent::HandoffRequested { target_agent, context } = e {
+                assert_eq!(target_agent, "BillingAgent");
+                assert_eq!(context, "User asked about an invoice");
+                found_handoff_event = true;
+                break;
+            }
+        }
+        assert!(found_handoff_event);
     }
 }

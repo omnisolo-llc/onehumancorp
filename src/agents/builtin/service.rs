@@ -479,6 +479,11 @@ impl AgentService for AgentServiceImpl {
                         error: format!("USER INTERVENTION REQUIRED: {}", error),
                         ..Default::default()
                     },
+                    AgentEvent::HandoffRequested { target_agent, context } => RunTaskEvent {
+                        r#type: EventType::TaskError as i32,
+                        error: format!("Handoff to {} requested: {}", target_agent, context),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };

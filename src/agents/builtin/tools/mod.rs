@@ -30,6 +30,7 @@ pub mod anthropic_memory;
 pub mod lazy_load;
 pub mod screenshot;
 pub mod generative_visibility;
+pub mod handoff;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
