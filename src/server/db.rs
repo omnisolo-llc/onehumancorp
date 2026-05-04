@@ -67,21 +67,45 @@ impl DB {
                         }
                     }
                 }
+                // Ensure preemptive file creation with strict permissions (0o600)
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    if let Err(e) = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .mode(0o600)
+                        .open(&db_path)
+                    {
+                        eprintln!("Failed to securely create DB file: {}", e);
+                        return Err(e.into());
+                    }
+                }
+                #[cfg(not(unix))]
+                {
+                    if let Err(e) = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open(&db_path)
+                    {
+                        eprintln!("Failed to create DB file: {}", e);
+                        return Err(e.into());
+                    }
+                }
+
             }
 
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") {
-                if let Some(key) = database_url.split("key=").nth(1) {
-                    let key = key.split('&').next().unwrap_or("").to_string();
-                    conn_opts = conn_opts.pragma("key", key.clone());
-                }
-            }
 
-            // SQLCipher support for standalone mode encryption
+
+
+            // Ensure Standalone Mode uses secure, encrypted SQLite storage
+            let cipher_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "ohc_default_secure_key".to_string());
+            conn_opts = conn_opts.pragma("key", cipher_key);
+
             if database_url.contains("cipher=sqlcipher") {
                 if let Some(key) = database_url.split("key=").nth(1) {
                     let key = key.split('&').next().unwrap_or("").to_string();
@@ -98,13 +122,6 @@ impl DB {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = 'system'").await?;
-                        Ok(true)
-                    })
-                })
                 .connect(&database_url)
                 .await?;
 
