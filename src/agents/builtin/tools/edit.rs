@@ -45,9 +45,69 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(path, &new_content)
+        fs::write(&actual_path, &new_content)
             .await
-            .map_err(|e| format!("edit: write {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        // Verification Loop: Computational/Guides
+        if let Some(ext) = actual_path.extension().and_then(|e| e.to_str()) {
+            if ext == "py" {
+                let cmd = "python3";
+                let args = vec!["-m", "py_compile", actual_path.to_str().unwrap()];
+
+                let mut child = tokio::process::Command::new(cmd);
+                child.args(&args);
+                if let Some(wd) = &self.working_dir {
+                    child.current_dir(wd);
+                }
+
+                if let Ok(output) = child.output().await {
+                    if !output.status.success() {
+                        // Rollback to previous content
+                        let _ = fs::write(&actual_path, &content).await;
+
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Syntax verification failed after edit. File rolled back to previous state.
+Command: {} {}
+Error:
+{}",
+                            cmd, args.join(" "), stderr
+                        )));
+                    }
+                }
+            } else if ext == "rs" {
+                // For Rust, use standard formatting check or basic parsing check instead of compilation,
+                // because rustc --emit=metadata fails on unresolved module dependencies when ran on individual files in a bazel workspace
+                let cmd = "rustfmt";
+                let args = vec!["--edition", "2021", "--check", actual_path.to_str().unwrap()];
+
+                let mut child = tokio::process::Command::new(cmd);
+                child.args(&args);
+                if let Some(wd) = &self.working_dir {
+                    child.current_dir(wd);
+                }
+
+                // We're just running formatting as a syntax parser trick,
+                // wait to see if it reports parsing errors.
+                if let Ok(output) = child.output().await {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        if stderr.contains("error:") {
+                            // Only rollback on actual syntax errors, not just formatting diffs
+                            let _ = fs::write(&actual_path, &content).await;
+                            return Err(ToolError::LlmRecoverable(format!(
+                                "Syntax verification failed after edit. File rolled back to previous state.
+Command: {} {}
+Error:
+{}",
+                                cmd, args.join(" "), stderr
+                            )));
+                        }
+                    }
+                }
+            }
+        }
 
         Ok(format!("File edited: {}", path))
     }
