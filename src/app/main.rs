@@ -19,7 +19,7 @@ pub mod ohc {
     }
 }
 
-use slint::{ComponentHandle, Model};
+use slint::ComponentHandle;
 
 pub mod action_queue;
 
@@ -27,6 +27,7 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
+#[allow(dead_code, unused_variables)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
