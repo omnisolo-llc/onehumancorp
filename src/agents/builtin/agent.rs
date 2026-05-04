@@ -44,7 +44,6 @@ pub struct AgentRunConfig {
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
-    pub enable_git_state_checkpointing: bool,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
     pub injected_context: Option<Vec<ohc_builtin_agent_core::types::Message>>,
@@ -79,7 +78,6 @@ impl Default for AgentRunConfig {
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
-            enable_git_state_checkpointing: false,
             workspace_path: None,
             project_trusted: true,
             injected_context: None,
@@ -1038,7 +1036,7 @@ impl Agent {
             });
 
             // State Management Checkpointing Mechanic
-            // 1. Database Checkpointer (LangGraph / OpenAI-like)
+            // 1. Configured Checkpointer (Database or Git)
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
                 let cp = crate::checkpointer::Checkpoint {
@@ -1075,44 +1073,6 @@ impl Agent {
                     }
                 }
             }
-
-            // 3. Git State Checkpointing (Claude Code)
-            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
-                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                let thread = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
-
-                // Only commit if .git exists to avoid turning random directories into repos
-                if std::path::Path::new(&wd).join(".git").exists() {
-                    let mut add_cmd = tokio::process::Command::new("git");
-                    add_cmd.current_dir(&wd).arg("add").arg("-A");
-                    if add_cmd.output().await.is_ok() {
-                        let mut diff_cmd = tokio::process::Command::new("git");
-                        diff_cmd.current_dir(&wd).arg("diff").arg("--cached").arg("--quiet");
-                        // If it fails (exit code 1), it means there ARE changes staged
-                        if let Ok(diff_out) = diff_cmd.output().await {
-                            if !diff_out.status.success() {
-                                let mut commit_cmd = tokio::process::Command::new("git");
-                                commit_cmd.current_dir(&wd)
-                                    .arg("commit")
-                                    .arg("-m")
-                                    .arg(format!("🤖 Agent checkpoint: Iteration {} (Thread: {})", iteration, thread));
-
-                                if let Ok(commit_out) = commit_cmd.output().await {
-                                    if commit_out.status.success() {
-                                        on_event(AgentEvent::CheckpointSaved {
-                                            iteration,
-                                            path: format!("git:{}", wd),
-                                        });
-                                    } else {
-                                        tracing::warn!("Failed to create git commit: {}", String::from_utf8_lossy(&commit_out.stderr));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -2511,80 +2471,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_git_state_checkpointing() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_mutating".to_string(),
-                            name: "mutating_tool".to_string(),
-                            arguments: serde_json::Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                },
-                ChatResponse {
-                    message: Message::assistant("Final answer"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                },
-            ]),
-        });
-
-        let mutating_tool = Tool {
-            name: "mutating_tool".to_string(),
-            description: "A mutating tool".to_string(),
-            parameters: serde_json::Value::Null,
-            is_read_only: false,
-            execute: Arc::new(MockToolExecutor),
-        };
-
-        let agent = Agent::new(client, vec![mutating_tool]);
-
-        let dir = tempfile::tempdir().unwrap();
-        let wd = dir.path().to_path_buf();
-
-        // Setup git repo
-        std::process::Command::new("git").current_dir(&wd).arg("init").status().unwrap();
-        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.name").arg("Agent").status().unwrap();
-        std::process::Command::new("git").current_dir(&wd).arg("config").arg("user.email").arg("agent@example.com").status().unwrap();
-
-        // Make a change
-        std::fs::write(wd.join("test.txt"), "hello").unwrap();
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_state_checkpointing = true;
-        cfg.workspace_path = Some(wd.to_string_lossy().to_string());
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run(&cfg, "Hello", &mut on_event).await;
-        assert!(result.is_ok());
-
-        // Verify event was emitted
-        let mut found_checkpoint_event = false;
-        for e in events {
-            if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("git:") {
-                    found_checkpoint_event = true;
-                }
-            }
-        }
-        assert!(found_checkpoint_event);
-
-        // Verify git log
-        let output = std::process::Command::new("git").current_dir(&wd).arg("log").arg("--oneline").output().unwrap();
-        let log_str = String::from_utf8_lossy(&output.stdout);
-        assert!(log_str.contains("Agent checkpoint: Iteration 0"));
-    }
-
-    #[tokio::test]
     async fn test_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -2746,5 +2632,89 @@ mod tests {
             }
         }
         assert!(found_task_error);
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_integration() {
+        use crate::checkpointer::{GitCheckpointer, CheckpointSaver, Checkpoint};
+
+        // Create a temporary directory for the git repo
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_path = temp_dir.path().to_path_buf();
+
+        let checkpointer = Arc::new(GitCheckpointer::new(repo_path.clone()));
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Initial thought"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                }
+            ]),
+        });
+
+        // Add a mutating tool so it triggers the checkpoint
+        let mut mutating_tool = crate::tools::Tool {
+            name: "Mutator".to_string(),
+            description: "mutates".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        // We'll mock it so the LLM calls the tool, then stops
+        let client_with_tools = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "Mutator".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                }
+            ]),
+        });
+
+        let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.thread_id = Some("git-thread-123".to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Do it", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Now verify that the GitCheckpointer successfully created a checkpoint
+        let checkpoints = checkpointer.list_checkpoints("git-thread-123").await.unwrap();
+        assert!(!checkpoints.is_empty(), "Git checkpoints should not be empty");
+
+        // Verify the file was written to the repo
+        let progress_file = repo_path.join(".agent_progress_git-thread-123.json");
+        assert!(progress_file.exists(), "Progress file should exist in git repo");
+
+        // Verify that it is actually a git repository and has commits
+        let output = std::process::Command::new("git")
+            .arg("log")
+            .current_dir(&repo_path)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "Git log should succeed");
+        let log_output = String::from_utf8_lossy(&output.stdout);
+        assert!(log_output.contains("Checkpoint:"), "Commit message should contain Checkpoint:");
     }
 }
