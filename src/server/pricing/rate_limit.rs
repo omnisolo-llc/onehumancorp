@@ -1,4 +1,5 @@
 use redis::{AsyncCommands, Client};
+use chrono::Utc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
@@ -87,18 +88,82 @@ impl RedisRateLimiter {
             PlanTier::Pro => "Pro",
             PlanTier::Business => "Business",
         };
-        conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
+        let _: () = conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn check_action_quota(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let current_month = Utc::now().format("%Y-%m").to_string();
+        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, current_month);
+        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, current_month);
+
+        let tenant_used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+        let tenant_used = tenant_used.unwrap_or(0);
+
+        let agent_used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
+        let agent_used = agent_used.unwrap_or(0);
+
+        if let Some(limit) = tier.monthly_action_limit() {
+            if tenant_used >= limit {
+                return Ok(RateLimitStatus {
+                    is_allowed: true, // Soft limit
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "You have reached your {} tier limit of {} AI actions this month. Consider upgrading to keep your business running smoothly!",
+                        match tier {
+                            PlanTier::Free => "Free",
+                            PlanTier::Starter => "Starter",
+                            _ => "Current",
+                        },
+                        limit
+                    )),
+                });
+            }
+        }
+
+        if let Some(limit) = tier.agent_action_limit() {
+            if agent_used >= limit {
+                return Ok(RateLimitStatus {
+                    is_allowed: true, // Soft limit
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "Agent {} has reached its {} tier limit of {} actions. Upgrade to unlock more power.",
+                        agent_id,
+                        match tier {
+                            PlanTier::Free => "Free",
+                            PlanTier::Starter => "Starter",
+                            _ => "Current",
+                        },
+                        limit
+                    )),
+                });
+            }
+        }
+
+        Ok(RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        })
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+
         let tier = self.get_tenant_tier(tenant_id).await?;
 
-        let tenant_key = format!("tenant:{}:actions_used", tenant_id);
-        let agent_key = format!("tenant:{}:agent:{}:actions_used", tenant_id, agent_id);
+        let current_month = Utc::now().format("%Y-%m").to_string();
+        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, current_month);
+        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, current_month);
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
         let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+
+        let _: () = conn.expire(&tenant_key, 5184000).await.map_err(|e| e.to_string())?;
+        let _: () = conn.expire(&agent_key, 5184000).await.map_err(|e| e.to_string())?;
 
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
@@ -208,5 +273,21 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(50));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+    }
+
+    #[tokio::test]
+    async fn test_rate_limiter_redis() {
+        // This test gracefully skips if Redis is not available, as required by the instruction.
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if client.get_multiplexed_async_connection().await.is_ok() {
+                let limiter = RedisRateLimiter::new(client);
+                let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;
+
+                let status = limiter.check_action_quota("test_tenant", "agent_1").await.unwrap();
+                assert!(status.is_allowed);
+                assert!(!status.soft_limit_reached);
+            }
+        }
     }
 }

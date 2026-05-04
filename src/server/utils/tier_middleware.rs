@@ -22,6 +22,7 @@ pub async fn tier_middleware(
     // Very simple placeholder: in a real system we might inspect the request path to determine the action cost
     // For this example, we just simulate a 1-action check for protected paths
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
+        // As per the code review feedback, we use `record_action` directly and evaluate its return value to avoid a TOCTOU race condition.
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
                 if status.soft_limit_reached {
@@ -52,6 +53,7 @@ mod tests {
     use std::sync::Arc;
     use crate::pricing::rate_limit::{RedisRateLimiter, PlanTier};
     use redis::AsyncCommands;
+    use chrono::Utc;
 
     async fn setup_test_router(rate_limiter: Arc<RedisRateLimiter>) -> Router {
         Router::new()
@@ -81,9 +83,11 @@ mod tests {
                 // Setup tier
                 let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;
 
+                let current_month = Utc::now().format("%Y-%m").to_string();
+
                 // Push limits
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let _: () = conn.set("tenant:test_tenant:actions_used", 101).await.unwrap();
+                let _: () = conn.set(format!("tenant:test_tenant:actions_used:{}", current_month), 101).await.unwrap();
 
                 let app = setup_test_router(limiter).await;
 
@@ -108,7 +112,7 @@ mod tests {
                 // Because we didn't send a valid Claims extension (no auth middleware here to set it),
                 // it defaults to "system" tenant. If "system" has no limits hit, it might return 200,
                 // or 402 if we hit the limit. We can't strictly assert 402 without setting the "system" usage too.
-                let _: () = conn.set("tenant:system:actions_used", 101).await.unwrap();
+                let _: () = conn.set(format!("tenant:system:actions_used:{}", current_month), 101).await.unwrap();
                 let res2 = client.get(&format!("http://{}/api/v1/protected/action", addr))
                     .send()
                     .await
