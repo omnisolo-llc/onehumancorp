@@ -1411,6 +1411,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let dashboard_briefing_handle = dashboard.as_weak();
+                dashboard.on_dismiss_daily_briefing(move || {
+                    if let Some(ui) = dashboard_briefing_handle.upgrade() {
+                        ui.set_show_daily_briefing(false);
+                    }
+                });
 
                 let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {

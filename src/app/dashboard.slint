@@ -4,7 +4,7 @@ import { GlassCard } from "glass_card.slint";
 import { StatCard } from "stat_card.slint";
 
 import { UpgradePrompt } from "./upgrade_prompt.slint";
-
+import { DailyBriefing } from "daily_briefing.slint";
 
 export struct UiPendingApproval {
     task_id: string,
@@ -67,6 +67,10 @@ export component Dashboard inherits Window {
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
+
+    in-out property <bool> show_daily_briefing: false;
+    in property <[string]> daily_briefing_content: [];
+    callback dismiss_daily_briefing();
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
@@ -319,6 +323,16 @@ export component Dashboard inherits Window {
                 alignment: center;
                 TooltipElement { tooltip_id: "share"; Button { text: "Share Store"; width: 120px; height: 44px; clicked => { action_share_store(); } } }
             }
+        }
+    }
+
+    if (show_daily_briefing) : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        z: 100;
+        DailyBriefing {
+            bullets: daily_briefing_content;
+            dismiss => { dismiss_daily_briefing(); }
         }
     }
 
