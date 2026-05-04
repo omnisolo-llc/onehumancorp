@@ -176,13 +176,8 @@ mod tests {
         }
 
         // Fast DB connection test with very short timeout
-        let pool_res = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            sqlx::PgPool::connect(&db_url)
-        ).await;
-
-        let pool = match pool_res {
-            Ok(Ok(p)) => p,
+        let pool = match sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url) {
+            Ok(p) => p,
             _ => return, // DB unreachable or timeout
         };
 

@@ -134,7 +134,7 @@ impl AgentServiceImpl {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
 
         if !db_url.is_empty() {
-            match sqlx::PgPool::connect(&db_url).await {
+            match sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url) {
                 Ok(pool) => {
                     self.memory = Some(Arc::new(VectorRepository::new(pool)));
                 }

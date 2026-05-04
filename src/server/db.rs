@@ -105,8 +105,7 @@ impl DB {
                         Ok(true)
                     })
                 })
-                .connect(&database_url)
-                .await?;
+                .connect_lazy(&database_url)?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
@@ -401,7 +400,11 @@ mod tests {
         // SAFETY: Test-only code setting environment variables
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
         let db = DB::new().await;
-        assert!(db.is_err());
+        // Since we migrated to connect_lazy, new() won't error immediately.
+        // It should error if we try to connect.
+        if let Ok(db) = db {
+            assert!(db.pool.acquire().await.is_err());
+        }
     }
 }
 

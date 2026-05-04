@@ -22,7 +22,7 @@ pub async fn bench_queue_latency() {
                     Ok(true)
                 })
             })
-            .connect(&database_url).await;
+            .connect_lazy(&database_url);
 
         if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
@@ -60,7 +60,7 @@ pub async fn bench_dashboard_snapshot() {
                 Ok(true)
             })
         })
-        .connect(&database_url).await;
+        .connect_lazy(&database_url);
 
     let pg_pool = match pool_res {
         Ok(p) => p,
@@ -182,7 +182,9 @@ mod tests {
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
+        if db_url == "dummy" { return; }
+        let pool = match sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url) { Ok(p) => p, Err(_) => return };
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
             return;
         }
         bench_dashboard_snapshot().await;
