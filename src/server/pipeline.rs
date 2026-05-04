@@ -122,7 +122,8 @@ mod tests {
     async fn test_handle_spec_approved() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").unwrap();
-        let hub = Arc::new(Hub::new(tx, pool));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(Hub::new(tx, db));
         let orchestrator = Orchestrator::new(hub.clone());
         
         let msg = Message {

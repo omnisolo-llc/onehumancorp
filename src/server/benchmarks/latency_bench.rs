@@ -70,7 +70,8 @@ pub async fn bench_dashboard_snapshot() {
         }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
+    let db = Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
+    let hub = Arc::new(crate::hub::Hub::new(tx, db));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
