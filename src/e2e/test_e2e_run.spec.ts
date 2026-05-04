@@ -183,7 +183,7 @@ test('verify advanced options toggle', async ({ page }) => {
     await page.goto('/');
 
     // We changed 'App Settings' to 'Advanced Options'
-    await page.click('button:has-text("Advanced Options")');
+    await page.click('button:has-text("Fix Login Issues")');
 
     // Expect the settings to be shown
     await expect(page.locator('text="App Settings"')).toBeVisible();
