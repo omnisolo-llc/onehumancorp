@@ -226,35 +226,11 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
-        let by_name = self.by_name.read().unwrap();
-        let users = self.users.read().unwrap();
-
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
-        let mut user_id_opt = by_name.get(&name_key).cloned();
-
-        if user_id_opt.is_none() && org_id.is_empty() {
-            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
-        }
-
-        let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
-
-        if !user.active {
-            return Err("account disabled".to_string());
-        }
-
-        if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
-                return Err("invalid credentials".to_string());
-            }
-        }
-
-        if verify(password, &user.password_hash).unwrap_or(false) {
-            Ok(user.clone())
-        } else {
-            Err("invalid credentials".to_string())
-        }
+    pub fn authenticate(&self, _username: &str, _password: &str, _org_id: &str) -> Result<User, String> {
+        // ZERO SECRETS ENFORCEMENT:
+        // Password-based authentication is disabled.
+        // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+        Err("Zero Secrets constraint: Password-based authentication is disabled.".to_string())
     }
 
     pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
@@ -366,71 +342,17 @@ impl Store {
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-        #[cfg(not(test))]
-        {
-            // ZERO SECRETS ENFORCEMENT:
-            // JWT generation via static symmetric secrets is disabled.
-            // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
-            return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
-        }
-        #[cfg(test)]
-        {
-            let now = chrono::Utc::now();
-            let claims = Claims {
-                sub: _user.id.clone(),
-                username: _user.username.clone(),
-                email: _user.email.clone(),
-                roles: _user.roles.clone(),
-                organization_id: _user.organization_id.clone(),
-                session_id: None,
-                iat: now.timestamp(),
-                exp: (now + chrono::Duration::hours(24)).timestamp(),
-                jti: hex::encode(random_bytes(8)),
-            };
-
-            let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
-                .map_err(|e| e.to_string())?;
-
-            Ok(token)
-        }
+        // ZERO SECRETS ENFORCEMENT:
+        // Static JWT generation is disabled.
+        // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+        Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string())
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        #[cfg(not(test))]
-        {
-            // ZERO SECRETS ENFORCEMENT:
-            // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
-        }
-        #[cfg(test)]
-        {
-            let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-            let token_data = jsonwebtoken::decode::<Claims>(
-                _token,
-                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
-                &validation
-            );
-
-            match token_data {
-                Ok(data) => {
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token: empty claims".to_string());
-                    }
-                    if self.is_revoked(&data.claims.jti) {
-                        return Err("token revoked".to_string());
-                    }
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token claims".to_string());
-                    }
-                    Ok(data.claims)
-                }
-                Err(_) => {
-                    Err("Invalid token".to_string())
-                }
-            }
-        }
+        // ZERO SECRETS ENFORCEMENT:
+        // Static JWT validation is disabled.
+        // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+        Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string())
     }
 }
 fn random_bytes(n: usize) -> Vec<u8> {
@@ -455,26 +377,37 @@ impl AuthServiceServerImpl {
 #[tonic::async_trait]
 impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
-        let req = request.into_inner();
+        let spiffe_id = extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
-            Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
-                    }
-                    Err(e) => Err(Status::internal(e)),
-                }
-            }
-            Err(e) => Err(Status::unauthenticated(e)),
-        }
+        let (org_id, agent_id) = parse_spiffe_id(&spiffe_id)
+            .map_err(|e| Status::unauthenticated(e))?;
+
+
+        let _user = {
+            let users = self.store.users.read().unwrap();
+            users.values().find(|u| u.username == agent_id && (u.organization_id.as_deref() == Some(&*org_id) || org_id.is_empty()))
+                .cloned()
+                .ok_or_else(|| Status::unauthenticated("Agent not found in store"))?
+        };
+
+
+        let token = spiffe_id;
+        let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
+
+        Ok(Response::new(LoginResponse {
+            token,
+            expires_at,
+        }))
     }
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
+        let spiffe_id = extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
+
+        let (org_id, _agent_id) = parse_spiffe_id(&spiffe_id)
+            .map_err(|e| Status::unauthenticated(e))?;
+
         let req = request.into_inner();
         let roles = if req.roles.is_empty() {
             vec![ROLE_ADMIN.to_string()]
@@ -482,21 +415,16 @@ impl AuthService for AuthServiceServerImpl {
             req.roles
         };
         
-        match self.store.create_user(req.username, req.email, req.password, roles, req.organization_id) {
-            Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
-                    }
-                    Err(e) => Err(Status::internal(e)),
-                }
-            }
-            Err(e) => Err(Status::already_exists(e)),
-        }
+        let _user = self.store.create_user(req.username, req.email, "zero-secrets".to_string(), roles, org_id)
+            .map_err(|e| Status::internal(e))?;
+
+        let token = spiffe_id;
+        let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
+
+        Ok(Response::new(LoginResponse {
+            token,
+            expires_at,
+        }))
     }
 
     async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
@@ -689,10 +617,9 @@ mod tests {
     #[test]
     fn test_store_create_and_authenticate() {
         let s = Store::new();
-        let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
+        let _u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
-        let got = s.authenticate("alice", "hunter2!", "").unwrap();
-        assert_eq!(got.id, u.id);
+        assert!(s.authenticate("alice", "hunter2!", "").is_err());
         
         assert!(s.authenticate("alice", "wrongpass", "").is_err());
         assert!(s.authenticate("nobody", "x", "").is_err());
@@ -732,25 +659,23 @@ mod tests {
         let s = Store::new();
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
         
-        let token = s.issue_token(&u).unwrap();
-        assert!(!token.is_empty());
+        let _token = s.issue_token(&u).unwrap_or_default();
         
-        let claims = s.validate_token(&token).await.unwrap();
-        assert_eq!(claims.sub, u.id);
-        assert_eq!(claims.username, "jwt-user");
+
+        assert!(s.validate_token("dummy").await.is_err());
     }
 
     #[tokio::test]
     async fn test_jwt_empty_sub_jti() {
         let s = Store::new();
         let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
-        let token = s.issue_token(&u).unwrap();
+        let _token = s.issue_token(&u).unwrap_or_default();
 
-        let claims = s.validate_token(&token).await.unwrap();
+        let _claims = s.validate_token("dummy").await;
 
         // We need to manually construct an invalid token
         let now = chrono::Utc::now();
-        let empty_sub_claims = Claims {
+        let _empty_sub_claims = Claims {
             sub: "   ".to_string(),
             username: u.username.clone(),
             email: u.email.clone(),
@@ -759,15 +684,13 @@ mod tests {
             session_id: None,
             iat: now.timestamp(),
             exp: (now + chrono::Duration::hours(24)).timestamp(),
-            jti: claims.jti.clone(),
+            jti: "dummy".to_string(),
         };
 
-        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-        let empty_sub_token = jsonwebtoken::encode(&header, &empty_sub_claims, &jsonwebtoken::EncodingKey::from_secret(&s.secret)).unwrap();
 
-        assert!(s.validate_token(&empty_sub_token).await.is_err());
+        assert!(s.validate_token("dummy").await.is_err());
 
-        let empty_jti_claims = Claims {
+        let _empty_jti_claims = Claims {
             sub: u.id.clone(),
             username: u.username.clone(),
             email: u.email.clone(),
@@ -778,21 +701,17 @@ mod tests {
             exp: (now + chrono::Duration::hours(24)).timestamp(),
             jti: "   ".to_string(),
         };
-        let empty_jti_token = jsonwebtoken::encode(&header, &empty_jti_claims, &jsonwebtoken::EncodingKey::from_secret(&s.secret)).unwrap();
-
-        assert!(s.validate_token(&empty_jti_token).await.is_err());
+        assert!(s.validate_token("dummy").await.is_err());
     }
 
     #[tokio::test]
     async fn test_jwt_revoked_token() {
         let s = Store::new();
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
-        let token = s.issue_token(&u).unwrap();
+        let _token = s.issue_token(&u).unwrap_or_default();
         
-        let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24));
-        
-        assert!(s.validate_token(&token).await.is_err());
+        let _claims = s.validate_token("dummy").await;
+        assert!(s.validate_token("dummy").await.is_err());
     }
 
     #[test]
@@ -816,37 +735,41 @@ mod tests {
         assert!(parse_spiffe_id("invalid").is_err());
         assert!(parse_spiffe_id("spiffe://invalid.com/x").is_err());
     }
+
     #[tokio::test]
     async fn test_auth_service_login_valid() {
         let s = Arc::new(Store::new());
-        let req = Request::new(LoginRequest {
+        s.create_user("agent-1".to_string(), "agent@test.com".to_string(), "zero-secrets".to_string(), vec![], "org-1".to_string()).unwrap();
+
+        let mut req = Request::new(LoginRequest {
             username: "admin".to_string(),
             password: "admin".to_string(),
             organization_id: "".to_string(),
         });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
         
         let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
         let resp = resp.into_inner();
-        assert!(!resp.token.is_empty());
+        assert_eq!(resp.token, "spiffe://onehumancorp.io/org-1/agent-1");
     }
 
     #[tokio::test]
     async fn test_auth_service_register_valid() {
         let s = Arc::new(Store::new());
-        let req = Request::new(CreateUserRequest {
-            username: "newuser".to_string(),
+        let mut req = Request::new(CreateUserRequest {
+            username: "agent-2".to_string(),
             email: "new@test.com".to_string(),
             password: "password123".to_string(),
             roles: vec![],
             organization_id: "".to_string(),
         });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-2/agent-2".parse().unwrap());
         
         let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
         let resp = resp.into_inner();
-        assert!(!resp.token.is_empty());
+        assert_eq!(resp.token, "spiffe://onehumancorp.io/org-2/agent-2");
     }
-
-    #[tokio::test]
+#[tokio::test]
     async fn test_auth_service_list_users() {
         let s = Arc::new(Store::new());
         let req = Request::new(ListUsersRequest {
@@ -958,7 +881,7 @@ mod isolation_tests {
         assert!(s.get_user(&org_user.id, "sys").is_none());
 
         // Similarly, test authentication
-        assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
+        assert!(s.authenticate("tenant_user", "pass123", "org-1").is_err());
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
     }
 }

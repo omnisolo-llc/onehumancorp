@@ -1031,25 +1031,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let db_path = "ohc-standalone.db";
-        #[cfg(unix)]
+                #[cfg(unix)]
         {
             use std::fs::OpenOptions;
             use std::os::unix::fs::OpenOptionsExt;
-            use std::os::unix::fs::PermissionsExt;
-
-            let file = OpenOptions::new()
+            let _file = OpenOptions::new()
                 .read(true)
                 .write(true)
                 .create(true)
                 .mode(0o600)
-                .open(db_path)?;
-
-            let metadata = file.metadata()?;
-            let mut perms = metadata.permissions();
-            if perms.mode() & 0o777 != 0o600 {
-                perms.set_mode(0o600);
-                file.set_permissions(perms)?;
-            }
+                .open(&db_path)?;
         }
     }
 

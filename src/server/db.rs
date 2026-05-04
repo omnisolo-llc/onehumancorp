@@ -671,16 +671,46 @@ mod security_tests_final {
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
         let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            let mut builder = std::fs::DirBuilder::new();
+            builder.recursive(true).mode(0o700);
+            let _ = builder.create(parent_dir);
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::create_dir_all(parent_dir);
+        }
 
         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::OpenOptions::new().write(true).create(true).open(&db_path);
+        }
+
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         let _ = DB::new().await;
         let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            let mut builder = std::fs::DirBuilder::new();
+            builder.recursive(true).mode(0o700);
+            let _ = builder.create(parent_dir);
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::create_dir_all(parent_dir);
+        }
 
         // Securely create the database file with restricted permissions initially to avoid TOCTOU
         #[cfg(unix)]
@@ -701,10 +731,11 @@ mod security_tests_final {
                 perms.set_mode(0o600);
                 file.set_permissions(perms).unwrap();
             }
+
         }
         #[cfg(not(unix))]
         {
-            let _ = fs::File::create(&db_path);
+            let _ = std::fs::File::create(&db_path);
         }
 
         let parent_dir = db_path.parent().unwrap();
