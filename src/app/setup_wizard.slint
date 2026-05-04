@@ -97,7 +97,7 @@ export component SetupWizard inherits Window {
 
     Timer {
         interval: 1000ms;
-        running: step == 9 && !launching;
+        running: (step == 9 && !launching) || step == 0;
         triggered => {
             pulse_scale = (pulse_scale == 1.0) ? 0.8 : 1.0;
         }
@@ -143,13 +143,20 @@ export component SetupWizard inherits Window {
             if (step == 0) : VerticalBox {
                 spacing: 24px;
                 alignment: center;
-                Text {
-                    text: "Your business,\nlive in minutes.";
-                    font-size: 32px;
-                    font-family: "Outfit";
-                    font-weight: 700;
-                    color: white;
-                    horizontal-alignment: center;
+
+                VerticalBox {
+                    alignment: center;
+                    opacity: pulse_scale;
+                    animate opacity { duration: 500ms; easing: ease-in-out; }
+
+                    Text {
+                        text: "Your business,\nlive in minutes.";
+                        font-size: 32px;
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        color: white;
+                        horizontal-alignment: center;
+                    }
                 }
                 Text {
                     text: "Zero tech skills needed. We do the heavy lifting.";
