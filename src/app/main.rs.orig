@@ -3197,7 +3197,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
 
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
