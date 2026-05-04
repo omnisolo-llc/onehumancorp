@@ -4,12 +4,12 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use dashmap::DashMap;
 
-pub use crate::proto::hub::TeammateMeshEvent as Message;
+pub use crate::proto::hub::TeammateMeshEvent;
 
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String>;
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
@@ -19,7 +19,7 @@ pub trait MeshTransport: Send + Sync {
 }
 
 pub struct MemoryTransport {
-    subs: DashMap<String, broadcast::Sender<Message>>,
+    subs: DashMap<String, broadcast::Sender<TeammateMeshEvent>>,
     presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
     locks: DashMap<String, (String, std::time::Instant)>, // resource -> (owner, expires_at)
 }
@@ -36,14 +36,14 @@ impl MemoryTransport {
 
 #[async_trait]
 impl MeshTransport for MemoryTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
         if let Some(tx) = self.subs.get(topic) {
             let _ = tx.send(message);
         }
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
@@ -126,7 +126,7 @@ impl MeshTransport for MemoryTransport {
 #[derive(Clone)]
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
-    subs: DashMap<String, broadcast::Sender<Message>>,
+    subs: DashMap<String, broadcast::Sender<TeammateMeshEvent>>,
 }
 
 impl IpcTransport {
@@ -198,7 +198,7 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
+                        if let Ok(message) = TeammateMeshEvent::decode(&payload[..]) {
                             let _ = tx.send(message);
                         }
                     }
@@ -217,7 +217,7 @@ impl IpcTransport {
 
 #[async_trait]
 impl MeshTransport for IpcTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
@@ -244,7 +244,7 @@ impl MeshTransport for IpcTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
             tx
@@ -349,7 +349,7 @@ impl RedisTransport {
 
 #[async_trait]
 impl MeshTransport for RedisTransport {
-    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+    async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         let mut conn = self.publish_conn.lock().await;
@@ -361,7 +361,7 @@ impl MeshTransport for RedisTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use prost::Message as ProstMessage;
         use futures_util::StreamExt;
 
@@ -373,7 +373,7 @@ impl MeshTransport for RedisTransport {
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
-                    if let Ok(message) = Message::decode(&buf[..]) {
+                    if let Ok(message) = TeammateMeshEvent::decode(&buf[..]) {
                         handler(message);
                     }
                 }
@@ -521,7 +521,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |msg: TeammateMeshEvent| {
             if msg.action == "ipc_test_topic" && msg.payload == b"ipc_hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
@@ -530,7 +530,7 @@ mod tests {
         let cancel = transport.subscribe("ipc_test_topic", handler).await.unwrap();
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let msg = Message {
+        let msg = TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "ipc_test_topic".to_string(),
             status: "ok".to_string(),
@@ -576,7 +576,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |msg: TeammateMeshEvent| {
             if msg.action == "test_topic" && msg.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
@@ -584,7 +584,7 @@ mod tests {
 
         let cancel = transport.subscribe("test_topic", handler).await.unwrap();
 
-        let msg = Message {
+        let msg = TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_topic".to_string(),
             status: "ok".to_string(),
@@ -693,7 +693,7 @@ mod tests {
         // Setup channel for verification
         let (tx, mut rx) = tokio::sync::mpsc::channel(10);
         let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
-        let handler = Box::new(move |msg: Message| {
+        let handler = Box::new(move |msg: TeammateMeshEvent| {
             let tx_clone = tx_arc.clone();
             tokio::spawn(async move {
                 let tx = tx_clone.lock().await;
@@ -709,7 +709,7 @@ mod tests {
         // Wait for subscription to propagate
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let msg = Message {
+        let msg = TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_topic_redis".to_string(),
             status: "ok".to_string(),

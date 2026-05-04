@@ -1,6 +1,5 @@
 use crate::ohc::orchestration::SyncStateHandoff;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
-use crate::ohc::orchestration::TeammateMeshEvent;
+use ohc_builtin_agent::mesh::transport::{MeshTransport, TeammateMeshEvent};
 use std::sync::Arc;
 use prost::Message;
 use crate::db::{DB, DbStore};
@@ -21,7 +20,7 @@ impl HandoffManager {
         let is_cloud = self.is_cloud;
         let transport_clone = self.transport.clone();
 
-        let handler = Box::new(move |msg: MeshMessage| {
+        let handler = Box::new(move |msg: TeammateMeshEvent| {
             if let Ok(handoff) = SyncStateHandoff::decode(&msg.payload[..]) {
                 // Prevent reflection (don't process messages we sent)
                 let current_mode = if is_cloud { "cloud" } else { "standalone" };
@@ -67,7 +66,7 @@ impl HandoffManager {
 
                     if !msg_id_for_ack.is_empty() {
                         let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
-                        let ack_msg = MeshMessage {
+                        let ack_msg = TeammateMeshEvent {
                             agent_id: "handoff".to_string(),
                             action: ack_topic.clone(),
                             status: "ok".to_string(),

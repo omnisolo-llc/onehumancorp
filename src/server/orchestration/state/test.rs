@@ -8,7 +8,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::{Message, MemoryTransport, MeshTransport};
+use ohc_builtin_agent::mesh::transport::{TeammateMeshEvent, MemoryTransport, MeshTransport};
 use async_trait::async_trait;
 
 struct MockMesh {
@@ -26,7 +26,7 @@ impl TeammateMesh for MockMesh {
     async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         Ok(())
     }
-    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         Ok(Box::new(|| {}))
     }
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {

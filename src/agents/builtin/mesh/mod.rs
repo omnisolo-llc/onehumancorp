@@ -2,15 +2,15 @@ pub mod transport;
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::mesh::transport::{MeshTransport, Message};
+use crate::mesh::transport::{MeshTransport, TeammateMeshEvent};
 
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
-    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
-    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct TeammateMeshClient {
@@ -26,7 +26,7 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:tasks", Message {
+        self.transport.publish("mesh:tasks", TeammateMeshEvent {
             agent_id: "agent".to_string(),
             action: "mesh:tasks".to_string(),
             status: "ok".to_string(),
@@ -36,7 +36,7 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:coordination", Message {
+        self.transport.publish("mesh:coordination", TeammateMeshEvent {
             agent_id: "agent".to_string(),
             action: "mesh:coordination".to_string(),
             status: "ok".to_string(),
@@ -45,11 +45,11 @@ impl TeammateMesh for TeammateMeshClient {
         }).await
     }
 
-    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:tasks", handler).await
     }
 
-    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("mesh:coordination", handler).await
     }
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
@@ -72,7 +72,7 @@ impl TeammateMesh for TeammateMeshClient {
                 return Err("Failed to receive ack after retries".to_string());
             }
 
-            let event = Message {
+            let event = TeammateMeshEvent {
                 agent_id: "agent".to_string(),
                 action: topic.to_string(),
                 status: "pending".to_string(),

@@ -721,7 +721,7 @@ pub async fn start_builtin_agent(
     let handler = {
         let transport = transport.clone();
         let svc = svc.clone();
-        Box::new(move |msg: crate::mesh::transport::Message| {
+        Box::new(move |msg: crate::mesh::transport::TeammateMeshEvent| {
             use prost::Message;
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
                 tracing::info!("Received job from mesh: {}", req.task_id);
@@ -736,7 +736,7 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
-                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::TeammateMeshEvent {
                                         agent_id: "agent".to_string(),
                                         action: "agent_events".to_string(),
                                         status: "ok".to_string(),
@@ -752,7 +752,7 @@ pub async fn start_builtin_agent(
                     }
                 });
             }
-        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+        }) as Box<dyn Fn(crate::mesh::transport::TeammateMeshEvent) + Send + Sync>
     };
 
     if let Err(e) = transport.subscribe("agent_jobs", handler).await {
@@ -763,7 +763,7 @@ pub async fn start_builtin_agent(
 
     let handler_ralph = {
         let svc = svc.clone();
-        Box::new(move |msg: crate::mesh::transport::Message| {
+        Box::new(move |msg: crate::mesh::transport::TeammateMeshEvent| {
             use prost::Message;
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
                 tracing::info!("Received Ralph job from mesh: {}", req.task_id);
@@ -772,7 +772,7 @@ pub async fn start_builtin_agent(
                     svc.run_ralph_loop(req).await;
                 });
             }
-        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+        }) as Box<dyn Fn(crate::mesh::transport::TeammateMeshEvent) + Send + Sync>
     };
 
     if let Err(e) = transport.subscribe("ralph_jobs", handler_ralph).await {

@@ -1,5 +1,4 @@
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use crate::ohc::orchestration::TeammateMeshEvent;
+use ohc_builtin_agent::mesh::transport::{MeshTransport, TeammateMeshEvent};
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use std::sync::Arc;
@@ -9,7 +8,7 @@ use opentelemetry::KeyValue;
 #[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
@@ -43,11 +42,11 @@ impl TeammateMesh for CentrifugeNode {
         }).await
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let receive_counter = self.receive_counter.clone();
         let topic_str = topic.to_string();
 
-        let wrapped_handler = Box::new(move |msg: Message| {
+        let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
             receive_counter.add(1, &[KeyValue::new("topic", topic_str.clone())]);
             handler(msg);
         });
@@ -93,7 +92,7 @@ impl TeammateMesh for RueidisMapping {
         }).await
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         // The redis mapping delegates entirely to the underlying transport for subscription events
         self.transport.subscribe(topic, handler).await
     }
@@ -144,7 +143,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let _cancel = node.subscribe("test_topic", Box::new(move |msg: Message| {
+        let _cancel = node.subscribe("test_topic", Box::new(move |msg: TeammateMeshEvent| {
             if msg.payload == b"hello world" {
                 received_clone.store(true, Ordering::SeqCst);
             }

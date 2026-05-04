@@ -3,7 +3,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ohc_builtin_agent::mesh::transport::{MeshTransport, TeammateMeshEvent};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
@@ -25,9 +25,9 @@ pub async fn mesh_ws_handler(
 
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::channel::<MeshMessage>(100);
+    let (tx, mut rx) = mpsc::channel::<TeammateMeshEvent>(100);
 
-    let handler = Box::new(move |msg: MeshMessage| {
+    let handler = Box::new(move |msg: TeammateMeshEvent| {
         let _ = tx.try_send(msg);
     });
 
@@ -59,7 +59,7 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
         while let Some(Ok(msg)) = receiver.next().await {
             if let WsMessage::Text(text) = msg {
                 if let Ok(buf) = STANDARD.decode(text.as_str()) {
-                    if let Ok(mesh_msg) = MeshMessage::decode(&buf[..]) {
+                    if let Ok(mesh_msg) = TeammateMeshEvent::decode(&buf[..]) {
                         let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
                     }
                 }
@@ -113,7 +113,7 @@ mod tests {
         let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
         // Test sending a message from client to server (publish)
-        let test_msg = MeshMessage {
+        let test_msg = TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_chan".to_string(),
             status: "ok".to_string(),
@@ -142,7 +142,7 @@ mod tests {
             if let Some(Ok(msg)) = ws_stream.next().await {
                 if let TungsteniteMessage::Text(text) = msg {
                     let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
-                    let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
+                    let received_mesh_msg: TeammateMeshEvent = prost::Message::decode(&buf[..]).unwrap();
                     if received_mesh_msg.payload == b"srv_test" {
                         assert_eq!(received_mesh_msg.action, "test_chan");
                         found = true;
