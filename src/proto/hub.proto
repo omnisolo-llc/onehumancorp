@@ -193,9 +193,15 @@ message SharedTask {
   int64 locked_until_unix = 11;
   int64 created_at_unix = 12;
   int64 updated_at_unix = 13;
-  string action_risk = 14;
+  ActionRisk action_risk = 14;
   string approval_status = 15;
   string proposed_content = 16;
+}
+
+enum ActionRisk {
+  ACTION_RISK_UNSPECIFIED = 0;
+  ACTION_RISK_LOW = 1;
+  ACTION_RISK_HIGH = 2;
 }
 
 
@@ -218,6 +224,14 @@ message TriggerCustomOrderResponse {
   bool success = 1;
 }
 
+message GetPendingApprovalsRequest {
+  string organization_id = 1;
+}
+
+message GetPendingApprovalsResponse {
+  repeated SharedTask tasks = 1;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -236,6 +250,7 @@ service HubService {
   rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
   rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
+  rpc GetPendingApprovals(GetPendingApprovalsRequest) returns (GetPendingApprovalsResponse);
   rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
   rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
