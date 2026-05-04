@@ -8,13 +8,15 @@ use crate::autodream::AutoDreamWorker;
 pub struct TaskDecompositionService {
     db: Arc<DB>,
     sqlite_mu: tokio::sync::Mutex<()>,
+    mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
 }
 
 impl TaskDecompositionService {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
         Self {
             db,
             sqlite_mu: tokio::sync::Mutex::new(()),
+            mesh,
         }
     }
 
@@ -177,6 +179,14 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
+                let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
+                let claimed_counter = meter.u64_counter("tasks.claimed").build();
+                claimed_counter.add(1, &[]);
+
+                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
+                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                }
+
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -264,6 +274,14 @@ impl TaskDecompositionService {
                 let task = self.get_task_sqlite(&mut tx, &id).await?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
+                let claimed_counter = meter.u64_counter("tasks.claimed").build();
+                claimed_counter.add(1, &[]);
+
+                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
+                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                }
 
                 Ok(Some(task))
             }
