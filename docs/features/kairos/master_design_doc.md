@@ -46,6 +46,7 @@ type TeammateMesh interface {
     ReleaseLock(ctx context.Context, key string) error
     RegisterPresence(ctx context.Context, agentID string, status string) error
     GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+    Acknowledge(ctx context.Context, messageID string) error
 }
 ```
 
