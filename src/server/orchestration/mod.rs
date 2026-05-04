@@ -1,4 +1,7 @@
 pub mod tasks;
+pub mod shared_tasks;
+#[cfg(test)]
+pub mod shared_tasks_test;
 #[cfg(test)]
 pub mod orchestration_test;
 pub mod handoff;
