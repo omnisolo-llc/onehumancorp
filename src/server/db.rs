@@ -105,8 +105,7 @@ impl DB {
                         Ok(true)
                     })
                 })
-                .connect(&database_url)
-                .await?;
+                .connect_lazy(&database_url)?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
@@ -401,7 +400,12 @@ mod tests {
         // SAFETY: Test-only code setting environment variables
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
         let db = DB::new().await;
-        assert!(db.is_err());
+        // with connect_lazy(), DB::new() will succeed, but the first query will fail
+        if let Ok(db) = db {
+            assert!(sqlx::query("SELECT 1").execute(&db.pool).await.is_err());
+        } else {
+            assert!(db.is_err());
+        }
     }
 }
 

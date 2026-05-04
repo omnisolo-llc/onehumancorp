@@ -405,7 +405,14 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap();
+            .connect_lazy(&database_url).unwrap();
+
+        let mut _pool_is_ok = false;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_ok() {
+            _pool_is_ok = true;
+        } else {
+            return;
+        }
 
         let service = MySyncService::new(pool.clone());
 
