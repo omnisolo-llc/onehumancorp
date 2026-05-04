@@ -65,7 +65,7 @@ impl CloudStateManager {
     async fn transition_state_inner(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        #[allow(unused_variables)] tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -97,7 +97,7 @@ impl CloudStateManager {
             ));
         }
 
-        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_local_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -148,7 +148,7 @@ impl CloudStateManager {
             "#
         )
         .bind(trans_id)
-        .bind(&tenant_id_db)
+        .bind(&tenant_id_local_db)
         .bind(task_id)
         .bind(from_state)
         .bind(to_state)
