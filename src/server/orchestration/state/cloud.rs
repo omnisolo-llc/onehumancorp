@@ -158,7 +158,7 @@ impl CloudStateManager {
 }
 
 #[async_trait]
-impl StateManager for CloudStateManager {
+impl crate::orchestration::state::StateManager for CloudStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
