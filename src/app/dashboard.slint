@@ -357,23 +357,26 @@ export component Dashboard inherits Window {
             }
 
             // AI-Powered Help Chat Button
-            Rectangle {
-                width: 50px;
-                height: 50px;
-                border-radius: 25px;
-                background: #8b5cf6; // Purple
+            TooltipElement {
+                tooltip_id: "ask_ai";
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #8b5cf6; // Purple
 
-                TouchArea {
-                    clicked => { open_ai_chat(); }
-                }
+                    TouchArea {
+                        clicked => { open_ai_chat(); }
+                    }
 
-                Text {
-                    text: "Ask AI";
-                    color: white;
-                    font-size: 14px;
-                    font-weight: 700;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                    Text {
+                        text: "Ask AI";
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
                 }
             }
         }
