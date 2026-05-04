@@ -143,6 +143,41 @@ impl RedisRateLimiter {
             user_message: None,
         })
     }
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+
+        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
+
+        if let Some(limit_mb) = tier.storage_limit_mb() {
+            let limit_bytes = (limit_mb as i64) * 1024 * 1024;
+            if total_storage > limit_bytes {
+                return Ok(RateLimitStatus {
+                    is_allowed: true, // Soft limit - allow but warn
+                    soft_limit_reached: true,
+                    user_message: Some(format!(
+                        "You have reached your {} tier limit of {}MB storage. Consider upgrading to keep your business running smoothly!",
+                        match tier {
+                            PlanTier::Free => "Free",
+                            PlanTier::Starter => "Starter",
+                            PlanTier::Pro => "Pro",
+                            _ => "Current",
+                        },
+                        limit_mb
+                    )),
+                });
+            }
+        }
+
+        Ok(RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        })
+    }
 }
 
 #[cfg(test)]
