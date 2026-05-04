@@ -1,0 +1,14 @@
+--- src/server/orchestration/state/standalone.rs
++++ src/server/orchestration/state/standalone.rs
+@@ -53,10 +53,10 @@
+ }
+
+ #[async_trait]
+ impl StateManager for StandaloneStateManager {
+     async fn transition_state(
+         &self,
+         task_id: &str,
+-        _tenant_id: &str,
++        tenant_id: &str,
+         from_state: &str,
+         to_state: &str,

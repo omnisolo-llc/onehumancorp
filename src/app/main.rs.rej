@@ -1,0 +1,42 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -1610,7 +1610,8 @@
+
+     setup_wizard_ui.on_launch({
+         let ui_handle = setup_wizard_handle.clone();
+-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
++        #[allow(unused_variables)]
++        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+             let ui = ui_handle.unwrap();
+             let state = std::collections::HashMap::from([
+                 ("business_type".to_string(), business_type.to_string()),
+@@ -1624,10 +1625,10 @@
+                 ("payment_pref".to_string(), payment_pref.to_string()),
+                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                 ("admin_email".to_string(), admin_email.to_string()),
+-                ("website_template".to_string(), _website_template.to_string()),
+-                ("product_name".to_string(), _product_name.to_string()),
+-                ("product_price".to_string(), _product_price.to_string()),
+-                ("domain_choice".to_string(), _domain_choice.to_string()),
++                ("website_template".to_string(), website_template.to_string()),
++                ("product_name".to_string(), product_name.to_string()),
++                ("product_price".to_string(), product_price.to_string()),
++                ("domain_choice".to_string(), domain_choice.to_string()),
+                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
+                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+@@ -1651,10 +1652,10 @@
+             req.business_type = business_type.to_string();
+             req.company_name = company_name.to_string();
+             req.company_description = company_description.to_string();
+-            req.website_template = _website_template.to_string();
+-            req.product_name = _product_name.to_string();
+-            req.product_price = _product_price.to_string();
+-            req.domain_choice = _domain_choice.to_string();
++            req.website_template = website_template.to_string();
++            req.product_name = product_name.to_string();
++            req.product_price = product_price.to_string();
++            req.domain_choice = domain_choice.to_string();
+             req.sell_physical = ui.get_sell_physical();
+             req.sell_digital = ui.get_sell_digital();
+             req.sell_services = ui.get_sell_services();
