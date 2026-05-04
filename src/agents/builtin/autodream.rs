@@ -57,8 +57,16 @@ impl AutoDreamWorker {
         let _db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running conflict resolution pipeline...");
-                if let Err(e) = Self::resolve_conflicts(&_db).await {
+                println!("AutoDream: running conflict resolution and pruning pipeline...");
+                let repository = std::sync::Arc::new(match &_db.store {
+                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(_db.pool.clone()),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                });
+                let older_than = chrono::Utc::now() - chrono::Duration::days(180);
+                if let Err(e) = repository.prune_stale(older_than).await {
+                    eprintln!("AutoDream: failed to prune stale context: {}", e);
+                }
+                if let Err(e) = Self::resolve_conflicts_full(&repository).await {
                     println!("AutoDream: conflict resolution failed: {}", e);
                 }
                 sleep(Duration::from_secs(1800)).await;
@@ -82,34 +90,47 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn resolve_conflicts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        let repository = match &db.store {
-            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
-        };
-
-        let conflicts = repository.get_conflicting_pairs().await.map_err(|e| e.to_string())?;
+    async fn resolve_conflicts_full(repository: &ohc_builtin_agent::memory_store::VectorRepository) -> Result<(), String> {
+        let conflicts = repository.get_conflicting_pairs().await?;
         if conflicts.is_empty() {
             return Ok(());
         }
 
-        for (a, b) in conflicts {
-            let (winner, loser) = Self::determine_conflict_winner(&a, &b);
-            let _ = repository.delete(&loser.id).await;
-            println!("AutoDream: Resolved conflict between {} and {}. Kept {}.", a.id, b.id, winner.id);
+        let losers = Self::determine_losers(&conflicts);
+
+        for loser_id in losers {
+            let _ = repository.delete(loser_id).await;
+            println!("AutoDream: Resolved conflict. Deleted {}.", loser_id);
         }
 
         Ok(())
     }
 
-    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        if a.owner_override != b.owner_override {
-            if a.owner_override { (a, b) } else { (b, a) }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score { (a, b) } else { (b, a) }
-        } else {
-            if a.created_at >= b.created_at { (a, b) } else { (b, a) }
+    pub fn determine_losers<'a>(conflicts: &'a [(EmbeddingRecord, EmbeddingRecord)]) -> Vec<&'a String> {
+        let mut losers = Vec::new();
+        for (a, b) in conflicts {
+            let mut loser_id = &b.id;
+
+            // Priority 1: owner_override
+            if a.owner_override != b.owner_override {
+                if b.owner_override {
+                    loser_id = &a.id;
+                }
+            }
+            // Priority 2: reliability_score
+            else if a.reliability_score != b.reliability_score {
+                if b.reliability_score > a.reliability_score {
+                    loser_id = &a.id;
+                }
+            }
+            // Priority 3: created_at
+            else if b.created_at > a.created_at {
+                loser_id = &a.id;
+            }
+
+            losers.push(loser_id);
         }
+        losers
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
@@ -159,7 +180,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content, agent_id FROM autodream_memories ORDER BY created_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -175,7 +196,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, agent_id, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <=> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
@@ -351,44 +372,79 @@ mod tests_conflict_logic {
     use ohc_builtin_agent::memory_store::EmbeddingRecord;
     use chrono::Utc;
 
+    fn create_dummy_record(id: &str, override_val: bool, rel_score: i32, time_offset: i64) -> EmbeddingRecord {
+        EmbeddingRecord {
+            id: id.to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "dummy".to_string(),
+            embedding: vec![],
+            source_type: "dummy".to_string(),
+            created_at: Utc::now() + chrono::Duration::seconds(time_offset),
+            last_referenced_at: Utc::now(),
+            reference_count: 0,
+            reliability_score: rel_score,
+            owner_override: override_val,
+            metadata: None,
+        }
+    }
+
     #[test]
-    fn test_determine_conflict_winner() {
-        let now = Utc::now();
-        let earlier = now - chrono::Duration::hours(1);
+    fn test_determine_losers_priority_1_override() {
+        let a = create_dummy_record("a", true, 10, 0);
+        let b = create_dummy_record("b", false, 100, 100);
 
-        let mut a = EmbeddingRecord {
-            id: "a".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
-            content: "a content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
-            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
-            owner_override: false, metadata: None,
-        };
+        let binding = [(a.clone(), b.clone())];
+        let losers = AutoDreamWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b", "a has override so b loses");
 
-        let mut b = EmbeddingRecord {
-            id: "b".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
-            content: "b content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
-            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
-            owner_override: false, metadata: None,
-        };
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = AutoDreamWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "b", "a has override so b loses, order reversed");
+    }
 
-        // Test owner_override priority
-        a.owner_override = true;
-        b.reliability_score = 100; // Even with higher score, override wins
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "a");
+    #[test]
+    fn test_determine_losers_priority_2_reliability() {
+        let a = create_dummy_record("a", false, 50, 0);
+        let b = create_dummy_record("b", false, 60, -100); // b is older but higher reliability
 
-        // Test reliability_score priority
-        a.owner_override = false;
-        a.reliability_score = 40;
-        b.reliability_score = 50;
-        b.created_at = earlier; // older, but higher score
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "b");
+        let binding = [(a.clone(), b.clone())];
+        let losers = AutoDreamWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "a", "b has higher reliability so a loses");
 
-        // Test created_at priority
-        a.reliability_score = 50;
-        a.created_at = now;
-        b.created_at = earlier;
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "a");
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = AutoDreamWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "a", "b has higher reliability so a loses, order reversed");
+    }
+
+    #[test]
+    fn test_determine_losers_priority_3_created_at() {
+        let a = create_dummy_record("a", false, 50, 100); // a is newer
+        let b = create_dummy_record("b", false, 50, 0);
+
+        let binding = [(a.clone(), b.clone())];
+        let losers = AutoDreamWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b", "a is newer so b loses");
+
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = AutoDreamWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "b", "a is newer so b loses, order reversed");
+    }
+
+    #[test]
+    fn test_determine_losers_tie_breaker() {
+        let a = create_dummy_record("a", false, 50, 0);
+        let mut b = create_dummy_record("b", false, 50, 0);
+
+        // Ensure exact same created_at time to force a tie
+        b.created_at = a.created_at;
+
+        let binding = [(a.clone(), b.clone())];
+        let losers = AutoDreamWorker::determine_losers(&binding);
+        assert_eq!(losers[0], "b");
+
+        let binding2 = [(b.clone(), a.clone())];
+        let losers2 = AutoDreamWorker::determine_losers(&binding2);
+        assert_eq!(losers2[0], "a");
     }
 }

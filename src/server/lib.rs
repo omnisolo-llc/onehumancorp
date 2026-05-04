@@ -943,14 +943,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
-    // Start Memory Consolidation Worker
-    let vector_repo = std::sync::Arc::new(match &db.store {
-        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
-    });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
-    consolidation_worker.start();
-
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
