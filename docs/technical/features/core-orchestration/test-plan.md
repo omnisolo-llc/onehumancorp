@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Core Orchestration Engine f
 - OHC Hub configured with local NATS/Kafka and Redis.
 
 ## Implementation Details
-- **Architecture**: Tested via Go 1.26 table-driven tests that utilize standard library features (`testing`, `gomock`). The test suite simulates the `HoldingCompany` CRD and orchestrates multi-agent LangGraph workflows against an in-memory Postgres test fixture to ensure determinism.
+- **Architecture**: Tested via Rust table-driven tests that utilize standard library features (`testing`, `gomock`). The test suite simulates the `HoldingCompany` CRD and orchestrates multi-agent LangGraph workflows against an in-memory Postgres test fixture to ensure determinism.
 - **Execution**: All tests run hermetically under Bazel 9.0.0 remote execution (`bazelisk test //...`). Mocks are restricted to external LLM provider APIs to ensure tests pass rapidly without incurring token costs or relying on external networks.
 - **Validation**: Strict >95% test coverage is required for all state transition logic within the `Hub`.
 

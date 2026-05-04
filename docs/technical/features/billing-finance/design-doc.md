@@ -19,7 +19,7 @@ The Billing & Finance Engine provides real-time visibility into the financial co
 
 ## 3. Implementation Details
 - **Architecture**: The `Cost Estimation & Billing Engine` acts as a middleware interceptor in the MCP Gateway. Every prompt and completion payload size is calculated and saved.
-- **Stack**: Built with Go 1.26 backends, with asynchronous event aggregation (via Redis Pub/Sub) preventing latency overhead on LLM responses. Postgres stores historical billing data.
+- **Stack**: Built with Rust backends, with asynchronous event aggregation (via Redis Pub/Sub) preventing latency overhead on LLM responses. Postgres stores historical billing data.
 - **Model Efficiency Metrics**: Tracks the "Shadow Price" (marginal value of a token vs. task reward) per agent profile.
 
 ## 4. Edge Cases

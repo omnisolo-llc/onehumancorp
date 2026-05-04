@@ -31,10 +31,10 @@ sequenceDiagram
 
 ## 3. Phase 2: Teammate Mesh APIs
 ### Architecture
-Realtime communication is managed via Redis Pub/Sub integration in Golang, providing low-latency coordination among agents. WebSockets are utilized for UI updates to the frontend.
+Realtime communication is managed via Redis Pub/Sub integration in Rust, providing low-latency coordination among agents. WebSockets are utilized for UI updates to the frontend.
 
 ### API Contracts
-The Teammate Mesh exposes APIs for mailbox interaction, primarily located in `api/mesh/mesh.go`.
+The Teammate Mesh exposes APIs for mailbox interaction, primarily located in `src/server/api/mesh/`.
 
 ## 4. Phase 3: AutoDream Vector Pipelines
 ### Architecture

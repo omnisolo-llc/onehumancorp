@@ -17,7 +17,7 @@ The Core Orchestration Engine (the "Hub") transforms high-level CEO mandates int
 - Human chat application features (e.g., emojis, threads).
 
 ## 3. Implementation Details
-- **Architecture**: A Go 1.26 monolith operating within the `Hub` module handles the orchestration loop. It uses goroutines for lightweight concurrent task management and LangGraph checkpointers for saving/loading context.
+- **Architecture**: A Rust monolith operating within the `Hub` module handles the orchestration loop. It uses goroutines for lightweight concurrent task management and LangGraph checkpointers for saving/loading context.
 - **Data Model**: The K8s Custom Resource Definition (`HoldingCompany`) natively syncs with internal Postgres records tracking current active directives and agent assignments.
 - **Messaging Pipeline**: Multi-agent delegation pushes state messages to Redis. The Hub reads from Redis to evaluate if dependencies are met for downstream tasks.
 

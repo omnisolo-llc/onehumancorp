@@ -20,7 +20,7 @@ The CEO hires an agent, assigns it a secure role, and relies on the Identity eng
 
 ## 3. Implementation Details
 - **Architecture**: The `identity-management.md` describes the SPIFFE/SPIRE core.
-- **Stack**: Go 1.26 sidecars, OIDC Provider, Postgres for Audit Logs.
+- **Stack**: The Rust sidecars, OIDC Provider, Postgres for Audit Logs.
 - **Auditing**: Every rejected request and verified interaction is logged to `audit_events`.
 
 ## 4. Edge Cases

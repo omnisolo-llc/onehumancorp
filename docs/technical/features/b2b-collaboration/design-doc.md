@@ -19,7 +19,7 @@ The B2B Collaboration feature provides a secure, auditable, and isolated environ
 
 ## 3. Implementation Details
 - **Architecture**: Leverages federated SPIFFE/SPIRE for cross-cluster identity validation. The gRPC/mTLS mesh bridges secure B2B interactions without exposing internal corporate networks.
-- **Stack**: Go 1.26 microservices, Redis for session state, Postgres for audit trails.
+- **Stack:** Rust microservices, Redis for session state, Postgres for audit trails.
 - **Security Check**: Employs strict IDOR prevention mechanisms. B2B handoffs authenticate both the specific Agent SVID and the originating trust domain.
 - **Zero Secrets Architecture**: No API keys are exchanged between organizations; short-lived certificates manage all trust boundaries.
 

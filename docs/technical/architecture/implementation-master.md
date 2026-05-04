@@ -48,11 +48,11 @@ CREATE TABLE IF NOT EXISTS task_dependencies_dag (
 
 ## Phase 2: Realtime Teammate Mesh APIs
 
-### Go API Contracts
-```go
-type TeammateMesh interface {
-    Publish(channel string, message []byte) error
-    Subscribe(channel string) (<-chan []byte, error)
+### Rust API Contracts
+```rust
+trait TeammateMesh {
+    fn publish(&self, channel: &str, message: &[u8]) -> Result<()>;
+    fn subscribe(&self, channel: &str) -> Result<Receiver<Vec<u8>>>;
 }
 ```
 

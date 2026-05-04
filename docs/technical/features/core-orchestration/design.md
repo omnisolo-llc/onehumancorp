@@ -53,7 +53,7 @@ graph TD
 - The Hub is designed to scale horizontally across multiple instances, using Redis for state synchronization.
 
 ## 7. Implementation Details
-- **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
+- **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.

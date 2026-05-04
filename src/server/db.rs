@@ -112,6 +112,39 @@ impl DB {
         }
     }
 
+
+    pub async fn execute_with_retry<F, Fut, T, E>(&self, operation: &str, mut f: F) -> Result<T, E>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: std::fmt::Debug + std::fmt::Display + From<String>,
+    {
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            match f().await {
+                Ok(val) => return Ok(val),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
+                        }
+                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
 
@@ -186,7 +219,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
-                        raw_content TEXT NOT NULL,
+                        raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
