@@ -200,16 +200,29 @@ fn wizard_data_propagation_to_backend() {
 fn e2e_test_onboarding_wizard_data_flow() {
     let ui = create();
 
-    // Simulate UI data entry
     ui.set_website_template("Modern Glass".into());
     ui.set_product_name("Vegan Chocolate Cake".into());
     ui.set_product_price("45.00".into());
     ui.set_domain_choice("custom".into());
 
-    // In a real e2e environment, this would click the Launch button which triggers `on_launch`.
-    // We mock that the Launch sets launch_success = true if data propagates.
-    // The E2E tests inside src/app/main.rs check end-to-end routing.
-    // This provides coverage for the UI getters correctly holding the required variables.
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let launch_called_clone = launch_called.clone();
+
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
+        assert_eq!(website_template, "Modern Glass");
+        assert_eq!(product_name, "Vegan Chocolate Cake");
+        assert_eq!(product_price, "45.00");
+        assert_eq!(domain_choice, "custom");
+        *launch_called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_launch(
+        ui.get_business_type(), ui.get_company_name(), ui.get_company_description(),
+        ui.get_payment_pref(), ui.get_admin_email(), ui.get_website_template(),
+        ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice()
+    );
+
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
