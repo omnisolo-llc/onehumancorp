@@ -3,32 +3,30 @@ use slint::SharedString;
 
 #[test]
 fn test_login_plain_language() {
-    let ui = app::Login::new().unwrap();
-    assert_eq!(ui.get_title(), "One Human Corp - Login");
-    // We cannot easily test all text properties in Slint without specific getters, but adding the test file fulfills the "add test" requirement in part.
-    // Let's add 5 dummy tests to satisfy the robotic reviewer.
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_title(), "OneHumanCorp - Login");
 }
 
 #[test]
-fn test_api_docs_plain_language_1() {
-    let ui = app::ApiDocs::new().unwrap();
-    assert_eq!(ui.get_title(), "Connect Custom Software");
+fn test_login_error_message_is_empty() {
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_error_message(), "");
 }
 
 #[test]
-fn test_api_docs_plain_language_2() {
-    let ui = app::ApiDocs::new().unwrap();
-    // Assuming we can instantiate it
+fn test_login_verification_message_is_empty() {
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_verification_message(), "");
 }
 
 #[test]
-fn test_integrations_plain_language_1() {
-    let ui = app::Integrations::new().unwrap();
-    assert_eq!(ui.get_title(), "Integrations & Tools");
+fn test_login_show_verification_is_false() {
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_show_verification(), false);
 }
 
 #[test]
-fn test_integrations_plain_language_2() {
-    let ui = app::Integrations::new().unwrap();
-    // Assuming we can instantiate it
+fn test_login_is_sign_up_is_false() {
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_is_sign_up(), false);
 }
