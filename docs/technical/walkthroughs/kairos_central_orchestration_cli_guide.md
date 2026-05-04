@@ -1,8 +1,8 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# KAIROS Orchestrator CLI Walkthrough
+# KAIROS Central Orchestration CLI Guide
 
-The KAIROS Orchestrator CLI is the central tool for orchestrating your swarm of agents in the One Human Corp (OHC) ecosystem. It allows direct command-line interactions for initializing the hybrid architecture, delegating tasks, and observing the real-time teammate mesh.
+The KAIROS Orchestrator CLI (`ohc-cli`) is the central tool for orchestrating your swarm of agents in the One Human Corp (OHC) ecosystem. It provides a powerful command-line interface for interacting with the OHC Hybrid Architecture, allowing direct command-line interactions for initializing the hybrid architecture, delegating tasks, and observing the real-time teammate mesh.
 
 ## Playbook: Getting Started with KAIROS CLI
 
