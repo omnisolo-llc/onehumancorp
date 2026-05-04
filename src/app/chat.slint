@@ -40,6 +40,8 @@ export component Chat inherits Window {
                     Rectangle {
                         background: msg.is_me ? #f3e8ff : #f1f5f9;
                         border-radius: 12px;
+                        border-color: msg.is_me && msg.author_name == "CEO" ? #fbbf24 : transparent;
+                        border-width: msg.is_me && msg.author_name == "CEO" ? 2px : 0px;
                         width: 260px;
                         
                         VerticalBox {
