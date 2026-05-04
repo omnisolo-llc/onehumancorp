@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export struct HelpArticle {
@@ -11,7 +12,7 @@ export component HelpCenter inherits Window {
     preferred-height: 800px;
     min-width: 375px;
     title: "Help Center";
-    background: #f8fafc;
+    background: #0f172a;
 
     in-out property <string> search_query: "";
     callback execute_search();
@@ -39,7 +40,7 @@ export component HelpCenter inherits Window {
                 text: "How can we help?";
                 font-size: 24px;
                 font-weight: 700;
-                color: #0f172a;
+                color: white;
             }
 
             LineEdit {
@@ -54,13 +55,12 @@ export component HelpCenter inherits Window {
                     for article in articles : VerticalBox {
                         spacing: 16px;
 
-                        Text { text: article.category; font-weight: 700; font-size: 18px; color: #334155; }
-                        Rectangle {
-                            background: white; border-radius: 8px;
+                        Text { text: article.category; font-weight: 700; font-size: 18px; color: white; }
+                        GlassCard {
                             VerticalBox {
                                 padding: 12px;
-                                Text { text: article.title; font-weight: 700; font-size: 16px; color: #0f172a; }
-                                Text { text: article.description; color: #64748b; wrap: word-wrap; }
+                                Text { text: article.title; font-weight: 700; font-size: 16px; color: white; }
+                                Text { text: article.description; color: white; wrap: word-wrap; }
                             }
                         }
                     }
