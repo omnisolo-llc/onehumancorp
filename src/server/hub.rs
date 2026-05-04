@@ -23,6 +23,7 @@ pub struct HubEvent {
 }
 
 pub struct Hub {
+    telemetry_tx: tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent>,
     agents: RwLock<HashMap<String, Agent>>,
     meetings: RwLock<HashMap<String, MeetingRoom>>,
     inbox: RwLock<HashMap<String, Vec<Message>>>,
@@ -55,7 +56,34 @@ impl Hub {
         } else {
             None
         };
+
+        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
+        let pool_clone = pool.clone();
+        tokio::spawn(async move {
+            while let Some(event) = telemetry_rx.recv().await {
+                let cost = crate::pricing::calculator::calculate_cost_with_config(
+                    event.input_tokens,
+                    event.output_tokens,
+                    event.cached_input_tokens,
+                    event.local_embedding_tokens,
+                    &crate::pricing::calculator::CostConfig::default(),
+                );
+
+                let labels = serde_json::json!({
+                    "agent_id": event.agent_id,
+                    "input_tokens": event.input_tokens,
+                    "output_tokens": event.output_tokens,
+                    "cached_input_tokens": event.cached_input_tokens,
+                    "local_embedding_tokens": event.local_embedding_tokens,
+                    "cost_usd": cost,
+                });
+
+                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels).await;
+            }
+        });
+
         Hub {
+            telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
             agent_cache: RwLock::new(None),
             meetings: RwLock::new(HashMap::new()),
@@ -70,7 +98,11 @@ impl Hub {
             tracker: Tracker::new(),
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
-            cost_auditor: Arc::new(CostAuditor::new(CostConfig::default())),
+            cost_auditor: Arc::new({
+                let mut a = CostAuditor::new(CostConfig::default());
+                a.set_telemetry_tx(telemetry_tx.clone());
+                a
+            }),
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
             get_token_usage: None,
@@ -100,6 +132,10 @@ impl Hub {
 
     pub fn get_cost_auditor(&self) -> Arc<CostAuditor> {
         self.cost_auditor.clone()
+    }
+
+    pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
+        self.telemetry_tx.clone()
     }
 
     pub fn register_agent(&self, agent: Agent) {

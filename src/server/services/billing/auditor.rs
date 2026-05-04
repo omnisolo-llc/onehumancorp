@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use crate::pricing::calculator::{self, CostConfig};
 
+#[derive(Clone)]
 pub struct AuditEvent {
     pub agent_id: String,
     pub input_tokens: i64,
@@ -27,6 +28,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
 }
 
 impl CostAuditor {
@@ -42,7 +44,12 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            telemetry_tx: None,
         }
+    }
+
+    pub fn set_telemetry_tx(&mut self, tx: tokio::sync::mpsc::UnboundedSender<AuditEvent>) {
+        self.telemetry_tx = Some(tx);
     }
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
@@ -64,6 +71,10 @@ impl CostAuditor {
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
+
+        if let Some(tx) = &self.telemetry_tx {
+            let _ = tx.send(event.clone());
+        }
 
         cost
     }
