@@ -1,8 +1,8 @@
-use sqlx::{postgres::PgPoolOptions, Row};
-use std::env;
 
 #[cfg(test)]
 mod tests {
+    use sqlx::{postgres::PgPoolOptions, Row};
+    use std::env;
     use super::*;
 
     #[tokio::test]
