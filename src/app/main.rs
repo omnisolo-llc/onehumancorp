@@ -150,46 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
-    login_ui.on_login({
-        let login_handle = login_ui_handle.clone();
-        move |email, _password| {
-            if let Some(ui) = login_handle.upgrade() {
-                // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                } else {
-                    println!("Login as {}...", email);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        let my_plan_ui = app::MyPlan::new().unwrap();
-                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                        let my_plan_handle_clone = my_plan_ui.as_weak();
-                        dashboard.on_open_billing(move || {
-                            if let Some(ui) = my_plan_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
-                        my_plan_ui.on_view_details(move || {
-                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
-                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                        });
-                        dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                        Box::leak(Box::new(my_plan_ui));
-                        Box::leak(Box::new(cost_dashboard_ui));
-                    }
-                }
-            }
-        }
-    });
+    configure_login_ui(&login_ui, login_ui_handle.clone());
 
     login_ui.on_resend_verification({
         let login_handle = login_ui_handle.clone();
@@ -1610,7 +1571,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -1840,20 +1801,89 @@ mod growth_e2e_tests {
 
         // We bind the login_ui.on_login logic for testing auto-redirect.
         // In the actual app this is done in main(), here we mock the main behavior.
-        login_ui.on_login({
-            let ui_handle = login_ui.as_weak();
-            move |_email, _password| {
-                if let Some(ui) = ui_handle.upgrade() {
-                    if ui.get_is_sign_up() {
-                        ui.invoke_start_setup_wizard();
-                    }
-                }
-            }
-        });
+        crate::configure_login_ui(&login_ui, login_ui.as_weak());
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
 
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on sign up");
+        assert!(login_ui.get_show_verification(), "Verification screen should be shown on sign up");
+    }
+
+    #[test]
+    fn test_e2e_first_login_auto_launch_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(false);
+        login_ui.set_is_first_login(true);
+
+        crate::configure_login_ui(&login_ui, login_ui.as_weak());
+
+        login_ui.invoke_login("newuser@example.com".into(), "password123".into());
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
+    }
+
+    #[test]
+    fn test_e2e_signup_shows_verification_screen() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+
+        login_ui.set_is_sign_up(true);
+        login_ui.set_username("test2@example.com".into());
+        login_ui.set_password("password123".into());
+
+        crate::configure_login_ui(&login_ui, login_ui.as_weak());
+
+        login_ui.invoke_login("test2@example.com".into(), "password123".into());
+        assert!(login_ui.get_show_verification(), "Verification screen should be shown on sign up");
+        assert_eq!(login_ui.get_verification_message(), "Please check your email to verify your account.");
+    }
+
+    #[test]
+    fn test_e2e_resend_verification_launch_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        crate::configure_login_ui(&login_ui, login_ui.as_weak());
+
+        login_ui.invoke_resend_verification("test@example.com".into());
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should launch when resend verification is clicked");
+    }
+
+    #[test]
+    fn test_e2e_standard_login_bypasses_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(false);
+        login_ui.set_is_first_login(false);
+        login_ui.set_username("olduser@example.com".into());
+        login_ui.set_password("password123".into());
+
+        crate::configure_login_ui(&login_ui, login_ui.as_weak());
+
+        login_ui.invoke_login("olduser@example.com".into(), "password123".into());
+        assert!(!*setup_wizard_launched.borrow(), "Setup wizard should not launch on standard returning user login");
     }
 
     #[test]
@@ -4657,4 +4687,51 @@ fn test_business_share_flow() {
 
     dashboard_ui.invoke_action_share_store();
     assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+}
+
+pub fn configure_login_ui(login_ui: &app::Login, login_ui_handle: slint::Weak<app::Login>) {
+    login_ui.on_login({
+        let login_handle = login_ui_handle.clone();
+        move |email, _password| {
+            if let Some(ui) = login_handle.upgrade() {
+                if ui.get_is_sign_up() {
+                    ui.set_show_verification(true);
+                    ui.set_verification_message("Please check your email to verify your account.".into());
+                } else {
+                    println!("Login as {}...", email);
+                    ui.hide().unwrap();
+
+                    let is_first_login = ui.get_is_first_login();
+                    if is_first_login {
+                        ui.invoke_start_setup_wizard();
+                    } else {
+                        if let Ok(dashboard) = app::Dashboard::new() {
+                            let my_plan_ui = app::MyPlan::new().unwrap();
+                            let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                            let my_plan_handle_clone = my_plan_ui.as_weak();
+                            dashboard.on_open_billing(move || {
+                                if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                    let _ = ui.show();
+                                }
+                            });
+                            let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                            my_plan_ui.on_view_details(move || {
+                                if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                    let _ = ui.show();
+                                }
+                            });
+                            dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                                let tooltips: std::collections::HashMap<String, String> = serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default();
+                                tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+                            });
+                            dashboard.show().unwrap();
+                            Box::leak(Box::new(dashboard));
+                            Box::leak(Box::new(my_plan_ui));
+                            Box::leak(Box::new(cost_dashboard_ui));
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
