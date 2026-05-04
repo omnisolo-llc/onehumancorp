@@ -1610,7 +1610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -4447,10 +4447,16 @@ mod e2e_hybrid_blob_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(6);
+        ui.set_website_template("Modern".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 7);
         ui.set_product_name("Bread".into());
         ui.set_product_price("5.00".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 8);
+        ui.set_domain_choice("custom".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 9);
     }
 
     #[test]
