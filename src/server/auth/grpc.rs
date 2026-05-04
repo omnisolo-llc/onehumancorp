@@ -166,4 +166,24 @@ mod tests {
         req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
         assert!(cfg.authenticate(&req2).is_err());
     }
+
+    #[test]
+    fn test_zero_secrets_spiffe_auth_enforcement() {
+        // Enforce that when auth mode is derived via environment falling back to default,
+        // it correctly enforces SPIFFE constraints, validating Zero Secrets strategy.
+        let cfg = AuthConfig { mode: AuthMode::SPIFFE { allowed_id: None } };
+        let mut req = Request::new(());
+
+        // Missing x-spiffe-id should fail
+        assert!(cfg.authenticate(&req).is_err());
+
+        // Invalid SPIFFE ID should fail
+        req.metadata_mut().insert("x-spiffe-id", MetadataValue::from_str("spiffe://invalid_domain/agent-1").unwrap());
+        assert!(cfg.authenticate(&req).is_err());
+
+        // Valid SPIFFE ID should pass
+        let mut req_valid = Request::new(());
+        req_valid.metadata_mut().insert("x-spiffe-id", MetadataValue::from_str("spiffe://onehumancorp.io/agent-1").unwrap());
+        assert!(cfg.authenticate(&req_valid).is_ok());
+    }
 }

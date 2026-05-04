@@ -67,6 +67,22 @@ impl DB {
                         }
                     }
                 }
+
+                // Securely touch file with strict 0o600 permissions before sqlx connection pool creation
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    if let Err(e) = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .create(true)
+                        .mode(0o600)
+                        .open(db_path)
+                    {
+                        eprintln!("Failed to securely create SQLite file: {}", e);
+                        return Err(e.into());
+                    }
+                }
             }
 
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
@@ -103,6 +119,13 @@ impl DB {
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
                 .connect(&database_url)
