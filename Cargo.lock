@@ -4243,6 +4243,8 @@ dependencies = [
  "tokio-tungstenite",
  "tonic",
  "tonic-build",
+ "tower 0.5.3",
+ "tower-service",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",

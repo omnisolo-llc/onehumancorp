@@ -35,6 +35,7 @@ pub struct User {
 
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct Claims {
     pub sub: String,
     pub username: String,

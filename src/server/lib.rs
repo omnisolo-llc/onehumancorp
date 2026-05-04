@@ -881,13 +881,20 @@ impl HubService for MyHubService {
         &self,
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
+        let tenant_id = crate::auth::parse_spiffe_id(
+            request.metadata()
+                .get("x-spiffe-id")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+        ).map(|(org_id, _)| org_id).unwrap_or_else(|_| "system".to_string());
+
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
 
-        self.invite_tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await
+        self.invite_tracker.record_invite(&tenant_id, &req.team_id, &req.inviter_id, &req.invitee_id).await
             .map_err(|e| Status::internal(format!("Failed to record invite: {}", e)))?;
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
@@ -1029,9 +1036,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
+    let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(db.pool.clone()));
+    let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/growth", api::growth::router(invite_tracker))
         .with_state(mesh_transport);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();

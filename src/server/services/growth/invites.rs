@@ -22,12 +22,13 @@ impl InviteRepository {
         InviteRepository { pool }
     }
 
-    pub async fn create_invite(&self, invite: &TeamInvite) -> Result<(), String> {
+    pub async fn create_invite(&self, tenant_id: &str, invite: &TeamInvite) -> Result<(), String> {
         sqlx::query(
-            "INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            "INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         )
         .bind(&invite.id)
+        .bind(tenant_id)
         .bind(&invite.team_id)
         .bind(&invite.inviter_id)
         .bind(&invite.invitee_id)
@@ -39,8 +40,9 @@ impl InviteRepository {
         Ok(())
     }
 
-    pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {
-        let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE team_id = $1")
+    pub async fn get_team_invites_count(&self, tenant_id: &str, team_id: &str) -> Result<i64, String> {
+        let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE tenant_id = $1 AND team_id = $2")
+            .bind(tenant_id)
             .bind(team_id)
             .fetch_one(&self.pool)
             .await
@@ -50,8 +52,9 @@ impl InviteRepository {
         Ok(count)
     }
 
-    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
-        let row = sqlx::query("SELECT COUNT(*) FROM team_invites")
+    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
+        let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE tenant_id = $1")
+            .bind(tenant_id)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -60,15 +63,16 @@ impl InviteRepository {
         Ok(count)
     }
 
-    pub async fn create_invites(&self, invites: &[TeamInvite]) -> Result<(), String> {
+    pub async fn create_invites(&self, tenant_id: &str, invites: &[TeamInvite]) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         for invite in invites {
             sqlx::query(
-                "INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
-                 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                "INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(&invite.id)
+            .bind(tenant_id)
             .bind(&invite.team_id)
             .bind(&invite.inviter_id)
             .bind(&invite.invitee_id)
@@ -92,7 +96,7 @@ impl InviteTracker {
         InviteTracker { repo }
     }
 
-    pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<(), String> {
+    pub async fn record_invite(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<(), String> {
         let invite = TeamInvite {
             id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
             team_id: team_id.to_string(),
@@ -103,20 +107,20 @@ impl InviteTracker {
             updated_at: Utc::now(),
         };
 
-        self.repo.create_invite(&invite).await?;
+        self.repo.create_invite(tenant_id, &invite).await?;
         
         Ok(())
     }
 
-    pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {
-        self.repo.get_team_invites_count(team_id).await
+    pub async fn get_team_invites_count(&self, tenant_id: &str, team_id: &str) -> Result<i64, String> {
+        self.repo.get_team_invites_count(tenant_id, team_id).await
     }
 
-    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
-        self.repo.get_total_invites_count().await
+    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
+        self.repo.get_total_invites_count(tenant_id).await
     }
 
-    pub async fn record_invites(&self, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
+    pub async fn record_invites(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
         let mut invites = Vec::new();
         for invitee_id in invitee_ids {
             invites.push(TeamInvite {
@@ -130,7 +134,7 @@ impl InviteTracker {
             });
         }
 
-        self.repo.create_invites(&invites).await?;
+        self.repo.create_invites(tenant_id, &invites).await?;
         
         Ok(())
     }

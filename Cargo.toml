@@ -53,6 +53,7 @@ opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.28"
 tonic-build = "0.12"
 axum = { version = "0.8.1", features = ["ws"] }
+tower = { version = "0.5.2", features = ["util"] }
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
 async-nats = "0.47.0"
@@ -60,6 +61,7 @@ protoc-gen-prost = { workspace = true }
 protoc-gen-tonic = { workspace = true }
 prost-types = { workspace = true }
 tempfile = "3.27.0"
+tower-service = "0.3.3"
 
 [build-dependencies]
 tonic-build = "0.12"
