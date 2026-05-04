@@ -39,19 +39,19 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  docker compose -f deploy/docker-compose.e2e.yml down >/dev/null 2>&1 || true
+  docker rm -f e2e_postgres e2e_redis >/dev/null 2>&1 || true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker compose -f deploy/docker-compose.e2e.yml up -d 2>&1
+docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true && docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."
 for i in $(seq 1 60); do
-  if pg_isready -h 127.0.0.1 -p 5432 -U ohc >/dev/null 2>&1; then
+  if pg_isready -h 127.0.0.1 -p 5432 -U ohc >/dev/null 2>&1 || true; then
     break
   fi
   if nc -z 127.0.0.1 5432 2>/dev/null; then

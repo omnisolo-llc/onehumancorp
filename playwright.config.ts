@@ -18,11 +18,4 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'docker compose -f deploy/docker-compose.e2e.yml up -d',
-    url: 'http://localhost:5432',
-    reuseExistingServer: !process.env.CI,
-    waitForSocket: 'postgres:5432',
-    timeout: 120 * 1000,
-  },
 });
