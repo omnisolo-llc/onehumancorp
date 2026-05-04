@@ -28,7 +28,7 @@ export component UnifiedInbox inherits Window {
     height: 600px;
     title: "Customer Inbox";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <[UiConversation]> conversations;
     in property <[UiInboxMessage]> current_messages;
@@ -98,7 +98,7 @@ export component UnifiedInbox inherits Window {
 
         // Chat Detail Area (Right side on desktop, full screen conditionally on mobile)
         if (root.width > 768px || !show_mobile_list) : Rectangle {
-            background: #f8fafc;
+            background: transparent;
 
             VerticalBox {
                 // Header
