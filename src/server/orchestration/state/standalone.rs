@@ -56,7 +56,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -95,7 +95,7 @@ impl StateManager for StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let db_tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -146,7 +146,7 @@ impl StateManager for StandaloneStateManager {
             "#
         )
         .bind(trans_id)
-        .bind(&tenant_id)
+        .bind(tenant_id)
         .bind(task_id)
         .bind(from_state)
         .bind(to_state)
@@ -225,8 +225,8 @@ impl StateManager for StandaloneStateManager {
             }
 
             if all_completed {
-                let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
-                task_ids.push((id.clone(), tenant_id.clone()));
+                let db_tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+                task_ids.push((id.clone(), db_tenant_id.clone()));
 
                 let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
                 let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
@@ -236,7 +236,7 @@ impl StateManager for StandaloneStateManager {
 
                 let t = SharedTask {
                     id: id.clone(),
-                    organization_id: tenant_id,
+                    organization_id: db_tenant_id,
                     mission_id: row.get("mission_id"),
                     parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
                     dependencies,
@@ -285,7 +285,7 @@ impl StateManager for StandaloneStateManager {
                     "#
                 )
                 .bind(trans_id)
-                .bind(&tenant_id)
+                .bind(tenant_id)
                 .bind(&id_str)
                 .bind(&now_rfc)
                 .execute(&mut *tx)
