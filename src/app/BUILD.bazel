@@ -31,6 +31,7 @@ rust_binary(
         "main.rs",
         "action_queue.rs",
     ],
+    compile_data = ["tooltips.json"],
     data = [
         "agent_config.slint",
         "walkthrough.slint",
@@ -86,6 +87,7 @@ rust_binary(
         "video_tutorials.slint",
         "website_builder.slint",
         "welcome_checklist.slint",
+        "tooltips.json",
     ],
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -120,6 +122,7 @@ rust_test(
         "main.rs",
         "action_queue.rs",
     ] + glob(["ui_tests/**/*.rs"]),
+    compile_data = ["tooltips.json"],
     crate_root = "main.rs",
     data = [
         "agent_config.slint",
@@ -176,6 +179,7 @@ rust_test(
         "video_tutorials.slint",
         "website_builder.slint",
         "welcome_checklist.slint",
+        "tooltips.json",
     ],
     edition = "2024",
     tags = ["exclusive"],
