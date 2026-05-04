@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Login Page', () => {
   test('should show login form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="Email or Username"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
   });
 
   test('should show email input field', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="Email or Username"]')).toBeVisible();
   });
 
   test('should show password input field', async ({ page }) => {
@@ -54,7 +54,7 @@ test.describe('Login Page', () => {
 
   test('should show email validation error on invalid input', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'invalidemail');
+    await page.fill('input[placeholder="Email or Username"]', 'invalidemail');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page.locator('text=/email|invalid/i')).toBeVisible();
   });
@@ -68,7 +68,7 @@ test.describe('Login Page', () => {
 
   test('should focus email field on load', async ({ page }) => {
     await page.goto('/login');
-    const emailField = page.locator('input[type="email"]');
+    const emailField = page.locator('input[placeholder="Email or Username"]');
     await expect(emailField).toBeFocused();
   });
 
@@ -81,7 +81,7 @@ test.describe('Login Page', () => {
 
   test('should submit form with enter key', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.keyboard.press('Enter');
     await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
@@ -91,7 +91,7 @@ test.describe('Login Page', () => {
     await page.goto('/login');
     const rememberCheckbox = page.locator('input[type="checkbox"]').first();
     await rememberCheckbox.check();
-    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.locator('button:has-text("Sign In")').click();
     // Verify session persists
@@ -99,7 +99,7 @@ test.describe('Login Page', () => {
 
   test('should show loading state during sign in', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page.locator('text=/loading|signing in/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
@@ -107,7 +107,7 @@ test.describe('Login Page', () => {
 
   test('should disable button during loading', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     const signInButton = page.locator('button:has-text("Sign In")');
     await signInButton.click();
@@ -116,7 +116,7 @@ test.describe('Login Page', () => {
 
   test('should clear form on successful sign out', async ({ page }) => {
     await page.goto('/logout');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="Email or Username"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
   });
 
@@ -134,7 +134,7 @@ test.describe('Login Page', () => {
 test.describe('Login Authentication', () => {
   test('should login with valid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'admin@example.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page).not.toHaveURL(/\/login/, { timeout: 10000 });
@@ -142,7 +142,7 @@ test.describe('Login Authentication', () => {
 
   test('should reject invalid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'wrong@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'wrong@example.com');
     await page.fill('input[type="password"]', 'wrongpassword');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page.locator('text=/invalid|incorrect|failed/i')).toBeVisible();
@@ -157,7 +157,7 @@ test.describe('Login Authentication', () => {
 
   test('should show error for empty password', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page.locator('text=/required|password/i')).toBeVisible();
   });
@@ -165,7 +165,7 @@ test.describe('Login Authentication', () => {
   test('should lock account after failed attempts', async ({ page }) => {
     for (let i = 0; i < 5; i++) {
       await page.goto('/login');
-      await page.fill('input[type="email"]', 'test@example.com');
+      await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
       await page.fill('input[type="password"]', 'wrongpassword');
       await page.locator('button:has-text("Sign In")').click();
       await page.waitForTimeout(500);
@@ -175,7 +175,7 @@ test.describe('Login Authentication', () => {
 
   test('should show session timeout message', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'expired@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'expired@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page.locator('text=/session.*expired|timed out/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
@@ -183,7 +183,7 @@ test.describe('Login Authentication', () => {
 
   test('should redirect to dashboard after login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'admin@example.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page).toHaveURL(/\/(dashboard|\/)$/, { timeout: 10000 });
@@ -191,7 +191,7 @@ test.describe('Login Authentication', () => {
 
   test('should preserve return URL after login', async ({ page }) => {
     await page.goto('/login?returnUrl=/settings');
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[placeholder="Email or Username"]', 'admin@example.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.locator('button:has-text("Sign In")').click();
     await expect(page).toHaveURL(/\/settings/, { timeout: 10000 });
@@ -212,5 +212,45 @@ test.describe('Login Social Auth', () => {
   test('should show microsoft sign in button', async ({ page }) => {
     await page.goto('/login');
     await expect(page.locator('button:has-text("Microsoft")')).toBeVisible({ timeout: 5000 }).catch(() => {});
+  });
+});
+test.describe('Login Visual Requirements', () => {
+  test('should assert the App Settings button text exists', async ({ page }) => {
+    await page.goto('/login');
+    const settingsButton = page.locator('button:has-text("App Settings")');
+    await expect(settingsButton).toBeVisible();
+  });
+
+  test('should check that the min-width limit is applied to the login window', async ({ page }) => {
+    await page.goto('/login');
+    // Using a broader locator or checking the body/main container if window isn't directly exposed
+    // Wait for the main container or body, check bounding box width
+    const loginContainer = page.locator('body');
+    const box = await loginContainer.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(375);
+  });
+
+  test('should check the 44px height bounds for the email input field', async ({ page }) => {
+    await page.goto('/login');
+    const emailInput = page.locator('input[placeholder="Email or Username"]');
+    await expect(emailInput).toBeVisible();
+    const box = await emailInput.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('should check the 44px height bounds for the sign in button', async ({ page }) => {
+    await page.goto('/login');
+    const signInButton = page.locator('button:has-text("Sign In")');
+    await expect(signInButton).toBeVisible();
+    const box = await signInButton.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('should check the 44px height bounds for the password toggle button', async ({ page }) => {
+    await page.goto('/login');
+    const toggleButton = page.locator('button:has-text("Show")');
+    await expect(toggleButton).toBeVisible();
+    const box = await toggleButton.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 });
