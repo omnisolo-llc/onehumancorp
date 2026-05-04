@@ -299,8 +299,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
                                         dashboard.show().unwrap();
                                         Box::leak(Box::new(dashboard));
-                                        Box::leak(Box::new(my_plan_ui));
-                                        Box::leak(Box::new(cost_dashboard_ui));
+                                        let _ = Box::leak(Box::new(my_plan_ui));
+                                        let _ = Box::leak(Box::new(cost_dashboard_ui));
                                     }
                                 }
                             }
@@ -353,8 +353,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
-                        Box::leak(Box::new(my_plan_ui));
-                        Box::leak(Box::new(cost_dashboard_ui));
+                        let _ = Box::leak(Box::new(my_plan_ui));
+                        let _ = Box::leak(Box::new(cost_dashboard_ui));
                     }
                 }
             }
@@ -1671,9 +1671,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
-                Box::leak(Box::new(pricing_ui));
+                let _ = Box::leak(Box::new(my_plan_ui));
+                let _ = Box::leak(Box::new(cost_dashboard_ui));
+                let _ = Box::leak(Box::new(pricing_ui));
             }
         }
     });
