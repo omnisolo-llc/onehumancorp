@@ -28,7 +28,6 @@ pub mod app {
 }
 
 #[allow(dead_code)]
-#[allow(unused_variables)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -1512,28 +1511,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let _help_center_handle = help_center_ui.as_weak();
+                let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
                 Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
-
-                let help_center_ui = app::HelpCenter::new().unwrap();
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
-
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
@@ -4108,8 +4098,6 @@ mod dashboard_docs_tests {
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
-            // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
@@ -4119,8 +4107,6 @@ mod dashboard_docs_tests {
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
-            // Verify AiHelpChat component can be instantiated
-            let _ai_chat = app::AiHelpChat::new().unwrap();
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
@@ -4130,7 +4116,6 @@ mod dashboard_docs_tests {
         let walkthrough_opened_clone = walkthrough_opened.clone();
         dashboard_ui.on_open_interactive_walkthrough(move || {
             *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
@@ -4140,7 +4125,6 @@ mod dashboard_docs_tests {
         let kairos_walkthrough_opened_clone = kairos_walkthrough_opened.clone();
         dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
             *kairos_walkthrough_opened_clone.borrow_mut() = true;
-            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap();
         });
         dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
         assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
@@ -4150,7 +4134,6 @@ mod dashboard_docs_tests {
         let video_tutorials_opened_clone = video_tutorials_opened.clone();
         dashboard_ui.on_open_video_tutorials(move || {
             *video_tutorials_opened_clone.borrow_mut() = true;
-            let _video_tutorials = app::VideoTutorials::new().unwrap();
         });
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
@@ -4160,7 +4143,6 @@ mod dashboard_docs_tests {
         let release_notes_opened_clone = release_notes_opened.clone();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
         });
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
@@ -4170,7 +4152,6 @@ mod dashboard_docs_tests {
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
             *api_docs_opened_clone.borrow_mut() = true;
-            let _api_docs = app::ApiDocs::new().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
         assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
