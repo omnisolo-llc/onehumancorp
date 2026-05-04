@@ -5,7 +5,7 @@ test.describe('Grandmother Test - Plain Language Check', () => {
     await page.goto('/login');
     await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
     await expect(page.locator('button:has-text("Continue with Google/Apple")')).toBeVisible();
-    await expect(page.locator('button:has-text("App Settings")')).toBeVisible();
+    await expect(page.locator('button:has-text("⚙ Fix Login Issues")')).toBeVisible();
   });
 
   test('Dashboard uses plain language labels', async ({ page }) => {
