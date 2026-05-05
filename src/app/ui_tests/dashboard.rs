@@ -62,7 +62,7 @@ fn test_optimistic_ui_mark_order_ready() {
     ui.set_new_orders_count(5);
 
     // In actual implementation, calling on_action_mark_order_ready
-    // directly reduces the count optimistically. Here we mock the behavior
+    // directly reduces the count optimistically. Here we simulate the behavior
     // that main.rs provides.
     let ui_handle = ui.as_weak();
     ui.on_action_mark_order_ready(move || {
