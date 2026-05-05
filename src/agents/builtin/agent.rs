@@ -354,7 +354,35 @@ impl Agent {
                     let id = tc_val["id"].as_str().unwrap();
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
-                        match tool.execute.execute(args).await {
+                        let mut retry_count = 0;
+                        let max_retries = 2;
+                        let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
+
+                        loop {
+                            match tool.execute.execute(args.clone()).await {
+                                Ok(res) => {
+                                    final_res = Ok(res);
+                                    break;
+                                }
+                                Err(crate::types::ToolError::Transient(msg)) => {
+                                    if retry_count < max_retries {
+                                        retry_count += 1;
+                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
+                                        tokio::time::sleep(backoff).await;
+                                        continue;
+                                    } else {
+                                        final_res = Err(crate::types::ToolError::Transient(msg));
+                                        break;
+                                    }
+                                }
+                                Err(e) => {
+                                    final_res = Err(e);
+                                    break;
+                                }
+                            }
+                        }
+
+                        match final_res {
                             Ok(res) => {
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
@@ -362,12 +390,28 @@ impl Agent {
                                     "error": ""
                                 }));
                             }
-                            Err(e) => {
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
-                                    "error": e.to_string()
+                                    "error": msg
                                 }));
+                            }
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                // Failed after retries
+                                tool_results_json.push(serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": format!("Transient error after retries: {}", msg)
+                                }));
+                            }
+                            Err(crate::types::ToolError::UserFixable(msg)) => {
+                                return Err(format!("USER_FIXABLE:{}", msg));
+                            }
+                            Err(e) => {
+                                // For Fatal, Unexpected, HandoffRequested
+                                // we halt the graph execution
+                                return Err(e.to_string());
                             }
                         }
                     } else {
@@ -431,13 +475,25 @@ impl Agent {
             "has_tool_calls": false
         });
 
-        let final_state = graph.run(initial_state).await.map_err(|e| format!("LangGraph Error: {}", e))?;
-
-        let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
-        let last_msg = final_msgs.last().unwrap();
-        let content = last_msg.get("content").unwrap().as_str().unwrap().to_string();
-
-        Ok(content)
+        match graph.run(initial_state).await {
+            Ok(final_state) => {
+                let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
+                let last_msg = final_msgs.last().unwrap();
+                let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                _on_event(AgentEvent::TaskComplete { content: content.clone() });
+                Ok(content)
+            }
+            Err(e) => {
+                if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
+                    let err_msg = format!("User intervention required: {}", msg);
+                    _on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                    return Err(err_msg.into());
+                }
+                let err_msg = format!("LangGraph Error: {}", e);
+                _on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                Err(err_msg.into())
+            }
+        }
     }
 
 
@@ -3161,5 +3217,199 @@ mod tests {
         assert!(output.status.success(), "Git log should succeed");
         let log_output = String::from_utf8_lossy(&output.stdout);
         assert!(log_output.contains("Checkpoint:"), "Commit message should contain Checkpoint:");
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_four_tier_errors() {
+        struct LanggraphFourTierErrorToolExecutor {
+            name: String,
+            call_count: tokio::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl ToolExecutor for LanggraphFourTierErrorToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                match self.name.as_str() {
+                    "transient_tool" => Err(ToolError::Transient(format!("network timeout {}", *count))),
+                    "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
+                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "user_fixable_tool" => Err(ToolError::UserFixable("please login to proceed".to_string())),
+                    _ => Ok("success".to_string()),
+                }
+            }
+        }
+
+        // Test Recoverable
+        let client1 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer after error"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_langgraph_mechanic = true;
+
+        let tool_recoverable = Tool {
+            name: "llm_recoverable_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+        };
+
+        let agent1 = Agent::new(client1, vec![tool_recoverable]);
+        let mut events1 = vec![];
+        let res1 = agent1.run(&cfg, "Start", &mut |e| events1.push(e)).await;
+        // Should succeed because it handles the recoverable error and gets the final answer
+        assert!(res1.is_ok());
+
+        // Test Fatal
+        let client2 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_2".to_string(),
+                            name: "fatal_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let tool_fatal = Tool {
+            name: "fatal_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "fatal_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+        };
+
+        // Test Transient
+        let client3 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_3".to_string(),
+                            name: "transient_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer after transient"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let tool_transient = Tool {
+            name: "transient_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "transient_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+        };
+
+        let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
+        let mut events3 = vec![];
+        let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
+        // Should succeed because transient error returns a string to LLM, allowing it to continue
+        assert!(res3.is_ok());
+
+        // Since it's a transient error that always fails, the retry loop will retry 2 times, then return the error string to the LLM.
+        // The fact that res3 is ok proves the loop handled the error gracefully instead of crashing.
+
+        let agent2 = Agent::new(client2, vec![tool_fatal]);
+        let mut events2 = vec![];
+        let res2 = agent2.run(&cfg, "Start", &mut |e| events2.push(e)).await;
+        // Should return Err immediately, halting execution
+        assert!(res2.is_err());
+        assert!(res2.unwrap_err().to_string().contains("system corrupted"));
+
+        // Test User Fixable
+        let client4 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_4".to_string(),
+                            name: "user_fixable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let tool_user_fixable = Tool {
+            name: "user_fixable_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+        };
+
+        let agent4 = Agent::new(client4, vec![tool_user_fixable]);
+        let mut events4 = vec![];
+        let res4 = agent4.run(&cfg, "Start", &mut |e| events4.push(e)).await;
+        assert!(res4.is_err());
+        assert!(res4.unwrap_err().to_string().contains("User intervention required: please login to proceed"));
+
+        let mut found_event = false;
+        for e in events4 {
+            if let AgentEvent::UserInterventionRequired { error } = e {
+                assert!(error.contains("please login to proceed"));
+                found_event = true;
+            }
+        }
+        assert!(found_event, "UserInterventionRequired event should be emitted");
     }
 }
