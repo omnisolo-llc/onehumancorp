@@ -278,6 +278,7 @@ impl LlmClient for OpenAIClient {
             },
             usage,
             stop_reason: finish_reason,
+            response_id: "".to_string(),
         })
     }
 }

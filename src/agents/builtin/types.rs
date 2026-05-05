@@ -73,6 +73,7 @@ pub struct ToolResult {
 
 /// Request to the LLM.
 #[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct ChatRequest {
     pub model: String,
     pub system: String,
@@ -80,18 +81,24 @@ pub struct ChatRequest {
     pub tools: Vec<ToolDefinition>,
     pub max_tokens: i32,
     pub temperature: f32,
+    #[serde(default)]
+    pub previous_response_id: Option<String>,
 }
 
 /// LLM response.
 #[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct ChatResponse {
     pub message: Message,
     pub usage: Usage,
     pub stop_reason: String,
+    #[serde(default)]
+    pub response_id: String,
 }
 
 /// Token usage statistics.
 #[derive(Debug, Clone, Default)]
+#[derive(Serialize, Deserialize)]
 pub struct Usage {
     pub input_tokens: i32,
     pub output_tokens: i32,
@@ -99,6 +106,7 @@ pub struct Usage {
 
 /// Tool definition for the LLM.
 #[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct ToolDefinition {
     pub name: String,
     pub description: String,
