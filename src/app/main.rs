@@ -6190,3 +6190,38 @@ fn test_business_share_flow() {
         manager_ui.invoke_close();
         assert!(*closed.borrow());
     }
+
+#[cfg(test)]
+mod additional_pricing_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_6_starter_price() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_is_annual(false);
+        assert_eq!(pricing.get_tiers().row_data(1).unwrap().price, "$9/mo");
+        pricing.set_is_annual(true);
+        assert_eq!(pricing.get_tiers().row_data(1).unwrap().price, "$7/mo (20% off)");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_7_pro_price() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_is_annual(false);
+        assert_eq!(pricing.get_tiers().row_data(2).unwrap().price, "$29/mo");
+        pricing.set_is_annual(true);
+        assert_eq!(pricing.get_tiers().row_data(2).unwrap().price, "$23/mo (20% off)");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_8_business_price() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_is_annual(false);
+        assert_eq!(pricing.get_tiers().row_data(3).unwrap().price, "$79/mo");
+        pricing.set_is_annual(true);
+        assert_eq!(pricing.get_tiers().row_data(3).unwrap().price, "$63/mo (20% off)");
+    }
+}
