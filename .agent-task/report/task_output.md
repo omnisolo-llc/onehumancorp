@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
-
 # 🔍 Scout: Tool Integration Research Q2
 
 ## [Social Media] Manychat Integration
@@ -133,5 +131,3 @@
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1
 **Estimated Scope**: Medium
-
-</div>
