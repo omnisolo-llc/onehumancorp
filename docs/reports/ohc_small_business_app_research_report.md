@@ -99,4 +99,3 @@ OHC's strategy is to shift AI from a "reactive tool" (like a chatbot) to "autono
 | **Booking + Store Unified** | No (Needs app) | Complex | Portfolio focus | Basic | **Yes (Built-in natively)** |
 | **Multi-Lingual UI Support**| App ecosystem | Yes | Limited | Yes | **Yes (Built-in translation)** |
 | **Plain-Language Analytics**| No (Dashboards) | No | No | No | **Yes ("The Advisor" summaries)** |
-
