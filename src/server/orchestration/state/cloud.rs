@@ -137,7 +137,12 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     ) -> Result<(), String> {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
+        let lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(guard)) => guard,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => return Err("Timeout acquiring lock".to_string()),
+        };
 
         // Will drop automatically when block exits
         self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
