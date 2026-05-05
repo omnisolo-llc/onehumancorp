@@ -1,4 +1,6 @@
 issue_category: cleanup
 debt_report: |
   Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+  Fixed unused import warning in `src/server/orchestration/health.rs` by removing unused `Duration`.
+  Fixed unused import warning in `src/server/benchmarks/chaos_bench.rs` by removing unused `AtomicBool`.
 status: resolved
