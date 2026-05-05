@@ -131,7 +131,7 @@ impl CostAuditor {
         *total_cost
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, f64, f64)> {
+    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
@@ -141,7 +141,7 @@ impl CostAuditor {
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, roi, efficiency));
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency));
         }
         result
     }
