@@ -1,7 +1,6 @@
 issue_category: cleanup
 status: resolved
 details:
-  - Fixed unused variable warnings in src/app/main.rs (_help_center_handle, _interactive_walkthrough_handle).
-  - Fixed unnecessary mutability warning in src/agents/builtin/llm/openai.rs.
-  - Fixed dead code / unused field warning in src/agents/builtin/autodream.rs (_embedded_counter).
+  - Fixed Slint build warnings about deprecated padding applied to non-layout elements in src/app/ongoing_management.slint and src/app/unified_inbox.slint by wrapping Text elements in a HorizontalLayout.
+  - Fixed Slint build warnings about binding loops in src/app/login.slint caused by referencing root.login_card_width in the VerticalLayout tree. Moved the constraint inside the GlassCard directly.
   - All warnings are clear and bazelisk test //... passed successfully.

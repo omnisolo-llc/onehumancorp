@@ -34,10 +34,11 @@ export component Login inherits Window {
 
         VerticalLayout {
             alignment: center;
-            width: root.login_card_width;
+
 
         GlassCard {
-            width: 100%;
+            width: root.login_card_width;
+
             VerticalBox {
                 spacing: 16px;
                 padding: 24px;
@@ -90,6 +91,7 @@ export component Login inherits Window {
 
                 if (error_message != "") : Text {
                     width: 100%;
+
                     text: error_message;
                     color: #ef4444;
                     horizontal-alignment: center;

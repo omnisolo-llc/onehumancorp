@@ -77,7 +77,7 @@ export component UnifiedInbox inherits Window {
                             }
 
                             HorizontalBox {
-                                padding: 12px;
+
                                 spacing: 12px;
                                 Text { text: conv.channel_icon; font-size: 24px; vertical-alignment: center; }
                                 VerticalBox {
@@ -144,7 +144,7 @@ export component UnifiedInbox inherits Window {
                                     max-width: 400px;
 
                                     VerticalBox {
-                                        padding: 12px;
+
                                         spacing: 4px;
                                         Text { text: msg.body; color: msg.is_me ? white : #1e293b; wrap: word-wrap; font-family: "Inter"; }
                                         Text { text: msg.time; font-size: 11px; color: msg.is_me ? #ddd6fe : #94a3b8; horizontal-alignment: right; }
@@ -160,12 +160,12 @@ export component UnifiedInbox inherits Window {
                         background: rgba(139, 92, 246, 0.05);
                         border-color: #e2e8f0;
                         border-width: 1px;
-                        padding: 12px;
+
 
                         VerticalBox {
                             spacing: 8px;
                             HorizontalBox {
-                                Text { text: "✨ Suggested Replies (The Ambassador)"; font-size: 12px; font-weight: 700; color: #8b5cf6; }
+                                HorizontalLayout { padding: 12px; Text { text: "✨ Suggested Replies (The Ambassador)"; font-size: 12px; font-weight: 700; color: #8b5cf6; } }
                             }
                             HorizontalBox {
                                 spacing: 8px;
