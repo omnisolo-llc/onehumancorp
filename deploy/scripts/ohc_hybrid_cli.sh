@@ -23,7 +23,10 @@ while true; do
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
     echo -e "  6) Standalone DB Health Check"
+    echo -e "  7) Launch Cloud Start"
     echo -e "  8) Seed Database with Mock Data"
+    echo -e "  9) Check Swarm Status"
+    echo -e "  10) Verify Setup"
     echo -e "  0) Exit"
     read -p "Choice: " choice
 
@@ -43,7 +46,10 @@ while true; do
                 echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
+        7) (set -e; bash "$SCRIPT_DIR/ohc-cloud-start.sh") || echo -e "${PURPLE}Cloud Start returned non-zero exit status ($?).${RESET}" ;;
         8) (set -e; bash "$SCRIPT_DIR/ohc-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
+        9) (set -e; bash "$SCRIPT_DIR/ohc-swarm-status.sh") || echo -e "${PURPLE}Swarm Status returned non-zero exit status ($?).${RESET}" ;;
+        10) (set -e; bash "$SCRIPT_DIR/ohc-verify-setup.sh") || echo -e "${PURPLE}Verify Setup returned non-zero exit status ($?).${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
