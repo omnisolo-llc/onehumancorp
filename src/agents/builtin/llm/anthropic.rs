@@ -83,6 +83,8 @@ struct AnthropicRequest {
     messages: Vec<AnthropicMessage>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<AnthropicToolDef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    previous_response_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -90,6 +92,7 @@ struct AnthropicResponse {
     content: Vec<AnthropicResponseContent>,
     usage: AnthropicUsage,
     stop_reason: Option<String>,
+    id: String,
 }
 
 #[derive(Deserialize)]
@@ -247,6 +250,7 @@ impl LlmClient for AnthropicClient {
             system,
             messages,
             tools,
+            previous_response_id: req.previous_response_id,
         };
 
         let resp = self
@@ -296,6 +300,7 @@ impl LlmClient for AnthropicClient {
 
         Ok(ChatResponse {
             message: Message {
+                response_id: Some(result.id),
                 role: Role::Assistant,
                 content: text_content,
                 tool_calls,

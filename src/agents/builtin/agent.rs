@@ -285,6 +285,7 @@ impl Agent {
                         content,
                         tool_calls,
                         tool_results,
+                        response_id: None,
                     });
                 }
 
@@ -295,6 +296,7 @@ impl Agent {
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
                     temperature: llm_cfg_c.temperature,
+                    previous_response_id: None,
                 };
 
                 match llm_client_c.chat(req).await {
@@ -612,10 +614,13 @@ impl Agent {
                 }
             }
 
+            let previous_response_id = final_messages.iter().rev().find_map(|m| m.response_id.clone());
+
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
+                previous_response_id,
                 tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
@@ -732,6 +737,7 @@ impl Agent {
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
+            previous_response_id: None,
                     };
 
                     match self.llm.chat(judge_req).await {
@@ -1066,6 +1072,7 @@ impl Agent {
                 content: String::new(),
                 tool_calls: vec![],
                 tool_results,
+                response_id: None,
             });
 
             // State Management Checkpointing Mechanic
@@ -1155,6 +1162,7 @@ impl Agent {
                             tools: vec![],
                             max_tokens: 2000,
                             temperature: 0.0,
+                            previous_response_id: None,
                         };
 
                         match self.llm.chat(summary_req).await {
@@ -1255,6 +1263,7 @@ mod tests {
                     // Turn 1: Return a tool call to generate some history
                     Ok(ChatResponse {
                         message: Message {
+                                 response_id: None,
                             role: Role::Assistant,
                             content: "I am thinking about calling a tool.".to_string(),
                             tool_calls: vec![ToolCall {
@@ -1271,6 +1280,7 @@ mod tests {
                     // Turn 2: Another tool call
                     Ok(ChatResponse {
                         message: Message {
+                                 response_id: None,
                             role: Role::Assistant,
                             content: "I need more info.".to_string(),
                             tool_calls: vec![ToolCall {
@@ -1365,6 +1375,7 @@ mod tests {
                     // Return a call to LazyLoadTools
                     Ok(ChatResponse {
                         message: Message {
+                                 response_id: None,
                             role: Role::Assistant,
                             content: "Loading HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
@@ -1383,6 +1394,7 @@ mod tests {
                     // Call the HeavyTool
                     Ok(ChatResponse {
                         message: Message {
+                                 response_id: None,
                             role: Role::Assistant,
                             content: "Using HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
@@ -1444,6 +1456,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
@@ -1506,6 +1519,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
@@ -1547,6 +1561,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
@@ -1625,6 +1640,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1639,6 +1655,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1693,6 +1710,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "tool call 1".to_string(),
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -1703,6 +1721,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "tool call 2".to_string(),
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -1713,6 +1732,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "tool call 3".to_string(),
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -1782,6 +1802,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "Yielding to finance...".to_string(),
                     tool_calls: vec![ToolCall {
@@ -1831,6 +1852,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "I will call a tool".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1845,6 +1867,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1859,6 +1882,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1873,6 +1897,7 @@ mod tests {
                 },
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
@@ -1949,6 +1974,7 @@ mod tests {
         let client_transient = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -1996,6 +2022,7 @@ mod tests {
             requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -2034,6 +2061,7 @@ mod tests {
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -2061,6 +2089,7 @@ mod tests {
         let client_fatal = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -2088,6 +2117,7 @@ mod tests {
         let client_unexpected = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message {
+                    response_id: None,
                     role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
@@ -2118,6 +2148,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "I am going to use the bad tool now.".to_string(),
                         tool_calls: vec![ToolCall {
@@ -2174,6 +2205,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
@@ -2325,6 +2357,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
@@ -2468,6 +2501,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
@@ -2565,6 +2599,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
@@ -2757,6 +2792,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
+                        response_id: None,
                         role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {

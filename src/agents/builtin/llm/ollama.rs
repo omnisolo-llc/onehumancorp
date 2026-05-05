@@ -107,6 +107,7 @@ impl LlmClient for OllamaClient {
 
         Ok(ChatResponse {
             message: Message {
+                response_id: None,
                 role: Role::Assistant,
                 content: result.message.content,
                 tool_calls: vec![],

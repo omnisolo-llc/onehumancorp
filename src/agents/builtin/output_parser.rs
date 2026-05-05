@@ -131,6 +131,7 @@ mod tests {
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
+            previous_response_id: None,
         };
 
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
@@ -150,6 +151,7 @@ mod tests {
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
+            previous_response_id: None,
         };
 
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
@@ -172,6 +174,7 @@ mod tests {
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
+            previous_response_id: None,
         };
 
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
@@ -194,6 +197,7 @@ mod tests {
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
+            previous_response_id: None,
         };
 
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;

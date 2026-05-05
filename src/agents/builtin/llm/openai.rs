@@ -83,12 +83,15 @@ struct OpenAIRequest {
     max_tokens: Option<i32>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<OpenAIToolDef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    previous_response_id: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct OpenAIResponse {
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
+    id: String,
 }
 
 #[derive(Deserialize)]
@@ -210,6 +213,7 @@ impl LlmClient for OpenAIClient {
             model: req.model.clone(),
             messages,
             max_tokens,
+            previous_response_id: req.previous_response_id,
             tools,
         };
 
@@ -272,6 +276,7 @@ impl LlmClient for OpenAIClient {
 
         Ok(ChatResponse {
             message: Message {
+                response_id: Some(result.id),
                 role: Role::Assistant,
                 content: text,
                 tool_calls,
