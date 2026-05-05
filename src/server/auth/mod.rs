@@ -101,6 +101,9 @@ impl Store {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
+                if crate::config::get().multitenant {
+                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                }
                 println!("warning: falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
                 random_bytes(32)
             });
@@ -456,6 +459,10 @@ impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         
+        if crate::config::get().multitenant && req.organization_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+
         match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
             Ok(user) => {
                 match self.store.issue_token(&user) {
@@ -475,6 +482,11 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
+
+        if crate::config::get().multitenant && req.organization_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+
         let roles = if req.roles.is_empty() {
             vec![ROLE_ADMIN.to_string()]
         } else {
@@ -959,5 +971,28 @@ mod isolation_tests {
         // Similarly, test authentication
         assert!(s.authenticate("tenant_user", "pass123", "org-1").is_ok());
         assert!(s.authenticate("tenant_user", "pass123", "sys").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_multitenant_requires_org_id() {
+        // Using unsafe to modify environment for the test configuration scope
+        unsafe {
+            std::env::set_var("OHC_MULTITENANT", "true");
+            std::env::set_var("JWT_SECRET", "test_secret");
+        }
+        let s = Arc::new(Store::new());
+        let svc = AuthServiceServerImpl::new(s.clone());
+
+        let req = tonic::Request::new(LoginRequest {
+            username: "test".to_string(),
+            password: "password".to_string(),
+            organization_id: "".to_string(),
+        });
+
+        let res = svc.login(req).await;
+        assert!(res.is_err());
+        if let Err(status) = res {
+            assert!(status.code() == tonic::Code::InvalidArgument || status.code() == tonic::Code::Unauthenticated);
+        }
     }
 }
