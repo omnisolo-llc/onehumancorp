@@ -1603,6 +1603,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
+                                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                    static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+                    tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+                });
+
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
                 let all_articles = vec![

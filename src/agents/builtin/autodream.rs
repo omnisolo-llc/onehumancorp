@@ -67,11 +67,11 @@ impl AutoDreamWorker {
             }
         });
         
-        let _db = self.db.clone();
+        let db_clone_for_conflict = self.db.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running conflict resolution pipeline...");
-                if let Err(e) = Self::resolve_conflicts(&_db).await {
+                if let Err(e) = Self::resolve_conflicts(&db_clone_for_conflict).await {
                     debug!("AutoDream: conflict resolution failed: {}", e);
                 }
                 sleep(Duration::from_secs(1800)).await;
