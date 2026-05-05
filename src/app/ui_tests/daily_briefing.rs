@@ -15,7 +15,7 @@ fn e2e_daily_briefing_show_and_dismiss() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     let ui = create();
 
-    // We mock the behavior defined in main.rs
+    // We simulate the behavior defined in main.rs
     let ui_handle = ui.as_weak();
     ui.on_dismiss_daily_briefing(move || {
         if let Some(ui) = ui_handle.upgrade() {
