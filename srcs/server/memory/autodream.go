@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"regexp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -118,8 +119,35 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 		return
 	}
 
+	// Extract metadata
+	orgID := "system"
+	agentID := "system"
+	taskID := "system"
+
+	// Try extracting from content
+	orgRe := regexp.MustCompile("(?i)(?:tenant_id|organization_id):\\s*([a-zA-Z0-9_-]+)")
+	if matches := orgRe.FindStringSubmatch(content); len(matches) > 1 {
+		orgID = matches[1]
+	}
+	agentRe := regexp.MustCompile("(?i)agent_id:\\s*([a-zA-Z0-9_-]+)")
+	if matches := agentRe.FindStringSubmatch(content); len(matches) > 1 {
+		agentID = matches[1]
+	}
+	taskRe := regexp.MustCompile("(?i)task_id:\\s*([a-zA-Z0-9_-]+)")
+	if matches := taskRe.FindStringSubmatch(content); len(matches) > 1 {
+		taskID = matches[1]
+	}
+
+	// Try extracting from filename fallback (e.g., agent-123_task-456_tenant-789.md)
+	base := filepath.Base(path)
+	if orgID == "system" {
+		if matches := regexp.MustCompile("tenant-([a-zA-Z0-9_-]+)").FindStringSubmatch(base); len(matches) > 1 {
+			orgID = matches[1]
+		}
+	}
+
 	// Upsert into DB
-	err = d.upsertMemory(ctx, filepath.Base(path), content, embeddingBytes)
+	err = d.upsertMemory(ctx, base, orgID, agentID, taskID, content, embeddingBytes)
 	if err != nil {
 		log.Printf("Failed to upsert memory for %s: %v", path, err)
 		return
@@ -133,15 +161,32 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	os.Rename(path, path+".processed")
 }
 
-func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, content string, embedding []byte) error {
-	// The problem statement requires []byte for vector_embedding
+func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID string, agentID string, taskID string, content string, embedding []byte) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	if err != nil {
+		// Ignore syntax errors for sqlite testing fallback, if any
+		if !strings.Contains(err.Error(), "syntax error") {
+			return err
+		}
+	}
+
 	query := `
-		INSERT INTO memory_embeddings (id, content, vector_embedding)
-		VALUES (?, ?, ?)
+		INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(id) DO UPDATE SET
 			content = excluded.content,
-			vector_embedding = excluded.vector_embedding
+			embedding = excluded.embedding
 	`
-	_, err := d.db.ExecContext(ctx, query, id, content, embedding)
-	return err
+	_, err = tx.ExecContext(ctx, query, id, orgID, agentID, taskID, content, string(embedding), "autodream")
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
