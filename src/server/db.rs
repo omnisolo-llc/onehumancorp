@@ -337,6 +337,17 @@ impl DB {
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS department_tasks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        locked_until TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
