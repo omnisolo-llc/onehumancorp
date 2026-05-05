@@ -5555,8 +5555,8 @@ mod e2e_hybrid_blob_tests {
         assert!(*grow_opened.borrow(), "Grow Business should be opened from Dashboard");
 
         let ui = app::GrowBusiness::new().unwrap();
-        ui.set_step(0);
-        ui.set_is_advanced(true);
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_toggle_advanced();
         ui.invoke_select_strategy("Connect Instagram".into());
         assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
         ui.invoke_next_step();
@@ -5594,17 +5594,15 @@ mod e2e_hybrid_blob_tests {
         // The dashboard doesn't directly open FixAgent, AgentStatusIndicator does or Agents view.
         // We will just test the FixAgent component since it's triggered from an agent card (which is in Agents UI)
         let ui = app::FixAgent::new().unwrap();
-        ui.set_step(0);
+        assert_eq!(ui.get_step(), 0);
         let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let apply_clone = apply_called.clone();
         ui.on_apply_fix(move || {
             *apply_clone.borrow_mut() = true;
         });
+        // We simulate the button click or callback
         ui.invoke_apply_fix();
         assert!(*apply_called.borrow());
-        ui.set_is_applying(true);
-        ui.set_step(1);
-        assert_eq!(ui.get_step(), 1);
     }
 
     #[test]
@@ -5638,10 +5636,10 @@ mod e2e_hybrid_blob_tests {
 
         let ui = app::BillingWizard::new().unwrap();
 
-        ui.set_step(0);
         assert_eq!(ui.get_step(), 0);
 
-        ui.set_is_advanced(true);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 1);
 
@@ -5690,12 +5688,10 @@ mod e2e_hybrid_blob_tests {
         assert!(*bm_opened.borrow(), "BM should be opened from Dashboard");
 
         let ui = app::BusinessManager::new().unwrap();
-        ui.set_step(0);
+        assert_eq!(ui.get_step(), 0);
         ui.invoke_select_type("DIGITAL".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 1);
-        ui.set_product_name("E-Book".into());
-        ui.set_product_price("10.00".into());
     }
 
     #[test]
