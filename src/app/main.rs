@@ -594,6 +594,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
                         if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
                         if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                         if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
@@ -627,6 +628,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("price_type".to_string(), ui.get_price_type().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
