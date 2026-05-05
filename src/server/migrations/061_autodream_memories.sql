@@ -1,0 +1,4 @@
+-- 061_autodream_memories.sql
+-- This file exists solely to track migration sequence number for the schema already initialized via db.rs
+-- The native schema initialization handles SQLite/Postgres types seamlessly.
+-- Do not put raw sql here, it will crash sqlite.

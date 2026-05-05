@@ -409,7 +409,7 @@ impl DB {
                 }
             },
             DbStore::Postgres => {
-                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&self.pool).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&self.pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("organization_id");
@@ -417,7 +417,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&self.pool).await?;
+                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&self.pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = "system".to_string(); // Fallback organization_id
@@ -446,7 +446,7 @@ impl DB {
         Ok(())
     }
 
-pub async fn insert_autodream_memory(
+    pub async fn insert_autodream_memory(
         &self,
         id: &str,
         org_id: &str,
@@ -755,5 +755,30 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+    }
+}
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_autodream_mark_task_sqlite() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE swarm_tasks (id TEXT PRIMARY KEY, auto_dreamed BOOLEAN DEFAULT FALSE)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, auto_dreamed BOOLEAN DEFAULT FALSE)").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO swarm_tasks (id) VALUES ('task1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks (id) VALUES ('task2')").execute(&pool).await.unwrap();
+
+        let db = DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) };
+
+        db.mark_task_auto_dreamed("task1", "swarm_tasks").await.unwrap();
+        db.mark_task_auto_dreamed("task2", "shared_tasks").await.unwrap();
+
+        let swarm_res: (bool,) = sqlx::query_as("SELECT auto_dreamed FROM swarm_tasks WHERE id = 'task1'").fetch_one(&pool).await.unwrap();
+        assert!(swarm_res.0);
+
+        let shared_res: (bool,) = sqlx::query_as("SELECT auto_dreamed FROM shared_tasks WHERE id = 'task2'").fetch_one(&pool).await.unwrap();
+        assert!(shared_res.0);
     }
 }
