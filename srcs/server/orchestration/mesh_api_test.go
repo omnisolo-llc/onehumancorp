@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,54 +21,76 @@ func (m *MockTransport) Broadcast(channel string, payload []byte) error {
 	return nil
 }
 
-func TestMeshAPI(t *testing.T) {
+func TestMeshAPI_Integration(t *testing.T) {
 	mockTransport := &MockTransport{}
 	api := &MeshAPI{Transport: mockTransport}
 
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
+	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
 	tests := []struct {
 		name            string
+		endpoint        string
 		payload         string
 		statusCode      int
 		shouldBroadcast bool
 	}{
 		{
-			name:            "valid",
+			name:            "valid broadcast",
+			endpoint:        "/api/mesh/broadcast",
+			payload:         `{"agent_id": "spiffe://example.org/agent", "channel": "mesh:tasks", "event_type": "test", "data": {}}`,
+			statusCode:      http.StatusOK,
+			shouldBroadcast: true,
+		},
+		{
+			name:            "valid publish",
+			endpoint:        "/api/mesh/publish",
 			payload:         `{"agent_id": "spiffe://example.org/agent", "channel": "mesh:tasks", "event_type": "test", "data": {}}`,
 			statusCode:      http.StatusOK,
 			shouldBroadcast: true,
 		},
 		{
 			name:            "missing agent_id",
+			endpoint:        "/api/mesh/broadcast",
 			payload:         `{"channel": "mesh:tasks", "event_type": "test", "data": {}}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
 		},
 		{
-			name:            "invalid agent_id",
+			name:            "invalid agent_id prefix",
+			endpoint:        "/api/mesh/publish",
 			payload:         `{"agent_id": "invalid", "channel": "mesh:tasks", "event_type": "test", "data": {}}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
 		},
 		{
 			name:            "missing channel",
+			endpoint:        "/api/mesh/broadcast",
 			payload:         `{"agent_id": "spiffe://example.org/agent", "event_type": "test", "data": {}}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
 		},
 		{
-			name:            "invalid channel",
+			name:            "invalid channel format",
+			endpoint:        "/api/mesh/publish",
 			payload:         `{"agent_id": "spiffe://example.org/agent", "channel": "invalid", "event_type": "test", "data": {}}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
 		},
 		{
 			name:            "missing event_type",
+			endpoint:        "/api/mesh/broadcast",
 			payload:         `{"agent_id": "spiffe://example.org/agent", "channel": "mesh:tasks", "data": {}}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
 		},
 		{
 			name:            "missing data",
+			endpoint:        "/api/mesh/publish",
 			payload:         `{"agent_id": "spiffe://example.org/agent", "channel": "mesh:tasks", "event_type": "test"}`,
 			statusCode:      http.StatusBadRequest,
 			shouldBroadcast: false,
@@ -77,17 +100,16 @@ func TestMeshAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTransport.BroadcastCalled = false // reset for each run
-			req, err := http.NewRequest("POST", "/api/mesh/broadcast", bytes.NewBuffer([]byte(tt.payload)))
+			res, err := http.Post(server.URL+tt.endpoint, "application/json", bytes.NewBuffer([]byte(tt.payload)))
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer res.Body.Close()
 
-			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(api.HandleBroadcast)
+			// Read body to clear the connection
+			_, _ = io.ReadAll(res.Body)
 
-			handler.ServeHTTP(rr, req)
-
-			if status := rr.Code; status != tt.statusCode {
+			if status := res.StatusCode; status != tt.statusCode {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, tt.statusCode)
 			}
