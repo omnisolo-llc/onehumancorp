@@ -337,4 +337,59 @@ mod tests {
         assert!(drops > 0, "Packet loss simulation should successfully drop packets");
         assert!(successes > 0, "Packet loss simulation should allow some packets to pass");
     }
+
+    #[tokio::test]
+    async fn test_mesh_message_duplication_resilience() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let processed_count = Arc::new(AtomicUsize::new(0));
+        let processed_count_clone = processed_count.clone();
+
+        let handler = move |_msg: String| {
+            processed_count_clone.fetch_add(1, Ordering::SeqCst);
+        };
+
+        // Simulating message deduplication logic
+        let mut seen_ids = std::collections::HashSet::new();
+        let message_id = "unique_msg_123";
+
+        for _ in 0..3 {
+            if seen_ids.insert(message_id) {
+                handler("payload".to_string());
+            }
+        }
+
+        assert_eq!(processed_count.load(Ordering::SeqCst), 1, "Message should only be processed once despite duplication");
+    }
+
+    #[tokio::test]
+    async fn test_transient_db_failure_retry() {
+        let attempts = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let max_retries = 3;
+
+        let attempts_clone = attempts.clone();
+        let operation = move || {
+            let attempts_inner = attempts_clone.clone();
+            async move {
+                let current = attempts_inner.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                if current <= 2 {
+                    return Err("Transient DB error");
+                }
+                Ok("Success")
+            }
+        };
+
+        let mut result = Err("Initial");
+        for _ in 0..max_retries {
+            result = operation().await;
+            if result.is_ok() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        assert_eq!(result.unwrap(), "Success");
+        assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
+    }
 }

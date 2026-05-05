@@ -92,6 +92,14 @@ impl TaskDecompositionService {
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
         let now = Utc::now();
+        let claim_future = self.claim_task_inner(agent_id, now);
+        match tokio::time::timeout(std::time::Duration::from_secs(60), claim_future).await {
+            Ok(res) => res,
+            Err(_) => Err("Timeout claiming task (ML-Resilience 60s boundary)".to_string()),
+        }
+    }
+
+    async fn claim_task_inner(&self, agent_id: &str, now: chrono::DateTime<Utc>) -> Result<Option<SharedTask>, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
