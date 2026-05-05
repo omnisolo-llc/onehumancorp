@@ -10,7 +10,8 @@ export component SwarmMemory inherits Window {
     in-out property <string> durable_memory: "Empty";
     in-out property <int> velocity_score: 0;
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
 
     HorizontalBox {
         spacing: 20px;
@@ -21,11 +22,11 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "Live Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "Live updates"; color: #64748b; }
+            Text { text: "Live Activity"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "Live updates"; color: #94a3b8; font-family: "Inter"; }
             
             Rectangle {
-                background: white;
+                background: rgba(255, 255, 255, 0.03);
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -36,13 +37,13 @@ export component SwarmMemory inherits Window {
                     alignment: start;
                     
                     Rectangle {
-                        background: #f1f5f9;
+                        background: rgba(255, 255, 255, 0.05);
                         border-radius: 8px;
                         
                         VerticalBox {
                             padding: 8px;
                             Text { text: "Helper Alice"; font-weight: 700; color: #a855f7; }
-                            Text { text: "Processed task 123"; color: #1e293b; }
+                            Text { text: "Processed task 123"; color: white; font-family: "Inter"; }
                         }
                     }
                 }
@@ -54,11 +55,11 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "Saved Information"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "Cloud Backup"; color: #64748b; }
+            Text { text: "Saved Information"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "Cloud Backup"; color: #94a3b8; font-family: "Inter"; }
             
             Rectangle {
-                background: white;
+                background: rgba(255, 255, 255, 0.03);
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -69,13 +70,13 @@ export component SwarmMemory inherits Window {
                     alignment: start;
                     
                     Rectangle {
-                        background: #f1f5f9;
+                        background: rgba(255, 255, 255, 0.05);
                         border-radius: 8px;
                         
                         VerticalBox {
                             padding: 8px;
-                            Text { text: "Project goal defined"; color: #1e293b; }
-                            Text { text: "2026-04-25 12:00"; color: #64748b; font-size: 12px; }
+                            Text { text: "Project goal defined"; color: white; font-family: "Inter"; }
+                            Text { text: "2026-04-25 12:00"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         }
                     }
                 }
@@ -87,11 +88,11 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "Automated Tasks"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "System Insights"; color: #64748b; }
+            Text { text: "Automated Tasks"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "System Insights"; color: #94a3b8; font-family: "Inter"; }
             
             Rectangle {
-                background: white;
+                background: rgba(255, 255, 255, 0.03);
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -99,8 +100,8 @@ export component SwarmMemory inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 10px;
-                    Text { text: "[ Task Speed ]"; color: #64748b; horizontal-alignment: center; }
-                    Text { text: "[ Memory Viewer ]"; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "[ Task Speed ]"; color: #94a3b8; font-family: "Inter"; horizontal-alignment: center; }
+                    Text { text: "[ Memory Viewer ]"; color: #94a3b8; font-family: "Inter"; horizontal-alignment: center; }
                     Button { text: "View Walkthrough"; clicked => { view_walkthrough(); } }
                 }
             }

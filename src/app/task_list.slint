@@ -17,14 +17,15 @@ export component TaskList inherits Window {
     in property <[UiTask]> tasks;
     callback refresh();
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
             Button { 
                 text: "Refresh"; 
@@ -35,7 +36,7 @@ export component TaskList inherits Window {
         VerticalBox {
             spacing: 16px;
             for t in tasks : Rectangle {
-                background: white;
+                background: rgba(255, 255, 255, 0.03);
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -45,15 +46,15 @@ export component TaskList inherits Window {
                     spacing: 8px;
                     
                     HorizontalBox {
-                        Text { text: t.title; font-weight: 700; color: #1e293b; }
+                        Text { text: t.title; font-family: "Inter"; font-weight: 700; color: white; }
                         Rectangle {}
-                        Text { text: t.status; color: #a855f7; }
+                        Text { text: t.status; font-family: "Inter"; color: #a855f7; }
                     }
                     
-                    if (t.agent_id != "") : Text { text: "Helper: " + t.agent_id; color: #64748b; }
-                    if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #64748b; font-size: 12px; }
-                    if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #64748b; font-size: 12px; }
-                    if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #64748b; font-size: 12px; }
+                    if (t.agent_id != "") : Text { text: "Helper: " + t.agent_id; color: #94a3b8; font-family: "Inter"; }
+                    if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                 }
             }
         }

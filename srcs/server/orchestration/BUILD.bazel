@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = [
+        "autodream_worker.go",
+        "mesh.go",
+    ],
+    importpath = "ohc/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_go_redis_redis_v8//:redis",
+        "@com_github_google_uuid//:uuid",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = [
+        "autodream_worker_test.go",
+        "mesh_test.go",
+    ],
+    embed = [":orchestration"],
+)
+
+go_binary(
+    name = "mesh_server",
+    srcs = ["cmd/main.go"],
+    deps = [":orchestration"],
+)

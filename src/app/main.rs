@@ -3716,6 +3716,119 @@ mod docs_tests {
 
 
     #[test]
+    fn test_e2e_task_list_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let task_list_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let task_list_opened_clone = task_list_opened.clone();
+
+        // Simulating the user clicking through the dashboard to the TaskList
+        dashboard_ui.on_open_task_list(move || {
+            *task_list_opened_clone.borrow_mut() = true;
+            let ui = app::TaskList::new().unwrap();
+            let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+            let refresh_called_clone = refresh_called.clone();
+            ui.on_refresh(move || {
+                *refresh_called_clone.borrow_mut() = true;
+            });
+            ui.invoke_refresh();
+            assert!(*refresh_called.borrow(), "Refresh action should trigger inside TaskList");
+        });
+
+        dashboard_ui.invoke_open_task_list();
+        assert!(*task_list_opened.borrow(), "Task List should be opened from Dashboard");
+    }
+
+    #[test]
+    fn test_e2e_swarm_memory_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let swarm_memory_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let swarm_memory_opened_clone = swarm_memory_opened.clone();
+
+        // Simulating the user clicking through the dashboard to SwarmMemory
+        dashboard_ui.on_open_swarm_memory(move || {
+            *swarm_memory_opened_clone.borrow_mut() = true;
+            let ui = app::SwarmMemory::new().unwrap();
+            let view_walkthrough_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+            let view_walkthrough_called_clone = view_walkthrough_called.clone();
+
+            ui.on_view_walkthrough(move || {
+                *view_walkthrough_called_clone.borrow_mut() = true;
+            });
+
+            ui.invoke_view_walkthrough();
+            assert!(*view_walkthrough_called.borrow(), "View walkthrough action should trigger inside SwarmMemory");
+        });
+
+        dashboard_ui.invoke_open_swarm_memory();
+        assert!(*swarm_memory_opened.borrow(), "Swarm Memory should be opened from Dashboard");
+    }
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_steps() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let ui_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ui_opened_clone = ui_opened.clone();
+
+        dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
+            *ui_opened_clone.borrow_mut() = true;
+            let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+            assert_eq!(ui.get_current_step(), 0);
+            ui.set_current_step(1);
+            assert_eq!(ui.get_current_step(), 1);
+            ui.set_current_step(2);
+            assert_eq!(ui.get_current_step(), 2);
+            ui.set_current_step(3);
+            assert_eq!(ui.get_current_step(), 3);
+        });
+
+        dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
+        assert!(*ui_opened.borrow(), "Walkthrough should be opened from Dashboard");
+    }
+
+
+    #[test]
     fn test_e2e_email_marketing_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 

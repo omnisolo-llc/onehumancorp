@@ -53,6 +53,8 @@ export component Dashboard inherits Window {
     callback open_video_tutorials();
     callback open_release_notes();
     callback open_api_docs();
+    callback open_task_list();
+    callback open_swarm_memory();
     callback approve_task(string);
     callback open_billing();
 
@@ -294,6 +296,28 @@ export component Dashboard inherits Window {
             alignment: center;
             spacing: 4px;
 
+
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "open_task_list";
+                    Button { text: "Tasks"; width: 64px; height: 44px; clicked => { open_task_list(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "open_swarm_memory";
+                    Button { text: "Memory"; width: 64px; height: 44px; clicked => { open_swarm_memory(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "open_kairos_orchestration_walkthrough";
+                    Button { text: "Kairos"; width: 64px; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); } }
+                }
+            }
             VerticalBox {
                 alignment: center;
                 TooltipElement {

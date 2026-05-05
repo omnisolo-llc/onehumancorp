@@ -2,3 +2,5 @@ issue_category: refactor
 debt_report: |
   Cleaned up compiler warnings regarding unused variables in `src/app/main.rs` (by prefixing them with an underscore).
   Removed an unused import (`ToolIntegration`) from `src/agents/scout/tests.rs`.
+issue_id: 4319
+issue_id: 4319
