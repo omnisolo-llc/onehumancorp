@@ -5,43 +5,23 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
-
-var meter = otel.Meter("onehumancorp/sync")
-var escalationsCounter metric.Int64Counter
-
-func init() {
-	var err error
-	escalationsCounter, err = meter.Int64Counter(
-		"ohc.sync.escalations.count",
-		metric.WithDescription("Number of local missions escalated to the cloud"),
-	)
-	if err != nil {
-		log.Printf("Failed to initialize escalationsCounter: %v", err)
-	}
-}
 
 // HybridMCPRAGDaemon handles the synchronization of local agent_missions
 // marked for CLOUD_ESCALATION to the remote orchestration cloud.
 type HybridMCPRAGDaemon struct {
 	db          *sql.DB
 	remoteURL   string
-	syncToCloudFunc func(ctx context.Context, id string, payload []byte) error
 }
 
 // NewHybridMCPRAGDaemon creates a new instance of HybridMCPRAGDaemon
 func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
-	d := &HybridMCPRAGDaemon{
+	return &HybridMCPRAGDaemon{
 		db:          db,
 		remoteURL:   remoteURL,
 	}
-	d.syncToCloudFunc = d.defaultSyncToCloud
-	return d
 }
 
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
@@ -68,7 +48,11 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		missions = append(missions, m)
 	}
 
-	rows.Close() // we don't return early here if there is a rows.Err, so that we can test rows iteration simpler
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("sync_daemon: rows iteration error: %w", err)
+	}
+	rows.Close()
 
 	var syncedCount int
 
@@ -80,16 +64,8 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 			return ctx.Err()
 		}
 
-		// Sanitize payload before syncing
-		sanitizedPayloadStr, err := SanitizePayload(string(m.payload))
-		if err != nil {
-			<-throttleSemaphore
-			log.Printf("sync_daemon: failed to sanitize payload for mission %s: %v", m.id, err)
-			continue
-		}
-
 		// Simulate syncing to remote cloud
-		err = d.syncToCloudFunc(ctx, m.id, []byte(sanitizedPayloadStr))
+		err = d.syncToCloud(ctx, m.id, m.payload)
 
 		if err != nil {
 			// Release semaphore on error
@@ -108,10 +84,6 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 			continue
 		}
 
-		if escalationsCounter != nil {
-			escalationsCounter.Add(ctx, 1)
-		}
-
 		syncedCount++
 	}
 
@@ -119,7 +91,8 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	return nil
 }
 
-func (d *HybridMCPRAGDaemon) defaultSyncToCloud(ctx context.Context, id string, payload []byte) error {
+// syncToCloud simulates the actual RPC/HTTP call to the cloud endpoint
+func (d *HybridMCPRAGDaemon) syncToCloud(ctx context.Context, id string, payload []byte) error {
 	// In a real implementation, this would use d.remoteURL and make an HTTP/gRPC request.
 	// For this test daemon, we just return nil assuming success.
 	return nil
