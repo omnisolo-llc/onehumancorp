@@ -68,8 +68,12 @@ impl HandoffManager {
                                 }
                             },
                             "shared_tasks" => {
-                                // For shared_tasks, serialized_state is the JSON payload of the task
-                                let payload_str = String::from_utf8_lossy(&handoff.serialized_state).to_string();
+                                // For shared_tasks, serialized_state is a SharedTask protobuf
+                                let payload_str = if let Ok(task) = crate::ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
+                                    task.payload
+                                } else {
+                                    String::from_utf8_lossy(&handoff.serialized_state).to_string()
+                                };
                                 match &db_clone.store {
                                     DbStore::Postgres => {
                                         let payload_json: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(serde_json::json!({}));
@@ -318,6 +322,86 @@ mod tests {
             .unwrap();
 
         assert!(row2.is_none());
+
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_handoff_listener_shared_tasks() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+            .unwrap()
+            .create_if_missing(true);
+
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, payload TEXT, updated_at TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert a dummy task with an older timestamp to satisfy the UPDATE statement
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, payload, updated_at) VALUES ('task_123', 'old_payload', datetime('now', '-1 day'))")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
+        let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
+
+        let cancel = manager.start_listener().await.unwrap();
+
+        let shared_task = crate::ohc::orchestration::SharedTask {
+            id: "task_123".to_string(),
+            organization_id: "org_1".to_string(),
+            parent_plan_id: "".to_string(),
+            dependencies: vec![],
+            title: "Task".to_string(),
+            description: "Desc".to_string(),
+            status: "pending".to_string(),
+            assigned_agent_id: "agent_1".to_string(),
+            priority: "high".to_string(),
+            payload: r#"{"key": "value"}"#.to_string(),
+            action_risk: 0,
+            approval_status: "approved".to_string(),
+            created_at_unix: 0,
+            updated_at_unix: 0,
+            locked_until_unix: 0,
+            proposed_content: "".to_string(),
+        };
+
+        let mut task_buf = Vec::new();
+        shared_task.encode(&mut task_buf).unwrap();
+
+        let handoff = SyncStateHandoff {
+            tenant_id: "test_tenant".to_string(),
+            state_id: "task_123".to_string(),
+            serialized_state: task_buf,
+            mode_source: "standalone".to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
+            entity_type: "shared_tasks".to_string(),
+        };
+
+        let mut buf = Vec::new();
+        handoff.encode(&mut buf).unwrap();
+
+        mesh.publish("mesh:coordination:handoff", buf).await.unwrap();
+
+        // Let listener process
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        let row = sqlx::query("SELECT payload FROM shared_tasks_decomposition WHERE id = 'task_123'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let content: String = row.get("payload");
+        assert_eq!(content, r#"{"key": "value"}"#);
 
         cancel();
     }
