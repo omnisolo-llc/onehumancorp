@@ -52,6 +52,7 @@ impl DB {
                         {
                             use std::os::unix::fs::DirBuilderExt;
                             let mut builder = std::fs::DirBuilder::new();
+                            // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
                                 eprintln!("Failed to securely create DB directory: {}", e);
