@@ -3941,9 +3941,39 @@ mod docs_tests {
         ai_chat.set_user_input("How do I sell a product?".into());
         let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let send_called_clone = send_called.clone();
-        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+
+        let ai_chat_weak = ai_chat.as_weak();
+        ai_chat.on_send_message(move || {
+            *send_called_clone.borrow_mut() = true;
+            if let Some(ui) = ai_chat_weak.upgrade() {
+                let mut messages = ui.get_messages().iter().collect::<Vec<_>>();
+                messages.push(app::ChatMessage {
+                    sender: "AI".into(),
+                    text: "You can sell a product by adding it in the products tab.".into(),
+                    article_link: "how-to-sell".into(),
+                });
+                let model = std::rc::Rc::new(slint::VecModel::from(messages));
+                ui.set_messages(model.into());
+            }
+        });
+
+        let article_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let article_opened_clone = article_opened.clone();
+        ai_chat.on_open_article(move |link| {
+            assert_eq!(link, "how-to-sell");
+            *article_opened_clone.borrow_mut() = true;
+        });
+
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+
+        // Check if messages got updated
+        let messages_count = ai_chat.get_messages().iter().count();
+        assert_eq!(messages_count, 2, "There should be two messages in the chat now");
+
+        // Simulate click on article link
+        ai_chat.invoke_open_article("how-to-sell".into());
+        assert!(*article_opened.borrow(), "AI Chat open_article should be called via the link");
     }
 
     #[test]

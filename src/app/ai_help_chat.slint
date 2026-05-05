@@ -1,6 +1,12 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+export struct ChatMessage {
+    sender: string,
+    text: string,
+    article_link: string,
+}
+
 export component AiHelpChat inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
@@ -10,7 +16,11 @@ export component AiHelpChat inherits Window {
     background: #0f172a;
 
     in-out property <string> user_input: "";
+    in property <[ChatMessage]> messages: [
+        { sender: "AI", text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?", article_link: "" }
+    ];
     callback send_message();
+    callback open_article(string);
 
     HorizontalBox {
         alignment: center;
@@ -20,19 +30,35 @@ export component AiHelpChat inherits Window {
             padding: 16px;
             spacing: 16px;
 
-            GlassCard {
+            ScrollView {
                 VerticalBox {
-                    padding: 16px;
-                    Text {
-                        text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?";
-                        color: white;
-                        wrap: word-wrap;
+                    spacing: 12px;
+                    for msg in messages: GlassCard {
+                        background: msg.sender == "User" ? #1e293b : #334155;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text {
+                                text: msg.sender == "User" ? "You" : "Helper";
+                                color: #94a3b8;
+                                font-size: 12px;
+                            }
+                            Text {
+                                text: msg.text;
+                                color: white;
+                                wrap: word-wrap;
+                            }
+                            if msg.article_link != "": TouchArea {
+                                clicked => { root.open_article(msg.article_link); }
+                                Text {
+                                    text: "Read the full article →";
+                                    color: #0ea5e9; // Action color
+                                    font-size: 14px;
+                                }
+                            }
+                        }
                     }
                 }
-            }
-
-            ScrollView {
-                // Chat history would go here
             }
 
             HorizontalBox {
