@@ -51,7 +51,7 @@ pub fn get() -> &'static AppConfig {
     })
 }
 
-fn load() -> Result<AppConfig, config::ConfigError> {
+pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
     let s = config::Config::builder()
         // Defaults
         .set_default("listen_addr", ":8080")?
