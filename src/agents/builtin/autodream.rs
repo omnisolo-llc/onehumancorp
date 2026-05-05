@@ -33,8 +33,19 @@ impl AutoDreamWorker {
             loop {
                 debug!("AutoDream: running pruning pipeline...");
                 if let Err(e) = Self::prune_stale_sessions(&db, &counter).await {
-                    debug!("AutoDream: pruning failed: {}", e);
+                    debug!("AutoDream: pruning stale sessions failed: {}", e);
                 }
+
+                let repository = match &db.store {
+                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                };
+
+                let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
+                if let Err(e) = repository.prune_stale(stale_threshold).await {
+                    debug!("AutoDream: pruning consolidated memory failed: {}", e);
+                }
+
                 sleep(Duration::from_secs(60)).await;
             }
         });
@@ -141,28 +152,12 @@ impl AutoDreamWorker {
             crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
-        let conflicts = repository.get_conflicting_pairs().await.map_err(|e| e.to_string())?;
-        if conflicts.is_empty() {
-            return Ok(());
-        }
-
-        for (a, b) in conflicts {
-            let (winner, loser) = Self::determine_conflict_winner(&a, &b);
-            let _ = repository.delete(&loser.id).await;
-            debug!("AutoDream: Resolved conflict between {} and {}. Kept {}.", a.id, b.id, winner.id);
+        let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
+        if resolved_count > 0 {
+            debug!("AutoDream: Resolved {} memory conflicts automatically.", resolved_count);
         }
 
         Ok(())
-    }
-
-    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        if a.owner_override != b.owner_override {
-            if a.owner_override { (a, b) } else { (b, a) }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score { (a, b) } else { (b, a) }
-        } else {
-            if a.created_at >= b.created_at { (a, b) } else { (b, a) }
-        }
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
@@ -501,50 +496,3 @@ mod tests {
     }
 }
 
-#[cfg(test)]
-mod tests_conflict_logic {
-    use super::*;
-    use ohc_builtin_agent::memory_store::EmbeddingRecord;
-    use chrono::Utc;
-
-    #[test]
-    fn test_determine_conflict_winner() {
-        let now = Utc::now();
-        let earlier = now - chrono::Duration::hours(1);
-
-        let mut a = EmbeddingRecord {
-            id: "a".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
-            content: "a content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
-            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
-            owner_override: false, metadata: None,
-        };
-
-        let mut b = EmbeddingRecord {
-            id: "b".to_string(), tenant_id: "org1".to_string(), agent_id: "".to_string(),
-            content: "b content".to_string(), embedding: vec![0.0; 1536], source_type: "SRC".to_string(),
-            created_at: now, last_referenced_at: now, reference_count: 1, reliability_score: 50,
-            owner_override: false, metadata: None,
-        };
-
-        // Test owner_override priority
-        a.owner_override = true;
-        b.reliability_score = 100; // Even with higher score, override wins
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "a");
-
-        // Test reliability_score priority
-        a.owner_override = false;
-        a.reliability_score = 40;
-        b.reliability_score = 50;
-        b.created_at = earlier; // older, but higher score
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "b");
-
-        // Test created_at priority
-        a.reliability_score = 50;
-        a.created_at = now;
-        b.created_at = earlier;
-        let (winner, _) = AutoDreamWorker::determine_conflict_winner(&a, &b);
-        assert_eq!(winner.id, "a");
-    }
-}
