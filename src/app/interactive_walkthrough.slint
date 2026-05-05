@@ -10,67 +10,54 @@ export component InteractiveWalkthrough inherits Window {
 
     in-out property <int> current_step: 0;
 
-    HorizontalBox {
-        alignment: center;
+    // We use absolute positioning to create an overlay highlight + speech bubble system
+    GlassCard {
+        width: 335px;
+        // Position changes based on current_step
+        x: current_step == 0 ? 20px : (current_step == 1 ? (parent.width - 335px) / 2 : parent.width - 355px);
+        y: current_step == 0 ? 100px : (current_step == 2 || current_step == 3 ? parent.height - 300px : 100px);
+
         VerticalBox {
-            max-width: 600px;
-            width: 100%;
-            alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
-            padding-top: current_step == 0 ? 100px : 0;
-            padding-bottom: current_step == 2 || current_step == 3 ? 100px : 0;
+            padding: 20px;
+            spacing: 16px;
+
+            Text {
+                text: current_step == 0 ? "Welcome to your store!" :
+                      current_step == 1 ? "Add your first product" :
+                      current_step == 2 ? "Set up payments" :
+                      "You're all set!";
+                font-size: 20px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+            }
+
+            Text {
+                text: current_step == 0 ? "Let's take a quick tour to get you set up." :
+                      current_step == 1 ? "Click here to add photos and prices for what you sell." :
+                      current_step == 2 ? "Connect your bank so you can get paid by customers." :
+                      "Your store is ready. You can always find more help in the Help Center.";
+                color: #94a3b8;
+                font-family: "Inter";
+                wrap: word-wrap;
+            }
 
             HorizontalBox {
-                alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
-                padding-left: current_step == 0 ? 20px : 0;
-                padding-right: current_step == 2 || current_step == 3 ? 20px : 0;
+                alignment: end;
+                spacing: 12px;
 
-                GlassCard {
-                    width: 335px;
+                Button {
+                    text: "Skip tour";
+                    clicked => { root.visible = false; }
+                }
 
-                    VerticalBox {
-                        padding: 20px;
-                        spacing: 16px;
-
-                        Text {
-                            text: current_step == 0 ? "Welcome to your store!" :
-                                  current_step == 1 ? "Add your first product" :
-                                  current_step == 2 ? "Set up payments" :
-                                  "You're all set!";
-                            font-size: 20px;
-                            font-family: "Outfit";
-                            font-weight: 700;
-                            color: white;
-                        }
-
-                        Text {
-                            text: current_step == 0 ? "Let's take a quick tour to get you set up." :
-                                  current_step == 1 ? "Click here to add photos and prices for what you sell." :
-                                  current_step == 2 ? "Connect your bank so you can get paid by customers." :
-                                  "Your store is ready. You can always find more help in the Help Center.";
-                            color: #94a3b8;
-                            font-family: "Inter";
-                            wrap: word-wrap;
-                        }
-
-                        HorizontalBox {
-                            alignment: end;
-                            spacing: 12px;
-
-                            Button {
-                                text: "Skip tour";
-                                clicked => { root.visible = false; }
-                            }
-
-                            Button {
-                                text: current_step < 3 ? "Next" : "Done";
-                                clicked => {
-                                    if (current_step < 3) {
-                                        current_step += 1;
-                                    } else {
-                                        root.visible = false;
-                                    }
-                                }
-                            }
+                Button {
+                    text: current_step < 3 ? "Next" : "Done";
+                    clicked => {
+                        if (current_step < 3) {
+                            current_step += 1;
+                        } else {
+                            root.visible = false;
                         }
                     }
                 }

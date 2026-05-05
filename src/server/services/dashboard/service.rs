@@ -169,4 +169,19 @@ impl DashboardService for MyDashboardService {
 
         Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
     }
+
+    async fn ask_help_agent(
+        &self,
+        request: tonic::Request<crate::ohc::app::AskHelpAgentRequest>,
+    ) -> Result<tonic::Response<crate::ohc::app::AskHelpAgentResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        let answer = format!("I can help with '{}'. Here is a relevant article.", req.question);
+        let article_link = "https://help.ohc.io/article/123".to_string();
+
+        Ok(tonic::Response::new(crate::ohc::app::AskHelpAgentResponse {
+            answer,
+            article_link,
+        }))
+    }
 }

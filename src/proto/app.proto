@@ -120,6 +120,7 @@ service DashboardService {
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+  rpc AskHelpAgent(AskHelpAgentRequest) returns (AskHelpAgentResponse);
 }
 
 // Onboarding State
@@ -160,4 +161,13 @@ message GetVideoTutorialsRequest {
 
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
+}
+
+message AskHelpAgentRequest {
+  string question = 1;
+}
+
+message AskHelpAgentResponse {
+  string answer = 1;
+  string article_link = 2;
 }

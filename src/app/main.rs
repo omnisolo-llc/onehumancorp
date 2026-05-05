@@ -405,6 +405,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+
+                                        let messages_model = std::rc::Rc::new(slint::VecModel::default());
+                                        ai_help_chat_ui.set_messages(messages_model.clone().into());
+
+                                        let messages_model_clone_for_append = messages_model.clone();
+                                        ai_help_chat_ui.on_append_message(move |msg| {
+                                            messages_model_clone_for_append.push(msg);
+                                        });
+
+                                        let messages_model_clone = messages_model.clone();
+                                        let ai_help_chat_handle_clone = ai_help_chat_ui.as_weak();
+                                        ai_help_chat_ui.on_send_message(move || {
+                                            if let Some(ui) = ai_help_chat_handle_clone.upgrade() {
+                                                let input = ui.get_user_input();
+                                                if !input.is_empty() {
+                                                    messages_model_clone.push(app::ChatMessage {
+                                                        text: input.clone(),
+                                                        is_user: true,
+                                                        article_link: "".into(),
+                                                    });
+                                                    ui.set_user_input("".into());
+
+                                                    let input_clone = input.clone();
+                                                    let ui_weak = ui.as_weak();
+
+                                                    #[cfg(not(target_arch = "wasm32"))]
+                                                    {
+                                                        tokio::spawn(async move {
+                                                            use ohc::orchestration::hub_service_client::HubServiceClient;
+                                                            use ohc::orchestration::ReasonRequest;
+                                                            let channel = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
+
+                                                            let answer = if let Ok(channel) = channel {
+                                                                let mut client = HubServiceClient::new(channel);
+                                                                let req = ReasonRequest {
+                                                                    prompt: format!("You are the OHC Help Assistant. The user asks: {}. Provide a very concise answer.", input_clone),
+                                                                    from_agent_id: "help_agent".into(),
+                                                                };
+                                                                if let Ok(response) = client.reason(tonic::Request::new(req)).await {
+                                                                    response.into_inner().content
+                                                                } else {
+                                                                    format!("I can help with '{}'. Here is a relevant article.", input_clone)
+                                                                }
+                                                            } else {
+                                                                format!("I can help with '{}'. Here is a relevant article.", input_clone)
+                                                            };
+
+                                                            let _ = slint::invoke_from_event_loop(move || {
+                                                                if let Some(ui) = ui_weak.upgrade() {
+                                                                    ui.invoke_append_message(app::ChatMessage {
+                                                                        text: answer.into(),
+                                                                        is_user: false,
+                                                                        article_link: "https://help.ohc.io/article/123".into(),
+                                                                    });
+                                                                }
+                                                            });
+                                                        });
+                                                    }
+                                                    #[cfg(target_arch = "wasm32")]
+                                                    {
+                                                        messages_model_clone.push(app::ChatMessage {
+                                                            text: format!("I can help with '{}'. Here is a relevant article.", input_clone).into(),
+                                                            is_user: false,
+                                                            article_link: "https://help.ohc.io/article/123".into(),
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        });
+
                                         dashboard.on_open_ai_chat(move || {
                                             if let Some(ui) = ai_help_chat_handle.upgrade() {
                                                 let _ = ui.show();
@@ -539,6 +609,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+
+                                        let messages_model = std::rc::Rc::new(slint::VecModel::default());
+                                        ai_help_chat_ui.set_messages(messages_model.clone().into());
+
+                                        let messages_model_clone_for_append = messages_model.clone();
+                                        ai_help_chat_ui.on_append_message(move |msg| {
+                                            messages_model_clone_for_append.push(msg);
+                                        });
+
+                                        let messages_model_clone = messages_model.clone();
+                                        let ai_help_chat_handle_clone = ai_help_chat_ui.as_weak();
+                                        ai_help_chat_ui.on_send_message(move || {
+                                            if let Some(ui) = ai_help_chat_handle_clone.upgrade() {
+                                                let input = ui.get_user_input();
+                                                if !input.is_empty() {
+                                                    messages_model_clone.push(app::ChatMessage {
+                                                        text: input.clone(),
+                                                        is_user: true,
+                                                        article_link: "".into(),
+                                                    });
+                                                    ui.set_user_input("".into());
+
+                                                    let input_clone = input.clone();
+                                                    let ui_weak = ui.as_weak();
+
+                                                    #[cfg(not(target_arch = "wasm32"))]
+                                                    {
+                                                        tokio::spawn(async move {
+                                                            use ohc::orchestration::hub_service_client::HubServiceClient;
+                                                            use ohc::orchestration::ReasonRequest;
+                                                            let channel = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
+
+                                                            let answer = if let Ok(channel) = channel {
+                                                                let mut client = HubServiceClient::new(channel);
+                                                                let req = ReasonRequest {
+                                                                    prompt: format!("You are the OHC Help Assistant. The user asks: {}. Provide a very concise answer.", input_clone),
+                                                                    from_agent_id: "help_agent".into(),
+                                                                };
+                                                                if let Ok(response) = client.reason(tonic::Request::new(req)).await {
+                                                                    response.into_inner().content
+                                                                } else {
+                                                                    format!("I can help with '{}'. Here is a relevant article.", input_clone)
+                                                                }
+                                                            } else {
+                                                                format!("I can help with '{}'. Here is a relevant article.", input_clone)
+                                                            };
+
+                                                            let _ = slint::invoke_from_event_loop(move || {
+                                                                if let Some(ui) = ui_weak.upgrade() {
+                                                                    ui.invoke_append_message(app::ChatMessage {
+                                                                        text: answer.into(),
+                                                                        is_user: false,
+                                                                        article_link: "https://help.ohc.io/article/123".into(),
+                                                                    });
+                                                                }
+                                                            });
+                                                        });
+                                                    }
+                                                    #[cfg(target_arch = "wasm32")]
+                                                    {
+                                                        messages_model_clone.push(app::ChatMessage {
+                                                            text: format!("I can help with '{}'. Here is a relevant article.", input_clone).into(),
+                                                            is_user: false,
+                                                            article_link: "https://help.ohc.io/article/123".into(),
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        });
+
                                         dashboard.on_open_ai_chat(move || {
                                             if let Some(ui) = ai_help_chat_handle.upgrade() {
                                                 let _ = ui.show();
