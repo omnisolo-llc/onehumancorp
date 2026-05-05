@@ -1,133 +1,99 @@
-# 🔍 Scout: Tool Integration Research Q2
+# [research]_market_sizing_and_strategic_direction
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+## Title
+Market Sizing & Strategic Expansion Direction for OneHumanCorp (OHC)
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Problem Statement
+While OHC aims to empower all non-technical small business owners, trying to capture everyone simultaneously diffuses our marketing and engineering efforts. We lack a clear view of our Total Addressable Market (TAM), an optimal beachhead persona, and a prioritized sequence for geographic, vertical, and marketplace expansion. To reach dominance, OHC must identify the exact sequence of markets and personas that will maximize user acquisition and lifetime value (LTV).
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
-**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
-**Research Report**:
-- **Tool**: Mailchimp
-- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
-- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Research Report
+### Total Addressable Market (TAM)
+- **United States:** According to the US Census Bureau, there are approximately 33 million small businesses, of which roughly 27 million are "non-employer" firms (solopreneurs, freelancers, micro-businesses).
+- **Globally:** The World Bank and OECD estimate there are over 400 million micro and small enterprises globally.
+- **Online Presence:** Estimates suggest around 36% to 40% of small businesses still do not have a dedicated website or online storefront, relying purely on word-of-mouth or social media (like Maya the Baker using Instagram DMs). This represents a global immediate TAM of ~140 million underserved users, and a US TAM of ~10 million users.
 
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
-**Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
-**Estimated Scope**: Large
+### Beachhead Market: The Optimal Persona
+Evaluating our 5 personas (Maya, Carlos, Priya, Leo, Fatima), the optimal beachhead market is **Maya the Home Baker (and similar solopreneur creators/makers).**
+- **Why Maya?**
+  - **High Density:** Massive density on Instagram, TikTok, and Etsy.
+  - **Underserved:** Overwhelmed by Shopify's complexity, high Etsy fees, and lack of AI assistance.
+  - **High Engagement:** Constant need for order taking, custom quoting, and deposit payments.
+  - **LTV Potential:** These businesses scale through repeat customers, requiring exactly the tools OHC provides (Customer Success AI, Operations AI).
+- **Secondary (Fast Follower):** Carlos the Handyman (Service & Bookings). Simple service listings with automated quoting solves a high-value pain point quickly.
 
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+### Geographic Expansion Strategy
+After dominating the English-speaking market, OHC should prioritize regions with high smartphone penetration and massive informal micro-economies.
+1. **Spanish/LATAM:** High mobile commerce adoption (Mercado Libre influence), heavy WhatsApp usage. Requires deep WhatsApp integration for the "Customer Success" agent.
+2. **Hindi/India:** Booming micro-entrepreneurship, mobile-first population (UPI payments integration is critical).
+3. **Arabic/MENA:** Fast-growing digital markets. Requires RTL (Right-to-Left) UI support and integration with local payment gateways.
+4. **Portuguese/Brazil:** Large social commerce market via Instagram and WhatsApp.
 
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+### Vertical Expansion
+After horizontal stability, OHC should build vertical depth targeting **Food & Beverage (e.g., Fatima the Food Cart)**.
+- **Features Needed:** POS integration, tap-to-pay on phone, multi-language menus, high-visibility prep queues, and HACCP compliance templates.
+- **Why?** High transaction volume and local network effects (QR codes on carts drive app downloads).
 
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Marketplace Opportunity
+- **Demand:** Solopreneurs deeply desire top-of-funnel traffic (the main reason they tolerate Etsy's fees).
+- **Opportunity:** An OHC-powered "Local AI Marketplace." Instead of competing globally, an AI agent connects local buyers with OHC merchants (e.g., "Find me a vegan cake maker in Austin").
+- **Recommendation:** Delay until 100,000 active merchants. Focus first on providing individual storefronts before aggregating them.
+
+## Design Doc
+### Key Strategic Decisions
+- **Focus Area:** Maya (Makers/Creators) first. Marketing should be tailored strictly to "Launch your creator business from your phone."
+- **Platform Focus:** WhatsApp integration for LATAM and MENA expansion.
+- **Marketplace Strategy:** Develop "Local Discovery API" where OHC stores are indexed and surfaced to local consumers via AI search (Generative Engine Optimization - GEO).
+
+### Architecture Diagrams (Mermaid.js)
+
+#### 1. Strategic Phasing Chart
+```mermaid
+gantt
+    title OHC Market Strategy Phasing
+    dateFormat  YYYY-MM
+    section Phase 1: Beachhead
+    Target Maya (Creators/Makers)  :active, 2024-06, 6m
+    Target Carlos (Service/Booking) : 2024-09, 6m
+    section Phase 2: Geographic
+    LATAM (Spanish/WhatsApp)       : 2025-01, 8m
+    India (Hindi/UPI)              : 2025-04, 8m
+    MENA (Arabic/RTL)              : 2025-08, 6m
+    section Phase 3: Vertical & Marketplace
+    Food & Beverage Vertical Depth : 2025-06, 9m
+    Local AI Discovery Marketplace : 2026-01, 12m
+```
+
+#### 2. Persona Value vs. Complexity
+```mermaid
+quadrantChart
+    title Persona Go-To-Market Viability
+    x-axis Low Setup Complexity --> High Setup Complexity
+    y-axis Low Revenue Potential --> High Revenue Potential
+    quadrant-1 "High Value / Complex"
+    quadrant-2 "High Value / Simple (Beachhead)"
+    quadrant-3 "Low Value / Simple"
+    quadrant-4 "Low Value / Complex"
+    "Maya (Home Baker)": [0.3, 0.8]
+    "Carlos (Handyman)": [0.4, 0.7]
+    "Priya (Boutique)": [0.8, 0.9]
+    "Leo (Tutor)": [0.5, 0.6]
+    "Fatima (Food Cart)": [0.7, 0.5]
+```
+
+### Comparative Table: Geographic Expansion Matrix
+| Region | Primary Language | Key Payment Integration | Key Communication Channel | Priority |
+|---|---|---|---|---|
+| LATAM | Spanish | Mercado Pago | WhatsApp | 1 |
+| India | Hindi | UPI / Paytm | WhatsApp | 2 |
+| MENA | Arabic | PayTabs / Telr | WhatsApp / IG | 3 |
+| Brazil | Portuguese | PIX | WhatsApp | 4 |
+
+## Implementation Prompt
+**To Implementer Agent:**
+Review the Market Sizing & Strategic Direction report. Based on the identification of Maya (the Home Baker/Creator) as the beachhead market, implement the onboarding UI flow specifically tailored to the "Creator/Maker" persona. The wizard should ask no more than 3 questions (e.g., "What do you create?", "What is your Instagram handle?", "Connect Stripe for deposits") and instantly generate a mobile-first catalog storefront. Ensure the integration with the Marketing Agent focuses on converting Instagram followers into storefront visitors.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
