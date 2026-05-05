@@ -10,6 +10,25 @@ use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
 
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
+fn client_spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    if !req.metadata().contains_key("x-spiffe-id") {
+        let id = std::env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_else(|_| "spiffe://onehumancorp.io/system".to_string());
+        if let Ok(metadata_value) = id.parse::<tonic::metadata::MetadataValue<_>>() {
+            req.metadata_mut().insert("x-spiffe-id", metadata_value);
+        } else {
+            return Err(tonic::Status::unauthenticated("invalid spiffe id format"));
+        }
+    }
+    Ok(req)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn connect_with_interceptor(url: String) -> Result<ohc::orchestration::hub_service_client::HubServiceClient<tonic::codegen::InterceptedService<tonic::transport::Channel, fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>>>, tonic::transport::Error> {
+    let channel = tonic::transport::Endpoint::new(url)?.connect().await?;
+    Ok(ohc::orchestration::hub_service_client::HubServiceClient::with_interceptor(channel, client_spiffe_interceptor))
+}
+
 pub mod ohc {
     pub mod orchestration {
         pub use hub_proto::ohc::orchestration::*;
@@ -174,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tokio::spawn(async move {
-        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
@@ -286,9 +305,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(wizard) = wizard_handle.upgrade() {
                 let weak_wizard = wizard.as_weak();
                 tokio::spawn(async move {
-                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
-                        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Ok(resp) = client.get_wizard_state(req).await {
                             let state = resp.into_inner().state;
                             slint::invoke_from_event_loop(move || {
@@ -341,9 +359,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let ui_weak = login_handle.clone();
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
-                        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
-                            req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                             if let Ok(resp) = client.get_wizard_state(req).await {
                                 let state = resp.into_inner().state;
                                 // In the SetupWizard, step 10 is the final welcome checklist.
@@ -578,7 +595,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -647,7 +664,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -666,7 +683,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_agent_config_handle = agent_config_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -687,7 +704,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -700,7 +717,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-                match HubServiceClient::connect(url).await {
+                match connect_with_interceptor(url).await {
                     Ok(mut client) => {
                         let mut capabilities = std::collections::HashMap::new();
                         capabilities.insert("can_reply".to_string(), can_reply);
@@ -722,8 +739,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             capabilities,
                             work_hours,
                         });
-                        // Pass x-spiffe-id as system
-                        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Err(e) = client.handle_config_wizard(req).await {
                             eprintln!("Failed to handle config wizard: {}", e);
                             slint::invoke_from_event_loop(move || {
@@ -757,7 +772,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -778,7 +793,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -803,7 +818,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-                match HubServiceClient::connect(url).await {
+                match connect_with_interceptor(url).await {
                     Ok(mut client) => {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                         if let Err(e) = client.save_wizard_state(request).await {
@@ -826,7 +841,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             personality: tone.to_string(),
                             domain_focus,
                         });
-                        prompt_request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
                             eprintln!("Failed to handle prompt tuning: {}", e);
                             let ui_err_clone = ui_handle_err.clone();
@@ -866,7 +880,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_website_builder_handle = website_builder_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -887,7 +901,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -911,7 +925,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let name = ui.get_product_name().to_string();
                 tokio::spawn(async move {
-                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let prompt = format!("Write a short, engaging one-sentence product description for {}.", name);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
@@ -976,7 +990,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_settings_handle = settings_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -997,7 +1011,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -1035,7 +1049,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let init_grow_business_handle = grow_business_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
@@ -1056,7 +1070,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
@@ -2132,7 +2146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut admin_email = "admin@ai-generated.test".to_string();
                     let mut payment_pref = "online".to_string();
 
-                    if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
@@ -2184,7 +2198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let biz_type = biz_type.to_string();
             tokio::spawn(async move {
                 let mut description = format!("{} is a premium {} business.", name, biz_type);
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let prompt = format!("Generate a catchy 1-sentence tagline/description for a business named \"{}\" which is a \"{}\".", name, biz_type);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                         prompt,
@@ -2212,7 +2226,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let prod_name = prod_name.to_string();
             tokio::spawn(async move {
                 let mut description = format!("A premium {}.", prod_name);
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                         prompt,
@@ -2298,7 +2312,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
-                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
                             business_type: req_business_type,
