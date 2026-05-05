@@ -17,6 +17,7 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
 impl IntegrationsRegistry {
@@ -40,6 +41,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
 
@@ -142,6 +144,17 @@ impl IntegrationsRegistry {
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+        }
+        if integration_id == "nats" {
+            let base_url_clone = base_url.to_string();
+            let nats_clients = std::sync::Arc::clone(&self.nats_clients);
+            let integration_id_clone = integration_id.to_string();
+            tokio::spawn(async move {
+                if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
+                    let mut clients = nats_clients.write().unwrap();
+                    clients.insert(integration_id_clone, std::sync::Arc::new(provider));
+                }
+            });
         }
 
         Ok(inst)
