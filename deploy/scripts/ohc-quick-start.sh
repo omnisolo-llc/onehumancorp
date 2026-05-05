@@ -21,6 +21,7 @@ command -v go >/dev/null 2>&1 || { echo -e "${PURPLE}Go is required.${RESET}"; f
 echo -e "${DIM}[2/4] Setting up environment...${RESET}"
 if [ ! -f .env ]; then
   echo "LOG_LEVEL=info" > .env
+  echo "LOG_FORMAT=json" >> .env
   echo "PORT=8080" >> .env
   echo "OHC_MULTITENANT=false" >> .env
   echo "OHC_HEADLESS=false" >> .env
