@@ -1119,6 +1119,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     cs_worker.start();
     competitor_audit_worker.start();
 
+    // Start Maintenance Worker
+    let maintenance_worker = crate::workers::maintenance::MaintenanceWorker::new(db.clone());
+    maintenance_worker.start();
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
