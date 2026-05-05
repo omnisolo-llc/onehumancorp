@@ -77,7 +77,8 @@ mod tests {
     #[tokio::test]
     async fn test_memory_bus_pub_sub() {
         let bus = MemoryBus::new();
-        let received = Arc::new(AtomicBool::new(false));
+        use std::sync::Arc;
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
         
         let handler = Box::new(move |msg: Message| {
