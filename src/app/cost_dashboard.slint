@@ -14,6 +14,7 @@ export component CostDashboard inherits Window {
     min-width: 375px;
     height: 800px;
     title: "Cost & AI Usage";
+    out property <string> test_title: root.title;
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";

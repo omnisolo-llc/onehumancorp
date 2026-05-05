@@ -7,9 +7,11 @@ export struct UiLogLine {
 }
 
 export component Logs inherits Window {
-    width: 600px;
+    min-width: 375px;
+    preferred-width: 600px;
     height: 500px;
     title: "Service Logs";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 

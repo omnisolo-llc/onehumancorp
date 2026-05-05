@@ -9,9 +9,11 @@ export struct UiAiConfigProvider {
 }
 
 export component AiConfig inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "AI Providers";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 
@@ -36,11 +38,11 @@ export component AiConfig inherits Window {
                 alignment: end;
                 Text { text: "Advanced Mode"; color: #94a3b8; font-size: 14px; }
                 TouchArea {
-                    width: 20px;
+                    preferred-width: 20px;
                     height: 20px;
                     clicked => { toggle_advanced(); }
                     Rectangle {
-                        width: 100%;
+                        preferred-width: 100%;
                         height: 100%;
                         border-radius: 4px;
                         border-color: #a855f7;

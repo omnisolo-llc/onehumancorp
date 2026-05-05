@@ -7,9 +7,11 @@ export struct UiPromptExample {
 }
 
 export component PromptTuning inherits Window {
-    width: 700px;
+    min-width: 375px;
+    preferred-width: 700px;
     height: 500px;
     title: "Tune Helper";
+    out property <string> test_title: root.title;
 
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly";
@@ -37,7 +39,7 @@ export component PromptTuning inherits Window {
 
         // Left Column: Wizard Steps
         VerticalBox {
-            width: 320px;
+            preferred-width: 320px;
             spacing: 20px;
             
             HorizontalBox {
@@ -48,11 +50,11 @@ export component PromptTuning inherits Window {
                     alignment: end;
                     Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     TouchArea {
-                        width: 20px;
+                        preferred-width: 20px;
                         height: 20px;
                         clicked => { is_advanced = !is_advanced; save_state(); }
                         Rectangle {
-                            width: 100%;
+                            preferred-width: 100%;
                             height: 100%;
                             border-radius: 4px;
                             border-color: #a855f7;
@@ -72,21 +74,21 @@ export component PromptTuning inherits Window {
                 HorizontalBox {
                     spacing: 10px;
                     GlassCard {
-                        width: 100px;
+                        preferred-width: 100px;
                         height: 60px;
                         background: tone == "Professional" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "💼\nProfessional"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Professional"; } }
                     }
                     GlassCard {
-                        width: 100px;
+                        preferred-width: 100px;
                         height: 60px;
                         background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "😊\nFriendly"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Friendly"; } }
                     }
                     GlassCard {
-                        width: 100px;
+                        preferred-width: 100px;
                         height: 60px;
                         background: tone == "Energetic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "⚡\nEnergetic"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
@@ -186,7 +188,7 @@ export component PromptTuning inherits Window {
 
         // Right Column: Preview
         VerticalBox {
-            width: 320px;
+            preferred-width: 320px;
             spacing: 16px;
             
             HorizontalBox {
@@ -236,7 +238,7 @@ export component PromptTuning inherits Window {
     }
 
     if (show_toast) : GlassCard {
-        width: 300px;
+        preferred-width: 300px;
         height: 60px;
         x: (parent.width - self.width) / 2;
         y: parent.height - 100px;

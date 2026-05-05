@@ -2,9 +2,11 @@ import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component EmailMarketing inherits Window {
-    width: 600px;
+    min-width: 375px;
+    preferred-width: 600px;
     height: 700px;
     title: "Email Marketing";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 

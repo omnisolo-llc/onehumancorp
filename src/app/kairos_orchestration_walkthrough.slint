@@ -1,9 +1,11 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component KairosOrchestrationWalkthrough inherits Window {
-    width: 600px;
+    min-width: 375px;
+    preferred-width: 600px;
     height: 600px;
     title: "KAIROS Orchestration Walkthrough";
+    out property <string> test_title: root.title;
 
     in-out property <int> current_step: 0;
 
@@ -14,7 +16,7 @@ export component KairosOrchestrationWalkthrough inherits Window {
     Rectangle {
         background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
         opacity: 0.5;
-        width: parent.width;
+        preferred-width: parent.width;
         height: parent.height;
     }
 
@@ -31,7 +33,7 @@ export component KairosOrchestrationWalkthrough inherits Window {
             border-color: rgba(255, 255, 255, 0.1);
             border-width: 1px;
             border-radius: 12px;
-            width: 500px;
+            preferred-width: 500px;
 
             VerticalBox {
                 padding: 32px;

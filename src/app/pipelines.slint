@@ -11,9 +11,11 @@ export struct UiPipeline {
 }
 
 export component Pipelines inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "Task Automation";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 

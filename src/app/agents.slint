@@ -12,9 +12,11 @@ export struct UiAgent {
 }
 
 export component Agents inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "Helpers";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 

@@ -1,9 +1,11 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Scaling inherits Window {
-    width: 700px;
+    min-width: 375px;
+    preferred-width: 700px;
     height: 600px;
     title: "Dynamic Scaling";
+    out property <string> test_title: root.title;
 
     in-out property <string> selected_role: "SOFTWARE_ENGINEER";
     in-out property <int> target_count: 1;
@@ -18,7 +20,7 @@ export component Scaling inherits Window {
 
         // Left Column: Controls
         VerticalBox {
-            width: 350px;
+            preferred-width: 350px;
             spacing: 20px;
             
             Text { text: "Helper Workforce Scaling"; font-size: 24px; font-weight: 700; color: #1e293b; }
@@ -62,7 +64,7 @@ export component Scaling inherits Window {
 
         // Right Column: Logs
         VerticalBox {
-            width: 250px;
+            preferred-width: 250px;
             spacing: 10px;
             
             Text { text: "Provisioning Logs"; font-size: 18px; font-weight: 700; color: #1e293b; }

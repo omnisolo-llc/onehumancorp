@@ -1,6 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, StandardTableView, LineEdit, TextEdit } from "std-widgets.slint";
 
 export component SocialPosting inherits Window {
+    min-width: 375px;
     in-out property <string> post_content: "";
     in-out property <bool> is_connected_instagram: false;
     in-out property <bool> is_connected_facebook: false;

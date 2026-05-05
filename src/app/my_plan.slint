@@ -6,6 +6,7 @@ export component MyPlan inherits Window {
     min-width: 375px;
     height: 400px;
     title: "My Plan";
+    out property <string> test_title: root.title;
 
     in-out property <string> tier: "Pro Tier";
     in-out property <string> total_actions: "1200";

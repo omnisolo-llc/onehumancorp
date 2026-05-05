@@ -6,6 +6,7 @@ export component WebsiteBuilder inherits Window {
     width: 600px;
     height: 600px;
     title: "Build My Website";
+    out property <string> test_title: root.title;
 
     callback publish_site(string, string, string, string, string, string);
     callback open_ohc_signup();

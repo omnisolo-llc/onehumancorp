@@ -49,7 +49,8 @@ import { StatCard } from "./stat_card.slint";
 
 
 export component StatCardWindow inherits Window {
-    width: 200px;
+    min-width: 375px;
+    preferred-width: 200px;
     height: 100px;
     in-out property <string> label <=> sc.label;
     in-out property <string> value <=> sc.value;
@@ -57,9 +58,11 @@ export component StatCardWindow inherits Window {
 }
 
 export component AgentStatusIndicatorWindow inherits Window {
-    width: 100px;
+    min-width: 375px;
+    preferred-width: 100px;
     height: 100px;
     title: "Agent Status Indicator Test";
+    out property <string> test_title: root.title;
     
     in-out property <bool> is_active <=> asi.is_active;
     in-out property <string> status_text <=> asi.status_text;
@@ -72,9 +75,11 @@ export { Meetings, UiMeeting } from "./meetings.slint";
 export { Skills, UiSkill } from "./skills.slint";
 
 export component AppWindow inherits Window {
-    width: 400px;
+    min-width: 375px;
+    preferred-width: 400px;
     height: 300px;
     title: "New Rust + Slint App";
+    out property <string> test_title: root.title;
 
     VerticalBox {
         alignment: center;

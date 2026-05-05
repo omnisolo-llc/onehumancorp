@@ -1,9 +1,11 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Diagnostics inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "Diagnostics Dashboard";
+    out property <string> test_title: root.title;
 
     callback run_diagnostics();
     in-out property <string> db_status: "Connected";

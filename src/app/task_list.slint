@@ -13,6 +13,7 @@ export component TaskList inherits Window {
     width: 500px;
     height: 600px;
     title: "Shared Task List";
+    out property <string> test_title: root.title;
 
     in property <[UiTask]> tasks;
     callback refresh();

@@ -10,9 +10,11 @@ export struct UiReferral {
 }
 
 export component Referrals inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "Referral Dashboard";
+    out property <string> test_title: root.title;
 
     background: #f8fafc;
 
@@ -136,7 +138,7 @@ export component Referrals inherits Window {
                 HorizontalBox {
                     Text { text: "Program Enabled"; vertical-alignment: center; }
                     Rectangle {
-                        width: 40px; height: 20px; border-radius: 10px; background: #a855f7;
+                        preferred-width: 40px; height: 20px; border-radius: 10px; background: #a855f7;
                         Rectangle { width: 16px; height: 16px; border-radius: 8px; background: white; x: 22px; y: 2px; }
                     }
                 }

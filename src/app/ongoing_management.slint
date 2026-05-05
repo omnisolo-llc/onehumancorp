@@ -6,6 +6,7 @@ export component FixAgent inherits Window {
     min-width: 375px;
     height: 600px;
     title: "Help Me Fix This";
+    out property <string> test_title: root.title;
 
     in-out property <int> step: 0;
     in-out property <bool> is_applying: false;
@@ -126,6 +127,7 @@ export component Upgrade inherits Window {
     min-width: 375px;
     height: 600px;
     title: "Platform Upgrade";
+    out property <string> test_title: root.title;
 
     in-out property <int> progress: 0;
     in-out property <bool> is_upgrading: false;
@@ -221,6 +223,7 @@ export component Billing inherits Window {
     min-width: 375px;
     height: 600px;
     title: "Billing & Credits";
+    out property <string> test_title: root.title;
 
     in-out property <bool> is_advanced: false;
     callback save_state();

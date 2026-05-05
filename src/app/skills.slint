@@ -10,9 +10,11 @@ export struct UiSkill {
 }
 
 export component Skills inherits Window {
-    width: 500px;
+    min-width: 375px;
+    preferred-width: 500px;
     height: 600px;
     title: "Skills & Plugins";
+    out property <string> test_title: root.title;
 
     in-out property <string> selected_category: "all";
     in-out property <[UiSkill]> skills;

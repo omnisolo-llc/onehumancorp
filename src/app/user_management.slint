@@ -39,6 +39,7 @@ export component UserManagement inherits Window {
     width: 500px;
     height: 600px;
     title: "User Management";
+    out property <string> test_title: root.title;
 
     in property <[UiUser]> users;
     callback delete_user(string);

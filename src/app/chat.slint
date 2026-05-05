@@ -8,9 +8,11 @@ export struct UiChatMessage {
 }
 
 export component Chat inherits Window {
-    width: 400px;
+    min-width: 375px;
+    preferred-width: 400px;
     height: 600px;
     title: "Chat - #general";
+    out property <string> test_title: root.title;
 
     in property <[UiChatMessage]> messages;
     in-out property <string> new_message: "";
@@ -42,7 +44,7 @@ export component Chat inherits Window {
                         border-radius: 12px;
                         border-color: msg.is_me && msg.author_name == "CEO" ? #fbbf24 : transparent;
                         border-width: msg.is_me && msg.author_name == "CEO" ? 2px : 0px;
-                        width: 260px;
+                        preferred-width: 260px;
                         
                         VerticalBox {
                             padding: 10px;

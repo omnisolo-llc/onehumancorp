@@ -30,7 +30,6 @@ fn test_login_subtitle_plain_language() {
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
     ui.set_is_sign_up(false);
-    // Subtitle logic is internal, we just verify component doesn't crash on standard properties
     assert_eq!(ui.get_is_sign_up(), false);
 }
 
@@ -89,4 +88,44 @@ fn test_ai_help_chat_title() {
     crate::ui_tests::init();
     let ui = crate::app::AiHelpChat::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
+}
+
+#[test]
+fn test_dashboard_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Dashboard::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Dashboard"));
+}
+
+#[test]
+fn test_settings_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Settings::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Settings"));
+}
+
+#[test]
+fn test_pricing_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Pricing::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Pricing & Billing"));
+}
+
+#[test]
+fn test_referrals_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Referrals::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Referral Dashboard"));
+}
+
+#[test]
+fn test_task_list_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::TaskList::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Shared Task List"));
 }
