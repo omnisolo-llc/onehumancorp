@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::Ordering;
     use tokio::time::{sleep, Duration, timeout};
 
     // Note: this represents Chaos tests focusing on parity constraints.
