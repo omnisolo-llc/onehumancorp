@@ -113,29 +113,29 @@ struct GeminiRequest {
     system_instruction: Option<GeminiContent>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GeminiResponse {
     candidates: Vec<GeminiCandidate>,
     usage_metadata: Option<GeminiUsageMetadata>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GeminiCandidate {
     content: GeminiResponseContent,
     finish_reason: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GeminiResponseContent {
     parts: Vec<GeminiResponsePart>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GeminiResponsePart {
     text: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GeminiUsageMetadata {
     prompt_token_count: i32,
     candidates_token_count: i32,
@@ -147,6 +147,11 @@ impl LlmClient for GeminiClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
+        }
+
         let req = super::minify_chat_request(req);
         let mut contents = Vec::new();
 
@@ -200,12 +205,20 @@ impl LlmClient for GeminiClient {
             .await?;
 
         if !resp.status().is_success() {
+            cb.record_failure();
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("gemini api error (status {}): {}", status, body).into());
         }
 
-        let result: GeminiResponse = resp.json().await?;
+        let result = resp.json::<GeminiResponse>().await;
+        if result.is_err() {
+            cb.record_failure();
+            return Err(format!("gemini api error: failed to parse response: {:?}", result.unwrap_err()).into());
+        }
+        let result = result.unwrap();
+        cb.record_success();
+
 
         let candidate = result.candidates.into_iter().next().ok_or("no candidates")?;
         let finish_reason = candidate.finish_reason.unwrap_or_default();

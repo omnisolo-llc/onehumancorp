@@ -144,20 +144,20 @@ struct OpenAIRequest {
     tools: Vec<OpenAIToolDef>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIResponse {
     id: Option<String>,
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIChoice {
     message: OpenAIResponseMessage,
     finish_reason: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIResponseMessage {
     #[allow(dead_code)]
     role: String,
@@ -165,19 +165,19 @@ struct OpenAIResponseMessage {
     tool_calls: Option<Vec<OpenAIResponseToolCall>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIResponseToolCall {
     id: String,
     function: OpenAIResponseFunction,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIResponseFunction {
     name: String,
     arguments: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OpenAIUsage {
     prompt_tokens: i32,
     completion_tokens: i32,
@@ -189,6 +189,11 @@ impl LlmClient for OpenAIClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
+        }
+
         let req = super::minify_chat_request(req);
         let mut messages = Vec::new();
 
@@ -295,12 +300,20 @@ impl LlmClient for OpenAIClient {
             .await?;
 
         if !resp.status().is_success() {
+            cb.record_failure();
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("openai api error (status {}): {}", status, body).into());
         }
 
-        let result: OpenAIResponse = resp.json().await?;
+        let result = resp.json::<OpenAIResponse>().await;
+        if result.is_err() {
+            cb.record_failure();
+            return Err(format!("openai api error: failed to parse response: {:?}", result.unwrap_err()).into());
+        }
+        let result = result.unwrap();
+        cb.record_success();
+
 
         let choice = result.choices.into_iter().next().ok_or("no choices")?;
         let finish_reason = choice.finish_reason.unwrap_or_default();
