@@ -159,7 +159,7 @@ impl Store {
         let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
         let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
-        let hash = hash(admin_pass, DEFAULT_COST).expect("Failed to hash password");
+        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
         
@@ -203,7 +203,7 @@ impl Store {
             return Err("email already registered".to_string());
         }
 
-        let hash = hash(password, DEFAULT_COST).expect("Failed to hash password");
+        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
         let now = Utc::now();
