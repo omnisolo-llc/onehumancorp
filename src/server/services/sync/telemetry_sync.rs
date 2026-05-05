@@ -182,9 +182,12 @@ mod tests {
         }
 
         // Fast DB connection test with very short timeout
+        let pool_opts = sqlx::postgres::PgPoolOptions::new()
+             .acquire_timeout(std::time::Duration::from_millis(100));
+
         let pool_res = tokio::time::timeout(
             std::time::Duration::from_millis(100),
-            sqlx::PgPool::connect(&db_url)
+            pool_opts.connect(&db_url)
         ).await;
 
         let pool = match pool_res {
