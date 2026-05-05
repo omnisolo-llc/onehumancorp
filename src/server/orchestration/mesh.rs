@@ -158,16 +158,7 @@ mod tests {
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
-    match db_store {
-        crate::db::DbStore::Postgres => {
-            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = ohc_builtin_agent::mesh::transport::RedisTransport::new(&redis_url).await
-                .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
-            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
-        }
-        crate::db::DbStore::Sqlite(_) => {
-            let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
-            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
-        }
-    }
+    let is_cloud = matches!(db_store, crate::db::DbStore::Postgres);
+    let transport = ohc_builtin_agent::mesh::transport::create_transport(std::env::var("REDIS_URL").ok().as_deref(), is_cloud).await.map_err(|e| e.to_string())?;
+    Ok(Arc::new(CentrifugeNode::new(transport)))
 }
