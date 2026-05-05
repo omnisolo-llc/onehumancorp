@@ -166,7 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
         println!("Starting bundled server...");
         tokio::spawn(async move {
-            if let Err(e) = server_lib::run_server().await {
+            if let Err(e) = ohc_mono::run_server().await {
                 eprintln!("Bundled server error: {}", e);
             }
         });
