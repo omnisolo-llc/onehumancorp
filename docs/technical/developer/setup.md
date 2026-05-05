@@ -4,6 +4,13 @@
 
 This guide walks you through setting up a development environment capable of working across OHC's various hybrid execution modes.
 
+## Master CLI
+For developers, the unified entry point for environment operations is the OHC Hybrid CLI. This interactive menu allows you to navigate onboarding scripts interactively.
+
+```bash
+bash deploy/scripts/ohc_hybrid_cli.sh
+```
+
 ## The Problem
 OHC is designed as a single monorepo that targets vastly different runtime environments:
 - **Cloud-Native Mode**: Orchestrates horizontally scalable containers with PostgreSQL and Redis.
