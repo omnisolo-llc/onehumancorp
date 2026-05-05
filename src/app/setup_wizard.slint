@@ -37,11 +37,17 @@ export component SetupWizard inherits Window {
     in-out property <string> product_name: "";
     in-out property <string> product_description: "";
     in-out property <string> product_price: "";
+    in-out property <string> currency_symbol: "$";
     in-out property <string> price_type: "fixed"; // fixed, starting_at, request_quote
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
     in-out property <string> domain_choice: "";
     in-out property <string> custom_dns_target: "";
+    in-out property <bool> is_cropping_photo: false;
+    in-out property <bool> is_picking_file: false;
+    in-out property <string> picked_file_path: "";
+    callback finish_crop();
+    callback confirm_file();
 
     in-out property <bool> launching: false;
     in-out property <bool> is_instant_build: false;
@@ -63,6 +69,7 @@ export component SetupWizard inherits Window {
     callback generate_instant_preview();
     callback generate_company_description(string, string);
     callback generate_product_description(string);
+    callback upload_photo();
 
     callback go_to_add_products();
     callback go_to_connect_instagram();
@@ -313,7 +320,33 @@ export component SetupWizard inherits Window {
             }
 
             // Step 4: Payments
-            if (step == 4) : VerticalBox {
+            if (step == 4 && is_picking_file) : VerticalBox {
+                alignment: center;
+                spacing: 16px;
+                Text { text: "Select Photo File"; font-size: 20px; font-family: "Outfit"; color: white; font-weight: 700; horizontal-alignment: center; }
+                LineEdit { placeholder-text: "Enter file path or URL..."; text <=> root.picked_file_path; height: 44px; }
+                Rectangle { width: 150px; height: 44px; background: #34C759; border-radius: 8px; Text { text: "Open"; color: white; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.is_picking_file = false; root.confirm_file(); } } }
+                Rectangle { width: 150px; height: 44px; background: #333; border-radius: 8px; Text { text: "Cancel"; color: white; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.is_picking_file = false; } } }
+            }
+
+            if (step == 4 && is_cropping_photo) : VerticalBox {
+                alignment: center;
+                spacing: 16px;
+                Text { text: "Crop Your Photo"; font-size: 20px; font-family: "Outfit"; color: white; font-weight: 700; horizontal-alignment: center; }
+                Rectangle {
+                    height: 200px;
+                    width: 200px;
+                    background: #333;
+                    border-radius: 8px;
+                    border-width: 2px;
+                    border-color: #34C759;
+                    Text { text: "Preview Area"; color: #aaa; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                Rectangle { width: 150px; height: 44px; background: #34C759; border-radius: 8px; Text { text: "Crop & Save"; color: white; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.is_cropping_photo = false; root.finish_crop(); } } }
+                Rectangle { width: 150px; height: 44px; background: #333; border-radius: 8px; Text { text: "Cancel"; color: white; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.is_cropping_photo = false; } } }
+            }
+
+            if (step == 4 && !is_cropping_photo && !is_picking_file) : VerticalBox {
                 spacing: 16px;
                 Text { text: "How do you want to receive payments?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
@@ -500,7 +533,11 @@ export component SetupWizard inherits Window {
                 if (price_type != "request_quote") : VerticalBox {
                     spacing: 8px;
                     Text { text: price_type == "fixed" ? "Price" : "Starting Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    HorizontalLayout {
+                    spacing: 8px;
+                    Text { text: root.currency_symbol; font-size: 16px; font-family: "Inter"; color: white; vertical-alignment: center; }
                     LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                }
                 }
 
                 if (is_advanced) : VerticalBox {
@@ -518,6 +555,7 @@ export component SetupWizard inherits Window {
                         Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                         Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                     }
+                    TouchArea { clicked => { root.upload_photo(); } }
                 }
             }
 

@@ -130,6 +130,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    // Auto-detect currency from locale
+    #[cfg(target_arch = "wasm32")]
+    let locale = web_sys::window()
+        .and_then(|w| w.navigator().language())
+        .unwrap_or_else(|| "en-US".to_string());
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let locale = std::env::var("LANG").unwrap_or_else(|_| "en-US".to_string());
+
+    let currency_sym = match locale.as_str() {
+        lang if lang.starts_with("en-GB") || lang.starts_with("en_GB") => "£",
+        lang if lang.starts_with("ja-JP") || lang.starts_with("ja_JP") => "¥",
+        lang if lang.contains("EUR") || lang.starts_with("de") || lang.starts_with("fr") => "€",
+        _ => "$",
+    };
+    setup_wizard_ui.set_currency_symbol(slint::SharedString::from(currency_sym));
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -1746,6 +1762,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
+        }
+    });
+
+    let setup_wizard_handle_crop = setup_wizard_ui.as_weak();
+    setup_wizard_ui.on_upload_photo(move || {
+        println!("Upload photo requested - opening simulated file picker.");
+        if let Some(ui) = setup_wizard_handle_crop.upgrade() {
+            ui.set_is_picking_file(true);
+        }
+    });
+
+    let setup_wizard_handle_confirm = setup_wizard_ui.as_weak();
+    setup_wizard_ui.on_confirm_file(move || {
+        println!("File selected. Proceeding to crop.");
+        if let Some(ui) = setup_wizard_handle_confirm.upgrade() {
+            ui.set_is_cropping_photo(true);
+        }
+    });
+
+    let setup_wizard_handle_finish = setup_wizard_ui.as_weak();
+    setup_wizard_ui.on_finish_crop(move || {
+        println!("Photo cropped and saved.");
+        if let Some(ui) = setup_wizard_handle_finish.upgrade() {
+            ui.set_is_cropping_photo(false);
         }
     });
 

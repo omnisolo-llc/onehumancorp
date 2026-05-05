@@ -478,3 +478,35 @@ fn wizard_copy_link_integration() {
 
     assert_eq!(*clipboard_val.borrow(), test_url);
 }
+
+#[test]
+fn wizard_upload_photo_integration() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = create();
+    let photo_uploaded = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let pu_clone = photo_uploaded.clone();
+
+    ui.on_upload_photo(move || {
+        *pu_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_upload_photo();
+
+    assert!(*photo_uploaded.borrow());
+}
+
+#[test]
+fn wizard_crop_photo_integration() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = create();
+    let crop_finished = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let cf_clone = crop_finished.clone();
+
+    ui.on_finish_crop(move || {
+        *cf_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_finish_crop();
+
+    assert!(*crop_finished.borrow());
+}
