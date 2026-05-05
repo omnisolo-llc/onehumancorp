@@ -7,6 +7,7 @@ pub struct IntegrationCredentials {
     pub chat_id: String,
     pub webhook_url: String,
     pub api_token: String,
+    pub from_phone: String,
 }
 
 pub struct IntegrationsRegistry {
@@ -15,6 +16,7 @@ pub struct IntegrationsRegistry {
     pull_requests: RwLock<std::collections::HashMap<String, Vec<PullRequest>>>,
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
+    twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -37,6 +39,7 @@ impl IntegrationsRegistry {
             pull_requests: RwLock::new(std::collections::HashMap::new()),
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
+            twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -82,6 +85,23 @@ impl IntegrationsRegistry {
                           tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
                      }
                  }
+                 "twilio" => {
+                     if !creds.from_phone.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let from = creds.from_phone.clone();
+                         let text = content.to_string();
+
+                         let clients = self.twilio_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                     tracing::error!("Failed to send Twilio SMS: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
                  _ => {}
              }
         }
@@ -113,11 +133,16 @@ impl IntegrationsRegistry {
 
         let mut credentials = self.credentials.write().unwrap();
         credentials.insert(integration_id.to_string(), IntegrationCredentials {
-            bot_token: creds.bot_token,
-            chat_id: creds.chat_id,
-            webhook_url: creds.webhook_url,
-            api_token: creds.api_token,
+            bot_token: creds.bot_token.clone(),
+            chat_id: creds.chat_id.clone(),
+            webhook_url: creds.webhook_url.clone(),
+            api_token: creds.api_token.clone(),
+            from_phone: creds.from_phone.clone(),
         });
+        if integration_id == "twilio" {
+            let mut clients = self.twilio_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+        }
 
         Ok(inst)
     }
@@ -251,5 +276,27 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
 
     if let Err(e) = res {
         println!("Failed to send Discord webhook: {}", e);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn test_twilio_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = crate::ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "twilio".to_string(),
+            base_url: "https://api.twilio.com".to_string(),
+            bot_token: "test_sid".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "+1234567890".to_string(),
+        };
+        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
+
+        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
+        assert_eq!(msg.content, "Hello World");
+
     }
 }

@@ -1434,6 +1434,7 @@ message ConnectIntegrationRequest {
   string chat_id = 4;
   string webhook_url = 5;
   string api_token = 6;
+  string from_phone = 7;
 }
 
 message DisconnectIntegrationRequest {
