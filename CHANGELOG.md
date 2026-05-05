@@ -1,5 +1,20 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
+- Fix gRPC calls with App UI Interceptor (#9cb3)
+- Final MaintenanceWorker implementation and Build Fix (#33a8)
+- Interop improvements: Refactor mesh handoff protocol and comm layer cross-mode sync (#8a65, #9537)
+- Fix server_test timeout issues in sandboxed environment (#b320)
+
+### Privacy/Offline Improvements
+- Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137)
+- Fix intentional memory leak and Box::leak usages in Slint UI instantiations (#e295)
+- Implement automated checks for PII leakage (#e930)
+- SQLite memory consolidation schema parity (#edc2)
+- Add UI cards for missing tool integrations in Slint dashboard (#5748)
+
 ## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
 ### Cloud Scaling Improvements
 - docs: update outdated Go/Flutter references to Rust/Slint (#9661)
