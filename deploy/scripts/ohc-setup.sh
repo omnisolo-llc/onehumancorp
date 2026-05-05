@@ -26,6 +26,7 @@ if [ ! -f .env ]; then
   cat << 'ENV' > .env
 # Default Local Config
 LOG_LEVEL=info
+LOG_FORMAT=json
 PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false

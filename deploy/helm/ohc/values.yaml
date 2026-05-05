@@ -27,14 +27,14 @@ backend:
   resourceQuota:
     enabled: true
     requests:
-      cpu: "2"
-      memory: "4Gi"
-      ephemeralStorage: "10Gi"
+      cpu: "1"
+      memory: "1Gi"
+      ephemeralStorage: "5Gi"
     limits:
-      cpu: "4"
-      memory: "4Gi"
-      ephemeralStorage: "20Gi"
-      pods: "10"
+      cpu: "2"
+      memory: "2Gi"
+      ephemeralStorage: "10Gi"
+      pods: "5"
   networkPolicy:
     enabled: true
 
