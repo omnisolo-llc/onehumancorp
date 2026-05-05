@@ -286,3 +286,85 @@ fn login_has_correct_title_and_window_size() {
     // Not directly asserting title because slint doesn't expose `get_title()` on Window natively in all bindings,
     // but we can ensure the minimum dimensions aren't violated.
 }
+
+#[test]
+fn grandmother_test_login_interaction_sign_in() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_login(move |username, password| {
+        assert_eq!(username, "testuser");
+        assert_eq!(password, "testpass");
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.set_is_sign_up(false);
+    ui.invoke_login("testuser".into(), "testpass".into());
+
+    assert!(*invoked.borrow(), "Sign in button should trigger login callback");
+}
+
+#[test]
+fn grandmother_test_login_interaction_sign_up() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_login(move |username, password| {
+        assert_eq!(username, "newuser");
+        assert_eq!(password, "newpass");
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.set_is_sign_up(true);
+    ui.invoke_login("newuser".into(), "newpass".into());
+
+    assert!(*invoked.borrow(), "Sign up button should trigger login callback");
+}
+
+#[test]
+fn grandmother_test_login_interaction_oauth_apple_google() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new("".to_string()));
+    let invoked_clone = invoked.clone();
+
+    ui.on_oauth_login(move |provider| {
+        *invoked_clone.borrow_mut() = provider.to_string();
+    });
+
+    ui.invoke_oauth_login("Google".into());
+    assert_eq!(*invoked.borrow(), "Google");
+}
+
+#[test]
+fn grandmother_test_login_interaction_resend_verification() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_resend_verification(move |username| {
+        assert_eq!(username, "testuser");
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.set_show_verification(true);
+    ui.invoke_resend_verification("testuser".into());
+
+    assert!(*invoked.borrow(), "Resend verification button should trigger callback");
+}
+
+#[test]
+fn grandmother_test_login_interaction_settings() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_open_settings(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_open_settings();
+
+    assert!(*invoked.borrow(), "App Settings button should trigger callback");
+}
