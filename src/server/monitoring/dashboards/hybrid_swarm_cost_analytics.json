@@ -1,0 +1,91 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Swarm Throughput",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(ohc_agent_cost_total[5m])",
+          "legendFormat": "{{entity}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Entity Latency",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
+          "legendFormat": "{{entity}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Contention Heatmap",
+      "type": "heatmap",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by(operation) (rate(ohc_sqlite_lock_contention_total[5m]))",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Cost Analytics Breakdown",
+      "type": "barchart",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by(entity) (increase(ohc_agent_cost_total[1h]))",
+          "legendFormat": "{{entity}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Hybrid Swarm Cost Analytics",
+  "uid": "hybrid_swarm_cost_analytics",
+  "version": 1
+}
