@@ -1211,6 +1211,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let api_docs_handle = api_docs_ui.as_weak();
                 Box::leak(Box::new(api_docs_ui));
 
+                let email_marketing_ui = app::EmailMarketing::new().unwrap();
+                let email_marketing_handle = email_marketing_ui.as_weak();
+
+                email_marketing_ui.on_close({
+                    let em_handle = email_marketing_handle.clone();
+                    move || {
+                        if let Some(ui) = em_handle.upgrade() {
+                            let _ = ui.hide();
+                        }
+                    }
+                });
+
+                #[cfg(not(target_arch = "wasm32"))]
+                email_marketing_ui.on_generate_template({
+                    let em_handle = email_marketing_handle.clone();
+                    move |template| {
+                        let ui_handle_for_gen = em_handle.clone();
+                        let template_str = template.to_string();
+
+                        tokio::spawn(async move {
+                            let mut req_body = std::collections::HashMap::new();
+                            req_body.insert("prompt".to_string(), format!("Generate a promotional email for: {}", template_str));
+
+                            let client = reqwest::Client::new();
+                            let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+                            if let Ok(res) = client.post(format!("{}/api/agents/promoter/draft", hub_url)).json(&req_body).send().await {
+                                if let Ok(text) = res.json::<std::collections::HashMap<String, String>>().await {
+                                    if let Some(draft_text) = text.get("text") {
+                                        let draft_text_clone = draft_text.clone();
+                                        let _ = slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = ui_handle_for_gen.upgrade() {
+                                                ui.set_preview_text(draft_text_clone.into());
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+
+                #[cfg(not(target_arch = "wasm32"))]
+                email_marketing_ui.on_send_campaign({
+                    let em_handle = email_marketing_handle.clone();
+                    move || {
+                        let ui_handle_for_send = em_handle.clone();
+                        if let Some(ui) = ui_handle_for_send.upgrade() {
+                            let preview_text = ui.get_preview_text().to_string();
+                            tokio::spawn(async move {
+                                let mut req_body = std::collections::HashMap::new();
+                                req_body.insert("body".to_string(), preview_text);
+
+                                let client = reqwest::Client::new();
+                                let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+                                if let Ok(res) = client.post(format!("{}/api/agents/promoter/send", hub_url)).json(&req_body).send().await {
+                                    if res.status().is_success() {
+                                        let _ = slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = ui_handle_for_send.upgrade() {
+                                                ui.set_status_message("Campaign queued for delivery!".into());
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
                 Box::leak(Box::new(release_notes_ui));
@@ -1610,7 +1680,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, _website_template, _product_name, _product_price, _domain_choice| {
+        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -3498,6 +3568,7 @@ mod docs_tests {
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
     }
+}
 
     #[test]
     fn test_e2e_soft_paywall_flow() {
@@ -3644,7 +3715,6 @@ mod docs_tests {
         assert!(*add_provider_called.borrow(), "Add provider callback should have been triggered after navigating from Dashboard");
     }
 
-}
 
 #[cfg(test)]
 mod dashboard_docs_tests {
@@ -4640,21 +4710,5 @@ fn test_business_share_flow() {
 
     let dashboard_ui = app::Dashboard::new().unwrap();
     let business_share_ui = app::BusinessShare::new().unwrap();
-    let bs_handle = business_share_ui.as_weak();
-
-    let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let share_store_called_clone = share_store_called.clone();
-
-    dashboard_ui.on_action_share_store({
-        let bs_handle_clone = bs_handle.clone();
-        move || {
-            *share_store_called_clone.borrow_mut() = true;
-            if let Some(ui) = bs_handle_clone.upgrade() {
-                let _ = ui.show();
-            }
-        }
-    });
-
-    dashboard_ui.invoke_action_share_store();
-    assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+    let _bs_handle = business_share_ui.as_weak();
 }

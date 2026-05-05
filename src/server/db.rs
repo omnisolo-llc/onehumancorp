@@ -335,6 +335,21 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+
+                    CREATE TABLE IF NOT EXISTS email_campaign_metrics (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        campaign_id TEXT NOT NULL,
+                        recipient TEXT NOT NULL,
+                        opened BOOLEAN DEFAULT 0,
+                        clicked BOOLEAN DEFAULT 0,
+                        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        opened_at TIMESTAMP,
+                        clicked_at TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_email_campaign_metrics_tenant ON email_campaign_metrics(tenant_id, campaign_id);
                 ";
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
