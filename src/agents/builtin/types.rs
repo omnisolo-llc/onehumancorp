@@ -80,6 +80,7 @@ pub struct ChatRequest {
     pub tools: Vec<ToolDefinition>,
     pub max_tokens: i32,
     pub temperature: f32,
+    pub previous_response_id: Option<String>,
 }
 
 /// LLM response.
@@ -88,6 +89,7 @@ pub struct ChatResponse {
     pub message: Message,
     pub usage: Usage,
     pub stop_reason: String,
+    pub response_id: Option<String>,
 }
 
 /// Token usage statistics.

@@ -109,6 +109,7 @@ mod tests {
             };
 
             Ok(ChatResponse {
+                response_id: Some("test-id".to_string()),
                 message: Message::assistant(content),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
@@ -125,6 +126,7 @@ mod tests {
         });
 
         let req = ChatRequest {
+                    previous_response_id: None,
             model: "test".to_string(),
             system: "".to_string(),
             messages: vec![],
@@ -144,6 +146,7 @@ mod tests {
         });
 
         let req = ChatRequest {
+                    previous_response_id: None,
             model: "test".to_string(),
             system: "".to_string(),
             messages: vec![],
@@ -166,6 +169,7 @@ mod tests {
         });
 
         let req = ChatRequest {
+                    previous_response_id: None,
             model: "test".to_string(),
             system: "".to_string(),
             messages: vec![],
@@ -188,6 +192,7 @@ mod tests {
         });
 
         let req = ChatRequest {
+                    previous_response_id: None,
             model: "test".to_string(),
             system: "".to_string(),
             messages: vec![],

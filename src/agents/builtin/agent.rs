@@ -295,6 +295,7 @@ impl Agent {
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
                     temperature: llm_cfg_c.temperature,
+                    previous_response_id: None,
                 };
 
                 match llm_client_c.chat(req).await {
@@ -464,6 +465,7 @@ impl Agent {
 
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
+        let mut last_response_id: Option<String> = None;
 
         if cfg.enable_langgraph_mechanic {
             return self.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
@@ -617,6 +619,7 @@ impl Agent {
                 tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
+                previous_response_id: last_response_id.clone(),
             };
 
             let resp = match self.llm.chat(req).await {
@@ -627,6 +630,8 @@ impl Agent {
                     return Err(err.into());
                 }
             };
+
+            last_response_id = resp.response_id.clone();
 
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
@@ -730,6 +735,7 @@ impl Agent {
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
+                        previous_response_id: None,
                     };
 
                     match self.llm.chat(judge_req).await {
@@ -1135,6 +1141,7 @@ impl Agent {
                             tools: vec![],
                             max_tokens: 2000,
                             temperature: 0.0,
+                            previous_response_id: None,
                         };
 
                         match self.llm.chat(summary_req).await {
@@ -1234,6 +1241,7 @@ mod tests {
                 if *count == 1 {
                     // Turn 1: Return a tool call to generate some history
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message {
                             role: Role::Assistant,
                             content: "I am thinking about calling a tool.".to_string(),
@@ -1250,6 +1258,7 @@ mod tests {
                 } else if *count == 2 {
                     // Turn 2: Another tool call
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message {
                             role: Role::Assistant,
                             content: "I need more info.".to_string(),
@@ -1282,12 +1291,14 @@ mod tests {
                     assert!(found_acon, "ACON should have stripped older tool results.");
 
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message::assistant("Final answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                     })
                 } else {
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message::assistant("Extra answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
@@ -1344,6 +1355,7 @@ mod tests {
                     assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Return a call to LazyLoadTools
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message {
                             role: Role::Assistant,
                             content: "Loading HeavyTool".to_string(),
@@ -1362,6 +1374,7 @@ mod tests {
                     assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Call the HeavyTool
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message {
                             role: Role::Assistant,
                             content: "Using HeavyTool".to_string(),
@@ -1378,6 +1391,7 @@ mod tests {
                 } else {
                     // Done
                     Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                         message: Message::assistant("Final Answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
@@ -1423,6 +1437,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -1437,6 +1452,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final answer"),
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -1485,6 +1501,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -1526,6 +1543,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -1581,6 +1599,7 @@ mod tests {
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -1604,6 +1623,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -1618,6 +1638,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -1672,6 +1693,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 1".to_string(),
@@ -1682,6 +1704,7 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 2".to_string(),
@@ -1692,6 +1715,7 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 3".to_string(),
@@ -1702,11 +1726,13 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("final answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
@@ -1761,6 +1787,7 @@ mod tests {
 
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "Yielding to finance...".to_string(),
@@ -1810,6 +1837,7 @@ mod tests {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "I will call a tool".to_string(),
@@ -1824,6 +1852,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
@@ -1838,6 +1867,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
@@ -1852,6 +1882,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "I will call another tool".to_string(),
@@ -1928,6 +1959,7 @@ mod tests {
         // 1. Transient Error (Retries with backoff but fails after max_retries)
         let client_transient = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
@@ -1937,6 +1969,7 @@ mod tests {
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
             }, ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
             }]),
         });
@@ -1967,7 +2000,12 @@ mod tests {
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                    Ok(ChatResponse {
+                        response_id: Some("test-id".to_string()),
+                        message: Message::assistant("stop"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string()
+                    })
                 }
             }
         }
@@ -1975,6 +2013,7 @@ mod tests {
         let client_llm = Arc::new(LlmRecoverableMockClient {
             requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
@@ -1984,6 +2023,7 @@ mod tests {
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
             }, ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
             }]),
         });
@@ -2013,6 +2053,7 @@ mod tests {
         // 3. User Fixable
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
@@ -2040,6 +2081,7 @@ mod tests {
         // 4. Fatal
         let client_fatal = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
@@ -2067,6 +2109,7 @@ mod tests {
         // 5. Unexpected Error
         let client_unexpected = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message {
                     role: Role::Assistant,
                     content: "".to_string(),
@@ -2097,6 +2140,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "I am going to use the bad tool now.".to_string(),
@@ -2111,6 +2155,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("This contains the secret password!"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2153,6 +2198,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -2189,6 +2235,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Here is the secret data."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2304,6 +2351,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -2318,6 +2366,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2349,21 +2398,25 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Draft answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("REJECT: The answer is incomplete."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Better answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("APPROVE"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2392,6 +2445,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 50 },
                     stop_reason: "stop".to_string(),
@@ -2447,6 +2501,7 @@ mod tests {
         let client1 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -2459,6 +2514,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2506,6 +2562,7 @@ mod tests {
         let client2 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Resumed answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2544,6 +2601,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -2558,6 +2616,7 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2614,6 +2673,7 @@ mod tests {
             let mut lr = self.last_request.lock().await;
             *lr = Some(req);
             Ok(ChatResponse {
+                    response_id: Some("test-id".to_string()),
                 message: Message::assistant("Final answer"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
@@ -2670,6 +2730,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("I have written some code."),
                     usage: Usage { input_tokens: 50, output_tokens: 200 },
                     stop_reason: "length".to_string(), // LLM stopped due to length
@@ -2716,6 +2777,7 @@ mod tests {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Initial thought"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -2736,6 +2798,7 @@ mod tests {
         let client_with_tools = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message {
                         role: Role::Assistant,
                         content: String::new(),
@@ -2750,6 +2813,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
+                    response_id: Some("test-id".to_string()),
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),

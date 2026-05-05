@@ -83,10 +83,13 @@ struct OpenAIRequest {
     max_tokens: Option<i32>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<OpenAIToolDef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_response_id: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct OpenAIResponse {
+    id: Option<String>,
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
 }
@@ -210,6 +213,7 @@ impl LlmClient for OpenAIClient {
             messages,
             max_tokens,
             tools,
+            previous_response_id: req.previous_response_id.clone(),
         };
 
         // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)
@@ -278,6 +282,7 @@ impl LlmClient for OpenAIClient {
             },
             usage,
             stop_reason: finish_reason,
+            response_id: result.id,
         })
     }
 }

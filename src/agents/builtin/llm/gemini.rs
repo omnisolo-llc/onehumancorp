@@ -56,6 +56,7 @@ struct GeminiRequest {
 
 #[derive(Deserialize)]
 struct GeminiResponse {
+    id: Option<String>,
     candidates: Vec<GeminiCandidate>,
     usage_metadata: Option<GeminiUsageMetadata>,
 }
@@ -175,6 +176,7 @@ impl LlmClient for GeminiClient {
             },
             usage,
             stop_reason: finish_reason,
+            response_id: result.id,
         })
     }
 }
