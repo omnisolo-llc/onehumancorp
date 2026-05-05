@@ -71,7 +71,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
+		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies
 		FROM shared_tasks
 		WHERE status = 'CLOUD_ESCALATION'
 	`
@@ -88,7 +88,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		var payloadBytes, depsBytes []byte
 		if err := rows.Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
-			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&task.AssignedAgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
 		); err != nil {
 			log.Printf("Error scanning local task: %v", err)
 			continue

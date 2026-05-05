@@ -1,16 +1,16 @@
 package orchestration
 
 import (
-	"github.com/DATA-DOG/go-sqlmock"
-	"time"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"github.com/DATA-DOG/go-sqlmock"
 	"testing"
+	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -24,7 +24,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT,
 			parent_plan_id TEXT,
@@ -88,7 +88,7 @@ func TestSqliteTaskStore_ClaimTask(t *testing.T) {
 
 	assert.Equal(t, task.ID, claimedTask.ID)
 	assert.Equal(t, "ASSIGNED", claimedTask.Status)
-	assert.Equal(t, "agent-x", *claimedTask.AgentID)
+	assert.Equal(t, "agent-x", *claimedTask.AssignedAgentID)
 
 	// Try to claim again
 	secondClaim, err := store.ClaimTask(ctx, "org-1", "agent-y")
@@ -124,7 +124,6 @@ func TestSqliteTaskStore_UpdateTaskStatus(t *testing.T) {
 // however, sqlite testing is preferred for covering the logic since the SQL semantics are similar.
 // For full >90% coverage as requested, we will use a sqlmock library or we can increase sqlite coverage first.
 
-
 func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -141,7 +140,7 @@ func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	}
 
 	mock.ExpectQuery("INSERT INTO shared_tasks").
-		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, []byte("[]")).
+		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, []byte("[]")).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
 
 	err = store.CreateTask(ctx, task)
@@ -158,9 +157,9 @@ func TestPostgresTaskStore_ClaimTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "assigned_agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", []byte(`{"k":"v"}`), nil, []byte("[]"), time.Now(), time.Now()))
 	mock.ExpectExec("UPDATE shared_tasks").
 		WithArgs("agent-x", "uuid-1").
@@ -182,9 +181,9 @@ func TestPostgresTaskStore_GetTask(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-1").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "assigned_agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", nil, nil, []byte("[]"), time.Now(), time.Now()))
 
 	task, err := store.GetTask(ctx, "uuid-1")
@@ -217,7 +216,7 @@ func TestPostgresTaskStore_ClaimTask_NoTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
@@ -235,7 +234,7 @@ func TestPostgresTaskStore_GetTask_NoTask(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-none").
 		WillReturnError(sql.ErrNoRows)
 
@@ -297,18 +296,18 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
-        Dependencies:   json.RawMessage(`["dep-1"]`),
+		Payload:        &rawPayload,
+		Dependencies:   json.RawMessage(`["dep-1"]`),
 	}
 
 	mock.ExpectQuery("INSERT INTO shared_tasks").
-		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
+		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
 
 	err = store.CreateTask(ctx, task)
@@ -320,8 +319,8 @@ func TestSqliteTaskStore_ClaimTask_Errors(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    // Close DB to force an error on BeginTx
-    db.Close()
+	// Close DB to force an error on BeginTx
+	db.Close()
 	_, err := store.ClaimTask(ctx, "org-1", "agent-x")
 	require.Error(t, err)
 }
@@ -335,10 +334,10 @@ func TestSqliteTaskStore_GetTask_ErrorParsing(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO shared_tasks (id, organization_id, title, created_at) VALUES ('bad-date', 'org-1', 'title', 'not-a-date')`)
 	require.NoError(t, err)
 
-    // We expect it to still return the task, but parsing of time might silently fail or fallback
-    task, err := store.GetTask(ctx, "bad-date")
-    require.NoError(t, err)
-    require.NotNil(t, task)
+	// We expect it to still return the task, but parsing of time might silently fail or fallback
+	task, err := store.GetTask(ctx, "bad-date")
+	require.NoError(t, err)
+	require.NotNil(t, task)
 }
 
 func TestPostgresTaskStore_GetTask_Errors(t *testing.T) {
@@ -381,19 +380,19 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
+		Payload:        &rawPayload,
 	}
 
 	err := store.CreateTask(ctx, task)
 	require.NoError(t, err)
 
-    savedTask, err := store.GetTask(ctx, task.ID)
-    require.NoError(t, err)
-    assert.Equal(t, task.Payload, savedTask.Payload)
+	savedTask, err := store.GetTask(ctx, task.ID)
+	require.NoError(t, err)
+	assert.Equal(t, task.Payload, savedTask.Payload)
 }
