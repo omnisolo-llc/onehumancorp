@@ -122,7 +122,7 @@ export component SetupWizard inherits Window {
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
-                Text { text: "Advanced mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "Advanced Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 TouchArea {
                     height: 44px;
                     clicked => { toggle_advanced(); }
@@ -337,8 +337,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Tap to pay on phone (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "🤝 In-person (Take payments on your phone)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Use your phone as a card reader (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
                 }
@@ -346,8 +346,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Online & In-person"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "🌍 Both Online & In-person"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Sell everywhere, synced in one place"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
                 }
@@ -355,8 +355,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⏭️ Receive money later"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Skip Stripe connection for now"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "You can set up payments later from your dashboard"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
@@ -576,7 +576,7 @@ export component SetupWizard inherits Window {
                         Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        if (is_advanced) : Text { text: "K8s Tenant: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                        if (is_advanced) : Text { text: "System Technical ID: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
                     }
                 }
 
@@ -594,10 +594,10 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
-                        Text { text: "🎊 CONFETTI! SUCCESS 🎊"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: "Your business is live!"; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                        Text { text: "✨ Success! Your business is live! ✨"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
-                            text: "Copy Shareable Link";
+                            text: "Copy Store Link";
                             height: 44px;
                             clicked => { copy_link(shareable_link); }
                         }

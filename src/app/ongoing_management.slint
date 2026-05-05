@@ -2,9 +2,10 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component FixAgent inherits Window {
-    width: 600px;
-    height: 500px;
-    title: "Agent Diagnostics";
+    preferred-width: 400px;
+    min-width: 375px;
+    height: 600px;
+    title: "Help Me Fix This";
 
     in-out property <int> step: 0;
     in-out property <bool> is_applying: false;
@@ -50,7 +51,7 @@ export component FixAgent inherits Window {
             GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "We detected a connection timeout with the business records storage. The agent was unable to read the required state."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "Something went wrong. We lost connection to your business records, and your helper needs a quick hand to get back to work."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
 
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
@@ -73,7 +74,7 @@ export component FixAgent inherits Window {
             GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Suggested fix: Restart the agent process and refresh memory to reconnect."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "Don't worry! We can usually fix this by refreshing the connection. This won't delete any of your data."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
 
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
@@ -89,7 +90,8 @@ export component FixAgent inherits Window {
                 }
             }
             Button {
-                text: "Apply Fix";
+                text: "Refresh & Reconnect";
+                height: 44px;
                 clicked => {
                     is_applying = true;
                     apply_fix();
@@ -116,8 +118,9 @@ export component FixAgent inherits Window {
 }
 
 export component Upgrade inherits Window {
-    width: 600px;
-    height: 500px;
+    preferred-width: 400px;
+    min-width: 375px;
+    height: 600px;
     title: "Platform Upgrade";
 
     in-out property <int> progress: 0;
@@ -210,8 +213,9 @@ export component Upgrade inherits Window {
 }
 
 export component Billing inherits Window {
-    width: 600px;
-    height: 500px;
+    preferred-width: 400px;
+    min-width: 375px;
+    height: 600px;
     title: "Billing & Credits";
 
     in-out property <bool> is_advanced: false;

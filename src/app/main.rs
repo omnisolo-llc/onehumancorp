@@ -2335,7 +2335,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_choice: req_domain_choice,
                         });
 
-                        match client.start_onboarding(onboarding_request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::StartOnboardingResponse>, tonic::Status> = client.start_onboarding(onboarding_request).await;
+                        match response {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
@@ -2345,11 +2346,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
                                         ui.invoke_copy_link(ui.get_shareable_link());
-                                        // Delay going to step 10 to show confetti?
-                                        // The issue says "Publish button with animated confetti on success. Auto-copy shareable link to clipboard."
-                                        // If we transition to step 10, the confetti disappears.
-                                        // Wait, let's keep it on step 9 until the user clicks next or maybe we don't auto-advance.
-                                        // Actually, step 10 is the Welcome Checklist. We'll set launch_success to true on step 9.
                                     }
                                 }).unwrap();
                             }
@@ -4134,7 +4130,7 @@ mod docs_tests {
         let publish_success_clone = publish_success.clone();
 
         ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
-            assert_eq!(agent, "Customer Support");
+            assert_eq!(agent, "CustomerSuccess");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
             assert_eq!(can_write_descriptions, true);
@@ -4150,7 +4146,7 @@ mod docs_tests {
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("Customer Support".into());
+        ui.set_selected_agent("CustomerSuccess".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -4173,7 +4169,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "Customer Support");
+        assert_eq!(ui.get_selected_agent(), "CustomerSuccess");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);
