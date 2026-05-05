@@ -638,47 +638,8 @@ export component SetupWizard inherits Window {
                 }
             }
 
-            // Step 10: Checklist
+            // Step 10: Generated Storefront
             if (step == 10) : VerticalBox {
-                spacing: 16px;
-
-                Text { text: "You're set up! Here's what to do next:"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
-
-                GlassCard {
-                    height: 60px;
-                    background: rgba(16, 185, 129, 0.2); // Greenish tint
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "✅ Business live"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Add 3 more products"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_add_products(); } }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Connect Instagram"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_connect_instagram(); } }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Share your link with a friend"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_share_link(); } }
-                }
-            }
-
-            // Step 100: Generated Storefront
-            if (step == 100) : VerticalBox {
                 spacing: 16px;
 
                 Text { text: "Your live storefront!"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
@@ -767,7 +728,7 @@ export component SetupWizard inherits Window {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
                 VerticalBox { alignment: center; Text { text: "View Live Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 100; } }
+                TouchArea { clicked => { step = 10; } }
             }
 
             if (step == 10) : GlassCard {
@@ -776,13 +737,6 @@ export component SetupWizard inherits Window {
                 VerticalBox { alignment: center; Text { text: "Go to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 // In a real app, this goes to the dashboard
                 TouchArea { clicked => { root.go_to_dashboard(); } }
-            }
-
-            if (step == 100) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Continue to Setup Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 10; } }
             }
         }
     }
