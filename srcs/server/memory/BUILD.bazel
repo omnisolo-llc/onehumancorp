@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "memory",
+    srcs = ["autodream.go"],
+    importpath = "onehumancorp/srcs/server/memory",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "memory_test",
+    srcs = ["autodream_test.go"],
+    embed = [":memory"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+    ],
+)
