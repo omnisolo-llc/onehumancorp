@@ -88,6 +88,7 @@ impl LlmClient for GeminiClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let req = super::minify_chat_request(req);
         let mut contents = Vec::new();
 
         for m in &req.messages {

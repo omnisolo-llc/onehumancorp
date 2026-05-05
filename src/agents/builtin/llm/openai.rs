@@ -129,6 +129,7 @@ impl LlmClient for OpenAIClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let req = super::minify_chat_request(req);
         let mut messages = Vec::new();
 
         if !req.system.is_empty() {

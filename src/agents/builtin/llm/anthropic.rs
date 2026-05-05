@@ -119,6 +119,7 @@ impl LlmClient for AnthropicClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let req = super::minify_chat_request(req);
         let mut messages: Vec<AnthropicMessage> = Vec::new();
 
         for m in &req.messages {
