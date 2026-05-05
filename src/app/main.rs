@@ -1948,6 +1948,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut company_description = "A great AI-generated business.".to_string();
                     let mut domain_choice = "free".to_string();
                     let mut website_template = "Modern".to_string();
+                    let mut admin_email = "admin@ai-generated.test".to_string();
+                    let mut payment_pref = "online".to_string();
 
                     if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
@@ -1967,6 +1969,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(d) = v.get("company_description").and_then(|d| d.as_str()) { company_description = d.to_string(); }
                                 if let Some(dc) = v.get("domain_choice").and_then(|dc| dc.as_str()) { domain_choice = dc.to_string(); }
                                 if let Some(wt) = v.get("website_template").and_then(|wt| wt.as_str()) { website_template = wt.to_string(); }
+                                if let Some(ae) = v.get("admin_email").and_then(|ae| ae.as_str()) { admin_email = ae.to_string(); }
+                                if let Some(pp) = v.get("payment_pref").and_then(|pp| pp.as_str()) { payment_pref = pp.to_string(); }
                             }
                         }
                     }
@@ -1980,8 +1984,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.set_company_description(company_description.into());
                             ui.set_domain_choice(domain_choice.into());
                             ui.set_website_template(website_template.into());
-                            ui.set_admin_email("admin@ai-generated.test".into());
-                            ui.set_payment_pref("online".into());
+                            ui.set_admin_email(admin_email.into());
+                            ui.set_payment_pref(payment_pref.into());
                             ui.set_is_generating_instant_preview(false);
                             ui.set_step(9); // Skip straight to Review & Launch
                         }
