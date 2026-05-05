@@ -38,37 +38,58 @@ impl SipDB {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
         
-        // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
-            .bind(stuck_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            let res = async {
+                let mut tx = self.pool.begin().await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                    .bind(stuck_threshold)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                    .bind(fail_threshold)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                    .bind(fail_threshold)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }.await;
             
-        // 1b. Immediately requeue STUCK missions to PENDING to attempt exponential backoff
-        // A full exponential backoff implementation requires schema additions. Here we requeue STUCK
-        // missions that were moved to STUCK during this iteration, bumping updated_at so they
-        // aren't instantly marked as STUCK again next tick.
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        // 3. Remove COMPLETED, or very old FAILED missions
-        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
-            .bind(fail_threshold)
-            .bind(&self.org_id)
-            .execute(&self.pool)
-            .await?;
-            
-        Ok(())
+            match res {
+                Ok(_) => return Ok(()),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
     }
 
 
