@@ -478,3 +478,37 @@ fn wizard_copy_link_integration() {
 
     assert_eq!(*clipboard_val.borrow(), test_url);
 }
+#[test]
+fn e2e_test_onboarding_wizard_data_flow_minimalist() {
+    let ui = create();
+
+    ui.set_website_template("Minimalist".into());
+    ui.set_product_name("Simple Product".into());
+    ui.set_product_price("20.0".into());
+    ui.set_domain_choice("custom".into());
+
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let launch_called_clone = launch_called.clone();
+
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
+        assert_eq!(website_template, "Minimalist");
+        assert_eq!(product_name, "Simple Product");
+        assert_eq!(product_price, "20.0");
+        assert_eq!(domain_choice, "custom");
+        *launch_called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_launch(
+        ui.get_business_type(),
+        ui.get_company_name(),
+        ui.get_company_description(),
+        ui.get_payment_pref(),
+        ui.get_admin_email(),
+        ui.get_website_template(),
+        ui.get_product_name(),
+        ui.get_product_price(),
+        ui.get_domain_choice()
+    );
+
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+}

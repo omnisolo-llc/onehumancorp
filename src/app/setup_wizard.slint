@@ -409,7 +409,7 @@ export component SetupWizard inherits Window {
                         }
                         Rectangle {
                             height: 60px;
-                            background: website_template == "Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : #334155));
+                            background: website_template == "Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : (website_template == "Minimalist" ? #f8fafc : #334155)));
                             border-radius: 4px;
                             VerticalBox {
                                 alignment: center;
@@ -432,6 +432,15 @@ export component SetupWizard inherits Window {
                         Text { text: "Clean, minimal design perfect for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_template("Modern"); } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: website_template == "Minimalist" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "Minimalist"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Ultra simple layout for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    }
+                    TouchArea { clicked => { select_template("Minimalist"); } }
                 }
                 GlassCard {
                     height: 80px;
@@ -553,7 +562,7 @@ export component SetupWizard inherits Window {
                     height: 80px;
                     background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌍 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "🔗 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_domain("custom"); } }
