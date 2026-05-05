@@ -39,7 +39,12 @@ impl StateManager for StandaloneStateManager {
         };
 
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
-        let _lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30);
+        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(guard)) => guard,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => return Err("Timeout acquiring lock".to_string()),
+        };
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
