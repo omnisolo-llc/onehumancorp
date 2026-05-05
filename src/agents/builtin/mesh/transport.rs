@@ -131,6 +131,28 @@ pub struct IpcTransport {
 
 impl IpcTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
+        if let Some(path_str) = db_url.strip_prefix("sqlite://") {
+            if path_str != ":memory:" {
+                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                if let Some(parent) = db_path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                }
+                if !db_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::fs::OpenOptions;
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let _ = OpenOptions::new().read(true).write(true).create(true).mode(0o600).open(&db_path);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::File::create(&db_path);
+                    }
+                }
+            }
+        }
         use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);

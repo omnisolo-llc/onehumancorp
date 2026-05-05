@@ -158,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     // Start bundled server if in standalone mode
-    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+    if std::env::var("STANDALONE_MODE").unwrap_or_default() == "true" {
         println!("Starting bundled server...");
         tokio::spawn(async move {
             if let Err(e) = server_lib::run_server().await {

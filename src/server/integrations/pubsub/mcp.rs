@@ -16,7 +16,7 @@ impl PubSubManager {
     }
 
     pub fn from_env(transport: Arc<dyn MeshTransport>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_default() != "true";
         Self::new(transport, is_cloud)
     }
 

@@ -977,7 +977,7 @@ mod isolation_tests {
     async fn test_multitenant_requires_org_id() {
         // Using unsafe to modify environment for the test configuration scope
         unsafe {
-            std::env::set_var("OHC_MULTITENANT", "true");
+            std::env::set_var("STANDALONE_MODE", "false");
             std::env::set_var("JWT_SECRET", "test_secret");
         }
         let s = Arc::new(Store::new());

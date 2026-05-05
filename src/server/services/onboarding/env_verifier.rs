@@ -94,7 +94,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     let mut is_standalone = false;
-    if let Some(sa) = env_vars.get("OHC_STANDALONE") {
+    if let Some(sa) = env_vars.get("STANDALONE_MODE") {
         if sa.to_lowercase() == "true" {
             is_standalone = true;
         }

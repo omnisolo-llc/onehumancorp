@@ -110,7 +110,7 @@ impl DB {
                     let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                     conn_opts = conn_opts.pragma("key", fallback_key);
                 }
-            } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
+            } else if std::env::var("STANDALONE_MODE").unwrap_or_default() == "true" && !database_url.contains("test") {
                 let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                 conn_opts = conn_opts.pragma("key", fallback_key);
             }
