@@ -3,7 +3,7 @@ use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use agent_service_proto::ohc::agent::service::{agent_service_client::AgentServiceClient, SubAgentRequest};
+
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
@@ -35,64 +35,79 @@ impl ToolExecutor for SubagentExecutor {
                 return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
             }
 
-            let mut req = SubAgentRequest::default();
-            req.task = task.to_string();
-            req.working_dir = worktree_path.clone();
+            let wt_path = std::path::Path::new(&worktree_path);
+            if let Err(e) = tokio::fs::create_dir_all(wt_path).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to create worktree directory: {}", e)));
+            }
+            let task_file = wt_path.join("agent_task.json");
 
-            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
-            let res = async {
-                let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
-                    .map_err(|e| format!("invalid sub-agent address: {}", e))?
-                    .connect()
-                    .await
-                    .map_err(|e| format!("connect to sub-agent: {}", e))?;
-                let mut client = AgentServiceClient::new(channel);
-                client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
-            }.await;
+            let task_content = json!({
+                "task": task
+            });
+
+            if let Err(e) = tokio::fs::write(&task_file, task_content.to_string()).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to write task file: {}", e)));
+            }
+
+            // Execute the agent binary in the isolated worktree directory
+            let res = self.runner.run(
+                "cargo",
+                &["run", "--bin", "ohc-builtin-agent", "--", "--task-file", "agent_task.json"],
+                Some(wt_path),
+                vec![]
+            ).await;
 
             // Cleanup
             let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_path], None, vec![]).await;
             let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
 
             match res {
-                Ok(r) => {
-                    let inner = r.into_inner();
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
+                Ok(output) => {
+                    if !output.status.success() {
+                        let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
+                        Err(ToolError::LlmRecoverable(format!("Subagent failed with error: {}", err_msg)))
                     } else {
-                        Ok(inner.result)
+                        let result = String::from_utf8_lossy(&output.stdout).to_string();
+                        Ok(result)
                     }
                 }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed to spawn: {}", e))),
             }
         } else if mode == "fork" {
             let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
 
-            let mut req = SubAgentRequest::default();
-            req.task = task.to_string();
-            req.parent_context_json = parent_context_json.to_string();
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let fork_dir = format!(".agent-forks/{}", task_id);
+            if let Err(e) = tokio::fs::create_dir_all(&fork_dir).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to create fork directory: {}", e)));
+            }
 
-            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
-            let res = async {
-                let channel = tonic::transport::Channel::from_shared(format!("http://{}", addr))
-                    .map_err(|e| format!("invalid sub-agent address: {}", e))?
-                    .connect()
-                    .await
-                    .map_err(|e| format!("connect to sub-agent: {}", e))?;
-                let mut client = AgentServiceClient::new(channel);
-                client.dispatch_to_sub_agent(req).await.map_err(|e| e.to_string())
-            }.await;
+            let context_path = format!("{}/parent_context.json", fork_dir);
+            if let Err(e) = tokio::fs::write(&context_path, parent_context_json).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to write parent context: {}", e)));
+            }
+
+            // Execute the agent binary with the exact memory clone (parent context)
+            let res = self.runner.run(
+                "cargo",
+                &["run", "--bin", "ohc-builtin-agent", "--", "--task", task, "--parent-context", &context_path],
+                None,
+                vec![]
+            ).await;
+
+            let _ = tokio::fs::remove_dir_all(&fork_dir).await;
 
             match res {
-                Ok(r) => {
-                    let inner = r.into_inner();
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
+                Ok(output) => {
+                    if !output.status.success() {
+                        let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
+                        Err(ToolError::LlmRecoverable(format!("Subagent failed with error: {}", err_msg)))
                     } else {
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, inner.result))
+                        let result = String::from_utf8_lossy(&output.stdout).to_string();
+                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, result))
                     }
                 }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed to spawn: {}", e))),
             }
         } else if mode == "teammate" {
             let task_id = uuid::Uuid::new_v4().to_string();
@@ -113,45 +128,41 @@ impl ToolExecutor for SubagentExecutor {
                 task, outbox_path, inbox_path
             );
 
-            let mut req = SubAgentRequest::default();
-            req.task = teammate_task;
-
-            let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
-
-            // Spawn the gRPC call in the background
-            let outbox_path_clone = outbox_path.clone();
-            tokio::spawn(async move {
-                let channel_res = tonic::transport::Channel::from_shared(format!("http://{}", addr))
-                    .map_err(|e| format!("invalid sub-agent address: {}", e));
-
-                let res = match channel_res {
-                    Ok(endpoint) => {
-                        match endpoint.connect().await {
-                            Ok(channel) => {
-                                let mut client = AgentServiceClient::new(channel);
-                                match client.dispatch_to_sub_agent(req).await {
-                                    Ok(resp) => {
-                                        let inner = resp.into_inner();
-                                        if !inner.error.is_empty() {
-                                            format!("Subagent error: {}", inner.error)
-                                        } else {
-                                            inner.result
-                                        }
-                                    }
-                                    Err(e) => format!("Subagent failed: {}", e),
-                                }
-                            }
-                            Err(e) => format!("Subagent failed to connect: {}", e),
-                        }
-                    }
-                    Err(e) => e,
-                };
-
-                use tokio::io::AsyncWriteExt;
-                if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
-                    let _ = file.write_all(format!("\n[System: Subagent Process Terminated]\nFinal Result: {}", res).as_bytes()).await;
-                }
+            // Write the task to a file to avoid command injection via shell interpolation.
+            let task_file_path = format!("{}/task.json", mailbox_dir);
+            let task_content = json!({
+                "task": teammate_task
             });
+            if let Err(e) = tokio::fs::write(&task_file_path, task_content.to_string()).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to write teammate task file: {}", e)));
+            }
+
+            // Execute the agent binary in the background (nohup ... &)
+            // Using a shell script but referencing the safe task file instead of inline task payload
+            let bash_cmd = format!(
+                "nohup cargo run --bin ohc-builtin-agent -- --task-file \"{}\" --inbox \"{}\" --outbox \"{}\" > {}/teammate.log 2>&1 &",
+                task_file_path,
+                inbox_path,
+                outbox_path,
+                mailbox_dir
+            );
+
+            let res = self.runner.run(
+                "bash",
+                &["-c", &bash_cmd],
+                None,
+                vec![]
+            ).await;
+
+            match res {
+                Ok(output) => {
+                    if !output.status.success() {
+                        let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
+                        return Err(ToolError::LlmRecoverable(format!("Subagent failed to spawn background teammate: {}", err_msg)));
+                    }
+                }
+                Err(e) => return Err(ToolError::LlmRecoverable(format!("Subagent failed to spawn teammate: {}", e))),
+            }
 
             Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
         } else {
@@ -226,15 +237,59 @@ mod tests {
         }
     }
 
-    // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
-    // to 127.0.0.1:50051 which will fail in the sandboxed test environment unless mocked.
+    #[tokio::test]
+    async fn test_subagent_fork_mode() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "mock fork summary output", "")));
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "do fork task",
+            "mode": "fork",
+            "parent_context_json": "[]"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for fork mode");
+        let msg = result.unwrap();
+        assert!(msg.contains("[Subagent (Fork)] Completed task: do fork task. Summary: mock fork summary output"));
+    }
+
+    #[tokio::test]
+    async fn test_subagent_worktree_mode() {
+        // Need an extra mock output for tokio::fs::write ? No, that doesn't use the runner.
+        // Wait, did we use `fs::write`? Yes: tokio::fs::write(&task_file, task_content.to_string()).await
+        // That writes to the filesystem! In a test, `.agent-worktrees/...` might not exist.
+        // Ah! `std::path::Path::new(&worktree_path)` and `task_file` !
+        // In the test, we mock `runner`, but the `tokio::fs::write` will fail if `.agent-worktrees` directory isn't created by `git worktree add` (since it's mocked!).
+
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "", ""))); // git branch
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "", ""))); // git worktree add
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "mock worktree summary output", ""))); // cargo run
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "", ""))); // git worktree remove
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "", ""))); // git branch -D
+
+        // Ensure the mock dir exists so write succeeds
+        let _ = tokio::fs::create_dir_all(".agent-worktrees").await;
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "do worktree task",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for worktree mode");
+        let msg = result.unwrap();
+        assert_eq!(msg, "mock worktree summary output");
+    }
 
     #[tokio::test]
     async fn test_subagent_teammate_mode() {
-        // We set the address to something invalid to quickly trigger connection failure for the background task
-        unsafe { std::env::set_var("OHC_AGENT_ADDRESS", "127.0.0.1:0"); }
-
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "", ""))); // bash -c
+
         let executor = SubagentExecutor { runner };
         let args = json!({
             "task": "Do this teammate task",
@@ -254,27 +309,9 @@ mod tests {
         assert_eq!(path_parts.len(), 2);
 
         let inbox_path = path_parts[0];
-        let outbox_path = path_parts[1];
+        let _outbox_path = path_parts[1];
 
         assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
-
-        // Wait for the background task to fail to connect and write the error to the outbox.
-        let mut attempts = 0;
-        let mut found = false;
-        while attempts < 20 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
-                if content.contains("[System: Subagent Process Terminated]") {
-                    found = true;
-                    // It should contain the connection failure error because it's an invalid port
-                    assert!(content.contains("Subagent failed to connect"), "Should contain connection error");
-                    break;
-                }
-            }
-            attempts += 1;
-        }
-
-        assert!(found, "Background task should have written to outbox");
 
         let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
         let _ = tokio::fs::remove_dir_all(parent_dir).await;
