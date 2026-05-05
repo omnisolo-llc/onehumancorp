@@ -2,4 +2,4 @@ issue_category: compliance
 debt_report: |
   Audited hybrid data privacy.
   System already implements proper PII guardrails in src/server/telemetry.rs and src/server/telemetry_test.rs.
-  Documented findings in .agent-task/report/task_output.md.
+  Documented findings in docs/research/hybrid_privacy_audit.md.
