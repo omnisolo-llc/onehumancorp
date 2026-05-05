@@ -31,11 +31,12 @@ pub struct MeshLockGuard {
 
 impl MeshLockGuard {
     pub async fn acquire(mesh: Arc<dyn TeammateMesh>, resource: String, owner: String, ttl_seconds: u64) -> Result<Self, String> {
-        let acquired = mesh.acquire_lock(&resource, &owner, ttl_seconds).await?;
-        if acquired {
-            Ok(Self { mesh, resource, owner })
-        } else {
-            Err(format!("Resource {} is currently locked", resource))
+        let acquire_future = mesh.acquire_lock(&resource, &owner, ttl_seconds);
+        match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(true)) => Ok(Self { mesh, resource, owner }),
+            Ok(Ok(false)) => Err(format!("Resource {} is currently locked", resource)),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(format!("Timeout acquiring lock for {}", resource)),
         }
     }
 }

@@ -169,7 +169,12 @@ impl StateManager for StandaloneStateManager {
 
         let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
             Ok(Ok(result)) => result,
-            Ok(Err(e)) => return Err(e),
+            Ok(Err(e)) => {
+                if e.contains("Timeout acquiring lock") {
+                    return Ok(vec![]);
+                }
+                return Err(e);
+            }
             Err(_) => {
                 println!("WARNING: Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
