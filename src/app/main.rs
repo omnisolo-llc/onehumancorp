@@ -315,9 +315,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -415,9 +415,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -1613,7 +1613,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let help_center_handle = help_center_ui.as_weak();
+                let _help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
@@ -1627,7 +1627,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
@@ -1656,7 +1656,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {
-                    if let Some(ui) = help_center_handle.upgrade() {
+                    if let Some(ui) = _help_center_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -1675,7 +1675,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                    if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });

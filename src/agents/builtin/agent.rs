@@ -1807,7 +1807,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
-        let _client = Arc::new(MockLlmClient {
+        let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message {
@@ -2705,7 +2705,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_git_checkpointer_integration() {
-        use crate::checkpointer::{GitCheckpointer, CheckpointSaver, Checkpoint};
+        use crate::checkpointer::{GitCheckpointer, CheckpointSaver};
 
         // Create a temporary directory for the git repo
         let temp_dir = tempfile::tempdir().unwrap();
@@ -2724,7 +2724,7 @@ mod tests {
         });
 
         // Add a mutating tool so it triggers the checkpoint
-        let mut mutating_tool = crate::tools::Tool {
+        let mutating_tool = crate::tools::Tool {
             name: "Mutator".to_string(),
             description: "mutates".to_string(),
             is_read_only: false,
