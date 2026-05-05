@@ -115,7 +115,7 @@ impl LlmClient for OllamaClient {
                 input_tokens: result.prompt_eval_count,
                 output_tokens: result.eval_count,
             },
-            stop_reason: result.done_reason,
+            stop_reason: result.done_reason, response_id: None,
         })
     }
 }

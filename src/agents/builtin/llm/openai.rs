@@ -87,6 +87,7 @@ struct OpenAIRequest {
 
 #[derive(Deserialize)]
 struct OpenAIResponse {
+    id: Option<String>,
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
 }
@@ -277,7 +278,7 @@ impl LlmClient for OpenAIClient {
                 tool_results: vec![],
             },
             usage,
-            stop_reason: finish_reason,
+            stop_reason: finish_reason, response_id: result.id.clone(),
         })
     }
 }

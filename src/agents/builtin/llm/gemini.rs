@@ -174,7 +174,7 @@ impl LlmClient for GeminiClient {
                 tool_results: vec![],
             },
             usage,
-            stop_reason: finish_reason,
+            stop_reason: finish_reason, response_id: None,
         })
     }
 }

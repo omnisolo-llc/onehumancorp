@@ -295,7 +295,7 @@ impl Agent {
                     messages: msgs,
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
-                    temperature: llm_cfg_c.temperature,
+                    temperature: llm_cfg_c.temperature, previous_response_id: None,
                 };
 
                 match llm_client_c.chat(req).await {
@@ -461,6 +461,7 @@ impl Agent {
 
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
+        let mut previous_response_id: Option<String> = None;
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
@@ -618,6 +619,7 @@ impl Agent {
                 tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
+                previous_response_id: previous_response_id.clone(),
             };
 
             let resp = match self.llm.chat(req).await {
@@ -632,6 +634,7 @@ impl Agent {
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
             let total_tokens = (turn_input_tokens + output_tokens) as i64;
+            previous_response_id = resp.response_id.clone();
             self.progress.add_tokens(total_tokens);
             global_turn_tokens += output_tokens;
 
@@ -731,6 +734,7 @@ impl Agent {
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
+                        previous_response_id: None,
                     };
 
                     match self.llm.chat(judge_req).await {
@@ -1162,6 +1166,7 @@ impl Agent {
                             tools: vec![],
                             max_tokens: 2000,
                             temperature: 0.0,
+                        previous_response_id: None,
                         };
 
                         match self.llm.chat(summary_req).await {
@@ -1272,7 +1277,7 @@ mod tests {
                             tool_results: vec![],
                         },
                         usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
+                        stop_reason: "tool_calls".to_string(), response_id: None,
                     })
                 } else if *count == 2 {
                     // Turn 2: Another tool call
@@ -1288,7 +1293,7 @@ mod tests {
                             tool_results: vec![],
                         },
                         usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
+                        stop_reason: "tool_calls".to_string(), response_id: None,
                     })
                 } else if *count == 3 {
                     // Turn 3: Final answer. We check the received messages.
@@ -1311,13 +1316,13 @@ mod tests {
                     Ok(ChatResponse {
                         message: Message::assistant("Final answer"),
                         usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
+                        stop_reason: "stop".to_string(), response_id: None,
                     })
                 } else {
                     Ok(ChatResponse {
                         message: Message::assistant("Extra answer"),
                         usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
+                        stop_reason: "stop".to_string(), response_id: None,
                     })
                 }
             }
@@ -1382,7 +1387,7 @@ mod tests {
                             tool_results: vec![],
                         },
                         usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
+                        stop_reason: "tool_calls".to_string(), response_id: None,
                     })
                 } else if *count == 2 {
                     // Assert that HeavyTool IS in the tools list
@@ -1400,14 +1405,14 @@ mod tests {
                             tool_results: vec![],
                         },
                         usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
+                        stop_reason: "tool_calls".to_string(), response_id: None,
                     })
                 } else {
                     // Done
                     Ok(ChatResponse {
                         message: Message::assistant("Final Answer"),
                         usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
+                        stop_reason: "stop".to_string(), response_id: None,
                     })
                 }
             }
@@ -1461,12 +1466,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -1521,7 +1526,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
             ]),
         });
@@ -1562,7 +1567,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
             ]),
         });
@@ -1610,7 +1615,7 @@ mod tests {
                 return Ok(ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 });
             }
             Ok(resps.remove(0))
@@ -1642,7 +1647,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1656,7 +1661,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
             ]),
         });
@@ -1706,7 +1711,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1716,7 +1721,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1726,17 +1731,17 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("final answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -1792,7 +1797,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1806,7 +1811,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1820,7 +1825,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message {
@@ -1834,7 +1839,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 }
             ]),
         });
@@ -1906,9 +1911,9 @@ mod tests {
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
+                stop_reason: "tool_calls".to_string(), response_id: None,
             }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None
             }]),
         });
         let agent1 = Agent::new(client_transient, tools.clone());
@@ -1938,7 +1943,7 @@ mod tests {
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None })
                 }
             }
         }
@@ -1953,9 +1958,9 @@ mod tests {
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
+                stop_reason: "tool_calls".to_string(), response_id: None,
             }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None
             }]),
         });
         let agent2 = Agent::new(client_llm.clone(), tools.clone());
@@ -1991,7 +1996,7 @@ mod tests {
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
+                stop_reason: "tool_calls".to_string(), response_id: None,
             }]),
         });
         let agent3 = Agent::new(client_user, tools.clone());
@@ -2018,7 +2023,7 @@ mod tests {
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
+                stop_reason: "tool_calls".to_string(), response_id: None,
             }]),
         });
         let agent4 = Agent::new(client_fatal, tools.clone());
@@ -2045,7 +2050,7 @@ mod tests {
                     tool_results: vec![],
                 },
                 usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
+                stop_reason: "tool_calls".to_string(), response_id: None,
             }]),
         });
         let agent5 = Agent::new(client_unexpected, tools.clone());
@@ -2079,12 +2084,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("This contains the secret password!"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2135,7 +2140,7 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2162,7 +2167,7 @@ mod tests {
                 ChatResponse {
                     message: Message::assistant("Here is the secret data."),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2286,12 +2291,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2322,22 +2327,22 @@ mod tests {
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("REJECT: The answer is incomplete."),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Better answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("APPROVE"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2365,7 +2370,7 @@ mod tests {
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 50 },
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2427,12 +2432,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "tool_calls".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2479,7 +2484,7 @@ mod tests {
                 ChatResponse {
                     message: Message::assistant("Resumed answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2526,12 +2531,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2600,12 +2605,12 @@ mod tests {
                         tool_results: vec![],
                     },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "stop".to_string(), response_id: None,
                 },
             ]),
         });
@@ -2661,7 +2666,7 @@ mod tests {
             Ok(ChatResponse {
                 message: Message::assistant("Final answer"),
                 usage: Usage::default(),
-                stop_reason: "stop".to_string(),
+                stop_reason: "stop".to_string(), response_id: None,
             })
         }
     }
@@ -2717,7 +2722,7 @@ mod tests {
                 ChatResponse {
                     message: Message::assistant("I have written some code."),
                     usage: Usage { input_tokens: 50, output_tokens: 200 },
-                    stop_reason: "length".to_string(), // LLM stopped due to length
+                    stop_reason: "length".to_string(), response_id: None, // LLM stopped due to length
                 }
             ]),
         });

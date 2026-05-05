@@ -87,6 +87,7 @@ struct AnthropicRequest {
 
 #[derive(Deserialize)]
 struct AnthropicResponse {
+    id: Option<String>,
     content: Vec<AnthropicResponseContent>,
     usage: AnthropicUsage,
     stop_reason: Option<String>,
@@ -304,7 +305,7 @@ impl LlmClient for AnthropicClient {
                 input_tokens: result.usage.input_tokens,
                 output_tokens: result.usage.output_tokens,
             },
-            stop_reason,
+            stop_reason, response_id: result.id.clone(),
         })
     }
 }
