@@ -1,6 +1,8 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
+import { UiChatMessage } from "chat.slint";
+
 export component AiHelpChat inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
@@ -9,6 +11,7 @@ export component AiHelpChat inherits Window {
     background: #0f172a;
 
     in-out property <string> user_input: "";
+    in property <[UiChatMessage]> messages;
     callback send_message();
 
     HorizontalBox {
@@ -31,7 +34,30 @@ export component AiHelpChat inherits Window {
             }
 
             ScrollView {
-                // Chat history would go here
+                VerticalBox {
+                    spacing: 12px;
+                    alignment: start;
+
+                    for msg in messages : HorizontalBox {
+                        alignment: msg.is_me ? end : start;
+                        if (msg.is_me) : Rectangle {} // Spacer
+                        GlassCard {
+                            width: 300px;
+                            VerticalBox {
+                                padding: 10px;
+                                spacing: 4px;
+                                Text {
+                                    text: msg.author_name;
+                                    font-weight: 700;
+                                    color: msg.is_me ? #38bdf8 : #a855f7;
+                                    horizontal-alignment: msg.is_me ? right : left;
+                                }
+                                Text { text: msg.body; color: white; wrap: word-wrap; }
+                            }
+                        }
+                        if (!msg.is_me) : Rectangle {} // Spacer
+                    }
+                }
             }
 
             HorizontalBox {

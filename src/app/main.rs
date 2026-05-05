@@ -126,6 +126,31 @@ pub fn setup_welcome_checklist_routing(
     });
 }
 
+
+pub fn load_video_metadata() -> slint::ModelRc<app::VideoMetadata> {
+    let videos = vec![
+        app::VideoMetadata {
+            id: "v1".into(),
+            title: "How to add your first product".into(),
+            description: "A quick 60-second guide to listing items in your store.".into(),
+            duration_sec: 60,
+            thumbnail_url: "default_thumb".into(),
+            video_url: "default_video".into(),
+        },
+        app::VideoMetadata {
+            id: "v2".into(),
+            title: "Setting up AI Helpers".into(),
+            description: "Learn how to let AI handle your customer emails and social media.".into(),
+            duration_sec: 90,
+            thumbnail_url: "default_thumb".into(),
+            video_url: "default_video".into(),
+        }
+    ];
+    slint::ModelRc::new(slint::VecModel::from(videos))
+}
+
+
+
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -326,6 +351,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                video_tutorials_ui.set_videos(load_video_metadata());
+                video_tutorials_ui.set_videos(load_video_metadata());
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
                                                 let _ = ui.show();
@@ -426,6 +453,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                video_tutorials_ui.set_videos(load_video_metadata());
+                video_tutorials_ui.set_videos(load_video_metadata());
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
                                                 let _ = ui.show();
@@ -1650,6 +1679,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                video_tutorials_ui.set_videos(load_video_metadata());
+                video_tutorials_ui.set_videos(load_video_metadata());
                 Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
@@ -1667,7 +1698,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let input = ui.get_user_input();
                             println!("User asked AI Help: {}", input);
                             ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
+                            let mut messages: Vec<app::UiChatMessage> = ui.get_messages().iter().collect();
+                            messages.push(app::UiChatMessage {
+                                id: format!("msg-{}", messages.len()).into(),
+                                author_name: "Me".into(),
+                                body: input.clone(),
+                                is_me: true,
+                            });
+                            ui.set_messages(slint::ModelRc::new(slint::VecModel::from(messages.clone())));
+                            let ui_weak = ui.as_weak();
+                            slint::Timer::single_shot(std::time::Duration::from_millis(500), move || {
+                                if let Some(ui) = ui_weak.upgrade() {
+                                    let mut msgs: Vec<app::UiChatMessage> = ui.get_messages().iter().collect();
+                                    msgs.push(app::UiChatMessage {
+                                        id: format!("msg-{}", msgs.len()).into(),
+                                        author_name: "AI Help".into(),
+                                        body: "I can help with that! Here is the relevant article: Read the full article → [Help Center]".into(),
+                                        is_me: false,
+                                    });
+                                    ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                                }
+                            });
                         }
                     }
                 });
@@ -3494,6 +3545,7 @@ mod docs_tests {
         ai_chat.set_user_input("How to add product".into());
         let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let send_called_clone = send_called.clone();
+        ai_chat.set_messages(slint::ModelRc::new(slint::VecModel::from(vec![])));
         ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
@@ -3536,6 +3588,7 @@ mod docs_tests {
         ai_chat.set_user_input("How do I sell a product?".into());
         let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let send_called_clone = send_called.clone();
+        ai_chat.set_messages(slint::ModelRc::new(slint::VecModel::from(vec![])));
         ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
         ai_chat.invoke_send_message();
         assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
