@@ -1,105 +1,99 @@
-# OHC Research Report: Small Business Platform Market Analysis
+# [architecture] Website & Storefront Builder
 
-## Deep Competitor Audit
+## Problem Statement
+Small business owners lack the technical expertise to build and maintain a professional online presence. They need a simple, mobile-first, and highly performant website and storefront builder that requires zero coding knowledge. The current ecosystem lacks a truly accessible tool that allows users to launch a functional business site in under 10 minutes from their mobile device.
 
-| Platform | Onboarding Flow | Time to Live Store | Mobile App Quality | AI Features | Free Tier |
-|---|---|---|---|---|---|
-| **Shopify** | Complex, multi-step | 30-60 mins | Good for mgmt, poor for setup | Sidekick (Chatbot) | No |
-| **Wix** | Guided, template-heavy | 20-40 mins | Basic mgmt | Wix ADI (Setup only) | Yes (Watermarked) |
-| **Squarespace** | Design-first | 30-60 mins | Basic mgmt | Limited | No |
-| **GoDaddy** | Fast but shallow | 15-30 mins | Poor | Airo (Branding only) | Yes |
-| **OHC (Target)** | Radical Simplicity | < 10 mins | Full setup & mgmt (Mobile-first) | Autonomous Agents | Yes (Useful) |
+## Research Report
+### Competitive Analysis
+- **Shopify:** Powerful but overwhelming for non-technical users. Requires significant time investment.
+- **Wix/Squarespace:** Drag-and-drop complexity is high; templates often break on mobile.
+- **OHC Advantage:** OHC's builder must be radically simple. AI handles the heavy lifting of design, SEO, and optimization, allowing users to focus purely on content. The interface must be primarily touch-driven and mobile-first.
 
-**Key Finding:** No competitor offers a truly mobile-first setup experience combined with invisible, autonomous AI agents. Existing AI features are predominantly conversational (chatbots) or one-off generation tools during onboarding.
+## Design Doc
 
-### Competitive Landscape Heatmap
-
-```mermaid
-pie title AI vs Mobile-First Gap Analysis
-    "High Mobile, High AI (Target OHC)" : 40
-    "High Mobile, Low AI (Square)" : 15
-    "Low Mobile, Low AI (Wix/Squarespace)" : 30
-    "Low Mobile, Conversational AI (Shopify)" : 15
-```
+### Architecture Diagram
 
 ```mermaid
-quadrantChart
-    title Competitive Landscape: AI vs Mobile-First Usability
-    x-axis "Low Mobile Usability" --> "High Mobile Usability"
-    y-axis "Conversational/Basic AI" --> "Autonomous Agentic AI"
-    quadrant-1 "Target OHC Dominance"
-    quadrant-2 "Untapped High-End"
-    quadrant-3 "Legacy Gaps"
-    quadrant-4 "Niche Mobile Builders"
-    "Shopify": [0.2, 0.4]
-    "Wix": [0.3, 0.2]
-    "Squarespace": [0.2, 0.1]
-    "GoDaddy": [0.4, 0.2]
-    "Square Online": [0.7, 0.1]
-    "OHC": [0.9, 0.9]
+graph TD
+    subgraph Client [Mobile/Web Client]
+        A[Website Builder UI]
+        B[Live Preview Engine]
+    end
+
+    subgraph API [Backend API]
+        C[Storefront Service]
+        D[AI Marketing Agent]
+        E[Asset Optimizer]
+    end
+
+    subgraph Storage [Data Layer]
+        F[(PostgreSQL - Site Drafts/Config)]
+        G[Edge CDN - Live Assets]
+        H[Cloud Storage - Uploads]
+    end
+
+    A <-->|State Updates| C
+    A -->|Generate Content| D
+    B <--|Render Draft| C
+    A -->|Upload Image| E
+    E -->|Store WebP| H
+    C <-->|Persist| F
+    C -->|Publish| G
 ```
 
-## SMB User Pain Point Research (Persona-Specific)
+### Key Components
 
-Based on simulated analysis of r/smallbusiness, App Store reviews, and Trustpilot, mapped to core personas:
+1.  **Content Blocks:** Pre-defined functional units (Hero, Product Grid, Service Booking, Testimonials, Contact Form) rather than low-level HTML/CSS elements.
+2.  **Templates & Customization:** Users select "vibes" and primary colors. Strict constraints ensure aesthetic quality and performance. AI generates initial drafts based on basic business info.
+3.  **Publishing Lifecycle:** Drafts are saved instantly. The "Publish" action compiles the state into static, edge-cached assets (HTML/CSS/WebP) for zero-latency delivery.
+4.  **Automated SEO:** AI generates meta tags, JSON-LD schema, and sitemaps invisibly.
+5.  **Custom Domains & SSL:** Auto-provisioned free subdomains. Automated SSL management for custom domains.
 
-1. **Maya (The Home Baker, 28) - Complexity Overload & Customer Support Burden:** Non-technical users find Shopify's dashboard intimidating. They want to sell, not learn e-commerce administration. Answering repetitive DMs (e.g., "Do you do vegan cakes?") consumes hours daily.
-2. **Carlos (The Freelance Handyman, 42) - Disjointed Tooling & Missing Leads:** Users string together Linktree, Calendly, and manual quoting. They want an all-in-one solution that automatically captures leads and books slots when they are on the job.
-3. **Priya (The Boutique Owner, 35) - Multi-Channel Synchronization:** Needs seamless inventory sync between physical in-store tap-to-pay and online storefront, struggling with platforms that treat POS as an expensive add-on.
-4. **Leo (The Music Tutor, 22) - Marketing Paralysis & Follow-Ups:** Setting up a store is one thing; driving traffic is another. Users struggle with SEO, social media posting, and remembering to follow up with leads who haven't booked a lesson.
-5. **Fatima (The Food Cart Operator, 50) - Mobile Management Gap:** Users run their lives from their phones but are forced to use desktop for complex store configurations on existing platforms. Needs simple phone notifications and printable order lists.
-
-### User Journey Comparison
+### Mobile UX Flow (375px First)
 
 ```mermaid
-journey
-    title E-Commerce Onboarding Comparison (Maya the Baker)
-    section Shopify
-      Sign up: 3: Maya
-      Configure tax/shipping settings: 1: Maya
-      Design storefront on Desktop: 2: Maya
-      Upload initial products: 3: Maya
-      Give up due to complexity: 1: Maya
-    section Target OHC
-      Sign up on iPhone: 5: Maya
-      Answer AI interview questions: 5: Maya
-      AI auto-generates full storefront: 5: AI Agent
-      Review and Publish: 5: Maya
+sequenceDiagram
+    actor User (Mobile)
+    participant Builder UI
+    participant Backend
+    participant AI Agent
+
+    User->>Builder UI: Enter Business Name & Industry
+    Builder UI->>Backend: Request Setup
+    Backend->>AI Agent: Generate Initial Draft
+    AI Agent-->>Backend: Draft Content & Structure
+    Backend-->>Builder UI: Render Live Preview
+    User->>Builder UI: Tap "Add Section" -> "Product Grid"
+    Builder UI->>Backend: Add Block State
+    Backend-->>Builder UI: Update Preview
+    User->>Builder UI: Tap "Publish"
+    Builder UI->>Backend: Publish Site Request
+    Backend->>Backend: Compile & Optimize Assets
+    Backend->>CDN: Deploy Static Assets
+    Backend-->>Builder UI: Success! Share Link
 ```
 
-## AI Differentiation Manifesto
+1.  **Setup Wizard:** Minimal input required (Name, Industry). AI auto-generates a complete functional draft instantly.
+2.  **Editing:** Touch-friendly "Add Section" and reorder handles. No precise drag-and-drop. Text input uses native mobile keyboards.
+3.  **Publishing:** Single-tap action. Clear feedback and immediate access to the live URL and shareable links.
 
-OHC will leapfrog competitors by moving from *Conversational AI* to *Agentic AI*. The Top 5 AI Automations:
+### Key Design Decisions
+-   **Constraint over Flexibility:** Limiting customization ensures users cannot build "ugly" or non-performant sites.
+-   **Static Compilation:** Publishing generates static assets for maximum performance and security, rather than dynamic rendering on every request.
+-   **AI-First Generation:** Staring at a blank canvas is the biggest hurdle. AI provides a 90% complete starting point.
 
-1. **The Ambassador (Customer Success):** Auto-draft replies to DMs and emails based on past interactions and FAQs.
-2. **The Promoter (Marketing):** Automatically generate and schedule social media posts when new products are added.
-3. **The Accountant (Finance):** Generate plain-language weekly financial health summaries via push notification.
-4. **The Manager (Operations):** Auto-update inventory and tag "sold out" across all channels instantly.
-5. **The Salesperson (Sales):** Auto-send follow-up messages to users who abandoned bookings/carts.
+## Implementation Prompt
+**Task:** Implement the Website & Storefront Builder backend services and frontend UI.
+**Outcome:** A user can successfully complete the setup wizard, edit their site using pre-defined content blocks, preview the changes, and publish the site to a live, accessible URL.
+**Acceptance Criteria:**
+- The builder UI must be fully functional and responsive on a 375px mobile screen.
+- AI generation must produce a coherent initial draft based on minimal input.
+- Publishing must result in a publicly accessible, optimized static site.
+- SEO metadata and SSL must be handled automatically without user intervention.
+- Include comprehensive unit and E2E tests covering the complete creation and publishing flow.
 
-## Market Sizing & Strategic Direction
+## Priority
+P0 (Critical)
 
-- **Target Beachhead:** "Maya the Baker" and "Carlos the Handyman" profiles. High volume, currently relying on Instagram/WhatsApp, overwhelmed by standard e-commerce tools.
-- **Geographic Focus:** English-first launch, followed closely by Spanish (LATAM) given high mobile-first adoption rates.
-
-## Feature Gap Matrix
-
-| Feature | Shopify | Wix | OHC (Current Codebase) | OHC Opportunity / Gap |
-|---|---|---|---|---|
-| Mobile-First Setup | No | No | Partial | Build full mobile 375px setup flow |
-| Autonomous AI Agents | No | No | Under Development | Integrate Agent Service natively into core CUJs |
-| Booking + Store Combined | Complex Add-on | Complex | Needs Integration | Unify product and service data models |
-
----
-## Proposed Action
-
-```yaml
-issue_title: "[research] Build Mobile-First, AI-Assisted Unified Onboarding Flow"
-issue_priority: "P0"
-issue_description: "Implement a mobile-first (375px) onboarding flow where an AI agent interviews the user to generate a unified storefront supporting both products and bookings in under 10 minutes."
-issue_todo_list:
-  - [ ] Design 375px mobile UI wireframes for conversational onboarding
-  - [ ] Implement AI Assistant backend integration to generate store config from prompt
-  - [ ] Unify product and booking data models in PostgreSQL
-issue_label: ["research", "high-impact", "mobile-first"]
-```
+## Estimated Scope
+Large
