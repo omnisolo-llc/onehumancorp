@@ -87,4 +87,54 @@ mod additional_login_tests {
 
         assert!(*clicked.borrow(), "The settings callback should fire when invoked.");
     }
+
+    #[test]
+    fn test_login_glasscard_width_1440() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(1440, 900));
+        let width = ui.get_login_card_width();
+        assert_eq!(width, 400.0);
+    }
+
+    #[test]
+    fn test_login_glasscard_width_768() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(768, 1024));
+        let width = ui.get_login_card_width();
+        assert_eq!(width, 400.0);
+    }
+
+    #[test]
+    fn test_login_glasscard_width_375() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(375, 812));
+        let width = ui.get_login_card_width();
+        assert_eq!(width, 311.0);
+    }
+
+    #[test]
+    fn test_login_glasscard_max_width_constraint() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(2000, 1000));
+        let width = ui.get_login_card_width();
+        assert!(width <= 400.0);
+    }
+
+    #[test]
+    fn test_login_glasscard_responsive_scaling() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+        ui.window().set_size(slint::PhysicalSize::new(300, 800));
+        let width = ui.get_login_card_width();
+        assert_eq!(width, 236.0); // 300 - 64
+    }
 }

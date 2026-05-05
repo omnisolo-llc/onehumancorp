@@ -36,13 +36,15 @@ export component Login inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    gc := GlassCard {
-        x: (root.width - self.width) / 2;
-        y: (root.height - self.height) / 2;
-        width: min(root.width - 64px, 400px);
-            VerticalBox {
-                spacing: 16px;
-                padding: 24px;
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            alignment: center;
+            gc := GlassCard {
+                width: min(root.width - 64px, 400px);
+                VerticalBox {
+                    spacing: 16px;
+                    padding: 24px;
 
                 Text {
                     text: "✨";
@@ -134,5 +136,7 @@ export component Login inherits Window {
                     clicked => { open_settings(); }
                 }
             }
+            }
+        }
     }
 }
