@@ -104,16 +104,21 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: is_sign_up ? "Sign Up" : "Sign In";
+                    text: is_sign_up ? "Create Account" : "Sign In";
                     clicked => { login(username, password); }
                 }
 
                 Button {
                     height: 44px;
-                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                    text: is_sign_up ? "Already have an account? Sign In" : "Create Account";
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
+                }
+
+                Button {
+                    height: 44px;
+                    text: "Forgot Password";
                 }
 
                 HorizontalBox {
@@ -123,14 +128,33 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: "Continue with Google/Apple";
-                    clicked => { oauth_login("SSO"); }
+                    text: "Continue with Google";
+                    clicked => { oauth_login("Google"); }
+                }
+
+                Button {
+                    height: 44px;
+                    text: "Continue with GitHub";
+                    clicked => { oauth_login("GitHub"); }
+                }
+
+                Button {
+                    height: 44px;
+                    text: "Continue with Microsoft";
+                    clicked => { oauth_login("Microsoft"); }
                 }
 
                 Button {
                     height: 44px;
                     text: "App Settings";
                     clicked => { open_settings(); }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 16px;
+                    Text { text: "Privacy Policy"; color: #9ca3af; font-size: 12px; }
+                    Text { text: "Terms of Service"; color: #9ca3af; font-size: 12px; }
                 }
             }
         }
