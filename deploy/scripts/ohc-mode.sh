@@ -25,10 +25,10 @@ case $MODE in
     export OHC_SOURCE_MODE=standalone
     export GOMAXPROCS=2
     export OHC_STANDALONE=true
-    export GOMEMLIMIT="256MiB"
-    export GOGC=50
+    export GOMEMLIMIT="128MiB"
+    export GOGC=20
     mkdir -p .ohc/memory/auto/ .ohc/memory/team/
-    export LOG_FORMAT="text"
+    export LOG_FORMAT="json"
     export LOG_LEVEL="info"
     if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
       export OHC_TELEMETRY_ENABLED=false
