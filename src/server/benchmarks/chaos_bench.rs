@@ -77,6 +77,14 @@ mod tests {
             async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
                 self.transport.release_lock(resource, owner).await
             }
+
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
         }
 
         let faulty_mesh = FaultyMesh {
