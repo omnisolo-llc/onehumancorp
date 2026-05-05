@@ -14,7 +14,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {
-    await expect(page.locator('text=Your business,\nlive in minutes.')).toBeVisible();
+    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
     await expect(page.locator('text=Guided Setup →')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
@@ -277,7 +277,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
-    await expect(page.locator('text=Your business,\nlive in minutes.')).toBeVisible();
+    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
     await expect(page.locator('text=Guided Setup →')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
