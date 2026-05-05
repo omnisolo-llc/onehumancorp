@@ -4,6 +4,7 @@ use sqlx::Row;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTaskV4 {
@@ -23,11 +24,12 @@ pub struct SharedTaskV4 {
 
 pub struct SharedTaskOrchestrator {
     db: Arc<DB>,
+    sqlite_mutex: Mutex<()>,
 }
 
 impl SharedTaskOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self { db, sqlite_mutex: Mutex::new(()) }
     }
 
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
@@ -93,6 +95,125 @@ impl SharedTaskOrchestrator {
         let mut res = task;
         res.id = task_id;
         Ok(res)
+    }
+
+    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTaskV4>, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row = sqlx::query(
+                    r#"
+                    SELECT * FROM shared_tasks_v4
+                    WHERE status = 'PENDING' AND organization_id = $1
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                    "#
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(row) = row {
+                    let task_id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks_v4
+                        SET status = 'ASSIGNED', agent_id = $1, updated_at = $2
+                        WHERE id = $3
+                        "#
+                    )
+                    .bind(agent_id)
+                    .bind(Utc::now())
+                    .bind(&task_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+
+                    Ok(Some(SharedTaskV4 {
+                        id: task_id,
+                        organization_id: row.get("organization_id"),
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        status: "ASSIGNED".to_string(),
+                        agent_id: Some(agent_id.to_string()),
+                        priority: row.get("priority"),
+                        payload: row.get("payload"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: row.get("dependencies"),
+                        created_at: row.get("created_at"),
+                        updated_at: Utc::now(),
+                    }))
+                } else {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(None)
+                }
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row = sqlx::query(
+                    r#"
+                    SELECT * FROM shared_tasks_v4
+                    WHERE status = 'PENDING' AND organization_id = ?
+                    LIMIT 1
+                    "#
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(row) = row {
+                    let task_id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks_v4
+                        SET status = 'ASSIGNED', agent_id = ?, updated_at = ?
+                        WHERE id = ?
+                        "#
+                    )
+                    .bind(agent_id)
+                    .bind(Utc::now().to_rfc3339())
+                    .bind(&task_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+
+                    let created_str: String = row.get("created_at");
+                    let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                    Ok(Some(SharedTaskV4 {
+                        id: task_id,
+                        organization_id: row.get("organization_id"),
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        status: "ASSIGNED".to_string(),
+                        agent_id: Some(agent_id.to_string()),
+                        priority: row.get("priority"),
+                        payload: row.get("payload"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: row.get("dependencies"),
+                        created_at: dt_created,
+                        updated_at: Utc::now(),
+                    }))
+                } else {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(None)
+                }
+            }
+        }
     }
 
     pub async fn get_task(&self, id: &str) -> Result<SharedTaskV4, String> {
