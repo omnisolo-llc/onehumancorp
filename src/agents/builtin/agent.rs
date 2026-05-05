@@ -56,6 +56,7 @@ pub struct AgentRunConfig {
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_anthropic_gather_act_verify: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -91,6 +92,7 @@ impl Default for AgentRunConfig {
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_anthropic_gather_act_verify: false,
         }
     }
 }
@@ -437,7 +439,109 @@ impl Agent {
 
     /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
-    pub async fn run_plan_and_execute<F>(
+
+    /// Implement the Anthropic Claude Agent SDK & Claude Code "Gather-Act-Verify" Dumb Loop.
+    pub async fn run_gather_act_verify<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let mut messages = Vec::new();
+        messages.push(Message::user(format!("{} \n\nPlease follow the strict Gather-Act-Verify loop:\n1. Gather context (search files, read code)\n2. Take action (edit files, run commands)\n3. Verify results (run tests, check output)", initial_message)));
+
+        let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
+
+        for iteration in 0..cfg.max_iterations {
+            on_event(AgentEvent::IterationStarted {
+                iteration,
+                message_count: messages.len(),
+            });
+
+            let req_tools: Vec<ToolDefinition> = session_tools.iter().map(|t| ToolDefinition {
+                name: t.name.clone(),
+                description: t.description.clone(),
+                parameters: t.parameters.clone(),
+            }).collect();
+
+            let req = ChatRequest {
+                model: cfg.model.clone(),
+                system: system_prompt.clone(),
+                messages: messages.clone(),
+                tools: req_tools,
+                max_tokens: cfg.max_tokens,
+                temperature: cfg.temperature,
+            };
+
+            let resp = self.llm.chat(req).await.map_err(|e| format!("LLM error: {}", e))?;
+            let tool_calls = resp.message.tool_calls.clone();
+
+            messages.push(resp.message.clone());
+
+            if tool_calls.is_empty() {
+                on_event(AgentEvent::TaskComplete {
+                    content: resp.message.content.clone(),
+                });
+                return Ok(resp.message.content);
+            }
+
+            let mut tool_results = Vec::new();
+            for tc in tool_calls {
+                // OpenAI Mechanic: Tool Guardrails
+                if let Some(guard_cfg) = &cfg.guardrails {
+                    if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
+                // Anthropic Mechanic: 3-Stage Tool Gating
+                if let Err(e) = Self::check_tool_gating(&tc, false, cfg) {
+                     return Err(Box::new(e));
+                }
+
+                let mut error = String::new();
+                let content = match self.execute_tool(&tc, session_tools, &messages).await {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration,
+                        });
+                        r
+                    }
+                    Err(e) => {
+                        error = e.to_string();
+                        on_event(AgentEvent::TaskError { error: error.clone() });
+                        error.clone()
+                    }
+                };
+
+                tool_results.push(ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content,
+                    error,
+                });
+            }
+
+            messages.push(Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results,
+                response_id: None,
+            });
+        }
+
+        Err("Max iterations reached".into())
+    }
+
+pub async fn run_plan_and_execute<F>(
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
@@ -549,6 +653,10 @@ impl Agent {
     {
 
         let session_tools = self.tools.clone();
+
+        if cfg.enable_anthropic_gather_act_verify {
+            return self.run_gather_act_verify(cfg, initial_message, &session_tools, on_event).await;
+        }
         if cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(cfg, initial_message, &session_tools, on_event).await;
         }
@@ -3148,5 +3256,115 @@ mod tests {
         assert!(output.status.success(), "Git log should succeed");
         let log_output = String::from_utf8_lossy(&output.stdout);
         assert!(log_output.contains("Checkpoint:"), "Commit message should contain Checkpoint:");
+    }
+
+    #[tokio::test]
+    async fn test_run_gather_act_verify() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_gather".to_string(),
+                            name: "gather_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_act".to_string(),
+                            name: "act_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_verify".to_string(),
+                            name: "verify_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final verified answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                },
+            ]),
+        });
+
+        let gather_tool = Tool {
+            name: "gather_tool".to_string(),
+            description: "Gather".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: true,
+            execute: Arc::new(MockToolExecutor),
+        };
+        let act_tool = Tool {
+            name: "act_tool".to_string(),
+            description: "Act".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+        let verify_tool = Tool {
+            name: "verify_tool".to_string(),
+            description: "Verify".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: true,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![gather_tool, act_tool, verify_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_anthropic_gather_act_verify = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Fix the bug", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Final verified answer");
+
+        let tool_calls: Vec<String> = events.iter().filter_map(|e| {
+            if let AgentEvent::ToolCall { name, .. } = e {
+                Some(name.clone())
+            } else {
+                None
+            }
+        }).collect();
+
+        assert_eq!(tool_calls.len(), 3);
+        assert_eq!(tool_calls[0], "gather_tool");
+        assert_eq!(tool_calls[1], "act_tool");
+        assert_eq!(tool_calls[2], "verify_tool");
     }
 }
