@@ -64,20 +64,20 @@ fn create() -> app::Pipelines { crate::ui_tests::init(); app::Pipelines::new().u
 
 #[test] fn pipelines_flow_promote_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let c = called.clone();
-    ui.on_promote_pipeline(move |id| { *c.borrow_mut() = id.to_string(); });
+    ui.on_promote_pipeline(move |id| { *c.lock().unwrap() = id.to_string(); });
     ui.invoke_promote_pipeline("PIPE-001".into());
-    assert_eq!(*called.borrow(), "PIPE-001");
+    assert_eq!(*called.lock().unwrap(), "PIPE-001");
 }
 
 #[test] fn pipelines_flow_refresh_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_refresh(move || { *c.borrow_mut() = true; });
+    ui.on_refresh(move || { *c.lock().unwrap() = true; });
     ui.invoke_refresh();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 // --- Unique Scenarios with Verification ---

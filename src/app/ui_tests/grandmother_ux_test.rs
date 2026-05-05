@@ -39,13 +39,13 @@ fn test_login_sign_in_button() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
-    let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let clicked = std::sync::Arc::new(std::sync::Mutex::new(false));
     let clicked_clone = clicked.clone();
     ui.on_login(move |_u, _p| {
-        *clicked_clone.borrow_mut() = true;
+        *clicked_clone.lock().unwrap() = true;
     });
     ui.invoke_login("u".into(), "p".into());
-    assert!(*clicked.borrow(), "Sign in button callback should trigger");
+    assert!(*clicked.lock().unwrap(), "Sign in button callback should trigger");
 }
 
 #[test]

@@ -59,17 +59,17 @@ fn create() -> app::AiConfig { crate::ui_tests::init(); app::AiConfig::new().unw
 
 #[test] fn ai_config_flow_add_edit_trigger() {
     let ui = create();
-    let called_add = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called_add = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c1 = called_add.clone();
-    ui.on_add_provider(move || { *c1.borrow_mut() = true; });
+    ui.on_add_provider(move || { *c1.lock().unwrap() = true; });
     ui.invoke_add_provider();
-    assert!(*called_add.borrow());
+    assert!(*called_add.lock().unwrap());
 
-    let called_edit = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let called_edit = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let c2 = called_edit.clone();
-    ui.on_edit_provider(move |id| { *c2.borrow_mut() = id.to_string(); });
+    ui.on_edit_provider(move |id| { *c2.lock().unwrap() = id.to_string(); });
     ui.invoke_edit_provider("test-id".into());
-    assert_eq!(*called_edit.borrow(), "test-id");
+    assert_eq!(*called_edit.lock().unwrap(), "test-id");
 }
 
 // --- Unique Scenarios with Verification ---
@@ -95,13 +95,13 @@ fn ai_config_test_set_is_advanced_false() {
 #[test]
 fn ai_config_test_toggle_advanced_callback() {
     let ui = create();
-    let called_toggle = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called_toggle = std::sync::Arc::new(std::sync::Mutex::new(false));
     let t1 = called_toggle.clone();
     ui.on_toggle_advanced(move || {
-        *t1.borrow_mut() = true;
+        *t1.lock().unwrap() = true;
     });
     ui.invoke_toggle_advanced();
-    assert!(*called_toggle.borrow());
+    assert!(*called_toggle.lock().unwrap());
 }
 
 #[test]
