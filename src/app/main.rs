@@ -3800,7 +3800,7 @@ mod docs_tests {
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
 
-        login_ui.on_login(move |email, password| {
+        login_ui.on_login(move |_email, _password| {
             *login_successful_clone.borrow_mut() = true;
         });
 
