@@ -10,6 +10,7 @@ pub use crate::proto::hub::TeammateMeshEvent as Message;
 pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String>;
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
@@ -43,6 +44,10 @@ impl MeshTransport for MemoryTransport {
         Ok(())
     }
 
+    async fn ack(&self, _topic: &str, _message_id: &str) -> Result<(), String> {
+        Ok(())
+    }
+
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
@@ -66,26 +71,22 @@ impl MeshTransport for MemoryTransport {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let now = std::time::Instant::now();
-
-        // Remove expired locks
-        let expired_keys: Vec<String> = self.locks.iter()
-            .filter(|entry| entry.value().1 <= now)
-            .map(|entry| entry.key().clone())
-            .collect();
-
-        for key in expired_keys {
-            self.locks.remove(&key);
-        }
-
         let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
         use dashmap::mapref::entry::Entry;
+
         match self.locks.entry(resource.to_string()) {
             Entry::Vacant(e) => {
                 e.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Entry::Occupied(_) => {
-                Ok(false)
+            Entry::Occupied(mut e) => {
+                let (current_owner, current_expiry) = e.get();
+                if *current_expiry <= now || current_owner == owner {
+                    e.insert((owner.to_string(), expires_at));
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
             }
         }
     }
@@ -133,7 +134,9 @@ impl IpcTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
-        let options = options.create_if_missing(true);
+        let options = options.create_if_missing(true)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal);
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
 
         // Initialize schema
@@ -154,17 +157,6 @@ impl IpcTransport {
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
-        // Attempt to add the column, ignoring error if it already exists (e.g. duplicate column name)
-        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await {
-            Ok(_) => {},
-            Err(e) => {
-                let err_str = e.to_string();
-                if !err_str.contains("duplicate column name") {
-                    return Err(format!("Failed to migrate mesh_messages: {}", err_str));
-                }
-            }
-        }
-
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_locks (
                 resource TEXT PRIMARY KEY,
@@ -181,6 +173,14 @@ impl IpcTransport {
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS processed_messages (
+                msg_id TEXT PRIMARY KEY,
+                topic TEXT,
+                processed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
         let subs = DashMap::new();
 
         Ok(IpcTransport { pool, subs })
@@ -191,7 +191,7 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = std::env::var("OHC_MESH_SUBSCRIBER_ID").unwrap_or_else(|_| "builtin_agent_node".to_string());
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -200,9 +200,13 @@ impl IpcTransport {
             .unwrap_or(0);
 
         loop {
-            // Poll for new messages
+            // Poll for new messages, joining with processed_messages to avoid re-processing
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > ? ORDER BY id ASC"
+                "SELECT m.id, m.topic, m.payload
+                 FROM mesh_messages m
+                 LEFT JOIN processed_messages p ON m.msg_id = p.msg_id
+                 WHERE m.id > ? AND p.msg_id IS NULL
+                 ORDER BY m.id ASC"
             )
             .bind(last_id)
             .fetch_all(&pool)
@@ -213,6 +217,15 @@ impl IpcTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic) {
+                        if let Ok(message) = Message::decode(&payload[..]) {
+                            let _ = tx.send(message);
+                        }
+                    } else if topic == "agent_jobs" || topic == "mesh:coordination:handoff" {
+                        // Ensure we have a sender for high-priority topics even if no local subscribers yet
+                        let tx = subs.entry(topic.clone()).or_insert_with(|| {
+                            let (tx, _) = broadcast::channel(100);
+                            tx
+                        });
                         if let Ok(message) = Message::decode(&payload[..]) {
                             let _ = tx.send(message);
                         }
@@ -240,6 +253,16 @@ impl IpcTransport {
 
 #[async_trait]
 impl MeshTransport for IpcTransport {
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        sqlx::query("INSERT OR IGNORE INTO processed_messages (msg_id, topic) VALUES (?, ?)")
+            .bind(message_id)
+            .bind(topic)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -289,14 +312,10 @@ impl MeshTransport for IpcTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        // Cleanup expired locks
-        let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= datetime('now')")
-            .execute(&self.pool)
-            .await;
-
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= datetime('now')"
+             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at
+             WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = excluded.owner"
         )
         .bind(resource)
         .bind(owner)
@@ -372,6 +391,20 @@ impl RedisTransport {
 
 #[async_trait]
 impl MeshTransport for RedisTransport {
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let key = format!("mesh:ack:{}:{}", topic, message_id);
+        let _: () = redis::cmd("SET")
+            .arg(&key)
+            .arg("1")
+            .arg("EX")
+            .arg(3600) // Keep for 1 hour to prevent duplicates
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
@@ -502,6 +535,10 @@ impl NatsTransport {
 
 #[async_trait]
 impl MeshTransport for NatsTransport {
+    async fn ack(&self, _topic: &str, _message_id: &str) -> Result<(), String> {
+        Ok(())
+    }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -537,6 +574,7 @@ impl MeshTransport for NatsTransport {
             let entry_str = String::from_utf8_lossy(&entry.value);
             if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
                 if let Ok(exp) = stored_exp.parse::<i64>() {
+                    // Allow renewal if owner matches OR if lock is expired
                     if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
                         match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
                             Ok(_) => return Ok(true),
@@ -566,8 +604,7 @@ impl MeshTransport for NatsTransport {
             let entry_str = String::from_utf8_lossy(&entry.value);
             if let Some((stored_owner, _)) = entry_str.split_once(':') {
                 if stored_owner == owner {
-                    let payload = format!("{}:0", owner);
-                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
+                    let _ = self.kv.delete(resource).await;
                 }
             }
         }

@@ -38,6 +38,10 @@ impl MeshTransport for RedisMeshTransport {
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
     }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        self.inner.ack(topic, message_id).await
+    }
 }
 
 pub struct MemoryMeshTransport {
@@ -76,5 +80,9 @@ impl MeshTransport for MemoryMeshTransport {
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
+    }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        self.inner.ack(topic, message_id).await
     }
 }

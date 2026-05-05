@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
 use chrono::Utc;
+use prost::Message;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -183,8 +184,15 @@ impl TaskDecompositionService {
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
                 claimed_counter.add(1, &[]);
 
-                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
-                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                let run_req = crate::ohc::agent::service::RunTaskRequest {
+                    task_id: task.id.clone(),
+                    task: task.description.clone().unwrap_or_else(|| task.title.clone()),
+                    department: task.organization_id.clone(),
+                    ..Default::default()
+                };
+                let mut buf = Vec::new();
+                if run_req.encode(&mut buf).is_ok() {
+                    let _ = self.mesh.publish("agent_jobs", buf).await;
                 }
 
                 Ok(Some(task))
@@ -279,8 +287,15 @@ impl TaskDecompositionService {
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
                 claimed_counter.add(1, &[]);
 
-                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
-                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                let run_req = crate::ohc::agent::service::RunTaskRequest {
+                    task_id: task.id.clone(),
+                    task: task.description.clone().unwrap_or_else(|| task.title.clone()),
+                    department: task.organization_id.clone(),
+                    ..Default::default()
+                };
+                let mut buf = Vec::new();
+                if run_req.encode(&mut buf).is_ok() {
+                    let _ = self.mesh.publish("agent_jobs", buf).await;
                 }
 
                 Ok(Some(task))

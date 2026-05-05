@@ -740,6 +740,7 @@ pub async fn start_builtin_agent(
         let svc = svc.clone();
         Box::new(move |msg: crate::mesh::transport::Message| {
             use prost::Message;
+            // The envelope is a TeammateMeshEvent, the payload is RunTaskRequest
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
                 tracing::info!("Received job from mesh: {}", req.task_id);
                 let svc = svc.clone();

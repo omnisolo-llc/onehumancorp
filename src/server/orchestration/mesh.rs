@@ -14,6 +14,7 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String>;
 }
 
 pub struct CentrifugeNode {
@@ -62,6 +63,10 @@ impl TeammateMesh for CentrifugeNode {
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
+    }
+
+    async fn ack(&self, topic: &str, message_id: &str) -> Result<(), String> {
+        self.transport.ack(topic, message_id).await
     }
 
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {

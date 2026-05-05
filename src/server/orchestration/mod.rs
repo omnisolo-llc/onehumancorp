@@ -8,5 +8,7 @@ pub mod departments;
 pub mod handoff;
 pub mod state;
 pub mod mesh;
+#[cfg(test)]
+pub mod mesh_integration_test;
 pub mod health;
 pub mod hub;

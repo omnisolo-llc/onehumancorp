@@ -66,8 +66,9 @@ impl HandoffManager {
                     }
 
                     if !msg_id_for_ack.is_empty() {
-                        let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
-                        let _ = mesh.publish(&ack_topic, vec![]).await;
+                        let _ = mesh.release_lock(&lock_key, "handoff_manager").await;
+                        // Use unified ack protocol
+                        let _ = mesh.ack("mesh:coordination:handoff", &msg_id_for_ack).await;
                     }
                 });
             }
