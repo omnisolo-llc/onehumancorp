@@ -325,3 +325,9 @@ mod tests {
         );
     }
 }
+
+#[tokio::test]
+async fn test_queue_length_gauge_initialization() {
+    let gauge = crate::telemetry::get_queue_length_gauge();
+    gauge.add(1, &[]);
+}
