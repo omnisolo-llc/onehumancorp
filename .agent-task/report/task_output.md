@@ -1,133 +1,191 @@
-# 🔍 Scout: Tool Integration Research Q2
+# Scout Research Report
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+As a Research agent, I have evaluated multiple tool categories based on my autonomous task definition. The goal was to find tools that solve real problems for small business owners and can be seamlessly integrated into OHC. Below are the resulting issue briefs, which have also been saved in the `docs/technical/research/` directory.
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+## 1. Social Media Integration: Unified Inbox
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
-**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
-**Research Report**:
-- **Tool**: Mailchimp
-- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
-- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
-**Priority**: P1
-**Estimated Scope**: Medium
+**Problem Statement:** Small business owners receive customer inquiries across multiple platforms (Instagram DMs, Facebook comments, WhatsApp). Managing these scattered messages is overwhelming and leads to slow response times or missed sales opportunities. They need a single, unified inbox within OHC to read and reply to all customer messages.
 
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
-**Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
-**Estimated Scope**: Large
+**Research Report:**
+*   **Evaluated Tools:** Meta Graph API (for Instagram/Facebook), WhatsApp Business API
+*   **Alternatives Considered:** Smooch/Zendesk Sunshine, Twilio Conversations
+*   **Pros:** Direct integration with Meta APIs ensures reliable delivery and access to rich message features (images, reactions). No middleman costs compared to aggregator services.
+*   **Cons:** Meta's App Review process can be slow and strict. Requires managing long-lived page access tokens.
+*   **Ease of Use for Non-technical Users:** The user clicks "Connect Instagram" or "Connect Facebook Page", completes the standard Meta OAuth flow, and instantly sees their DMs appear in the OHC Customer Success tab.
+*   **Pricing:** Free for basic Graph API usage; WhatsApp pricing is conversation-based.
+*   **Deployment:** Cloud-native (OAuth callbacks require a public webhook).
 
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A customer sends a DM on Instagram or WhatsApp.
+    *   **Action:** Meta sends a webhook to OHC. OHC parses the payload and normalizes it into a standard "Message" record in the tenant's unified inbox.
+    *   **AI Agent Interaction:** "The Ambassador" agent reads the incoming message, matches the sender against the customer CRM, and drafts a suggested reply based on past context and business knowledge.
+    *   **User View:** A "Unified Inbox" UI showing threads from all connected platforms, with AI-drafted replies ready for approval or auto-sending.
 
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+**Implementation Prompt:** Integrate the Meta Graph API to receive and send Instagram Direct Messages and Facebook Page messages. Implement the OAuth flow for users to connect their social accounts. Create webhook handlers to ingest messages into the OHC database, and update the UI to display a unified inbox. Ensure "The Ambassador" agent is hooked into the message ingestion pipeline to draft replies.
 
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+**Priority:** P0
+**Estimated Scope:** Large
+
+---
+
+## 2. Calendar & Scheduling: Google Calendar Bi-Directional Sync
+
+**Problem Statement:** Service-based businesses (like Leo the Music Tutor) manage their personal and business schedules primarily in Google Calendar. If OHC allows a booking when the owner is at a dentist appointment, it causes double-booking friction. They need OHC to read their external availability and sync new bookings back to their personal calendar.
+
+**Research Report:**
+*   **Evaluated Tool:** Google Calendar API
+*   **Alternatives Considered:** Nylas, Cronofy
+*   **Pros:** Native integration with the most popular calendar platform. Free API usage within standard quotas. Avoids third-party aggregator costs.
+*   **Cons:** Only covers Google users (Outlook/Apple require separate integrations later). Google OAuth verification process can be tedious.
+*   **Ease of Use for Non-technical Users:** The user clicks "Sign in with Google", grants calendar access, and OHC immediately blocks off time slots where the user is already busy.
+*   **Pricing:** Free API tier is generally sufficient for SMB volume.
+*   **Deployment:** Cloud-native (OAuth requires web redirects).
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A customer views the booking page, or a new booking is created.
+    *   **Action:** OHC queries the connected Google Calendar for "busy" blocks before displaying available slots. When a booking is confirmed, OHC inserts a new event into the Google Calendar.
+    *   **AI Agent Interaction:** "The Operations Manager" monitors calendar conflicts and can suggest rescheduling if the owner manually double-books themselves in Google Calendar.
+    *   **User View:** A "Calendar Sync" settings page, and a calendar view in the OHC dashboard that overlays external events (read-only) with OHC bookings.
+
+**Implementation Prompt:** Integrate the Google Calendar API for bi-directional synchronization. Implement the Google OAuth flow requesting calendar read/write scopes. Update the availability calculation logic to exclude times marked as "busy" in the connected Google Calendar. Implement a background sync to push OHC bookings to Google Calendar.
+
+**Priority:** P0
+**Estimated Scope:** Medium
+
+---
+
+## 3. Email Marketing: Resend for Customer Campaigns
+
+**Problem Statement:** Boutique owners like Priya need to notify customers when new stock arrives. Managing a separate tool like Mailchimp is complex and requires importing/exporting CSVs of customer emails. They need an automated, beautiful way to send emails directly from their customer list in OHC.
+
+**Research Report:**
+*   **Evaluated Tool:** Resend
+*   **Alternatives Considered:** SendGrid, Mailgun
+*   **Pros:** Developer-friendly, extremely fast, excellent deliverability out-of-the-box. Built with modern React Email components in mind, making it easy to generate beautiful, mobile-responsive templates programmatically.
+*   **Cons:** Newer player, fewer legacy features compared to SendGrid.
+*   **Ease of Use for Non-technical Users:** The user simply clicks "Send Campaign" or "Generate Email". The AI and Resend handle the formatting, delivery, and open-rate tracking automatically.
+*   **Pricing:** Generous free tier, then volume-based. Very affordable for SMBs.
+*   **Deployment:** Cloud-native. Perfect for multi-tenant.
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** "The Promoter" agent schedules an email campaign, or the user clicks "Send Newsletter".
+    *   **Action:** OHC generates the email HTML (using React Email or similar) and sends it via the Resend API to the filtered customer list.
+    *   **AI Agent Interaction:** "The Promoter" drafts subject lines and email body text based on new inventory or seasonal events.
+    *   **User View:** A "Marketing Campaigns" tab showing draft emails, sent emails, open rates, and click rates.
+
+**Implementation Prompt:** Integrate the Resend API to enable bulk and transactional email sending. Create a UI flow for users to select a customer segment and generate an email campaign. Ensure "The Promoter" AI can draft templates and that open/click events are tracked via Resend webhooks.
+
+**Priority:** P1
+**Estimated Scope:** Medium
+
+---
+
+## 4. Payment Processing: Mercado Pago for LATAM Expansion
+
+**Problem Statement:** While Stripe covers the US and Europe well, businesses operating in Latin America need local payment methods (like Pix in Brazil, or OXXO in Mexico). Without these, they cannot process online payments effectively, limiting their business growth.
+
+**Research Report:**
+*   **Evaluated Tool:** Mercado Pago API
+*   **Alternatives Considered:** dLocal, EBANX
+*   **Pros:** Dominant player in LATAM. Supports a massive variety of local payment methods (cash vouchers, local credit cards, bank transfers). Strong consumer trust in the region.
+*   **Cons:** API documentation can be fragmented; support is localized.
+*   **Ease of Use for Non-technical Users:** The user connects their Mercado Pago account via a simple OAuth flow, instantly enabling local payment options at checkout for their customers.
+*   **Pricing:** Transaction percentage + fixed fee (varies heavily by country and payment method).
+*   **Deployment:** Cloud and Standalone compatible via standard OAuth and webhooks.
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A customer initiates checkout in a supported LATAM country.
+    *   **Action:** OHC routes the payment intent to Mercado Pago instead of Stripe, generating a checkout session or native UI component.
+    *   **AI Agent Interaction:** "The Accountant" logs the pending payment, monitors the Mercado Pago webhook for success, and reconciles the localized currency to the owner's dashboard.
+    *   **User View:** A "Payments" setting allowing the owner to connect Mercado Pago. Customers see familiar local payment options at checkout.
+
+**Implementation Prompt:** Integrate the Mercado Pago API as an alternative payment gateway. Implement the OAuth connection flow for tenants. Update the checkout UI to support Mercado Pago checkout sessions and handle webhooks for payment status updates (pending, approved, rejected).
+
+**Priority:** P2
+**Estimated Scope:** Large
+
+---
+
+## 5. Shipping & Logistics: Shippo for Automated Fulfillment
+
+**Problem Statement:** Sellers of physical products (like Priya's Boutique) struggle with calculating accurate shipping rates at checkout and manually copying addresses to print labels. They need an automated way to charge customers the right shipping fee and print labels with one click.
+
+**Research Report:**
+*   **Evaluated Tool:** Shippo API
+*   **Alternatives Considered:** EasyPost, ShipEngine
+*   **Pros:** Excellent API design, strong network of global carriers, built-in address validation. Often provides discounted USPS/UPS rates out of the box without requiring the user to negotiate their own carrier accounts.
+*   **Cons:** Customer support can be slow on lower tiers.
+*   **Ease of Use for Non-technical Users:** The user enters the weight of their product. When an order arrives, they click "Buy Label", and a printable PDF appears. Shippo's default discounted rates mean the user doesn't need to configure carrier accounts.
+*   **Pricing:** Pay-as-you-go (per label fee) or monthly subscriptions.
+*   **Deployment:** Cloud-native.
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A customer enters their shipping address at checkout (for live rates), or the business owner clicks "Fulfill Order".
+    *   **Action:** OHC queries Shippo for shipping rates, or generates a shipping label transaction.
+    *   **AI Agent Interaction:** "The Operations Manager" automatically fetches the tracking number from Shippo and triggers "The Ambassador" to email the customer the tracking link.
+    *   **User View:** A "Fulfillment" screen on the order details page showing a generated label PDF and tracking status.
+
+**Implementation Prompt:** Integrate the Shippo API to provide real-time shipping rate calculation at checkout and shipping label generation in the order management dashboard. Ensure tracking webhooks are processed to update order statuses and trigger customer notifications automatically.
+
+**Priority:** P1
+**Estimated Scope:** Medium
+
+---
+
+## 6. SMS & Notifications: MessageBird for Global SMS
+
+**Problem Statement:** For users with limited English or low internet connectivity (like Fatima the Food Cart Operator), push notifications and emails are unreliable. They need immediate SMS alerts when a new order arrives, and their customers need SMS order confirmations.
+
+**Research Report:**
+*   **Evaluated Tool:** MessageBird API (now Bird)
+*   **Alternatives Considered:** Twilio, Vonage
+*   **Pros:** Excellent global coverage, competitive pricing outside the US, and a unified API that also handles WhatsApp. Strong omnichannel capabilities.
+*   **Cons:** Less market dominance in the US compared to Twilio; recent rebranding may cause minor API documentation confusion.
+*   **Ease of Use for Non-technical Users:** The user simply provides their phone number and toggles "SMS Alerts" on. No technical setup required.
+*   **Pricing:** Pay-per-message, varies by destination country.
+*   **Deployment:** Cloud-native.
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A critical event occurs (e.g., new paid order, pickup ready).
+    *   **Action:** OHC sends a templated SMS via the MessageBird API to the business owner or the customer.
+    *   **AI Agent Interaction:** "The Operations Manager" decides when an SMS is necessary (vs. email) based on user preferences and urgency.
+    *   **User View:** A simple toggle in settings: "Send me an SMS for new orders", and a field in checkout for customers to opt-in to SMS updates.
+
+**Implementation Prompt:** Integrate the MessageBird API for sending transactional SMS messages. Add preference toggles in the tenant dashboard for receiving SMS alerts. Ensure checkout flows capture customer phone numbers and opt-in consent, and trigger SMS confirmations for pickups/deliveries.
+
+**Priority:** P1
+**Estimated Scope:** Small
+
+---
+
+## 7. Video Conferencing: Zoom API for Auto-Meeting Links
+
+**Problem Statement:** Service providers who teach or consult online (like Leo the Music Tutor) currently have to manually create a Zoom link, copy it, and email it to the student after they book. They need unique meeting links generated automatically and attached to the calendar invite.
+
+**Research Report:**
+*   **Evaluated Tool:** Zoom Meeting API
+*   **Alternatives Considered:** Google Meet API, Daily.co
+*   **Pros:** Ubiquitous adoption—almost all customers know how to use Zoom. Robust API for generating scheduled meetings programmatically.
+*   **Cons:** Requires the tenant to have a paid Zoom account to avoid 40-minute limits. OAuth approval process for the app marketplace can be stringent.
+*   **Ease of Use for Non-technical Users:** User clicks "Connect Zoom". When a customer books an "Online Lesson", a unique Zoom link appears on the confirmation screen and calendar invite.
+*   **Pricing:** Free API usage; requires tenant to have a Zoom subscription.
+*   **Deployment:** Cloud-native (Server-to-Server OAuth or standard OAuth).
+
+**Design Doc:**
+*   **Integration with OHC:**
+    *   **Trigger:** A new booking is created for a service marked as "Online Meeting".
+    *   **Action:** OHC calls the Zoom API to create a meeting associated with the tenant's Zoom account, retrieving the `join_url`.
+    *   **AI Agent Interaction:** "The Ambassador" includes the `join_url` in the booking confirmation email and reminder notifications.
+    *   **User View:** A "Video Conferencing" settings panel to connect Zoom, and an "Online Meeting" toggle when creating a service offering.
+
+**Implementation Prompt:** Integrate the Zoom Meeting API via OAuth. When an online service is booked, automatically generate a unique Zoom meeting link. Display this link in the user's booking dashboard, the customer's confirmation page, and include it in automated email/SMS reminders.
+
+**Priority:** P2
+**Estimated Scope:** Medium
+
