@@ -362,6 +362,13 @@ impl Agent {
                                     "error": ""
                                 }));
                             }
+                            Err(crate::types::ToolError::UserFixable(msg)) => {
+                                tool_results_json.push(serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": format!("USER_FIXABLE:{}", msg)
+                                }));
+                            }
                             Err(e) => {
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
@@ -2577,6 +2584,82 @@ mod tests {
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
         assert_eq!(user_part.len(), 32766);
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_mechanic_user_fixable_error() {
+        struct RecordingMockLlm {
+            responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for RecordingMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req);
+                let mut resps = self.responses.lock().await;
+                Ok(resps.remove(0))
+            }
+        }
+
+        let client = Arc::new(RecordingMockLlm {
+            requests: tokio::sync::Mutex::new(vec![]),
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final Answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+            ]),
+        });
+
+        struct UserFixableToolExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for UserFixableToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Please login first".to_string()))
+            }
+        }
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: Arc::new(UserFixableToolExecutor),
+        };
+
+        let agent = Agent::new(client.clone(), vec![tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_langgraph_mechanic = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let _result = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        let requests = client.requests.lock().await;
+        let final_msgs = requests.last().unwrap().messages.clone();
+        let tool_msg = final_msgs.iter().find(|m| m.role == crate::types::Role::Tool).unwrap();
+        let tool_res = tool_msg.tool_results.first().unwrap();
+        assert_eq!(tool_res.error, "USER_FIXABLE:Please login first");
     }
 
     #[tokio::test]
