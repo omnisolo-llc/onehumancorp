@@ -98,7 +98,6 @@ impl CompetitorAuditWorker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[tokio::test]
     async fn test_worker_initialization() {

@@ -91,6 +91,16 @@ impl CostAuditor {
         saved_cost
     }
 
+    pub fn get_agent_output_tokens(&self, agent_id: &str) -> i64 {
+        let tokens = self.agent_output_tokens.lock().unwrap();
+        *tokens.get(agent_id).unwrap_or(&0)
+    }
+
+    pub fn get_agent_revenue(&self, agent_id: &str) -> f64 {
+        let revenues = self.agent_revenues.lock().unwrap();
+        *revenues.get(agent_id).unwrap_or(&0.0)
+    }
+
     pub fn get_agent_cost(&self, agent_id: &str) -> f64 {
         let agent_costs = self.agent_costs.lock().unwrap();
         *agent_costs.get(agent_id).unwrap_or(&0.0)

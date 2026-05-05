@@ -64,7 +64,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let pg_pool = match pool_res {
         Ok(p) => p,
-        Err(e) => {
+        Err(_e) => {
 
             return;
         }

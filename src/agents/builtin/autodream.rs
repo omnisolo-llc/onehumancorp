@@ -5,7 +5,7 @@ use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+use ohc_builtin_agent::memory_store::{EmbeddingRecord};
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,

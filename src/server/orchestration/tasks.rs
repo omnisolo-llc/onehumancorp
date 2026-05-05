@@ -613,8 +613,8 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
 
                 if new_status == "COMPLETED" {
-                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
-                    let _ = autodream.consolidate_epoch().await;
+                    let _autodream = AutoDreamWorker::new(self.db.clone());
+                    let _ = _autodream.consolidate_epoch().await;
                 }
 
             }
@@ -665,8 +665,8 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
 
                 if new_status == "COMPLETED" {
-                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
-                    let _ = autodream.consolidate_epoch().await;
+                    let _autodream = AutoDreamWorker::new(self.db.clone());
+                    let _ = _autodream.consolidate_epoch().await;
                 }
 
             }

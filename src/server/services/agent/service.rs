@@ -30,7 +30,23 @@ impl MyAgentManagerService {
         let agents = agents_res.unwrap();
         let meetings = meetings_res.unwrap();
         let cost_auditor = self.hub.get_cost_auditor();
+        let agent_costs_summary: Vec<crate::ohc::orchestration::AgentCost> = agents.iter().map(|a| {
+            let cost = cost_auditor.get_agent_cost(&a.id);
+            let tokens = cost_auditor.get_agent_output_tokens(&a.id);
+            let revenue = cost_auditor.get_agent_revenue(&a.id);
+            let roi = cost_auditor.calculate_roi(cost, revenue);
+            let efficiency = cost_auditor.calculate_efficiency(cost, tokens);
+
+            crate::ohc::orchestration::AgentCost {
+                agent_id: a.id.clone(),
+                cost_usd: cost,
+                roi_pct: roi,
+                efficiency_tok_per_usd: efficiency,
+            }
+        }).collect();
+
         let costs = Summary {
+            agent_costs: agent_costs_summary,
             total_cost_usd: cost_auditor.get_total_cost(),
             total_tokens: cost_auditor.get_total_tokens(),
         };

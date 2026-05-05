@@ -1164,9 +1164,17 @@ message StatusCount {
   int32 count = 2;
 }
 
+message AgentCost {
+  string agent_id = 1;
+  double cost_usd = 2;
+  double roi_pct = 3;
+  double efficiency_tok_per_usd = 4;
+}
+
 message Summary {
   double total_cost_usd = 1;
   int64 total_tokens = 2;
+  repeated AgentCost agent_costs = 3;
 }
 
 message DashboardSnapshot {

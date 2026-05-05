@@ -70,7 +70,7 @@ impl TeammateMesh for TeammateMeshClient {
                 return Err("Failed to receive ack after retries".to_string());
             }
 
-            let mut event = Message {
+            let event = Message {
                 agent_id: "agent".to_string(),
                 action: topic.to_string(),
                 status: "pending".to_string(),

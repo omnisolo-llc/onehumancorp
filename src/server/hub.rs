@@ -210,9 +210,10 @@ impl Hub {
         // Check rate limiting
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
         let agent_id = msg.to_agent.clone();
+        let agent_id_for_task = agent_id.clone();
         let tracker = self.tracker.clone();
         tokio::spawn(async move {
-            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id_for_task).await {
                 if limit_status.soft_limit_reached {
                     println!("Rate limit warning: {:?}", limit_status.user_message);
                 }
@@ -232,6 +233,16 @@ impl Hub {
                 // Aggressive AI Context Summarization
                 if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
                     let api_key = self.minimax_api_key.clone();
+
+                    // Record event for cost tracking
+                    self.cost_auditor.record_event(crate::services::billing::auditor::AuditEvent {
+                        agent_id: agent_id.clone(),
+                        input_tokens: meeting.transcript.len() as i64 * 10,
+                        output_tokens: 50,
+                        cached_input_tokens: 0,
+                        local_embedding_tokens: 0,
+                    });
+
                     let m_id = msg.meeting_id.clone();
                     let transcript = meeting.transcript.clone();
                     let hub = self.clone();
