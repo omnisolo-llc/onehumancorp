@@ -42,7 +42,6 @@ Use this section for guided narratives such as setup verification, orchestration
 - [Sub-Agent Orchestration Walkthrough](./sub_agent_orchestration.md)
 - [Swarm Intelligence Protocol Walkthrough](./swarm_intelligence_protocol.md)
 - [Teammate Mesh Demo Walkthrough](./teammate_mesh_demo.md)
-- [Teammate Mesh Walkthrough](./teammate_mesh.md)
 - [Teammate Mesh Walkthrough](./teammate_mesh_walkthrough.md)
 - [Thin Client API Configuration Walkthrough](./thin_client_api_configuration.md)
 - [Thin Client Integration Walkthrough](./thin_client_integration.md)
