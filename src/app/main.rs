@@ -1908,10 +1908,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let reqwebsite_template = website_template.to_string();
+            let req_website_template = website_template.to_string();
             let req_first_product_name = product_name.to_string();
             let req_first_product_price = product_price.to_string();
-            let reqdomain_choice = domain_choice.to_string();
+            let req_domain_choice = domain_choice.to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1925,10 +1925,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             admin_name: req_admin_name,
                             admin_password: req_admin_password,
                             selling_categories: req_selling_categories,
-                            website_template: reqwebsite_template,
+                            website_template: req_website_template,
                             first_product_name: req_first_product_name,
                             first_product_price: req_first_product_price,
-                            domain_choice: reqdomain_choice,
+                            domain_choice: req_domain_choice,
                         });
 
                         match client.start_onboarding(onboarding_request).await {

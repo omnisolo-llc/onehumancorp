@@ -92,7 +92,10 @@ impl OnboardingAgent {
     }
 
     async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str) -> Result<(), String> {
-        let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+        let price_cents = match price_str.parse::<f64>() {
+            Ok(p) => (p * 100.0).round() as i64,
+            Err(_) => 0,
+        };
         let strategy = match business_type {
             "Service Business" => "booking",
             _ => "physical",
