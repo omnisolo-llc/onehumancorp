@@ -71,12 +71,14 @@ export component Pricing inherits Window {
         VerticalBox {
             spacing: 20px;
             padding: 24px;
+            width: 100%;
 
             Text { text: "Plan Comparison"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
 
             HorizontalBox {
                 alignment: center;
                 spacing: 10px;
+                width: 100%;
                 Text { text: "Monthly"; color: is_annual ? #64748b : #1e293b; vertical-alignment: center; }
                 Button {
                     text: is_annual ? "Annual (20% off)" : "Monthly";
@@ -85,21 +87,26 @@ export component Pricing inherits Window {
             }
 
             VerticalBox {
+                width: 100%;
                 spacing: 16px;
                 for tier in tiers : Rectangle {
                     background: white;
                     border-color: tier.is_recommended ? #a855f7 : #e2e8f0;
                     border-width: tier.is_recommended ? 2px : 1px;
                     border-radius: 8px;
+                    width: 100%;
 
                     VerticalBox {
+                        width: 100%;
                         padding: 16px;
                         spacing: 12px;
 
                         if tier.is_recommended : Rectangle {
                             background: #a855f7;
                             border-radius: 4px;
+                            width: 100%;
                             VerticalBox {
+                                width: 100%;
                                 padding: 4px;
                                 Text { text: "Recommended / Best"; color: white; font-size: 12px; horizontal-alignment: center; }
                             }
@@ -107,13 +114,14 @@ export component Pricing inherits Window {
 
                         Text { text: tier.name; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
                         Text { text: tier.price; font-size: 16px; color: #a855f7; }
-                        Text { text: tier.description; color: #64748b; wrap: word-wrap; }
+                        Text { text: tier.description; color: #64748b; wrap: word-wrap; width: 100%; }
 
                         Text { text: tier.agent_limit; color: #475569; }
                         Text { text: tier.storage_limit; color: #475569; }
                         Text { text: tier.support_level; color: #475569; }
 
                         VerticalBox {
+                            width: 100%;
                             spacing: 4px;
                             for feature in tier.features : Text {
                                 text: "• " + feature;
@@ -160,11 +168,12 @@ export component Pricing inherits Window {
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
+                    width: 100%;
                     VerticalBox {
                         padding: 16px;
                         spacing: 8px;
                         Text { text: "Question 1?"; font-weight: 700; color: #1e293b; }
-                        Text { text: "This is an answer description."; color: #64748b; wrap: word-wrap; }
+                        Text { text: "This is an answer description."; color: #64748b; wrap: word-wrap; width: 100%; }
                     }
                 }
             }
