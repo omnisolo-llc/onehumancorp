@@ -1136,6 +1136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             current_tasks.push(item);
                         }
                     }
+                    println!("Growth Feature: Social Media Auto-Posting Connect Instagram executed via OHC UI");
                     current_tasks.push(app::UiPendingApproval {
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
