@@ -294,8 +294,7 @@ impl LlmClient for AnthropicClient {
         let stop_reason = result.stop_reason.unwrap_or_default();
 
         Ok(ChatResponse {
-            message: Message {
-                role: Role::Assistant,
+            message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                 content: text_content,
                 tool_calls,
                 tool_results: vec![],

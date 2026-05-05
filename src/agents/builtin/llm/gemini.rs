@@ -167,8 +167,7 @@ impl LlmClient for GeminiClient {
             .unwrap_or_default();
 
         Ok(ChatResponse {
-            message: Message {
-                role: Role::Assistant,
+            message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                 content: text,
                 tool_calls: vec![], // Tools not supported in this simple impl
                 tool_results: vec![],

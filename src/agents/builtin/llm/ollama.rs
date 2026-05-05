@@ -105,8 +105,7 @@ impl LlmClient for OllamaClient {
         let result: OllamaResponse = resp.json().await?;
 
         Ok(ChatResponse {
-            message: Message {
-                role: Role::Assistant,
+            message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                 content: result.message.content,
                 tool_calls: vec![],
                 tool_results: vec![],

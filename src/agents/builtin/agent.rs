@@ -43,6 +43,7 @@ pub struct AgentRunConfig {
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
+    pub enable_lightweight_chaining: bool,
     pub state_scratchpad_path: Option<String>,
     pub enable_git_state_checkpointing: bool,
     pub workspace_path: Option<String>,
@@ -78,6 +79,7 @@ impl Default for AgentRunConfig {
             enable_llm_judge: false,
             guardrails: None,
             enable_state_checkpointing: false,
+            enable_lightweight_chaining: false,
             state_scratchpad_path: None,
             enable_git_state_checkpointing: false,
             workspace_path: None,
@@ -282,6 +284,8 @@ impl Agent {
                         }
                     }
                     msgs.push(crate::types::Message {
+                        id: None,
+                        previous_response_id: None,
                         role,
                         content,
                         tool_calls,
@@ -507,6 +511,7 @@ impl Agent {
         } else if !initial_message.is_empty() {
             messages.push(Message::user(initial_message));
         }
+        let mut last_response_id: Option<String> = None;
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
         let mut last_assistant_content = String::new();
@@ -698,7 +703,14 @@ impl Agent {
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
                     if !resp.message.content.is_empty() {
-                        messages.push(resp.message.clone());
+                                        let mut assistant_msg = resp.message.clone();
+                if cfg.enable_lightweight_chaining {
+                    assistant_msg.id = Some(uuid::Uuid::new_v4().to_string());
+                    assistant_msg.previous_response_id = last_response_id.clone();
+                    last_response_id = assistant_msg.id.clone();
+                }
+
+                messages.push(assistant_msg);
                     }
                     messages.push(Message::user(&decision.nudge_message));
                     continue;
@@ -708,7 +720,14 @@ impl Agent {
             let tool_calls = resp.message.tool_calls.clone();
 
             // Add assistant message to history (including tool calls).
-            messages.push(resp.message.clone());
+                            let mut assistant_msg = resp.message.clone();
+                if cfg.enable_lightweight_chaining {
+                    assistant_msg.id = Some(uuid::Uuid::new_v4().to_string());
+                    assistant_msg.previous_response_id = last_response_id.clone();
+                    last_response_id = assistant_msg.id.clone();
+                }
+
+                messages.push(assistant_msg);
 
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
@@ -1030,12 +1049,18 @@ impl Agent {
             }
 
             // Append tool results as a user turn.
+                        let tool_msg_id = if cfg.enable_lightweight_chaining { Some(uuid::Uuid::new_v4().to_string()) } else { None };
             messages.push(Message {
+                id: tool_msg_id.clone(),
+                previous_response_id: if cfg.enable_lightweight_chaining { last_response_id.clone() } else { None },
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
                 tool_results,
             });
+            if cfg.enable_lightweight_chaining {
+                last_response_id = tool_msg_id;
+            }
 
             // State Management Checkpointing Mechanic
             // 1. Database Checkpointer (LangGraph / OpenAI-like)
@@ -1261,8 +1286,7 @@ mod tests {
                 if *count == 1 {
                     // Turn 1: Return a tool call to generate some history
                     Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
+                        message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                             content: "I am thinking about calling a tool.".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "call_1".to_string(),
@@ -1277,8 +1301,7 @@ mod tests {
                 } else if *count == 2 {
                     // Turn 2: Another tool call
                     Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
+                        message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                             content: "I need more info.".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "call_2".to_string(),
@@ -1371,8 +1394,7 @@ mod tests {
                     assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Return a call to LazyLoadTools
                     Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
+                        message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                             content: "Loading HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "load_1".to_string(),
@@ -1389,8 +1411,7 @@ mod tests {
                     assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Call the HeavyTool
                     Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
+                        message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                             content: "Using HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "heavy_1".to_string(),
@@ -1448,10 +1469,10 @@ mod tests {
     #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
@@ -1510,10 +1531,10 @@ mod tests {
 
         // Reset mock
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
@@ -1551,10 +1572,10 @@ mod tests {
 
         // Test 3: High-risk operations require explicit confirmation
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
@@ -1600,11 +1621,13 @@ mod tests {
 
     struct MockLlmClient {
         responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+        requests: tokio::sync::Mutex<Vec<ChatRequest>>,
     }
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Ok(ChatResponse {
@@ -1629,10 +1652,10 @@ mod tests {
     #[tokio::test]
     async fn test_observation_masking() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -1645,8 +1668,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_2".to_string(),
@@ -1697,10 +1719,10 @@ mod tests {
     #[tokio::test]
     async fn test_context_compaction() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "tool call 1".to_string(),
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -1709,8 +1731,7 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "tool call 2".to_string(),
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -1719,8 +1740,7 @@ mod tests {
                     stop_reason: "stop".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "tool call 3".to_string(),
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -1779,10 +1799,10 @@ mod tests {
     #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
         let _client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "I will call a tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_transient".to_string(),
@@ -1795,8 +1815,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_llm_recoverable".to_string(),
@@ -1809,8 +1828,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_user_fixable".to_string(),
@@ -1823,8 +1841,7 @@ mod tests {
                     stop_reason: "tool_calls".to_string(),
                 },
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_fatal".to_string(),
@@ -1898,9 +1915,9 @@ mod tests {
 
         // 1. Transient Error (Retries with backoff but fails after max_retries)
         let client_transient = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
+                message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -1946,8 +1963,7 @@ mod tests {
         let client_llm = Arc::new(LlmRecoverableMockClient {
             requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
+                message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -1975,7 +1991,7 @@ mod tests {
         let last_req = reqs.last().unwrap();
         let _last_msg = last_req.messages.last().unwrap();
         // Since `agent.rs` handles mutating tool execution differently from read-only execution, we should check both or rely on the general logic.
-        // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
+        // Wait, mutating tools do `messages.push(Message { id: None, previous_response_id: None, role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
         assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
@@ -1983,9 +1999,9 @@ mod tests {
 
         // 3. User Fixable
         let client_user = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
+                message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -2010,9 +2026,9 @@ mod tests {
 
         // 4. Fatal
         let client_fatal = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
+                message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -2037,9 +2053,9 @@ mod tests {
 
         // 5. Unexpected Error
         let client_unexpected = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
+                message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -2066,10 +2082,10 @@ mod tests {
     #[tokio::test]
     async fn test_guardrail_tripwire() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "I am going to use the bad tool now.".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -2122,10 +2138,10 @@ mod tests {
 
         // Reset client for next tests
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -2158,6 +2174,7 @@ mod tests {
 
         // Reset client for Output test
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Here is the secret data."),
@@ -2273,10 +2290,10 @@ mod tests {
     #[tokio::test]
     async fn test_langgraph_mechanic_agent_run() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -2318,6 +2335,7 @@ mod tests {
     #[tokio::test]
     async fn test_llm_judge_rejects_and_approves() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
@@ -2361,6 +2379,7 @@ mod tests {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
@@ -2416,10 +2435,10 @@ mod tests {
     async fn test_agent_state_checkpointing_mechanic() {
         // Run 1: Agent saves a checkpoint
         let client1 = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
@@ -2475,6 +2494,7 @@ mod tests {
 
         // Run 2: Resume from checkpoint
         let client2 = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Resumed answer"),
@@ -2513,10 +2533,10 @@ mod tests {
     #[tokio::test]
     async fn test_git_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_mutating".to_string(),
@@ -2587,10 +2607,10 @@ mod tests {
     #[tokio::test]
     async fn test_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
+                    message: Message { id: None, previous_response_id: None, role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_mutating".to_string(),
@@ -2713,6 +2733,7 @@ mod tests {
 #[tokio::test]
     async fn test_token_budget_exhaustion_termination() {
         let client = Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("I have written some code."),
@@ -2747,4 +2768,73 @@ mod tests {
         }
         assert!(found_task_error);
     }
+
+    #[tokio::test]
+    async fn test_lightweight_response_chaining() {
+        let client = std::sync::Arc::new(MockLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        id: None,
+                        previous_response_id: None,
+                        role: Role::Assistant,
+                        content: "Call tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        id: None,
+                        previous_response_id: None,
+                        role: Role::Assistant,
+                        content: "Final Answer".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: std::sync::Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client.clone(), vec![tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lightweight_chaining = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await.unwrap();
+        assert_eq!(result, "Final Answer");
+
+        let reqs = client.requests.lock().await;
+        assert_eq!(reqs.len(), 2);
+
+        let msgs = &reqs[1].messages;
+        let assistant_msg = &msgs[1];
+        let tool_msg = &msgs[2];
+
+        assert!(assistant_msg.id.is_some());
+        assert!(assistant_msg.previous_response_id.is_none());
+
+        assert!(tool_msg.id.is_some());
+        assert_eq!(tool_msg.previous_response_id, assistant_msg.id);
+    }
+
 }
