@@ -226,7 +226,21 @@ impl HubService for MyHubService {
 
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let url = client.create_checkout_session(&req.plan_id, &tenant_id).await
+
+        let amount = match req.plan_id.as_str() {
+            "Starter" => 9.0,
+            "Pro" => 29.0,
+            "Business" => 79.0,
+            _ => 0.0
+        };
+
+        let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
+        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
+        if savings > 0.0 {
+            println!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
+        }
+
+        let url = client.create_checkout_session(&req.plan_id, &tenant_id, Some(optimal_pm)).await
             .map_err(|e| tonic::Status::internal(e))?;
 
         Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
