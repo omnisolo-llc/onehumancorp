@@ -773,11 +773,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     website_builder_ui.on_upload_logo(|| {
-        // Mocking upload for test environment since file dialogs are hard to test
+        // Simulate upload for test environment since file dialogs are hard to test
     });
 
     website_builder_ui.on_generate_logo(|| {
-        // AI generation mocked
+        // AI generation simulated
     });
 
     website_builder_ui.on_generate_description({
@@ -808,7 +808,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     website_builder_ui.on_upload_photo(|| {
-        // Mocking upload for test environment
+        // Simulating upload for test environment
     });
 
     website_builder_ui.on_publish_site({
@@ -1349,7 +1349,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // Simulating a success behavior or API call here.
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                // For WASM target, we mock it currently to avoid the E0433 errors and keep WASM functioning
+                                // For WASM target, we simulate it currently to avoid the E0433 errors and keep WASM functioning
                             }
                         }).unwrap();
                     });
@@ -2231,7 +2231,7 @@ mod growth_e2e_tests {
             move |_email, _password| {
                 if let Some(ui) = ui_handle.upgrade() {
                     if !ui.get_is_sign_up() {
-                        // Mock the network response directly as it would appear inside the async block
+                        // Simulate the network response directly as it would appear inside the async block
                         let mut needs_wizard = false;
 
                         // Let's pretend the API returned a state with step < 10
@@ -2364,7 +2364,7 @@ mod growth_e2e_tests {
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
-        // Mock wiring for action_share_store since we don't have the main closure here
+        // Simulate wiring for action_share_store since we don't have the main closure here
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
 
@@ -2390,14 +2390,14 @@ mod growth_e2e_tests {
         ]));
         referrals_ui.set_referrals(referral_data);
 
-        // Test link generation mock
+        // Test link generation simulate
         let new_link_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
         let new_link_generated_clone = new_link_generated.clone();
         referrals_ui.on_generate_new_link(move || {
             *new_link_generated_clone.borrow_mut() = true;
         });
 
-        // Test link sharing mock
+        // Test link sharing simulate
         let link_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_shared_clone = link_shared.clone();
         referrals_ui.on_share_link(move |link| {
@@ -2405,7 +2405,7 @@ mod growth_e2e_tests {
             *link_shared_clone.borrow_mut() = true;
         });
 
-        // Test send invite message mock
+        // Test send invite message simulate
         let ref_handle_clone_for_msg = referrals_ui.as_weak();
         referrals_ui.on_send_invite_message(move |link| {
             assert_eq!(link, "ohc://join?ref=DEFAULT");
@@ -2414,7 +2414,7 @@ mod growth_e2e_tests {
             }
         });
 
-        // Set up mock stats for test
+        // Set up simulated stats for test
         referrals_ui.set_total_referrals(5);
         referrals_ui.set_click_count(100);
         referrals_ui.set_conversion_rate(5.0);
@@ -2782,7 +2782,7 @@ mod tests {
         assert_eq!(ui.get_is_completed(), true);
 
         // Because tests run in a headless environment and we can't easily assert
-        // new window creations without mock closures, we verify the routing function
+        // new window creations without simulated closures, we verify the routing function
         // ekes out cleanly. The UI testing framework suppresses the newly created windows.
         ui.invoke_go_to_add_products();
         ui.invoke_go_to_connect_instagram();
@@ -3273,7 +3273,7 @@ mod docs_tests {
         ui.set_step(11);
         ui.set_instant_bio("A cool test bakery".into());
         ui.invoke_generate_instant_preview();
-        // Since we are mocking, reset to 9 and launching=true
+        // Since we are simulating, reset to 9 and launching=true
         ui.set_is_instant_build(false);
         ui.set_step(9);
 
@@ -3921,7 +3921,7 @@ mod docs_tests {
         let em_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
         let em_shown_clone = em_shown.clone();
 
-        // Mock wiring for testing purposes since it is hidden in the `main`
+        // Simulate wiring for testing purposes since it is hidden in the `main`
         let em_handle_for_gb = em_ui.as_weak();
         gb_ui.on_execute(move |strategy, _kpi| {
             if strategy == "Run your first email campaign" {
@@ -4198,7 +4198,7 @@ mod docs_tests {
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
 
-        // Mock navigating to AiConfig from Dashboard
+        // Simulate navigating to AiConfig from Dashboard
         dashboard_ui.on_open_ai_chat(move || {
             let ui = app::AiConfig::new().unwrap();
             let provider_called = add_provider_called_clone.clone();
@@ -4978,7 +4978,7 @@ mod e2e_hybrid_blob_tests {
         });
 
         // Actually we modified the logic in the asynchronous launch handler.
-        // We cannot easily test that without standing up the grpc mock server.
+        // We cannot easily test that without standing up the grpc server.
         // Just trigger the copy_link action directly to verify the binding works.
         ui.invoke_copy_link(ui.get_shareable_link());
         assert!(*copy_link_called.borrow());

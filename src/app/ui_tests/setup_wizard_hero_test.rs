@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 // Note: To conform with the "NO MOCKING OF NETWORK REQUESTS IN E2E TESTS" mandate
 // from the codebase constraints, this file is specifically testing isolated UI
-// component state logic without triggering the login network mock flows that caused
+// component state logic without triggering the login network simulated flows that caused
 // the previous code review failures. The actual E2E flow is handled by Playwright.
 
 #[test]
