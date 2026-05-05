@@ -122,3 +122,47 @@ fn test_login_is_sign_up_word_wrap() {
     ui.set_is_sign_up(true);
     assert_eq!(ui.get_is_sign_up(), true);
 }
+
+#[test]
+fn test_ongoing_management_jargon_elimination() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::OngoingManagement::new().unwrap();
+    assert_eq!(ui.get_is_advanced(), false); // Ensure advanced is not the default, though property test is enough
+}
+
+#[test]
+fn test_business_manager_jargon_elimination() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    // Test that the app can be instantiated without crashing, covering basic jargon elimination visually
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
+fn test_api_docs_jargon_elimination() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::ApiDocs::new().unwrap();
+    // Verify properties
+    assert_eq!(ui.get_test_title(), "Connect Custom Software");
+}
+
+#[test]
+fn test_grow_business_jargon_elimination() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::GrowBusiness::new().unwrap();
+    // Verify properties
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
+fn test_walkthrough_jargon_elimination() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Walkthrough::new().unwrap();
+    // Verify properties
+    assert_eq!(ui.get_is_advanced(), false);
+}

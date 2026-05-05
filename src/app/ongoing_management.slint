@@ -55,12 +55,12 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "Raw Error Log:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Error Details:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             padding: 8px;
                             border-radius: 4px;
-                            Text { text: "{\"error\": \"timeout\", \"service\": \"postgres\", \"latency_ms\": 5000}"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            Text { text: "Connection timed out after 5 seconds while accessing business records."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                         }
                     }
                 }
@@ -78,12 +78,12 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "CLI Command:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Command:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             padding: 8px;
                             border-radius: 4px;
-                            Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            Text { text: "Restart the AI helper."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                         }
                     }
                 }
@@ -187,8 +187,8 @@ export component Upgrade inherits Window {
                     }
                     if (is_advanced) : VerticalBox {
                         Rectangle { height: 16px; }
-                        Text { text: "> K8s pod rolling restart in progress..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
-                        Text { text: "> Migrating schemas..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "> Applying new updates..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "> Getting your store ready..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                     }
                 }
             }

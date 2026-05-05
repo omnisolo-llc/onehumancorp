@@ -41,13 +41,13 @@ export component Walkthrough inherits Window {
                 }
                 
                 Text {
-                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
-                          current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
-                          current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
+                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local Database with sync_status='pending'." :
+                          current_step == 1 ? "Sync Daemon periodically queries the Local Database for any vectors pending synchronization." :
+                          current_step == 2 ? "Local Database returns the pending intelligence vectors in a batch format to the Sync Daemon." :
                           current_step == 3 ? "Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS." :
-                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories)." :
+                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Business Cloud Database (autodream_memories)." :
                           current_step == 5 ? "Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon." :
-                          "Sync Daemon updates the local records in SQLite, marking them as sync_status='synced'.";
+                          "Sync Daemon updates the local records in Local Database, marking them as sync_status='synced'.";
                     color: #1e293b;
                     wrap: word-wrap;
                 }
@@ -61,13 +61,13 @@ export component Walkthrough inherits Window {
                         spacing: 12px;
                         Text { text: "🔄"; color: #0284c7; }
                         Text {
-                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local SQLite DB" :
-                                  current_step == 1 ? "Sync Daemon -> Local SQLite DB" :
-                                  current_step == 2 ? "Local SQLite DB -> Sync Daemon" :
+                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local Database" :
+                                  current_step == 1 ? "Sync Daemon -> Local Database" :
+                                  current_step == 2 ? "Local Database -> Sync Daemon" :
                                   current_step == 3 ? "Sync Daemon -> Cloud API Gateway" :
-                                  current_step == 4 ? "Cloud API Gateway -> Cloud PostgreSQL" :
+                                  current_step == 4 ? "Cloud API Gateway -> Business Cloud Database" :
                                   current_step == 5 ? "Cloud API Gateway -> Sync Daemon" :
-                                  "Sync Daemon -> Local SQLite DB";
+                                  "Sync Daemon -> Local Database";
                             color: #0284c7;
                             wrap: word-wrap;
                         }
