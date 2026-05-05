@@ -100,7 +100,7 @@ mod tests {
 
                 let client = reqwest::Client::new();
 
-                let res = client.get(&format!("http://{}/api/v1/protected/action", addr))
+                let _res = client.get(&format!("http://{}/api/v1/protected/action", addr))
                     .send()
                     .await
                     .unwrap();
