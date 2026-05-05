@@ -1,106 +1,133 @@
-# Issue Brief: Website & Storefront Builder Architecture
+# 🔍 Scout: Tool Integration Research Q2
 
-### Title
-Drag-and-Drop Website & Storefront Builder Architecture for OHC
+## [Social Media] Manychat Integration
+**Title**: Integrate Manychat for Unified Social Media Inbox
+**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
+**Research Report**:
+- **Tool**: Manychat
+- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
+- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
+- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
+- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
+- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
+**Design Doc**:
+- User goes to the Operations dashboard and clicks "Connect Instagram".
+- User authenticates with Facebook/Instagram via OAuth.
+- OHC registers webhooks to receive new DMs.
+- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
+- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
+**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+**Priority**: P0
+**Estimated Scope**: Large
 
-### Problem Statement
-Small business owners, such as bakers, handymen, and boutique owners, often lack the technical expertise to build and manage a website or online storefront. Traditional website builders like Shopify, Wix, and Squarespace still present a learning curve with their multitude of options, settings, and somewhat complex interfaces. Our non-technical users need a radically simple, mobile-first builder that abstracts away technical details (like hosting, SEO, and SSL) and allows them to launch a beautiful, functional storefront in under 10 minutes using intuitive drag-and-drop mechanics.
+## [Calendar] Calendly Integration
+**Title**: Integrate Calendly for Automated Booking
+**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
+**Research Report**:
+- **Tool**: Calendly
+- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
+- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
+- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
+- **Pricing**: Free tier available. Premium starts at $10/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
+**Design Doc**:
+- User goes to Sales dashboard and connects Calendly.
+- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
+- When a customer clicks to book, they are shown the Calendly widget.
+- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
+**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-### Research Report
-A successful website builder for our target audience must focus on simplicity, speed, and aesthetic excellence by default. It must support both physical/digital goods and service bookings.
+## [Email Marketing] Mailchimp Integration
+**Title**: Integrate Mailchimp for Customer Re-engagement
+**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
+**Research Report**:
+- **Tool**: Mailchimp
+- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
+- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
+- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
+- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
+- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
+- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
+- The user sees open rates and clicks in the OHC Marketing dashboard.
+**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-**Market Context & Competitor Analysis:**
-Our primary competitors target slightly more tech-savvy users or require more time investment. OHC's unique value proposition is the combination of extreme simplicity (zero technical knowledge), mobile-first management, and AI doing the heavy lifting.
+## [Payment] Mercado Pago Integration
+**Title**: Integrate Mercado Pago for LATAM Payments
+**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
+**Research Report**:
+- **Tool**: Mercado Pago
+- **Target Persona**: Global users outside the US/EU.
+- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
+- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
+- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
+- User connects their Mercado Pago account.
+- Customers see a "Pay with Mercado Pago" button at checkout.
+- Webhooks update the order status in OHC when payment succeeds.
+**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
+**Priority**: P2
+**Estimated Scope**: Large
 
-**Competitive Comparison:**
+## [Shipping] Shippo Integration
+**Title**: Integrate Shippo for Automated Label Generation
+**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
+**Research Report**:
+- **Tool**: Shippo
+- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
+- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
+- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
+- **Pricing**: Free tier (pay per label + postage).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
+- The Operations agent shows the cheapest shipping option.
+- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
+- OHC automatically emails the customer the tracking number.
+**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
+**Priority**: P1
+**Estimated Scope**: Large
 
-| Feature | OHC (Target) | Shopify | Wix | Squarespace | GoDaddy |
-|---|---|---|---|---|---|
-| Target User | **Non-technical (Zero knowledge)** | SMB/Tech-savvy | Semi-technical | Creative professional | Basic user |
-| Setup Time | **< 10 min** | 30-60 min | 20-40 min | 30-60 min | 20-40 min |
-| Management Device | **Mobile-first (100% functionality)** | Desktop primary, mobile app limited | Desktop primary, mobile app limited | Desktop primary | Desktop primary |
-| AI Integration | **Deep (Handles design, SEO, copy invisibly)** | Chatbot (Sidekick) | Generative (Wix AI) | Limited | Basic (Airo) |
-| Architecture | **All-in-one (Store + Bookings + Portfolio)** | Store-focused | Complex all-in-one | Portfolio + Store | Basic all-in-one |
-| Customization | **Curated blocks, premium defaults** | High complexity | High complexity | Moderate complexity | Low complexity |
+## [SMS] Twilio Integration
+**Title**: Integrate Twilio for SMS Order Notifications
+**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
+**Research Report**:
+- **Tool**: Twilio
+- **Target Persona**: Fatima (Food Cart Operator)
+- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
+- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
+- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
+- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+**Design Doc**:
+- User goes to Settings and toggles "Send me SMS for new orders".
+- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
+- (Future: Customers can also receive SMS receipts).
+**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
+**Priority**: P2
+**Estimated Scope**: Medium
 
-**Quadrant Chart: Market Positioning**
-
-```mermaid
-quadrantChart
-    title Market Positioning: Ease of Use vs. Mobile Management
-    x-axis Low Mobile Functionality --> High Mobile Functionality
-    y-axis High Complexity --> Low Complexity
-    quadrant-1 Ideal Target (OHC)
-    quadrant-2 Simple but Desktop Focused
-    quadrant-3 Complex & Desktop Focused
-    quadrant-4 Powerful Mobile App
-    "Shopify": [0.3, 0.4]
-    "Wix": [0.4, 0.3]
-    "Squarespace": [0.2, 0.6]
-    "GoDaddy": [0.5, 0.7]
-    "OHC": [0.9, 0.9]
-```
-
-### Design Doc
-
-**Overview:**
-The Website & Storefront Builder will utilize a block-based architecture. Users assemble pages by stacking predefined, fully responsive content blocks. The system prevents users from breaking the design by enforcing design tokens (Glassmorphism, Outfit/Inter typography, specific spacing constraints). AI ("The Promoter") assists in generating initial content and optimizing for SEO.
-
-**Core Content Blocks:**
-1.  **Hero Block:** Large image/video background, headline, tagline (AI-generated option), primary Call to Action (CTA).
-2.  **Product Grid:** Displays physical/digital products. Syncs automatically with inventory.
-3.  **Service/Booking Block:** Integration with the booking calendar. Displays available time slots.
-4.  **Text & Image Block:** For about us, policies, or general information.
-5.  **Testimonial Block:** Displays customer reviews.
-6.  **Contact Form Block:** Simple form for inquiries.
-
-**Key Mechanics:**
-*   **Templates:** Users start by selecting an AI-recommended template based on their business type. Templates are pre-configured combinations of blocks and theme settings.
-*   **Publishing Flow:** Users work in a "Draft" state. Clicking "Publish" triggers a background job to compile the site, optimize assets, and deploy to the CDN.
-*   **SEO Automation:** "The Promoter" agent automatically generates meta titles, descriptions, and alt text for images based on the content blocks.
-*   **Infrastructure (Abstracted):** Custom domains are provisioned automatically via a background service (e.g., integrating with a provider API). SSL certificates are provisioned and renewed automatically (e.g., Let's Encrypt integration). The user simply enters the domain they own or want to buy.
-
-**Architecture Diagram:**
-
-```mermaid
-graph TD
-    subgraph Frontend Builder (Flutter/PWA)
-        UI[Mobile-First UI 375px] --> BlockEditor[Block Editor Drag & Drop]
-        BlockEditor --> Preview[Live Preview Engine]
-        BlockEditor --> ThemeConfig[Theme Configuration Tokens]
-    end
-
-    subgraph Backend API (Go/Bazel)
-        API[Builder API Gateway] --> PageService[Page & Block Management]
-        API --> PublishService[Publishing Workflow]
-        API --> DomainService[Domain & SSL Management]
-    end
-
-    subgraph AI Agents
-        Promoter[The Promoter Agent] --> SEO[SEO Optimization]
-        Promoter --> CopyGen[Copy Generation]
-    end
-
-    subgraph Infrastructure
-        PublishService --> Storage[GCS/MinIO Storage]
-        Storage --> CDN[CDN Cloudflare/CloudFront]
-        DomainService --> Registrar[External Registrar API]
-    end
-
-    UI -- REST/JSON --> API
-    PageService -- CRUD --> DB[(PostgreSQL)]
-    PublishService -- Trigger --> Storage
-    BlockEditor -. Request Copy .-> Promoter
-```
-
-### Implementation Prompt
-Implement the backend and frontend foundation for the block-based Website Builder.
-1.  **Backend:** Create the database schema and API endpoints to support saving a page composed of an ordered list of blocks. A block should have a type (e.g., 'hero', 'product_grid') and a JSON payload for its specific configuration.
-2.  **Frontend:** Develop the mobile-first (375px) Flutter UI for the block editor. Implement the drag-and-drop reordering functionality for at least three basic block types: Hero, Text, and Product Grid. Ensure the UI enforces the OHC design system (Glassmorphism, specific typography).
-3.  **Acceptance Criteria:** A user can create a new page, add a Hero block and a Text block, reorder them via drag-and-drop on a mobile-sized screen, and save the page successfully to the backend. The saved structure must accurately reflect the visual order.
-
-### Priority
-P0
-
-### Estimated Scope
-Large
+## [Video] Zoom Integration
+**Title**: Integrate Zoom for Auto-Generated Meeting Links
+**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
+**Research Report**:
+- **Tool**: Zoom
+- **Target Persona**: Leo (Music Tutor)
+- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
+- **Risks**: Zoom OAuth requires annual app review and compliance checks.
+- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
+**Design Doc**:
+- User connects their Zoom account via the Sales dashboard.
+- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
+- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
+**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
+**Priority**: P1
+**Estimated Scope**: Medium
