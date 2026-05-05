@@ -286,3 +286,37 @@ fn login_has_correct_title_and_window_size() {
     // Not directly asserting title because slint doesn't expose `get_title()` on Window natively in all bindings,
     // but we can ensure the minimum dimensions aren't violated.
 }
+
+#[test]
+fn test_login_sso_button_text() {
+    let ui = create();
+    assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
+}
+
+#[test]
+fn test_login_settings_button_text() {
+    let ui = create();
+    assert_eq!(ui.get_settings_button_text(), "App Settings");
+}
+
+#[test]
+fn test_login_toggle_button_text() {
+    let ui = create();
+    assert_eq!(ui.get_toggle_button_text(), "Don't have an account? Sign Up");
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_toggle_button_text(), "Already have an account? Sign In");
+}
+
+#[test]
+fn test_login_submit_button_text_signin() {
+    let ui = create();
+    ui.set_is_sign_up(false);
+    assert_eq!(ui.get_submit_button_text(), "Sign In");
+}
+
+#[test]
+fn test_login_submit_button_text_signup() {
+    let ui = create();
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_submit_button_text(), "Sign Up");
+}

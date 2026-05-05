@@ -22,6 +22,12 @@ export component Login inherits Window {
     in-out property <string> username: "";
     in-out property <string> password: "";
 
+    // Test hooks
+    out property <string> sso_button_text: "Continue with Google/Apple";
+    out property <string> settings_button_text: "App Settings";
+    out property <string> toggle_button_text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+    out property <string> submit_button_text: is_sign_up ? "Sign Up" : "Sign In";
+
     callback login(string, string);
     callback oauth_login(string);
     callback open_settings();
@@ -104,21 +110,16 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: is_sign_up ? "Create Account" : "Sign In";
+                    text: root.submit_button_text;
                     clicked => { login(username, password); }
                 }
 
                 Button {
                     height: 44px;
-                    text: is_sign_up ? "Already have an account? Sign In" : "Create Account";
+                    text: root.toggle_button_text;
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
-                }
-
-                Button {
-                    height: 44px;
-                    text: "Forgot Password";
                 }
 
                 HorizontalBox {
@@ -128,33 +129,14 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: "Continue with Google";
-                    clicked => { oauth_login("Google"); }
+                    text: root.sso_button_text;
+                    clicked => { oauth_login("SSO"); }
                 }
 
                 Button {
                     height: 44px;
-                    text: "Continue with GitHub";
-                    clicked => { oauth_login("GitHub"); }
-                }
-
-                Button {
-                    height: 44px;
-                    text: "Continue with Microsoft";
-                    clicked => { oauth_login("Microsoft"); }
-                }
-
-                Button {
-                    height: 44px;
-                    text: "App Settings";
+                    text: root.settings_button_text;
                     clicked => { open_settings(); }
-                }
-
-                HorizontalBox {
-                    alignment: center;
-                    spacing: 16px;
-                    Text { text: "Privacy Policy"; color: #9ca3af; font-size: 12px; }
-                    Text { text: "Terms of Service"; color: #9ca3af; font-size: 12px; }
                 }
             }
         }
