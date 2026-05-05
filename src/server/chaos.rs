@@ -57,57 +57,69 @@ mod tests {
         assert!(result.is_err(), "Network spike should trigger circuit breaker / timeout");
     }
 
+
     #[tokio::test]
-    async fn test_sipdb_cuj_stress_verification() {
+    async fn test_task_queue_cuj_stress_verification() {
         use std::sync::Arc;
+        use crate::queue::{TaskQueue, Job};
+
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(5) // Constrained to force lock contention
+            .max_connections(5)
             .connect(&uri)
             .await
             .unwrap();
 
+        // Exact schema matching `queue.rs` local_queue_jobs initialization
         sqlx::query(
-            "CREATE TABLE agent_missions (
+            "CREATE TABLE IF NOT EXISTS local_queue_jobs (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
-                payload TEXT NOT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
-                cloud_mission_id TEXT,
-                sync_error TEXT,
-                last_synced_at DATETIME,
-                synced_to_cloud BOOLEAN DEFAULT 0,
-                _sync_status TEXT DEFAULT 'pending',
-                version INTEGER DEFAULT 1
+                tenant_id TEXT NOT NULL,
+                task_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                payload BLOB,
+                status TEXT DEFAULT 'PENDING'
             );"
         ).execute(&pool).await.unwrap();
 
-        let pool_arc = Arc::new(pool);
+        let queue_service = Arc::new(crate::queue::SqliteTaskQueue::new(pool.clone()));
+
         let mut tasks = vec![];
         for i in 0..50 {
-            let p = pool_arc.clone();
+            let q = queue_service.clone();
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
-                let max_attempts = 10;
-                let mut backoff = Duration::from_millis(10);
+                let max_attempts = 15;
+                let mut backoff = std::time::Duration::from_millis(10);
                 loop {
-                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
-                        .bind(format!("m_{}", i))
-                        .execute(&*p)
-                        .await;
+                    let job = Job {
+                        id: format!("q_chaos_{}", i),
+                        tenant_id: "system".to_string(),
+                        parent_task_id: "test_task".to_string(),
+                        agent_role: "test_role".to_string(),
+                        payload: "payload".to_string(),
+                        status: "pending".to_string(),
+                        attempts: 0,
+                        max_attempts: 3,
+                        run_after: chrono::Utc::now(),
+                        locked_until: None,
+                        created_at: chrono::Utc::now(),
+                        updated_at: chrono::Utc::now(),
+                    };
+
+                    // Actual application component!
+                    let res = q.enqueue(job).await;
                     match res {
                         Ok(_) => break,
                         Err(e) => {
-                            if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
+                            if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") || e.to_string().contains("timeout") {
                                 attempt += 1;
                                 if attempt >= max_attempts {
-                                    panic!("Stress test failed: {:?}", e);
+                                    panic!("Stress test failed due to timeout: {:?}", e);
                                 }
                                 tokio::time::sleep(backoff).await;
-                                backoff *= 2;
+                                backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                             } else {
                                 panic!("Unexpected error: {:?}", e);
                             }
@@ -121,13 +133,15 @@ mod tests {
             t.await.unwrap();
         }
 
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions")
-            .fetch_one(&*pool_arc)
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM local_queue_jobs WHERE tenant_id = 'system'")
+            .fetch_one(&pool)
             .await
             .unwrap();
 
-        assert_eq!(count, 50);
+        assert_eq!(count, 50, "All 50 tasks must be stored even under lock contention using SqliteTaskQueue");
     }
+
+
 
     #[tokio::test]
     async fn test_lock_contention_resilience() {
@@ -200,16 +214,24 @@ mod tests {
         std::fs::remove_dir_all(&temp_dir).unwrap();
     }
 
+
     #[tokio::test]
     async fn test_sentry_chaos_network_partition() {
-        // Thin client fails gracefully and missions persist as PENDING
-        use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new().max_connections(1).connect(&uri).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&uri)
+            .await
+            .unwrap();
+
+        let db = crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        };
 
         sqlx::query(
-            "CREATE TABLE agent_missions (
+            "CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 payload TEXT NOT NULL,
@@ -226,24 +248,42 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let mission_id = "test_mission_partition";
-        sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
+        // Explicitly set `_sync_status` to 'pending' to ensure rows.is_empty() is false in push_sync!
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, _sync_status) VALUES (?, 'PENDING', 'data', 'pending')")
             .bind(mission_id)
             .execute(&pool)
             .await
             .unwrap();
 
-        let thin_client_url = "http://127.0.0.1:1/unreachable"; // Guaranteed to drop or timeout
-        let client = reqwest::Client::builder().timeout(Duration::from_millis(50)).build().unwrap();
-        let res = client.get(thin_client_url).send().await;
+        let orchestrator = crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(
+            std::sync::Arc::new(db),
+            "http://127.0.0.1:0/unreachable".to_string() // Broken URL to simulate partition
+        );
 
-        assert!(res.is_err(), "Network partition should return error without crashing");
+        // Invoke actual application logic directly! No manual reqwest.
+        let res = orchestrator.push_sync().await;
 
-        let mission_status: String = sqlx::query_scalar("SELECT status FROM agent_missions WHERE id = ?")
+        assert!(res.is_err(), "PowerSyncOrchestrator must gracefully return error on network partition without crashing");
+
+        let err_msg = res.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("error communicating") ||
+            err_msg.contains("resolving") ||
+            err_msg.contains("timeout") ||
+            err_msg.contains("refused") ||
+            err_msg.contains("transport error") ||
+            err_msg.contains("connect"),
+            "Expected network partition error, got: {}", err_msg
+        );
+
+        // Verify the database state using application state expectations
+        let mission_status: String = sqlx::query_scalar("SELECT _sync_status FROM agent_missions WHERE id = ?")
             .bind(mission_id)
             .fetch_one(&pool)
             .await
             .unwrap();
 
-        assert_eq!(mission_status, "PENDING", "Missions should correctly persist as PENDING");
+        assert_eq!(mission_status, "pending", "Missions should correctly persist as PENDING under partition");
     }
+
 }
