@@ -30,7 +30,6 @@ pub mod app {
 }
 
 #[allow(dead_code)]
-#[allow(unused_variables)]
 fn open_url(url: &str) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -97,7 +96,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_b) = app::WebsiteBuilder::new() { _b.show().unwrap(); Box::leak(Box::new(_b)); }
+            if let Ok(_b) = app::WebsiteBuilder::new() { _b.show().unwrap(); }
         }
     });
 
@@ -105,7 +104,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_i) = app::Integrations::new() { _i.show().unwrap(); Box::leak(Box::new(_i)); }
+            if let Ok(_i) = app::Integrations::new() { _i.show().unwrap(); }
         }
     });
 
@@ -113,7 +112,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_r) = app::Referrals::new() { _r.show().unwrap(); Box::leak(Box::new(_r)); }
+            if let Ok(_r) = app::Referrals::new() { _r.show().unwrap(); }
         }
     });
 
@@ -121,7 +120,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_d) = app::Dashboard::new() { _d.show().unwrap(); Box::leak(Box::new(_d)); }
+            if let Ok(_d) = app::Dashboard::new() { _d.show().unwrap(); }
         }
     });
 }
@@ -317,9 +316,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -417,9 +416,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -1631,7 +1630,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let help_center_handle = help_center_ui.as_weak();
+                let _help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
@@ -1645,7 +1644,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                 Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
@@ -1674,7 +1673,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {
-                    if let Some(ui) = help_center_handle.upgrade() {
+                    if let Some(ui) = _help_center_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -1693,7 +1692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                    if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -4281,7 +4280,7 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
             // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
+            let _help_center = app::HelpCenter::new().unwrap(); Box::leak(Box::new(_help_center));
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
@@ -4292,7 +4291,7 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
             // Verify AiHelpChat component can be instantiated
-            let _ai_chat = app::AiHelpChat::new().unwrap();
+            let _ai_chat = app::AiHelpChat::new().unwrap(); Box::leak(Box::new(_ai_chat));
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
@@ -4302,7 +4301,7 @@ mod dashboard_docs_tests {
         let walkthrough_opened_clone = walkthrough_opened.clone();
         dashboard_ui.on_open_interactive_walkthrough(move || {
             *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+            let _walkthrough = app::InteractiveWalkthrough::new().unwrap(); Box::leak(Box::new(_walkthrough));
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
@@ -4312,7 +4311,7 @@ mod dashboard_docs_tests {
         let kairos_walkthrough_opened_clone = kairos_walkthrough_opened.clone();
         dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
             *kairos_walkthrough_opened_clone.borrow_mut() = true;
-            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap();
+            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap(); Box::leak(Box::new(_kairos_walkthrough));
         });
         dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
         assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
@@ -4322,7 +4321,7 @@ mod dashboard_docs_tests {
         let video_tutorials_opened_clone = video_tutorials_opened.clone();
         dashboard_ui.on_open_video_tutorials(move || {
             *video_tutorials_opened_clone.borrow_mut() = true;
-            let _video_tutorials = app::VideoTutorials::new().unwrap();
+            let _video_tutorials = app::VideoTutorials::new().unwrap(); Box::leak(Box::new(_video_tutorials));
         });
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
@@ -4332,7 +4331,7 @@ mod dashboard_docs_tests {
         let release_notes_opened_clone = release_notes_opened.clone();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
+            let _release_notes = app::ReleaseNotes::new().unwrap(); Box::leak(Box::new(_release_notes));
         });
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
@@ -4342,7 +4341,7 @@ mod dashboard_docs_tests {
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
             *api_docs_opened_clone.borrow_mut() = true;
-            let _api_docs = app::ApiDocs::new().unwrap();
+            let _api_docs = app::ApiDocs::new().unwrap(); Box::leak(Box::new(_api_docs));
         });
         dashboard_ui.invoke_open_api_docs();
         assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
