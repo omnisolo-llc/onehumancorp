@@ -173,7 +173,7 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
     // Trigger an error to see if error message is displayed
     await page.fill('input[type="email"]', 'invalid@example.com');
     await page.fill('input[type="password"]', 'wrong');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
 
     // Assume an error message like 'Invalid email or password' appears
     await expect(page.locator('text="Invalid"')).toBeVisible();
@@ -201,7 +201,7 @@ test('verify sign up and sign in toggle', async ({ page }) => {
     await page.goto('/');
 
     // Ensure we start at Sign In
-    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator('button:has-text("Login")')).toBeVisible();
 
     // Click Don't have an account
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
@@ -214,7 +214,7 @@ test('verify sign up and sign in toggle', async ({ page }) => {
     await page.click('button:has-text("Already have an account? Sign In")');
 
     // Ensure we are back at Sign In
-    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator('button:has-text("Login")')).toBeVisible();
 });
 
 test('verify password toggle', async ({ page }) => {
@@ -242,7 +242,7 @@ test('verify login empty submission', async ({ page }) => {
     await page.goto('/');
 
     // Submit empty form
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
 
     // Wait for validation error
     await expect(page.locator('text="Username cannot be empty"')).toBeVisible();
