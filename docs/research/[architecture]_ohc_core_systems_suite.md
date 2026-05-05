@@ -238,4 +238,3 @@ A clear, transparent pricing tier system is required to monetize the platform wh
 Implement the `TierService` middleware in the Go backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
 
 ### Priority: P1 | Scope: Medium
-
