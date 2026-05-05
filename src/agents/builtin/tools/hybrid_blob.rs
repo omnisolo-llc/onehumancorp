@@ -93,7 +93,7 @@ impl BlobManager for HybridBlobManager {
 
             let mut file = fs::File::create(&path).await.map_err(|e| format!("Failed to create file: {}", e))?;
             file.write_all(data).await.map_err(|e| format!("Failed to write data: {}", e))?;
-
+            file.flush().await.map_err(|e| format!("Failed to flush data: {}", e))?;
             Ok(())
         }
     }
