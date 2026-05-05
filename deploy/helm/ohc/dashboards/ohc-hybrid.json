@@ -206,19 +206,19 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "sum(rate(ohc_sqlite_lock_contention_total[1m])) by (operation)",
+          "expr": "sum(rate(ohc_redis_redlock_total[1m])) by (operation)",
           "legendFormat": "{{operation}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Standalone SQLite Contention Rate",
+      "title": "Redis Redlock Rate",
       "type": "timeseries",
       "transparent": true
     },
     {
       "id": 100,
-      "title": "SQLite Lock Contention Rate",
+      "title": "PostgreSQL SKIP LOCKED Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -232,7 +232,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "sum(rate(ohc_sqlite_lock_contention_total[1m])) by (operation)",
+          "expr": "sum(rate(ohc_postgres_skip_locked_total[1m])) by (operation)",
           "legendFormat": "{{operation}}",
           "range": true,
           "refId": "A"
