@@ -1059,7 +1059,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let response: Result<tonic::Response<_>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
                             let handle_clone = handle.clone();
@@ -1079,7 +1079,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let stats_response: Result<tonic::Response<_>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(stats_resp) = stats_response {
                             let stats = stats_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -1097,7 +1097,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(vc_resp) = vc_response {
                             let vc = vc_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -1181,7 +1181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             user_id: "current_user".to_string(), // In production, use actual user_id
                             referral_code: "".to_string(),
                         };
-                        let response = client.create_referral(tonic::Request::new(req)).await;
+                        let response: Result<tonic::Response<_>, tonic::Status> = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
                             let link = format!("ohc://join?ref={}&utm_source=standalone_desktop&utm_medium=team_share&inviter=current_user", referral.referral_code);
@@ -1264,7 +1264,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..Default::default()
             });
 
-            if let Ok(resp) = client.get_cost_summary(req).await {
+            let resp: Result<tonic::Response<_>, tonic::Status> = client.get_cost_summary(req).await;
+                if let Ok(resp) = resp {
                 let summary = resp.into_inner();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
@@ -1305,7 +1306,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ..Default::default()
                 });
 
-                if let Ok(resp) = client.get_cost_summary(req).await {
+                let resp: Result<tonic::Response<_>, tonic::Status> = client.get_cost_summary(req).await;
+                if let Ok(resp) = resp {
                     let summary = resp.into_inner();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
@@ -1396,7 +1398,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(not(target_arch = "wasm32"))]
                     tokio::spawn(async move {
                         if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            if let Ok(resp) = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await {
+                            let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
+                            if let Ok(resp) = resp {
                                 let quota = resp.into_inner();
                                 let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
@@ -1877,7 +1880,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                if let Ok(resp) = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                if let Ok(resp) = resp {
                     let analytics = resp.into_inner();
                     let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
