@@ -36,6 +36,7 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
+    pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
     pub enable_lost_in_the_middle_prevention: bool,
@@ -70,6 +71,7 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 0,
             confidence_threshold: 0.0,
+            enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_observation_masking: true,
             enable_lost_in_the_middle_prevention: true,
@@ -211,7 +213,7 @@ impl Agent {
         _on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send,
+        F: FnMut(AgentEvent) + Send + Sync,
     {
         // Add initial message if needed
         if !initial_message.is_empty() {
@@ -431,6 +433,110 @@ impl Agent {
         Ok(content)
     }
 
+
+    /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
+    /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
+    pub async fn run_plan_and_execute<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted {
+            iteration: 0,
+        });
+
+        // Phase 1: Planning
+        let planner_system = format!(
+            "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
+            serde_json::to_string_pretty(&self.tools.iter().map(|t| crate::types::ToolDefinition {
+                name: t.name.clone(),
+                description: t.description.clone(),
+                parameters: t.parameters.clone(),
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        );
+
+        let plan_req = ChatRequest {
+            model: cfg.model.clone(),
+            system: planner_system,
+            messages: vec![Message::user(initial_message)],
+            tools: vec![], // No tools, we force it to output JSON
+            max_tokens: cfg.max_tokens,
+            temperature: 0.0, // Planning should be deterministic
+        };
+
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+        let plan_resp = self.llm.chat(plan_req).await?;
+        let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+
+        on_event(AgentEvent::RunStarted { iteration: 1 });
+
+        let plan: Vec<serde_json::Value> = serde_json::from_str(plan_json_text).map_err(|e| format!("Failed to parse planner output as JSON array: {} (Output: {})", e, plan_json_text))?;
+
+        // Phase 2: Execution
+        let mut executed_steps = Vec::new();
+        for (i, step) in plan.into_iter().enumerate() {
+            let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
+            let args = step.get("args").unwrap_or(&serde_json::Value::Null);
+
+            let dummy_tc = ToolCall {
+                id: format!("plan_step_{}", i),
+                name: tool_name.to_string(),
+                arguments: args.clone(),
+            };
+
+            on_event(AgentEvent::ToolCall {
+                name: tool_name.to_string(),
+                args_json: args.to_string(),
+                result: "Executing planned step...".to_string(),
+                iteration: i as i32,
+            });
+
+            // Gating mechanics
+            if let Err(e) = Self::check_tool_gating(&dummy_tc, false, cfg) {
+                 return Err(Box::new(e));
+            }
+
+            let result = match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                Ok(res) => res,
+                Err(e) => format!("Error executing planned step: {:?}", e),
+            };
+
+            on_event(AgentEvent::ToolCall {
+                name: tool_name.to_string(),
+                args_json: args.to_string(),
+                result: result.clone(),
+                iteration: i as i32,
+            });
+
+            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tool_name, args, result));
+        }
+
+        // Phase 3: Replier
+        let replier_system = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
+        let execution_summary = executed_steps.join("\n\n");
+        let final_prompt = format!("Initial task: {}\n\nExecution steps and results:\n{}\n\nPlease provide the final answer.", initial_message, execution_summary);
+
+        let replier_req = ChatRequest {
+            model: cfg.model.clone(),
+            system: replier_system,
+            messages: vec![Message::user(final_prompt)],
+            tools: vec![],
+            max_tokens: cfg.max_tokens,
+            temperature: cfg.temperature,
+        };
+
+        on_event(AgentEvent::RunStarted { iteration: 2 });
+        let final_resp = self.llm.chat(replier_req).await?;
+
+        on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
+        Ok(final_resp.message.content)
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -438,8 +544,13 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send,
+        F: FnMut(AgentEvent) + Send + Sync,
     {
+
+        let session_tools = self.tools.clone();
+        if cfg.enable_llmcompiler_plan_and_execute {
+            return self.run_plan_and_execute(cfg, initial_message, &session_tools, on_event).await;
+        }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
@@ -1214,6 +1325,78 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_llmcompiler_plan_and_execute_mechanic() {
+        struct LLMCompilerMockClient {
+            pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for LLMCompilerMockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req.clone());
+
+                // If it's the planner phase (no tools supplied)
+                if req.tools.is_empty() && req.system.contains("You are an expert planner") {
+                    let plan = serde_json::json!([
+                        {
+                            "tool": "mock_read",
+                            "args": { "path": "file.txt" }
+                        }
+                    ]);
+                    Ok(ChatResponse {
+                        message: Message::assistant(plan.to_string()),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                } else {
+                    // It's the replier phase
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final plan executed."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+        }
+
+        let mock_tool = Tool {
+            name: "mock_read".to_string(),
+            description: "read".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let client = Arc::new(LLMCompilerMockClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let agent = Agent::new(client.clone(), vec![mock_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_llmcompiler_plan_and_execute = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Plan and run", &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Final plan executed.");
+
+        let reqs = client.requests.lock().await;
+        assert_eq!(reqs.len(), 2, "Should have called LLM twice: once for planner, once for replier");
+
+        let mut tool_called = false;
+        for e in events {
+            if let AgentEvent::ToolCall { name, .. } = e {
+                if name == "mock_read" {
+                    tool_called = true;
+                }
+            }
+        }
+        assert!(tool_called, "The planned tool should have been executed");
+    }
+
     use super::*;
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
