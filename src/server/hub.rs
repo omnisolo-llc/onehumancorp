@@ -397,6 +397,10 @@ impl Hub {
 
         let mut agents = self.agents.write().unwrap();
         
+        if !agents.contains_key(from_agent_id) {
+            return Err("sender agent is not registered".to_string());
+        }
+
         if agents.len() >= 10 {
             return Err("VRAM quota limit exceeded".to_string());
         }
@@ -838,6 +842,31 @@ mod tests {
         });
         assert!(hub.meetings_cache.read().unwrap().is_none());
     }
+    #[tokio::test]
+    async fn test_delegate_sub_task_invalid_sender() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let res = hub.delegate_sub_task(
+            "non_existent_agent",
+            "developer",
+            "fix the bug",
+            "thread123",
+        );
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "sender agent is not registered");
+    }
+
     #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available

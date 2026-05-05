@@ -901,6 +901,10 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("task_id and target_role are required"));
         }
         
+        if self.hub.get_agent(&req.from_agent_id).is_none() {
+            return Err(Status::invalid_argument("sender agent is not registered"));
+        }
+
         // Quota Enforcement
         if self.hub.get_agents_count() >= 10 {
             return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
