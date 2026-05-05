@@ -14,6 +14,15 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+
+    async fn ping(&self) -> Result<(), String>;
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct CentrifugeNode {
@@ -104,6 +113,46 @@ impl TeammateMesh for CentrifugeNode {
             retries += 1;
             backoff *= 2;
         }
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.transport.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.transport.get_active_agents().await
+    }
+
+    async fn ping(&self) -> Result<(), String> {
+        self.publish_with_ack("mesh:health:ping", b"ping".to_vec()).await
+    }
+
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let transport_clone = self.transport.clone();
+
+        self.transport.subscribe("mesh:health:ping", Box::new(move |msg: Message| {
+            let msg_id = msg.msg_id.clone();
+            let ack_topic = format!("mesh:ack:{}", msg_id);
+
+            let t_clone = transport_clone.clone();
+            tokio::spawn(async move {
+                let _ = t_clone.publish(&ack_topic, TeammateMeshEvent {
+                    agent_id: "health_responder".to_string(),
+                    action: ack_topic.clone(),
+                    status: "ok".to_string(),
+                    payload: b"pong".to_vec(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                }).await;
+            });
+        })).await
+    }
+
+    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:state:handoff", payload).await
+    }
+
+    async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("mesh:state:handoff", handler).await
     }
 }
 
