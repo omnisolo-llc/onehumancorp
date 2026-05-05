@@ -1,0 +1,86 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component SocialMedia inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Social Media Auto-Posting";
+
+    background: #f8fafc;
+
+    in-out property <bool> is_instagram_connected: false;
+    in-out property <bool> is_facebook_connected: false;
+    in-out property <bool> is_x_connected: false;
+    in-out property <string> status_message: "";
+
+    callback connect_instagram();
+    callback connect_facebook();
+    callback connect_x();
+    callback generate_posts();
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Social Media Auto-Posting"; font-size: 24px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Connect Platforms"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                Text { text: "Connect your social accounts to let your AI Agent post automatically."; color: #64748b; font-size: 14px; }
+
+                HorizontalBox {
+                    spacing: 12px;
+                    Button {
+                        text: is_instagram_connected ? "Instagram (Connected)" : "Connect Instagram";
+                        height: 44px;
+                        clicked => { connect_instagram(); }
+                    }
+                    Button {
+                        text: is_facebook_connected ? "Facebook (Connected)" : "Connect Facebook";
+                        height: 44px;
+                        clicked => { connect_facebook(); }
+                    }
+                    Button {
+                        text: is_x_connected ? "X (Connected)" : "Connect X";
+                        height: 44px;
+                        clicked => { connect_x(); }
+                    }
+                }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "AI Agent Actions"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                Text { text: "Generate engaging social posts for your new products, sales, and milestones."; color: #64748b; font-size: 14px; wrap: word-wrap; }
+
+                HorizontalBox {
+                    Button {
+                        text: "Generate Draft Posts";
+                        primary: true;
+                        height: 44px;
+                        clicked => { generate_posts(); }
+                    }
+                    if (status_message != "") : Text {
+                        text: status_message;
+                        color: #10b981;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+    }
+}

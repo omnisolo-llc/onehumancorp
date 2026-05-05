@@ -1,17 +1,25 @@
 use crate::app;
 
-fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
-fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
+fn create_f() -> app::FixAgent {
+    crate::ui_tests::init();
+    app::FixAgent::new().unwrap()
+}
+fn create_u() -> app::Upgrade {
+    crate::ui_tests::init();
+    app::Upgrade::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn ongoing_fix_step_negative() {
+#[test]
+fn ongoing_fix_step_negative() {
     let ui = create_f();
     ui.set_step(-5);
     assert_eq!(ui.get_step(), -5);
 }
 
-#[test] fn ongoing_upgrade_progress_oob() {
+#[test]
+fn ongoing_upgrade_progress_oob() {
     let ui = create_u();
     ui.set_progress(1000);
     assert_eq!(ui.get_progress(), 1000);
@@ -21,7 +29,8 @@ fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unw
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn ongoing_fix_flow_steps() {
+#[test]
+fn ongoing_fix_flow_steps() {
     let ui = create_f();
     assert_eq!(ui.get_step(), 0);
     ui.set_step(1);
@@ -34,7 +43,8 @@ fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unw
     assert!(!ui.get_is_applying());
 }
 
-#[test] fn ongoing_upgrade_flow() {
+#[test]
+fn ongoing_upgrade_flow() {
     let ui = create_u();
     assert!(!ui.get_is_upgrading());
     assert!(!ui.get_done());

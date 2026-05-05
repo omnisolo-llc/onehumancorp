@@ -1,10 +1,14 @@
 use crate::app;
 
-fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwrap() }
+fn create() -> app::ApiDocs {
+    crate::ui_tests::init();
+    app::ApiDocs::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn docs_flow_config_sync() {
+#[test]
+fn docs_flow_config_sync() {
     let ui = create();
     ui.set_api_key("sk_test_123".into());
     ui.set_endpoint_url("http://localhost:8080".into());
@@ -12,14 +16,16 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
     assert_eq!(ui.get_endpoint_url(), "http://localhost:8080");
 }
 
-#[test] fn docs_xss_key() {
+#[test]
+fn docs_xss_key() {
     let ui = create();
     let xss = "<script>alert('api_key')</script>";
     ui.set_api_key(xss.into());
     assert_eq!(ui.get_api_key(), xss);
 }
 
-#[test] fn docs_long_endpoint() {
+#[test]
+fn docs_long_endpoint() {
     let ui = create();
     let long = "https://".to_string() + &"a".repeat(1000) + ".com";
     ui.set_endpoint_url(long.clone().into());

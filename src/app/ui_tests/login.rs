@@ -1,43 +1,52 @@
 use crate::app;
 use slint::ComponentHandle;
 
-fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() }
+fn create() -> app::Login {
+    crate::ui_tests::init();
+    app::Login::new().unwrap()
+}
 
 // --- Security / Hacking Cases ---
 
-#[test] fn login_sqli_username() {
+#[test]
+fn login_sqli_username() {
     let ui = create();
     let malicious = "' OR '1'='1";
     ui.set_username(malicious.into());
     assert_eq!(ui.get_username(), malicious);
 }
 
-#[test] fn login_xss_password() {
+#[test]
+fn login_xss_password() {
     let ui = create();
     let xss = "<script>alert('pwned')</script>";
     ui.set_password(xss.into());
     assert_eq!(ui.get_password(), xss);
 }
 
-#[test] fn login_path_traversal() {
+#[test]
+fn login_path_traversal() {
     let ui = create();
     ui.set_username("../../../etc/passwd".into());
     assert_eq!(ui.get_username(), "../../../etc/passwd");
 }
 
-#[test] fn login_null_byte() {
+#[test]
+fn login_null_byte() {
     let ui = create();
     ui.set_username("admin\0user".into());
     assert_eq!(ui.get_username(), "admin\0user");
 }
 
-#[test] fn login_unicode_homograph() {
+#[test]
+fn login_unicode_homograph() {
     let ui = create();
     ui.set_username("аdmin".into()); // Cyrillic 'а'
     assert_eq!(ui.get_username(), "аdmin");
 }
 
-#[test] fn login_overflow_username() {
+#[test]
+fn login_overflow_username() {
     let ui = create();
     let long = "A".repeat(10000);
     ui.set_username(long.clone().into());
@@ -46,7 +55,8 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
 
 // --- Boundary / Corner Cases ---
 
-#[test] fn login_empty_credentials() {
+#[test]
+fn login_empty_credentials() {
     let ui = create();
     ui.set_username("".into());
     ui.set_password("".into());
@@ -55,13 +65,15 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
     ui.invoke_login("".into(), "".into());
 }
 
-#[test] fn login_max_int_username() {
+#[test]
+fn login_max_int_username() {
     let ui = create();
     ui.set_username("2147483647".into());
     assert_eq!(ui.get_username(), "2147483647");
 }
 
-#[test] fn login_special_chars() {
+#[test]
+fn login_special_chars() {
     let ui = create();
     let chars = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
     ui.set_username(chars.into());
@@ -70,7 +82,8 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
 
 // --- Complex Flows ---
 
-#[test] fn login_flow_toggle_signup_multiple_times() {
+#[test]
+fn login_flow_toggle_signup_multiple_times() {
     let ui = create();
     for _ in 0..10 {
         ui.set_is_sign_up(true);
@@ -80,7 +93,8 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
     }
 }
 
-#[test] fn login_flow_error_persistence() {
+#[test]
+fn login_flow_error_persistence() {
     let ui = create();
     ui.set_error_message("Initial error".into());
     ui.set_username("new_user".into());
@@ -89,12 +103,15 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
     assert_eq!(ui.get_error_message(), "");
 }
 
-#[test] fn login_callback_chain() {
+#[test]
+fn login_callback_chain() {
     let ui = create();
     let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
     let c = counter.clone();
-    ui.on_login(move |_, _| { *c.borrow_mut() += 1; });
-    
+    ui.on_login(move |_, _| {
+        *c.borrow_mut() += 1;
+    });
+
     ui.invoke_login("u1".into(), "p1".into());
     ui.invoke_login("u2".into(), "p2".into());
     assert_eq!(*counter.borrow(), 2);
@@ -132,7 +149,10 @@ fn create_verify_error_message() {
     ui.set_error_message("⚠️ Warning".into());
     assert_eq!(ui.get_error_message(), "⚠️ Warning");
     ui.set_error_message("Too many login attempts. Please try again later.".into());
-    assert_eq!(ui.get_error_message(), "Too many login attempts. Please try again later.");
+    assert_eq!(
+        ui.get_error_message(),
+        "Too many login attempts. Please try again later."
+    );
     ui.set_error_message("e61".into());
     assert_eq!(ui.get_error_message(), "e61");
 }
@@ -143,7 +163,10 @@ fn create_verify_verification_message() {
     ui.set_verification_message("123-456".into());
     assert_eq!(ui.get_verification_message(), "123-456");
     ui.set_verification_message("Please enter the 6-digit code sent to your phone.".into());
-    assert_eq!(ui.get_verification_message(), "Please enter the 6-digit code sent to your phone.");
+    assert_eq!(
+        ui.get_verification_message(),
+        "Please enter the 6-digit code sent to your phone."
+    );
     ui.set_verification_message("v66".into());
     assert_eq!(ui.get_verification_message(), "v66");
 }

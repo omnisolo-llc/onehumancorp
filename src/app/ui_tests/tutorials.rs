@@ -1,10 +1,14 @@
 use crate::app;
 
-fn create() -> app::VideoTutorials { crate::ui_tests::init(); app::VideoTutorials::new().unwrap() }
+fn create() -> app::VideoTutorials {
+    crate::ui_tests::init();
+    app::VideoTutorials::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn tutorials_flow_playback() {
+#[test]
+fn tutorials_flow_playback() {
     let ui = create();
     ui.set_selected_video_title("How to Scale".into());
     ui.set_is_playing(true);
@@ -14,14 +18,16 @@ fn create() -> app::VideoTutorials { crate::ui_tests::init(); app::VideoTutorial
     assert!(!ui.get_is_playing());
 }
 
-#[test] fn tutorials_xss_title() {
+#[test]
+fn tutorials_xss_title() {
     let ui = create();
     let xss = "<iframe src=javascript:alert('tutorial')>";
     ui.set_selected_video_title(xss.into());
     assert_eq!(ui.get_selected_video_title(), xss);
 }
 
-#[test] fn tutorials_injection_title() {
+#[test]
+fn tutorials_injection_title() {
     let ui = create();
     let inj = "Intro'); DROP TABLE tutorials; --";
     ui.set_selected_video_title(inj.into());

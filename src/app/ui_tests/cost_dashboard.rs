@@ -2,40 +2,49 @@ use crate::app;
 use slint::Model;
 use std::rc::Rc;
 
-fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard::new().unwrap() }
+fn create() -> app::CostDashboard {
+    crate::ui_tests::init();
+    app::CostDashboard::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn cost_xss_spend() {
+#[test]
+fn cost_xss_spend() {
     let ui = create();
     let xss = "<img src=x onerror=alert('spend')>";
     ui.set_total_spend(xss.into());
     assert_eq!(ui.get_total_spend(), xss);
 }
 
-#[test] fn cost_injection_tokens() {
+#[test]
+fn cost_injection_tokens() {
     let ui = create();
     let inj = "1000000'); DROP TABLE tokens; --";
     ui.set_total_tokens(inj.into());
     assert_eq!(ui.get_total_tokens(), inj);
 }
 
-#[test] fn cost_massive_list() {
+#[test]
+fn cost_massive_list() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = (0..500).map(|i| app::UiAgentCost {
-        name: format!("Agent {}", i).into(),
-        cost: format!("${}", i).into(),
-        roi: "High".into(),
-        efficiency: "Good".into(),
-        pct: (i % 100) as f32 / 100.0,
-    }).collect();
+    let v: Vec<app::UiAgentCost> = (0..500)
+        .map(|i| app::UiAgentCost {
+            name: format!("Agent {}", i).into(),
+            cost: format!("${}", i).into(),
+            roi: "High".into(),
+            efficiency: "Good".into(),
+            pct: (i % 100) as f32 / 100.0,
+        })
+        .collect();
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
     assert_eq!(ui.get_agent_costs().row_count(), 500);
 }
 
 // --- Unique Scenarios with Verification ---
 
-#[test] fn cost_zero_cost_agent() {
+#[test]
+fn cost_zero_cost_agent() {
     let ui = create();
     let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
         name: "Local Ollama Agent".into(),
@@ -55,7 +64,8 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
     assert_eq!(agent.pct, 0.0);
 }
 
-#[test] fn cost_zero_cost_multiple_agents() {
+#[test]
+fn cost_zero_cost_multiple_agents() {
     let ui = create();
     let v: Vec<app::UiAgentCost> = vec![
         app::UiAgentCost {
@@ -71,7 +81,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
             roi: "0.00%".into(),
             efficiency: "0.00 tok/$".into(),
             pct: 0.0,
-        }
+        },
     ];
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
     let models = ui.get_agent_costs();
@@ -84,13 +94,15 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
     assert_eq!(zero_agent.pct, 0.0);
 }
 
-#[test] fn cost_total_spend_zero() {
+#[test]
+fn cost_total_spend_zero() {
     let ui = create();
     ui.set_total_spend("$0.00".into());
     assert_eq!(ui.get_total_spend(), "$0.00");
 }
 
-#[test] fn cost_zero_roi_no_division_by_zero_ui_check() {
+#[test]
+fn cost_zero_roi_no_division_by_zero_ui_check() {
     let ui = create();
     let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
         name: "Zero ROI Agent".into(),
@@ -105,7 +117,8 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
     assert_eq!(agent.roi, "0.00");
 }
 
-#[test] fn cost_zero_efficiency_no_division_by_zero_ui_check() {
+#[test]
+fn cost_zero_efficiency_no_division_by_zero_ui_check() {
     let ui = create();
     let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
         name: "Zero Efficiency Agent".into(),

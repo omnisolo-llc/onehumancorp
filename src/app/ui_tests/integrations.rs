@@ -2,65 +2,75 @@ use crate::app;
 use slint::Model;
 use std::rc::Rc;
 
-fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::new().unwrap() }
+fn create() -> app::Integrations {
+    crate::ui_tests::init();
+    app::Integrations::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn integr_xss_tool_name() {
+#[test]
+fn integr_xss_tool_name() {
     let ui = create();
     let xss = "<script>alert('mcp')</script>";
-    let tools = slint::VecModel::from(vec![
-        app::UiMcpTool {
-            id: "t1".into(),
-            name: xss.into(),
-            description: "desc".into(),
-        }
-    ]);
+    let tools = slint::VecModel::from(vec![app::UiMcpTool {
+        id: "t1".into(),
+        name: xss.into(),
+        description: "desc".into(),
+    }]);
     ui.set_tools(Rc::new(tools).into());
     assert_eq!(ui.get_tools().row_data(0).unwrap().name, xss);
 }
 
-#[test] fn integr_injection_id() {
+#[test]
+fn integr_injection_id() {
     let ui = create();
     let inj = "tool'); DROP TABLE tools; --";
-    let tools = slint::VecModel::from(vec![
-        app::UiMcpTool {
-            id: inj.into(),
-            name: "SqlTool".into(),
-            description: "desc".into(),
-        }
-    ]);
+    let tools = slint::VecModel::from(vec![app::UiMcpTool {
+        id: inj.into(),
+        name: "SqlTool".into(),
+        description: "desc".into(),
+    }]);
     ui.set_tools(Rc::new(tools).into());
     assert_eq!(ui.get_tools().row_data(0).unwrap().id, inj);
 }
 
-#[test] fn integr_massive_tools() {
+#[test]
+fn integr_massive_tools() {
     let ui = create();
-    let v: Vec<app::UiMcpTool> = (0..200).map(|i| app::UiMcpTool {
-        id: format!("id-{}", i).into(),
-        name: format!("Tool {}", i).into(),
-        description: "description".into(),
-    }).collect();
+    let v: Vec<app::UiMcpTool> = (0..200)
+        .map(|i| app::UiMcpTool {
+            id: format!("id-{}", i).into(),
+            name: format!("Tool {}", i).into(),
+            description: "description".into(),
+        })
+        .collect();
     ui.set_tools(Rc::new(slint::VecModel::from(v)).into());
     assert_eq!(ui.get_tools().row_count(), 200);
 }
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn integr_flow_configure_callback() {
+#[test]
+fn integr_flow_configure_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.on_configure_integration(move |name| {
+        *c.borrow_mut() = name.to_string();
+    });
     ui.invoke_configure_integration("Slack".into());
     assert_eq!(*called.borrow(), "Slack");
 }
 
-#[test] fn integr_flow_invoke_callback() {
+#[test]
+fn integr_flow_invoke_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_invoke_tool(move |id| { *c.borrow_mut() = id.to_string(); });
+    ui.on_invoke_tool(move |id| {
+        *c.borrow_mut() = id.to_string();
+    });
     ui.invoke_invoke_tool("TOOL-X".into());
     assert_eq!(*called.borrow(), "TOOL-X");
 }
