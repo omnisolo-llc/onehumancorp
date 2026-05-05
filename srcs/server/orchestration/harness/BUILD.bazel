@@ -2,13 +2,22 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "harness",
-    srcs = ["macos_sandbox.go"],
+    srcs = [
+        "macos_sandbox.go",
+        "bwrap_sandbox.go",
+    ],
     importpath = "onehumancorp/srcs/server/orchestration/harness",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+    ],
 )
 
 go_test(
     name = "harness_test",
-    srcs = ["macos_sandbox_test.go"],
+    srcs = [
+        "macos_sandbox_test.go",
+        "bwrap_sandbox_test.go",
+    ],
     embed = [":harness"],
 )
