@@ -282,7 +282,14 @@ impl MeshTransport for IpcTransport {
         .await;
 
         match result {
-            Ok(res) => Ok(res.rows_affected() > 0),
+            Ok(res) => {
+                if res.rows_affected() > 0 {
+                    Ok(true)
+                } else {
+                    let current_owner: Result<String, _> = sqlx::query_scalar("SELECT owner FROM mesh_locks WHERE resource = ?").bind(resource).fetch_one(&self.pool).await;
+                    Ok(current_owner.is_ok() && current_owner.unwrap() == owner)
+                }
+            },
             Err(e) => Err(e.to_string()),
         }
     }
