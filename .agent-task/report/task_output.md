@@ -1,133 +1,137 @@
-# 🔍 Scout: Tool Integration Research Q2
+# [architecture] Data Model Architecture for OHC
 
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+## Title
+Unified Multi-Tenant Data Model Architecture for Small Business Operations
 
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Problem Statement
+Small business owners—whether they're baking custom cakes or running a mobile handyman service—currently face fragmented data. Customer interactions happen on Instagram, orders are tracked in a notebook or basic spreadsheet, payments run through an isolated terminal, and marketing goes out from yet another separate app. As a non-technical owner, trying to stitch these together is confusing and exhausting. If an AI agent drafts an email, it needs to instantly know the customer's purchase history, their upcoming appointments, and their recent support queries without the owner manually connecting dots. The lack of a robust, unified data model creates friction and makes the AI seem out of touch with the reality of the business.
 
-## [Email Marketing] Mailchimp Integration
-**Title**: Integrate Mailchimp for Customer Re-engagement
-**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
-**Research Report**:
-- **Tool**: Mailchimp
-- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
-- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
-- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
-- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
-- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
-- The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Research Report
+Current SMB platforms struggle with cross-domain data integration:
+- **Shopify**: Exceptional at product and order data, but service bookings or deep customer support context usually require third-party apps, making data fragmented. A chatbot app does not inherently know about a separate booking app.
+- **Wix & Squarespace**: Provide basic booking and e-commerce, but their underlying architectures are page-centric rather than entity-centric. Customizing relationships (e.g., a customer who both buys merchandise and books services) is clunky.
+- **GoDaddy**: Fast setup, but limited data relationships. It lacks a cohesive "brain" connecting interactions across a business’s lifecycle.
 
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
-**Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
-**Estimated Scope**: Large
+**Key Findings:**
+1. **Holistic View**: To make "AI agents do the work invisibly," agents need a 360-degree view of an entity. A `Customer` must be inextricably linked to their `Orders`, `Bookings`, `Conversations` (Inbox), and `Reviews`.
+2. **Multi-Tenancy is Non-Negotiable**: Data leaks between businesses would destroy trust. OHC must enforce strict tenant boundaries so Maya the Baker’s data is never visible to Carlos the Handyman.
+3. **Versatility**: The core schema must be flexible enough to handle a `Physical Product` (inventory, shipping) just as elegantly as a `Service Booking` (calendar, duration).
 
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+## Design Doc
 
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+### Key Invariants
+- **Strict Multi-Tenancy**: Every entity must belong to a specific `tenant_id` (the business organization). Row-Level Security (RLS) in PostgreSQL will ensure that a business owner can only ever see their own tenant's data.
+- **Agent Visibility**: AI Agents operate contextually. When queried, an agent accesses data bound exclusively to the tenant it serves.
+- **Immutability of Financials**: Orders, Payments, and Invoices cannot be physically deleted; they must support state transitions (e.g., Refunded, Cancelled).
 
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Architecture Diagram (Entity-Relationship)
+
+```mermaid
+erDiagram
+    TENANT {
+        string tenant_id PK
+        string business_name
+        string industry_type
+        string tier
+    }
+
+    USER {
+        string user_id PK
+        string role
+        string email
+    }
+
+    PRODUCT {
+        string product_id PK
+        string tenant_id FK
+        string type "Physical, Digital, Service"
+        int price_cents
+        boolean in_stock
+    }
+
+    ORDER {
+        string order_id PK
+        string tenant_id FK
+        string customer_id FK
+        string status
+        int total_cents
+    }
+
+    BOOKING {
+        string booking_id PK
+        string tenant_id FK
+        string customer_id FK
+        string service_id FK
+        datetime slot_start
+        datetime slot_end
+        string status
+    }
+
+    CUSTOMER {
+        string customer_id PK
+        string tenant_id FK
+        string name
+        string contact_info
+    }
+
+    CONVERSATION {
+        string conversation_id PK
+        string tenant_id FK
+        string customer_id FK
+        string channel "IG, Web, Email"
+    }
+
+    TENANT ||--o{ USER : "employs"
+    TENANT ||--o{ PRODUCT : "offers"
+    TENANT ||--o{ CUSTOMER : "serves"
+    TENANT ||--o{ ORDER : "processes"
+    TENANT ||--o{ BOOKING : "schedules"
+    TENANT ||--o{ CONVERSATION : "manages"
+
+    CUSTOMER ||--o{ ORDER : "places"
+    CUSTOMER ||--o{ BOOKING : "attends"
+    CUSTOMER ||--o{ CONVERSATION : "engages_in"
+
+    PRODUCT ||--o{ ORDER : "included_in"
+```
+
+### Key Access Patterns
+- **AI Agent Querying Customer History**: When drafting an Instagram DM reply, the Customer Success Agent retrieves the `CUSTOMER` record via contact info, then fetches associated `ORDER`, `BOOKING`, and past `CONVERSATION` records using the `customer_id` and `tenant_id`.
+- **Mobile App Fetching Orders**: The mobile app (e.g., used by Fatima at her food cart) authenticates and queries `ORDER` records filtered by `tenant_id` and `status="Pending"`, sorted by timestamp to see what to prepare next.
+
+### UI Wireframes / Screen Flow Description (375px first)
+1. **Dashboard Home**: A unified feed showing recent Orders, new Bookings, and unread Conversations.
+2. **Customer Detail View**: Tapping a customer reveals their holistic profile—a timeline of their purchases, past appointments, and chat history—giving the business owner immediate context.
+3. **Data Management**: Simple lists for Products/Services where adding a new item dynamically asks for shipping info (if physical) or duration/calendar sync (if service).
+
+### Mobile UX Flow
+- The owner opens the app.
+- They tap "Customers" in the bottom navigation.
+- They search for "Jane".
+- They see Jane's profile: "Bought 2 cakes, Booked 1 consultation, Sent 1 IG message yesterday."
+- AI suggestion at the top: "Jane hasn't ordered in 6 months. Tap to generate a re-engagement offer."
+
+### AI Agent Integration Points
+- **The Ambassador (Customer Success)** reads the unified `CUSTOMER` timeline to personalize responses.
+- **The Manager (Operations)** updates `ORDER` and `BOOKING` statuses and triggers fulfillment workflows.
+- **The Advisor (Business Advisory)** analyzes aggregate `ORDER` and `PRODUCT` data to generate the weekly health report.
+
+### Key Design Decisions and Why
+- **Unified `CUSTOMER` Record**: Instead of keeping store customers and booking clients separate, a single entity allows for cross-selling and unified communication.
+- **Single `PRODUCT` Table with Types**: Differentiating physical goods, digital downloads, and bookable services via a `type` field simplifies the schema and allows a unified storefront catalog.
+
+### Migration Strategy
+1. Introduce the new unified schema iteratively alongside the existing structures.
+2. Use background worker jobs to migrate data tenant-by-tenant (e.g., transforming legacy isolated store orders and standalone calendar bookings into the unified `ORDER` and `BOOKING` tables linked to the central `CUSTOMER`).
+3. Dual-write during the transition phase.
+4. Once verified, deprecate the old unlinked tables.
+
+## Implementation Prompt
+**To the Implementer:**
+Design and implement the core multi-tenant data layer for the OHC platform. Ensure that physical products, services, bookings, and customer communications all tie back to a single, unified customer profile per business (tenant). Ensure that Row-Level Security (RLS) is strictly enforced so that a user logged into a specific tenant can only access that tenant's records. You should enable an AI agent to fetch a 360-degree view of a customer in a single query. The user-facing outcome is that Maya the Baker can tap a customer's name and instantly see their cake orders, deposit payments, and Instagram messages all in one place, while the AI uses this same view to draft accurate replies. Implement the API handlers, database queries, and repository layer to support these holistic access patterns. Validate your implementation with end-to-end tests starting from a UI login.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
