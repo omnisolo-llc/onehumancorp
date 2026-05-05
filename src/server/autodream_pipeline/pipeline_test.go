@@ -6,13 +6,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/lib/pricing"
 )
 
 type MockEmbeddingApi struct {
 	generateEmbeddingFunc func(text string) (string, error)
+	calls                 int
 }
 
 func (m *MockEmbeddingApi) GenerateEmbedding(text string) (string, error) {
+	m.calls++
 	if m.generateEmbeddingFunc != nil {
 		return m.generateEmbeddingFunc(text)
 	}
@@ -38,7 +43,6 @@ func (m *MockDB) Exec(query string, args ...any) (sql.Result, error) {
 func TestSweepAndConsolidate_SQLite(t *testing.T) {
 	memDir := t.TempDir()
 
-	// Create a test yml file
 	testFile := filepath.Join(memDir, "test1.yml")
 	err := os.WriteFile(testFile, []byte("test content"), 0644)
 	if err != nil {
@@ -59,7 +63,7 @@ func TestSweepAndConsolidate_SQLite(t *testing.T) {
 
 	api := &MockEmbeddingApi{}
 
-	worker := NewAutoDreamWorker(db, api, memDir)
+	worker := NewAutoDreamWorker(db, api, memDir, nil)
 	err = worker.SweepAndConsolidate()
 
 	if err != nil {
@@ -98,7 +102,7 @@ func TestSweepAndConsolidate_Postgres(t *testing.T) {
 
 	api := &MockEmbeddingApi{}
 
-	worker := NewAutoDreamWorker(db, api, memDir)
+	worker := NewAutoDreamWorker(db, api, memDir, nil)
 	err = worker.SweepAndConsolidate()
 
 	if err != nil {
@@ -118,7 +122,7 @@ func TestSweepAndConsolidate_DirNotExist(t *testing.T) {
 	db := &MockDB{}
 	api := &MockEmbeddingApi{}
 
-	worker := NewAutoDreamWorker(db, api, "/path/that/does/not/exist")
+	worker := NewAutoDreamWorker(db, api, "/path/that/does/not/exist", nil)
 	err := worker.SweepAndConsolidate()
 
 	if err != nil {
@@ -144,7 +148,7 @@ func TestSweepAndConsolidate_ErrorHandling(t *testing.T) {
 
 	api := &MockEmbeddingApi{}
 
-	worker := NewAutoDreamWorker(db, api, memDir)
+	worker := NewAutoDreamWorker(db, api, memDir, nil)
 	err = worker.SweepAndConsolidate()
 
 	if err == nil {
@@ -159,7 +163,7 @@ func TestSweepAndConsolidate_ErrorHandling(t *testing.T) {
 		},
 	}
 
-	worker = NewAutoDreamWorker(db, apiErr, memDir)
+	worker = NewAutoDreamWorker(db, apiErr, memDir, nil)
 	err = worker.SweepAndConsolidate()
 
 	if err == nil {
@@ -170,12 +174,63 @@ func TestSweepAndConsolidate_ErrorHandling(t *testing.T) {
 func TestStartDaemon(t *testing.T) {
 	db := &MockDB{}
 	api := &MockEmbeddingApi{}
-	worker := NewAutoDreamWorker(db, api, "/path/that/does/not/exist")
+	worker := NewAutoDreamWorker(db, api, "/path/that/does/not/exist", nil)
 	// Test creating worker with empty string
-	worker2 := NewAutoDreamWorker(db, api, "")
+	worker2 := NewAutoDreamWorker(db, api, "", nil)
 	if worker2.memDir != ".agent-task/memory" {
 		t.Errorf("expected memDir to fallback to .agent-task/memory")
 	}
 
 	worker.StartDaemon(0)
+}
+
+func TestSweepAndConsolidate_WithCache(t *testing.T) {
+	memDir := t.TempDir()
+
+	testFile1 := filepath.Join(memDir, "test1.yml")
+	err := os.WriteFile(testFile1, []byte("test content for cache"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	testFile2 := filepath.Join(memDir, "test2.yml")
+	err = os.WriteFile(testFile2, []byte("test content for cache"), 0644) // Same content
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	db := &MockDB{
+		isSQLite: true,
+		execFunc: func(query string, args ...any) (sql.Result, error) {
+			return nil, nil
+		},
+	}
+
+	api := &MockEmbeddingApi{}
+	cache := pricing.NewLocalEmbeddingCache(10 * time.Minute)
+
+	worker := NewAutoDreamWorker(db, api, memDir, cache)
+
+	// First sweep (cache miss)
+	err = worker.SweepAndConsolidate()
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	// Wait a little to ensure file deleted and write new file with same content
+	time.Sleep(10 * time.Millisecond)
+	err = os.WriteFile(testFile2, []byte("test content for cache"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	// Second sweep (cache hit)
+	err = worker.SweepAndConsolidate()
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	if api.calls != 1 {
+		t.Errorf("expected API to be called exactly once due to cache, got %d calls", api.calls)
+	}
 }

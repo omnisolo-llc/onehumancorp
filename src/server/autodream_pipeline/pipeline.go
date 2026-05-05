@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/onehumancorp/mono/srcs/server/lib/pricing"
 )
 
 type EmbeddingApi interface {
@@ -24,9 +25,10 @@ type AutoDreamWorker struct {
 	db     DB
 	api    EmbeddingApi
 	memDir string
+	cache  *pricing.LocalEmbeddingCache
 }
 
-func NewAutoDreamWorker(db DB, api EmbeddingApi, memDir string) *AutoDreamWorker {
+func NewAutoDreamWorker(db DB, api EmbeddingApi, memDir string, cache *pricing.LocalEmbeddingCache) *AutoDreamWorker {
 	if memDir == "" {
 		memDir = ".agent-task/memory"
 	}
@@ -34,6 +36,7 @@ func NewAutoDreamWorker(db DB, api EmbeddingApi, memDir string) *AutoDreamWorker
 		db:     db,
 		api:    api,
 		memDir: memDir,
+		cache:  cache,
 	}
 }
 
@@ -59,9 +62,22 @@ func (w *AutoDreamWorker) SweepAndConsolidate() error {
 		}
 		content := string(contentBytes)
 
-		embedding, err := w.api.GenerateEmbedding(content)
-		if err != nil {
-			return fmt.Errorf("failed to generate embedding for %s: %w", path, err)
+		var embedding string
+		var errEmb error
+		var exists bool
+
+		if w.cache != nil {
+			embedding, exists = w.cache.Get(content)
+		}
+
+		if !exists {
+			embedding, errEmb = w.api.GenerateEmbedding(content)
+			if errEmb != nil {
+				return fmt.Errorf("failed to generate embedding for %s: %w", path, errEmb)
+			}
+			if w.cache != nil {
+				w.cache.Set(content, embedding)
+			}
 		}
 
 		memID := uuid.New().String()
