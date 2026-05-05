@@ -91,6 +91,29 @@ impl DashboardService for MyDashboardService {
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
 
+        let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
+        for m in _meetings.iter() {
+            let mut transcript = Vec::new();
+            if !req.mobile_optimized {
+                for msg in &m.transcript {
+                    transcript.push(crate::ohc::agent::AgentMessage {
+                        id: msg.id.clone(),
+                        from_agent_id: msg.from_agent.clone(),
+                        to_agent_id: msg.to_agent.clone(),
+                        message_type: msg.r#type.clone(),
+                        content: msg.content.clone(),
+                        meeting_id: m.id.clone(),
+                        occurred_at_unix: msg.occurred_at_unix,
+                    });
+                }
+            }
+            out_meetings.push(crate::ohc::app::MeetingRoom {
+                id: m.id.clone(),
+                participants: m.participants.clone(),
+                transcript,
+            });
+        }
+
         let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
 
         let mut status_map = std::collections::HashMap::new();
@@ -110,7 +133,7 @@ impl DashboardService for MyDashboardService {
         Ok(Response::new(DashboardSnapshot {
             organization: None, // Need to query DB for org info
             agents: vec![],
-            meetings: vec![],
+            meetings: out_meetings,
             cost_summary: Some(cost_summary),
             statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),
