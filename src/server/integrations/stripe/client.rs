@@ -30,8 +30,16 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, _customer_id: &str) -> Result<String, String> {
-        Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+    pub async fn create_checkout_session(&self, _price_id: &str, _customer_id: &str, payment_method: Option<crate::integrations::stripe::routing::PaymentMethod>) -> Result<String, String> {
+        let pm = payment_method.unwrap_or(crate::integrations::stripe::routing::PaymentMethod::CreditCard);
+        match pm {
+            crate::integrations::stripe::routing::PaymentMethod::Ach => {
+                Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
+            },
+            crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
+                Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+            }
+        }
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
