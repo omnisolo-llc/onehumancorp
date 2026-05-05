@@ -4270,6 +4270,178 @@ mod dashboard_docs_tests {
 
 #[cfg(test)]
 mod remaining_e2e_tests {
+    #[test]
+    fn test_e2e_social_posting_flow() {
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let social_posting_ui = app::SocialPosting::new().unwrap();
+        let connect_instagram_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let connect_instagram_called_clone = connect_instagram_called.clone();
+
+        social_posting_ui.on_connect_instagram(move || {
+            *connect_instagram_called_clone.borrow_mut() = true;
+        });
+
+        social_posting_ui.invoke_connect_instagram();
+        assert!(*connect_instagram_called.borrow(), "Connect Instagram should be invoked");
+
+        let connect_facebook_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let connect_facebook_called_clone = connect_facebook_called.clone();
+        social_posting_ui.on_connect_facebook(move || {
+            *connect_facebook_called_clone.borrow_mut() = true;
+        });
+        social_posting_ui.invoke_connect_facebook();
+        assert!(*connect_facebook_called.borrow(), "Connect Facebook should be invoked");
+
+        let approve_post_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let approve_post_called_clone = approve_post_called.clone();
+
+        social_posting_ui.on_approve_post(move || {
+            *approve_post_called_clone.borrow_mut() = true;
+        });
+
+        social_posting_ui.invoke_approve_post();
+        assert!(*approve_post_called.borrow(), "Approve post should be invoked");
+    }
+
+    #[test]
+    fn test_e2e_free_tier_limits_flow() {
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let dashboard_handle_add_product = dashboard_ui.as_weak();
+
+        dashboard_ui.on_action_add_product(move || {
+            if let Some(ui) = dashboard_handle_add_product.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                ui.set_show_upgrade_prompt(true);
+            }
+        });
+
+        dashboard_ui.invoke_action_add_product();
+        assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to add more!");
+
+        let agents_ui = app::Agents::new().unwrap();
+        let agents_ui_handle = agents_ui.as_weak();
+        agents_ui.on_hire_agent(move || {
+            if let Some(ui) = agents_ui_handle.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                ui.set_show_upgrade_prompt(true);
+            }
+        });
+
+        agents_ui.invoke_hire_agent();
+        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 agent. Upgrade to unlock more power!");
+
+        let wb_ui = app::WebsiteBuilder::new().unwrap();
+        wb_ui.set_domain_choice("subdomain".into());
+        assert_eq!(wb_ui.get_domain_choice(), "subdomain");
+    }
+
+    #[test]
+    fn test_e2e_success_milestones_flow() {
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        assert!(!dashboard_ui.get_show_milestone());
+        dashboard_ui.set_show_milestone(true);
+        dashboard_ui.set_milestone_title("First Sale!".into());
+        dashboard_ui.set_milestone_message("You just got your first customer!".into());
+
+        assert!(dashboard_ui.get_show_milestone());
+        assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
+        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+
+        let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let milestone_dismissed_clone = milestone_dismissed.clone();
+        dashboard_ui.on_dismiss_milestone(move || {
+            *milestone_dismissed_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_dismiss_milestone();
+        assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+
+        dashboard_ui.set_milestone_title("10th Order".into());
+        assert_eq!(dashboard_ui.get_milestone_title(), "10th Order");
+
+        dashboard_ui.set_milestone_title("100 Visitors".into());
+        assert_eq!(dashboard_ui.get_milestone_title(), "100 Visitors");
+    }
+
+    #[test]
+    fn test_e2e_viral_storefront_flow() {
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let ui = app::WebsiteBuilder::new().unwrap();
+        ui.set_step(4);
+        assert_eq!(ui.get_step(), 4);
+
+        let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let signup_opened_clone = signup_opened.clone();
+
+        ui.on_open_ohc_signup(move || {
+            *signup_opened_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_open_ohc_signup();
+        assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
+    }
+
     use super::*;
     use slint::Model;
 
