@@ -253,7 +253,7 @@ impl Hub {
                                         from_agent: "SYSTEM_SUMMARIZER".to_string(),
                                         to_agent: "all".to_string(),
                                         r#type: "status".to_string(),
-                                        content: format!("[CONTEXT SUMMARIZED]: {}", summary.0),
+                                        content: format!("[CONTEXT SUMMARIZED]: {}", summary),
                                         meeting_id: m_id.clone(),
                                         occurred_at_unix: Utc::now().timestamp(),
                                     }];

@@ -119,15 +119,10 @@ impl AutoDreamWorker {
             let client = crate::minimax::LocalLLMClient::new();
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
 {}", payload);
-            let summary = match client.reason(&prompt).await {
-                Ok((res, usage)) => {
-                    res
-                },
-                Err(e) => {
-                    println!("AutoDream: failed to summarize logs: {}.", e);
-                    format!("Summary of task: {}", payload)
-                }
-            };
+            let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
+                println!("AutoDream: failed to summarize logs: {}.", e);
+                format!("Summary of task: {}", payload)
+            });
             
             let mem_id = uuid::Uuid::new_v4().to_string();
             

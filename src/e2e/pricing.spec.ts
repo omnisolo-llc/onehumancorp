@@ -182,20 +182,29 @@ test.describe('My Plan Page', () => {
     }
   });
 
-});
-
-test.describe('Cost Transparency Dashboard E2E', () => {
-  test('should navigate from Dashboard -> My Plan -> Cost Details', async ({ page }) => {
+  test('should open cost transparency dashboard', async ({ page }) => {
     await page.goto('/');
+
+    // Login flow
     await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
     await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
     await page.click('button:has-text("Login"), button:has-text("Sign In")');
+
+    // Wait for Dashboard
     await expect(page.locator('text=Dashboard').first()).toBeVisible();
+
+    // Navigate to Billing / My Plan
     await page.click('text=Billing');
+
+    // Wait for My Plan page
     await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
+
+    // Verify Cost Details button and click it
     const detailsBtn = page.locator('button:has-text("View Cost Details")').first();
     await expect(detailsBtn).toBeVisible();
     await detailsBtn.click();
+
+    // Assert Cost Dashboard appears
     await expect(page.locator('text=/Cost & AI Usage/i').first()).toBeVisible();
   });
 });

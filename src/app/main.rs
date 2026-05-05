@@ -857,14 +857,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = ui.show();
         }
     });
-
-    let pricing_handle_clone = pricing_handle.clone();
-    my_plan_ui.on_upgrade(move || {
-        if let Some(ui) = pricing_handle_clone.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
     let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
     my_plan_ui.on_view_details(move || {
         if let Some(ui) = cost_dashboard_handle_clone.upgrade() {

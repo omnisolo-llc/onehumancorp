@@ -119,7 +119,7 @@ impl OrgService for MyOrgService {
             resumption_latency_ms: 4800,
             pending_approvals: 2,
             active_handoffs: 1,
-            token_velocity: summary.await.total_tokens,
+            token_velocity: summary.total_tokens,
         }))
     }
 }
