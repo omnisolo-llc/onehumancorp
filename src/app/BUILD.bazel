@@ -216,6 +216,7 @@ rust_shared_library(
     data = glob(["*.slint"]),
     edition = "2024",
     target_compatible_with = ["@platforms//cpu:wasm32"],
+    crate_root = "main.rs",
     deps = [
         ":build_script_wasm",
         "@crates//:chrono",
