@@ -2777,7 +2777,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let agent = Agent::new(client, vec![mutating_tool]);
+        let mut agent = Agent::new(client, vec![mutating_tool]);
 
         let temp_dir = std::env::temp_dir().join(format!("ohc_test_git_ckpt_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -2849,7 +2849,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let agent = Agent::new(client, vec![mutating_tool]);
+        let mut agent = Agent::new(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
         let mut cfg = AgentRunConfig::default();
