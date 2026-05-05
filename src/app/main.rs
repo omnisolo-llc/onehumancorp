@@ -17,6 +17,11 @@ pub mod ohc {
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
     }
+    pub mod api {
+        pub mod v1 {
+            pub use app_proto::ohc::api::v1::*;
+        }
+    }
 }
 
 use slint::ComponentHandle;
@@ -328,6 +333,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                // Ideally, we'd fetch these from the backend here. For now, since Slint UI tests run without backend, we populate it synchronously if empty or we could make a gRPC call.
+                                                // Assuming we make a grpc call
+                                                #[cfg(not(target_arch = "wasm32"))]
+                                                {
+                                                    let ui_weak = ui.as_weak();
+                                                    tokio::spawn(async move {
+                                                        use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+                                                        use ohc::api::v1::GetVideoTutorialsRequest;
+                                                        let channel = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
+                                                        if let Ok(channel) = channel {
+                                                            let mut client = DashboardServiceClient::new(channel);
+                                                            if let Ok(response) = client.get_video_tutorials(tonic::Request::new(GetVideoTutorialsRequest{})).await {
+                                                                let resp = response.into_inner();
+                                                                let mut models: Vec<app::VideoMetadata> = Vec::new();
+                                                                for v in resp.videos {
+                                                                    models.push(app::VideoMetadata {
+                                                                        title: v.title.into(),
+                                                                        description: v.description.into(),
+                                                                        duration_sec: v.duration_sec,
+                                                                        url: v.url.into(),
+                                                                        thumbnail_url: v.thumbnail_url.into(),
+                                                                    });
+                                                                }
+                                                                let _ = slint::invoke_from_event_loop(move || {
+                                                                    let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
+                                                                    if let Some(ui) = ui_weak.upgrade() {
+                                                                        ui.set_videos(model_rc.into());
+                                                                    }
+                                                                });
+                                                            }
+                                                        }
+                                                    });
+                                                }
                                                 let _ = ui.show();
                                             }
                                         });
@@ -3817,6 +3855,18 @@ mod docs_tests {
         // Initial state assertions
         assert_eq!(video_tutorials.get_selected_video_title(), "");
         assert_eq!(video_tutorials.get_is_playing(), false);
+
+        // Simulate getting video metadata
+        let models = vec![
+            app::VideoMetadata {
+                title: "How to add your first product".into(),
+                description: "desc".into(),
+                duration_sec: 60,
+                url: "url".into(),
+                thumbnail_url: "thumb".into(),
+            }
+        ];
+        video_tutorials.set_videos(std::rc::Rc::new(slint::VecModel::from(models)).into());
 
         // Simulate selecting and playing a video
         video_tutorials.set_selected_video_title("How to add your first product".into());

@@ -109,6 +109,7 @@ rust_binary(
         "@crates//:tonic",
         "@crates//:sqlx",
         "//src/proto:billing_tonic",
+        "//src/proto:app_tonic",
     ],
 )
 
@@ -208,6 +209,7 @@ rust_test(
         "@crates//:tonic",
         "@crates//:sqlx",
         "//src/proto:billing_tonic",
+        "//src/proto:app_tonic",
     ],
 )
 
