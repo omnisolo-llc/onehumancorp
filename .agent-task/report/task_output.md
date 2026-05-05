@@ -1,292 +1,133 @@
-# OHC Architecture Research Report
+# 🔍 Scout: Tool Integration Research Q2
 
-## 1. Business Journey Architecture
+## [Social Media] Manychat Integration
+**Title**: Integrate Manychat for Unified Social Media Inbox
+**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
+**Research Report**:
+- **Tool**: Manychat
+- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
+- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
+- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
+- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
+- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
+**Design Doc**:
+- User goes to the Operations dashboard and clicks "Connect Instagram".
+- User authenticates with Facebook/Instagram via OAuth.
+- OHC registers webhooks to receive new DMs.
+- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
+- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
+**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+**Priority**: P0
+**Estimated Scope**: Large
 
-### End-to-End User Journeys Across All Personas
+## [Calendar] Calendly Integration
+**Title**: Integrate Calendly for Automated Booking
+**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
+**Research Report**:
+- **Tool**: Calendly
+- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
+- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
+- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
+- **Pricing**: Free tier available. Premium starts at $10/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
+**Design Doc**:
+- User goes to Sales dashboard and connects Calendly.
+- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
+- When a customer clicks to book, they are shown the Calendly widget.
+- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
+**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-**Problem Statement**
-Small business owners—from bakers to freelance handymen to boutique owners—often lack the technical expertise to set up and grow an online presence. Existing tools like Shopify or Wix can be overwhelmingly complex. The OneHumanCorp (OHC) platform aims to bridge this gap, enabling a non-technical user to go from an idea to a fully operational, live business in under 10 minutes. Without mapped, persona-driven business journeys, we risk building fragmented, confusing experiences that lead to user drop-off and frustration. We must define the end-to-end journeys across all key phases—Acquisition, Onboarding, Activation, Retention, Revenue, and Referral—to ensure a seamless, mobile-first experience.
+## [Email Marketing] Mailchimp Integration
+**Title**: Integrate Mailchimp for Customer Re-engagement
+**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
+**Research Report**:
+- **Tool**: Mailchimp
+- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
+- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
+- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
+- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
+- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
+- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
+- The user sees open rates and clicks in the OHC Marketing dashboard.
+**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-**Research Report**
-- **Shopify / Wix / Squarespace / GoDaddy**: These platforms typically require 30–60 minutes of setup, assuming the user has high to moderate technical competence. They often focus heavily on the desktop experience for building the site.
-- **OHC's Edge**: True mobile-first management. Setup in under 10 minutes from a phone (375px display) without ever writing code or manually tuning complex layouts. Invisible AI acts as the builder and manager.
+## [Payment] Mercado Pago Integration
+**Title**: Integrate Mercado Pago for LATAM Payments
+**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
+**Research Report**:
+- **Tool**: Mercado Pago
+- **Target Persona**: Global users outside the US/EU.
+- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
+- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
+- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
+- User connects their Mercado Pago account.
+- Customers see a "Pay with Mercado Pago" button at checkout.
+- Webhooks update the order status in OHC when payment succeeds.
+**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
+**Priority**: P2
+**Estimated Scope**: Large
 
-**Persona Analysis & Friction Points**
-- **Maya (The Baker)**: Heavy reliance on Instagram. Friction: Translating IG DMs into actual tracked orders. Needs a direct link-in-bio storefront and automated DM follow-ups.
-- **Carlos (The Handyman)**: Entirely word-of-mouth. Friction: Capturing offline interest and translating it to a scheduled, paid booking. Needs simple offline-to-online bridges (e.g., QR codes) and an automated quoting agent.
-- **Priya (The Boutique Owner)**: Omnichannel. Friction: Inventory mismatch between in-store and online. Needs seamless tap-to-pay and synchronized digital inventory.
-- **Leo (The Music Tutor)**: Service & Subscription based. Friction: Manual scheduling and zoom link generation. Needs auto-sync with Google Calendar and subscription management.
-- **Fatima (The Food Cart Operator)**: High-speed, offline, limited English. Friction: Complex menus and POS flows. Needs multi-language, high-contrast, pre-order toggles for quick pre-orders.
+## [Shipping] Shippo Integration
+**Title**: Integrate Shippo for Automated Label Generation
+**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
+**Research Report**:
+- **Tool**: Shippo
+- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
+- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
+- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
+- **Pricing**: Free tier (pay per label + postage).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
+- The Operations agent shows the cheapest shipping option.
+- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
+- OHC automatically emails the customer the tracking number.
+**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
+**Priority**: P1
+**Estimated Scope**: Large
 
-**Design Doc**
+## [SMS] Twilio Integration
+**Title**: Integrate Twilio for SMS Order Notifications
+**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
+**Research Report**:
+- **Tool**: Twilio
+- **Target Persona**: Fatima (Food Cart Operator)
+- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
+- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
+- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
+- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+**Design Doc**:
+- User goes to Settings and toggles "Send me SMS for new orders".
+- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
+- (Future: Customers can also receive SMS receipts).
+**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
+**Priority**: P2
+**Estimated Scope**: Medium
 
-#### Architecture Diagrams (Mermaid.js)
-
-**1. Maya (The Baker) - Custom Product Journey**
-```mermaid
-sequenceDiagram
-    actor Maya
-    participant Marketing Agent
-    participant OHC Mobile App
-    participant Customer
-    participant Operations Agent
-
-    Maya->>OHC Mobile App: Connects Instagram & sets up profile
-    OHC Mobile App->>Marketing Agent: Generate Storefront & Link-in-bio
-    Marketing Agent-->>Maya: Previews layout (approved in 1 tap)
-    Maya->>Customer: Shares link-in-bio on Instagram
-    Customer->>OHC Mobile App: Requests custom vegan cake (via DM/link)
-    Operations Agent-->>Customer: Auto-replies with quote & payment link
-    Customer->>OHC Mobile App: Pays deposit via Stripe
-    OHC Mobile App-->>Maya: Push Notification "New Custom Order"
-    Operations Agent->>Maya: Adds to production calendar
-```
-
-**2. Carlos (The Handyman) - Service Booking Journey**
-```mermaid
-sequenceDiagram
-    actor Carlos
-    participant Sales Agent
-    participant OHC Mobile App
-    participant Customer
-    participant Legal Agent
-
-    Carlos->>OHC Mobile App: Lists services (Plumbing, Painting)
-    OHC Mobile App->>Sales Agent: Optimizes service descriptions
-    Customer->>OHC Mobile App: Scans QR code on Carlos' truck
-    Customer->>Sales Agent: Describes issue ("Leaky pipe")
-    Sales Agent-->>Customer: Generates estimated quote
-    Customer->>OHC Mobile App: Selects time slot & pays deposit
-    Legal Agent->>Customer: Auto-generates & sends terms of service
-    OHC Mobile App-->>Carlos: Push Notification "New Booking for Tuesday"
-```
-
-**3. Priya (The Boutique Owner) - Omnichannel Retail Journey**
-```mermaid
-sequenceDiagram
-    actor Priya
-    participant OHC Mobile App
-    participant Finance Agent
-    participant Customer
-    participant Marketing Agent
-
-    Priya->>OHC Mobile App: Scans new clothing inventory
-    OHC Mobile App->>Finance Agent: Updates online/offline stock
-    Customer->>Priya: Buys in-store via Tap-to-Pay
-    OHC Mobile App->>Finance Agent: Deducts inventory & logs revenue
-    Marketing Agent->>Customer: Sends email "Thanks! Here's 10% off next time"
-    Finance Agent-->>Priya: Daily Revenue Report Notification
-```
-
-**4. Leo (The Music Tutor) - Subscription Journey**
-```mermaid
-sequenceDiagram
-    actor Leo
-    participant Operations Agent
-    participant OHC Mobile App
-    participant Student
-    participant Customer Success Agent
-
-    Leo->>OHC Mobile App: Sets up monthly guitar lessons package
-    Student->>OHC Mobile App: Subscribes & pays first month
-    Operations Agent-->>Student: Generates & emails Zoom link
-    Operations Agent->>Leo: Syncs lesson to Google Calendar
-    Student->>OHC Mobile App: Misses 2 weeks of lessons
-    Customer Success Agent-->>Student: Re-engagement email/SMS
-```
-
-**5. Fatima (The Food Cart Operator) - Quick Pre-Order Journey**
-```mermaid
-sequenceDiagram
-    actor Fatima
-    participant OHC Mobile App (Arabic)
-    participant Customer
-    participant Operations Agent
-
-    Fatima->>OHC Mobile App (Arabic): Marks "Chicken Over Rice" as Available
-    Customer->>OHC Mobile App: Views menu & orders for 12:30 PM pickup
-    Customer->>OHC Mobile App: Pays online
-    Operations Agent-->>Fatima: High-volume audio alert & large UI notification
-    Fatima->>OHC Mobile App (Arabic): Taps "Order Ready"
-    Operations Agent-->>Customer: SMS "Your food is ready for pickup!"
-```
-
-**UI Wireframes & Screen Flow (375px First)**
-1. **Acquisition / Landing Page**: Minimal "Enter your business name" prompt with one clear CTA.
-2. **Onboarding (The 10-Minute Setup)**: Chat-like interface where the Business Advisory Agent asks 3-4 conversational questions (e.g., "What do you sell?", "How do you want to get paid?"). The UI builds the storefront dynamically in the background.
-3. **Dashboard (Activation & Retention)**:
-   - **Top**: "Today's Revenue" (large font) & "Pending Orders" (actionable buttons).
-   - **Middle**: "Agent Insights" feed (e.g., "The Promoter agent drafted an Instagram post for your new cakes. [Review & Post]").
-   - **Bottom**: Fixed tab bar (Home, Orders/Bookings, Customers, Settings).
-4. **Referral Flow**: A simple "Share OHC & get 1 month free" button in the Settings menu, pre-generating a personalized SMS message.
-
-**Mobile UX Flow**
-- **Input**: Use native mobile keyboards (numeric for pricing, email for customer data).
-- **Offline Mode**: The dashboard caches today's orders and revenue. Edits made offline (like toggling an item "Sold Out") are queued and synced when the network returns.
-- **Accessibility**: High contrast mode, large touch targets (44x44px minimum), and multi-language support (e.g., Arabic RTL layout for Fatima).
-
-**Key Design Decisions**
-- **Invisible Complexity**: Users never see "database", "DNS", or "API". The onboarding feels like a friendly text message conversation.
-- **Action-Oriented Dashboard**: The main screen isn't a static menu; it's a dynamic feed of what needs attention right now (Orders to fulfill, Agent actions to approve).
-- **Persona-Driven Defaults**: Based on onboarding answers, the UI automatically hides irrelevant features (e.g., Maya doesn't see "Tap-to-Pay" settings by default, Carlos doesn't see "Shipping Zones").
-
-## 2. Data Model Architecture
-
-### Entities, Relationships, and Multi-Tenancy Guarantees
-
-**Problem Statement**
-As OneHumanCorp scales to support diverse business types—from bakers and freelance handymen to boutique owners—the underlying data model must remain robust, scalable, and strictly isolated per tenant. A non-technical small business owner relies on the system to keep their customer data, orders, and AI agent memories perfectly secure and separate from others. We must define clear entity relationships, access patterns, and invariants that guarantee row-level multi-tenancy without adding complexity to the business owner's experience.
-
-**Research Report**
-- **Goal**: Review and evolve the OHC data model to ensure complete tenant isolation and optimized access patterns for both the mobile-first UI and the background AI agents.
-- **Context**: The backend uses PostgreSQL with Row-Level Security (RLS). Every query must implicitly respect the `tenant_id` context.
-
-**Key Entities**
-1.  **Tenant (Business)**: The core isolation boundary.
-2.  **User (Owner/Staff)**: Associates real people with one or more Tenants.
-3.  **Product/Service**: What the business sells. Needs to handle variants, pricing, and availability.
-4.  **Order/Booking**: The transaction record. Must link to Customer, Product/Service, and Payment.
-5.  **Customer**: The end-user buying from the Tenant.
-6.  **Agent Memory**: Context and history for AI interactions, scoped per Tenant and sometimes per Customer.
-7.  **File/Asset**: Images, documents, etc.
-
-**Design Doc**
-
-**Architecture Diagram (Mermaid.js)**
-```mermaid
-erDiagram
-    TENANT ||--o{ USER_TENANT : has
-    USER ||--o{ USER_TENANT : belongs_to
-    TENANT ||--o{ PRODUCT : owns
-    TENANT ||--o{ CUSTOMER : serves
-    TENANT ||--o{ ORDER : receives
-    CUSTOMER ||--o{ ORDER : places
-    PRODUCT ||--o{ ORDER_ITEM : included_in
-    ORDER ||--o{ ORDER_ITEM : contains
-    TENANT ||--o{ AGENT_MEMORY : stores
-    CUSTOMER ||--o{ AGENT_MEMORY : relates_to
-
-    TENANT {
-        uuid id PK
-        string name
-        string business_type
-        jsonb settings
-    }
-    USER {
-        uuid id PK
-        string email
-    }
-    USER_TENANT {
-        uuid user_id FK
-        uuid tenant_id FK
-        string role
-    }
-    PRODUCT {
-        uuid id PK
-        uuid tenant_id FK
-        string name
-        numeric price
-        jsonb variants
-    }
-    CUSTOMER {
-        uuid id PK
-        uuid tenant_id FK
-        string email
-        string phone
-    }
-    ORDER {
-        uuid id PK
-        uuid tenant_id FK
-        uuid customer_id FK
-        string status
-        numeric total_amount
-    }
-    ORDER_ITEM {
-        uuid id PK
-        uuid order_id FK
-        uuid product_id FK
-        integer quantity
-        numeric price_at_time
-    }
-    AGENT_MEMORY {
-        uuid id PK
-        uuid tenant_id FK
-        uuid customer_id FK "nullable"
-        string department
-        text context
-        vector embedding
-    }
-```
-
-**Invariants & Multi-Tenancy Guarantees**
--   **Strict RLS**: Every table (except global configuration) MUST have a `tenant_id` column. PostgreSQL Row-Level Security policies MUST ensure that queries can only read/write rows where `tenant_id = current_setting('app.current_tenant')`.
--   **Agent Isolation**: AI agents retrieve context (`AGENT_MEMORY`) strictly filtered by `tenant_id`. An agent operating for Tenant A cannot access embeddings or memory from Tenant B.
--   **No Cross-Tenant Joins**: Application logic should never need to join data across different tenants.
-
-**Access Patterns**
--   **Mobile App (Owner View)**: `SELECT * FROM orders WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50`. (Implicitly scoped to the owner's `tenant_id` via RLS).
--   **Customer Success Agent**: `SELECT context FROM agent_memory WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 10`. (Implicitly scoped).
--   **Analytics (Finance Agent)**: `SELECT date_trunc('day', created_at), sum(total_amount) FROM orders WHERE created_at > now() - interval '30 days' GROUP BY 1`.
-
-## 3. Website & Storefront Builder Architecture
-
-### Zero-Code AI Driven Design
-
-**Problem Statement**
-Traditional website builders like Squarespace or Wix offer too much flexibility for non-technical users, leading to decision paralysis, broken layouts on mobile, and hours wasted tweaking padding. Our users (Maya, Carlos, Leo) need a professional, high-converting storefront in minutes, not days. The OHC platform must provide a builder where AI handles the design, layout, and mobile responsiveness automatically, while allowing the user simple, guardrailed customization.
-
-**Research Report**
-- **Competitors**: Shopify's theme editor is robust but technical. Wix's AI is often a starting point that requires heavy manual adjustment.
-- **OHC's Edge**: The "Marketing & Advertising Agent" acts as the designer. The user provides intent (e.g., "Make it look elegant and focus on custom cakes"), and the agent selects the right layout blocks, applies the premium design tokens, and generates the copy.
-
-**Design Doc**
-
-**Architecture Highlights**
-1.  **Block-Based System**: The UI is composed of rigid, pre-tested blocks (e.g., `HeroBlock`, `ProductGridBlock`, `TestimonialBlock`, `ServiceListBlock`). Users cannot break the internal layout of a block; they can only reorder blocks or change the data within them.
-2.  **AI Designer**: The Marketing Agent analyzes the business type (from Onboarding) and automatically generates an initial sequence of blocks, populated with AI-generated copy and stock imagery (or the user's uploaded images).
-3.  **Global Theming (Design Tokens)**: Instead of tweaking individual colors, users select a "Vibe" (e.g., "Playful", "Minimal", "Premium"). This applies a cohesive set of CSS design tokens (Glassmorphism, specific font pairings like Outfit/Inter, color palettes) globally.
-4.  **Publishing Pipeline**: When a user hits "Publish", the JSON representation of the blocks is compiled into static, highly optimized HTML/CSS (or a highly cached SSR representation) and pushed to the CDN.
-
-**UI Wireframes & Screen Flow (Mobile-First)**
-- **Edit Mode**: The user sees their live site on their phone screen. Tapping a section (e.g., the Hero) opens a bottom sheet.
-- **Bottom Sheet Controls**: Instead of margin/padding sliders, the controls are intent-based:
-  - "Change Image"
-  - "Rewrite Text (AI)"
-  - "Change Vibe (Color/Font)"
-- **Block Reordering**: Simple drag handles on the side of sections to move them up or down.
-
-**Mobile UX Constraints**
-- The builder itself must be fully usable on a 375px screen.
-- Previews are inherently 1:1 with the final mobile product.
-
-## 4. Mobile-First Architecture Review
-
-### Validating the 375px Constraint and Offline Capabilities
-
-**Problem Statement**
-A core promise of the OHC platform is that a business owner can run their entire operation from a smartphone. Many platforms claim to be mobile-friendly, but core management tasks (like setting up variants, viewing complex analytics, or editing website layouts) inevitably force the user to a desktop. We must ensure our architecture and UI designs strictly adhere to the mobile-first mandate, specifically targeting a 375px viewport (e.g., standard iPhone) as the primary management interface.
-
-**Research Report**
-- **Context**: Business owners like Maya (Baker) or Fatima (Food Cart) rely entirely on their phones, often in environments with spotty network connectivity (kitchens, street corners).
-
-**Design Doc**
-
-**Key Constraints & Architecture Mandates**
-1.  **The 375px Rule**: Every single management screen (Dashboard, Product Creation, Order Fulfillment, Builder) must be fully functional without horizontal scrolling on a 375px wide screen. Desktop views are additive (e.g., showing more columns in a table), but the mobile view must contain 100% of the functionality.
-2.  **Offline-Capable Dashboard (Read/Queue)**:
-    - The mobile app must aggressively cache the current day's critical data (Pending Orders, Today's Appointments, Inventory Levels).
-    - If Fatima loses signal, she must still be able to read her active orders.
-    - If she marks an order as "Ready", the action is placed in a local queue and synced automatically when the connection is restored. The UI must optimistically update to show the action was successful.
-3.  **Input Optimization**:
-    - Avoid complex multi-select dropdowns or nested menus. Use full-screen bottom sheets for complex selections.
-    - Enforce native keyboard types (e.g., `keyboardType: TextInputType.number` in Flutter for prices).
-4.  **Performance Targets**:
-    - Initial app load time < 2 seconds on a mid-range Android device.
-    - All images uploaded by users are automatically compressed to WebP and served via a CDN resized to the exact viewport dimensions.
-
-**UI Validation Checklist (for Implementers)**
-- [ ] Are touch targets at least 44x44px?
-- [ ] Is contrast sufficient for outdoor use?
-- [ ] Does the UI rely on hover states? (If yes, redesign).
-- [ ] Can the most critical daily task be completed with one hand?
-
+## [Video] Zoom Integration
+**Title**: Integrate Zoom for Auto-Generated Meeting Links
+**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
+**Research Report**:
+- **Tool**: Zoom
+- **Target Persona**: Leo (Music Tutor)
+- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
+- **Risks**: Zoom OAuth requires annual app review and compliance checks.
+- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
+**Design Doc**:
+- User connects their Zoom account via the Sales dashboard.
+- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
+- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
+**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
+**Priority**: P1
+**Estimated Scope**: Medium
