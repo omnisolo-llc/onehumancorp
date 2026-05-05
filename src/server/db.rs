@@ -480,6 +480,20 @@ impl DB {
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS consolidated_memory (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        agent_id TEXT,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        source_type TEXT NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        last_referenced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        reference_count INTEGER DEFAULT 0,
+                        reliability_score INTEGER DEFAULT 50,
+                        owner_override BOOLEAN DEFAULT FALSE,
+                        metadata TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS agents (
                         id TEXT PRIMARY KEY,
                         name TEXT NOT NULL,
