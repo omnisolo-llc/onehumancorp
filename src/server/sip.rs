@@ -104,6 +104,15 @@ impl SipDB {
 
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
+
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        if is_standalone {
+            let pool_clone = self.pool.clone();
+            tokio::spawn(async move {
+                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": "delegate_mission" })).await;
+            });
+        }
+
         self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
     }
 
@@ -125,8 +134,17 @@ impl SipDB {
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
                     if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") {
+                        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+                        if is_standalone {
+                            let pool_clone = self.pool.clone();
+                            tokio::spawn(async move {
+                                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": "upsert_mission" })).await;
+                            });
+                        }
                         attempt += 1;
                         if attempt >= max_attempts {
+                            let pool_clone = self.pool.clone();
+                            let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_sqlite_retry_exhausted_total", "counter", 1.0, serde_json::json!({ "operation": "upsert_mission" })).await;
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;

@@ -226,6 +226,14 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        if is_standalone {
+            let pool_clone = self.hub.pool.clone();
+            tokio::spawn(async move {
+                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": "delegate_mission_batch" })).await;
+            });
+        }
+
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 

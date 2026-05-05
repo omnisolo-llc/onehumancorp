@@ -15,11 +15,9 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: powersync
-        controlledResources: ["cpu", "memory"]
+        controlledResources: ["memory"]
         minAllowed:
-          cpu: {{ .Values.powersync.resources.requests.cpu }}
           memory: {{ .Values.powersync.resources.requests.memory }}
         maxAllowed:
-          cpu: {{ .Values.powersync.resources.limits.cpu }}
           memory: {{ .Values.powersync.resources.limits.memory }}
 {{- end }}

@@ -553,8 +553,24 @@ impl Hub {
                     }
                     
                     if hist.len() > 1 {
-                        let _rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        // Removed noisy log for signal hygiene
+                        let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
+                        let labels = serde_json::json!({
+                            "tenant_id": org_id.clone()
+                        });
+
+                        let pool_clone = self.pool.clone();
+                        tokio::spawn(async move {
+                            let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_burn_rate_forecast", "gauge", rate as f32, labels.clone()).await;
+                        });
+
+                        let predicted_24h = rate * 60.0 * 24.0;
+                        let labels_24h = serde_json::json!({
+                            "tenant_id": org_id.clone()
+                        });
+                        let pool_clone_2 = self.pool.clone();
+                        tokio::spawn(async move {
+                            let _ = crate::telemetry::buffer_metric(&pool_clone_2, "ohc_token_burn_rate_predicted_24h", "gauge", predicted_24h as f32, labels_24h).await;
+                        });
                     }
                 } else {
                     history.remove(&org_id);

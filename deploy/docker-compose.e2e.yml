@@ -11,6 +11,11 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     image: public.ecr.aws/docker/library/postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
@@ -34,6 +39,11 @@ services:
           memory: 256M
 
   redis:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     image: public.ecr.aws/docker/library/redis:7-alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -53,6 +63,11 @@ services:
   # (IsSQLite() == false for Postgres), so no actual requests are made.
   # This container simply exists to satisfy any connectivity checks.
   ohc-core:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     image: public.ecr.aws/docker/library/busybox:latest
     command: sleep infinity
     deploy:
