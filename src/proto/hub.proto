@@ -1182,6 +1182,28 @@ service AutoDreamService {
   rpc QueryAutoDream(AutoDreamQueryRequest) returns (AutoDreamQueryResult);
 }
 
+
+message ConnectSocialRequest {
+  string platform = 1;
+}
+message ConnectSocialResponse {
+  bool success = 1;
+}
+message GeneratePostRequest {
+  string platform = 1;
+  string topic = 2;
+}
+message GeneratePostResponse {
+  string content = 1;
+}
+message SchedulePostRequest {
+  string platform = 1;
+  string content = 2;
+}
+message SchedulePostResponse {
+  bool success = 1;
+}
+
 message StatusCount {
   string status = 1;
   int32 count = 2;
@@ -1324,6 +1346,9 @@ service AgentManagerService {
   rpc GetDashboardSnapshot(EmptyRequest) returns (DashboardSnapshot);
   rpc CreateSnapshot(CreateSnapshotRequest) returns (OrgSnapshot);
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns (DashboardSnapshot);
+  rpc ConnectSocial(ConnectSocialRequest) returns (ConnectSocialResponse);
+  rpc GeneratePost(GeneratePostRequest) returns (GeneratePostResponse);
+  rpc SchedulePost(SchedulePostRequest) returns (SchedulePostResponse);
 }
 
 message WizardStepsProto {

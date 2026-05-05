@@ -65,6 +65,7 @@ thread_local! {
     static GLOBAL_WEBSITE_BUILDER: RefCell<Option<slint::Weak<app::WebsiteBuilder>>> = RefCell::new(None);
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
+    static GLOBAL_SOCIAL_POSTING: RefCell<Option<slint::Weak<app::SocialPosting>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
 }
 
@@ -79,6 +80,7 @@ thread_local! {
     static GLOBAL_WEBSITE_BUILDER: RefCell<Option<slint::Weak<app::WebsiteBuilder>>> = RefCell::new(None);
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
+    static GLOBAL_SOCIAL_POSTING: RefCell<Option<slint::Weak<app::SocialPosting>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
 }
 
@@ -1081,6 +1083,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
+
+    let social_posting_ui = app::SocialPosting::new()?;
+    GLOBAL_SOCIAL_POSTING.with(|g| *g.borrow_mut() = Some(social_posting_ui.as_weak()));
+
+    let social_posting_handle = social_posting_ui.as_weak();
+
+    social_posting_ui.on_connect_instagram({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            let ui_handle_clone = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::ConnectSocialRequest {
+                        platform: "instagram".to_string(),
+                    });
+                    if let Ok(res) = client.connect_social(req).await {
+                        if res.into_inner().success {
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_clone.upgrade() {
+                                    ui.set_is_connected_instagram(true);
+                                }
+                            }).unwrap();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    social_posting_ui.on_connect_facebook({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            let ui_handle_clone = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::ConnectSocialRequest {
+                        platform: "facebook".to_string(),
+                    });
+                    if let Ok(res) = client.connect_social(req).await {
+                        if res.into_inner().success {
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_clone.upgrade() {
+                                    ui.set_is_connected_facebook(true);
+                                }
+                            }).unwrap();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    social_posting_ui.on_generate_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            let ui_handle_clone = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::GeneratePostRequest {
+                        platform: "instagram".to_string(),
+                        topic: "New arrival".to_string(),
+                    });
+                    let result: Result<tonic::Response<_>, tonic::Status> = client.generate_post(req).await;
+                    if let Ok(res) = result {
+                        let content = res.into_inner().content;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_clone.upgrade() {
+                                ui.set_post_content(content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
+    social_posting_ui.on_schedule_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            let ui_handle_clone = ui_handle.clone();
+            let content = ui_handle.upgrade().map(|ui| ui.get_post_content().to_string()).unwrap_or_default();
+            tokio::spawn(async move {
+                if let Ok(mut client) = crate::ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(crate::ohc::orchestration::SchedulePostRequest {
+                        platform: "instagram".to_string(),
+                        content: content,
+                    });
+                    if let Ok(res) = client.schedule_post(req).await {
+                        if res.into_inner().success {
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle_clone.upgrade() {
+                                    let _ = ui.hide();
+                                }
+                            }).unwrap();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    social_posting_ui.on_approve_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+
     let email_marketing_ui = app::EmailMarketing::new()?;
     let email_marketing_handle = email_marketing_ui.as_weak();
 
@@ -1124,13 +1237,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let em_handle_for_gb = email_marketing_handle.clone();
     let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let business_manager_handle_for_gb = business_manager_handle.clone();
+    let sp_handle_for_gb = social_posting_handle.clone();
     grow_business_ui.on_execute({
         move |strategy, _kpi| {
             if strategy == "Run your first email campaign" {
                 if let Some(ui) = em_handle_for_gb.upgrade() {
                     let _ = ui.show();
                 }
+
             } else if strategy == "Connect Instagram" {
+                if let Some(ui) = sp_handle_for_gb.upgrade() {
+                    let _ = ui.show();
+                }
+
                 if let Some(dash) = dashboard_handle_for_gb.upgrade() {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
@@ -1159,6 +1278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(website_builder_ui));
     Box::leak(Box::new(grow_business_ui));
     Box::leak(Box::new(email_marketing_ui));
+    Box::leak(Box::new(social_posting_ui));
 
     let referrals_ui = app::Referrals::new()?;
     GLOBAL_REFERRALS.with(|g| *g.borrow_mut() = Some(referrals_ui.as_weak()));
@@ -4364,20 +4484,39 @@ mod docs_tests {
 
         let gb_ui = app::GrowBusiness::new().unwrap();
         let em_ui = app::EmailMarketing::new().unwrap();
+        let sp_ui = app::SocialPosting::new().unwrap();
+        let sp_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let sp_shown_clone = sp_shown.clone();
 
         let em_shown = std::rc::Rc::new(std::cell::RefCell::new(false));
         let em_shown_clone = em_shown.clone();
 
-        // Simulate wiring for testing purposes since it is hidden in the `main`
-        let em_handle_for_gb = em_ui.as_weak();
-        gb_ui.on_execute(move |strategy, _kpi| {
-            if strategy == "Run your first email campaign" {
-                if let Some(ui) = em_handle_for_gb.upgrade() {
-                    let _ = ui.show();
-                    *em_shown_clone.borrow_mut() = true;
+        let sp_handle_for_gb = sp_ui.as_weak();
+        gb_ui.on_execute({
+            let em_handle_for_gb_test = em_ui.as_weak();
+            move |strategy, _kpi| {
+                if strategy == "Run your first email campaign" {
+                    if let Some(ui) = em_handle_for_gb_test.upgrade() {
+                        let _ = ui.show();
+                        *em_shown_clone.borrow_mut() = true;
+                    }
+                } else if strategy == "Connect Instagram" {
+                    if let Some(ui) = sp_handle_for_gb.upgrade() {
+                        let _ = ui.show();
+                        *sp_shown_clone.borrow_mut() = true;
+                    }
                 }
             }
         });
+
+        gb_ui.invoke_select_strategy("Connect Instagram".into());
+        gb_ui.invoke_execute(gb_ui.get_selected_strategy(), gb_ui.get_kpi_target());
+        assert!(*sp_shown.borrow(), "SocialPosting should be opened from Grow Business for Connect Instagram");
+
+        gb_ui.invoke_select_strategy("Run your first email campaign".into());
+        gb_ui.invoke_execute(gb_ui.get_selected_strategy(), gb_ui.get_kpi_target());
+        assert!(*em_shown.borrow(), "Email Marketing should be opened from Grow Business");
+        assert!(*sp_shown.borrow(), "SocialPosting should be opened from Grow Business for Connect Instagram");
 
         gb_ui.invoke_select_strategy("Run your first email campaign".into());
         gb_ui.invoke_next_step();
@@ -4820,20 +4959,52 @@ mod remaining_e2e_tests {
         let connect_instagram_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let connect_instagram_called_clone = connect_instagram_called.clone();
 
-        social_posting_ui.on_connect_instagram(move || {
-            *connect_instagram_called_clone.borrow_mut() = true;
+        let social_posting_ui_for_test = social_posting_ui.as_weak();
+        social_posting_ui.on_connect_instagram({
+            let handle = social_posting_ui_for_test.clone();
+            move || {
+                *connect_instagram_called_clone.borrow_mut() = true;
+                if let Some(ui) = handle.upgrade() {
+                    ui.set_is_connected_instagram(true);
+                }
+            }
         });
 
         social_posting_ui.invoke_connect_instagram();
         assert!(*connect_instagram_called.borrow(), "Connect Instagram should be invoked");
+        assert_eq!(social_posting_ui.get_is_connected_instagram(), true);
 
         let connect_facebook_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let connect_facebook_called_clone = connect_facebook_called.clone();
-        social_posting_ui.on_connect_facebook(move || {
-            *connect_facebook_called_clone.borrow_mut() = true;
+        social_posting_ui.on_connect_facebook({
+            let handle = social_posting_ui_for_test.clone();
+            move || {
+                *connect_facebook_called_clone.borrow_mut() = true;
+                if let Some(ui) = handle.upgrade() {
+                    ui.set_is_connected_facebook(true);
+                }
+            }
         });
+
         social_posting_ui.invoke_connect_facebook();
         assert!(*connect_facebook_called.borrow(), "Connect Facebook should be invoked");
+        assert_eq!(social_posting_ui.get_is_connected_facebook(), true);
+
+        let generate_post_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let generate_post_called_clone = generate_post_called.clone();
+        social_posting_ui.on_generate_post({
+            let handle = social_posting_ui_for_test.clone();
+            move || {
+                *generate_post_called_clone.borrow_mut() = true;
+                if let Some(ui) = handle.upgrade() {
+                    ui.set_post_content("🚀 New Arrival: Organic Vegan Cakes now in stock! Order today and get 10% off. #vegan #cakes #homebaking".into());
+                }
+            }
+        });
+
+        social_posting_ui.invoke_generate_post();
+        assert!(*generate_post_called.borrow(), "Generate Post should be invoked");
+        assert_eq!(social_posting_ui.get_post_content(), "🚀 New Arrival: Organic Vegan Cakes now in stock! Order today and get 10% off. #vegan #cakes #homebaking");
 
         let approve_post_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let approve_post_called_clone = approve_post_called.clone();

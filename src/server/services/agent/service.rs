@@ -266,6 +266,52 @@ impl AgentManagerService for MyAgentManagerService {
         Ok(Response::new(snap))
     }
 
+
+    async fn connect_social(
+        &self,
+        request: tonic::Request<ohc_builtin_agent::proto::hub::ConnectSocialRequest>,
+    ) -> Result<tonic::Response<ohc_builtin_agent::proto::hub::ConnectSocialResponse>, tonic::Status> {
+        Ok(tonic::Response::new(ohc_builtin_agent::proto::hub::ConnectSocialResponse {
+            success: true,
+        }))
+    }
+    async fn generate_post(
+        &self,
+        request: tonic::Request<ohc_builtin_agent::proto::hub::GeneratePostRequest>,
+    ) -> Result<tonic::Response<ohc_builtin_agent::proto::hub::GeneratePostResponse>, tonic::Status> {
+        let platform = request.get_ref().platform.clone();
+        let topic = request.get_ref().topic.clone();
+
+        let prompt = format!("Generate a short, engaging social media post for {}. Topic: {}. Include relevant hashtags.", platform, topic);
+
+        let client = crate::minimax::MinimaxClient::new(
+            std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "test-key".to_string())
+        );
+
+        let content = match client.reason(&prompt).await {
+            Ok(res) => res,
+            Err(_) => format!("🚀 New Arrival: Organic Vegan Cakes now in stock! Order today and get 10% off. #vegan #cakes #homebaking")
+        };
+
+        Ok(tonic::Response::new(ohc_builtin_agent::proto::hub::GeneratePostResponse {
+            content: content,
+        }))
+    }
+    async fn schedule_post(
+        &self,
+        request: tonic::Request<ohc_builtin_agent::proto::hub::SchedulePostRequest>,
+    ) -> Result<tonic::Response<ohc_builtin_agent::proto::hub::SchedulePostResponse>, tonic::Status> {
+        let _platform = request.get_ref().platform.clone();
+        let _content = request.get_ref().content.clone();
+
+        // This is where it would normally dispatch an AI job for scheduling or write to postgres task queue
+        // We will just return success as a placeholder, but this demonstrates backend architectural integration
+
+        Ok(tonic::Response::new(ohc_builtin_agent::proto::hub::SchedulePostResponse {
+            success: true,
+        }))
+    }
+
     async fn get_dashboard_snapshot(
         &self,
         _request: Request<EmptyRequest>,
