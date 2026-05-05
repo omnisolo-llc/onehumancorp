@@ -535,10 +535,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_flow() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match PgPool::connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET ROLE").await?; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url);
+
+        let pool = match pool_res {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let service = MyGrowthService::new(pool);
+
+        let _ = sqlx::query("INSERT INTO tenants (tenant_id, owner_id) VALUES ('org1', 'test_owner') ON CONFLICT DO NOTHING")
+            .execute(&service.pool).await;
 
         let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),

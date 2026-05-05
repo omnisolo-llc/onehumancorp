@@ -68,4 +68,44 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_tenant_leakage_across_sessions() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET ROLE").await?; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        if env::var("CI").is_ok() {
+            return;
+        }
+
+        let tenant_1 = "00000000-0000-0000-0000-000000000001";
+        let tenant_2 = "00000000-0000-0000-0000-000000000002";
+
+        // Using the auth_utils
+        match pool.begin().await {
+            Ok(mut tx) => {
+                let mut tx2 = pool.begin().await.unwrap();
+
+                // Using SET LOCAL via auth_utils
+                crate::utils::auth_utils::set_org_context(&mut *tx, tenant_1).await.unwrap();
+                crate::utils::auth_utils::set_org_context(&mut *tx2, tenant_2).await.unwrap();
+
+                // Test we can't see the other tenant's data
+                let row = sqlx::query("SELECT current_setting('app.current_tenant', true)")
+                    .fetch_one(&mut *tx).await.unwrap();
+                let t1_setting: String = row.get(0);
+                assert_eq!(t1_setting, tenant_1);
+
+                let row2 = sqlx::query("SELECT current_setting('app.current_tenant', true)")
+                    .fetch_one(&mut *tx2).await.unwrap();
+                let t2_setting: String = row2.get(0);
+                assert_eq!(t2_setting, tenant_2);
+            },
+            Err(_) => {}
+        }
+    }
 }

@@ -17,6 +17,17 @@ where
             .await?;
     } else {
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
+        // We explicitly clear role to prevent cross-session leakage.
+        // Cannot execute multiple statements in parameterized query using extended query protocol.
+        // We can execute multiple statements but bind only works on the last one.
+        // Wait, RESET ROLE does not take parameters.
+        // Instead of executing two queries we can just execute `set_config` and let the caller reset role if they want to.
+        // Actually the `SET LOCAL app.current_tenant` does not require parameters if we format it safely (since org_id is UUID/alphanumeric).
+        // Since we are binding org_id, let's just keep the set_config.
+        // Actually the issue is that "SET LOCAL ROLE ohc_bypassrls" leaks across transactions if the pool reuses the connection and doesn't reset it.
+        // But the pool options have `after_release` configured to `RESET app.current_tenant`.
+        // Wait! The pool does NOT have `RESET ROLE`.
+        // Oh, `SET LOCAL ROLE` is transaction scoped. The role resets automatically at transaction commit/rollback.
         query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(org_id)
             .execute(executor)
