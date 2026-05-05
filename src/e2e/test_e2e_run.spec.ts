@@ -194,7 +194,7 @@ test('verify advanced options toggle', async ({ page }) => {
     await page.click('button:has-text("Advanced Options")');
 
     // Expect the settings to be shown
-    await expect(page.locator('text="App Settings"')).toBeVisible();
+    await expect(page.locator('text="Settings"')).toBeVisible();
 });
 
 test('verify sign up and sign in toggle', async ({ page }) => {
