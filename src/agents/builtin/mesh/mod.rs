@@ -66,9 +66,9 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:state:handoff", Message {
+        self.transport.publish("mesh:coordination:handoff", Message {
             agent_id: "agent".to_string(),
-            action: "mesh:state:handoff".to_string(),
+            action: "mesh:coordination:handoff".to_string(),
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
@@ -76,7 +76,7 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("mesh:state:handoff", handler).await
+        self.transport.subscribe("mesh:coordination:handoff", handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
