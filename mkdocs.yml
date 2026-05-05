@@ -70,7 +70,7 @@ nav:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
-      - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh.md
+      - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
       - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
       - Hybrid FS MCP Architecture: technical/walkthroughs/hybrid_fs_mcp_architecture.md
