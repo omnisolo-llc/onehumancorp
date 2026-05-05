@@ -1152,6 +1152,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/mesh/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+        .nest("/api/v1/integrations/manychat", api::integrations::manychat::manychat_router().with_state(mesh_transport.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             crate::utils::tier_middleware::tier_middleware,

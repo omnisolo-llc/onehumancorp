@@ -24,5 +24,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     ).into_integration_provider();
     catalog.push(nats_provider);
 
+    let manychat_provider = crate::integrations::manychat::provider::get_manychat_provider();
+    catalog.push(manychat_provider);
+
     catalog
 }
