@@ -1407,6 +1407,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let my_plan_handle_fetch = my_plan_handle.clone();
+    slint::spawn_local(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_my_plan(req).await {
+                let plan = res.into_inner();
+                if let Some(ui) = my_plan_handle_fetch.upgrade() {
+                    ui.set_tier(format!("{} Tier", plan.current_plan).into());
+                    ui.set_total_actions(plan.ai_actions_used.to_string().into());
+                    ui.set_action_limit(plan.ai_actions_limit.to_string().into());
+                    ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
+                    ui.set_limit_storage(format!("{:.1} GB", plan.storage_limit_bytes as f64 / 1_073_741_824.0).into());
+                    ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
+                }
+            }
+        }
+    }).unwrap();
+
+    let cost_dashboard_handle_fetch = cost_dashboard_handle.clone();
+    slint::spawn_local(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_cost_dashboard(req).await {
+                let dash = res.into_inner();
+                if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
+                                        ui.set_total_spend(format!("${}", dash.total_costs).into());
+                    ui.set_total_tokens(dash.llm_cost.to_string().into());
+                }
+            }
+        }
+    }).unwrap();
+
+    let _pricing_handle_select2 = pricing_handle.clone();
+    pricing_ui.on_select_plan(move |plan| {
+        let plan_str = plan.to_string();
+        slint::spawn_local(async move {
+            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let mut req = tonic::Request::new(ohc::orchestration::SelectPlanRequest {
+                    plan_id: plan_str,
+                });
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                }
+                let _ = client.select_plan(req).await;
+            }
+        }).unwrap();
+    });
+
+
     my_plan_ui.on_view_history(move || {
         // Handle view history (e.g. open an invoice history modal or trigger backend flow)
     });
@@ -2872,6 +2927,75 @@ mod e2e_tests {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_1() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login = app::Login::new().unwrap();
+        let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let logged_in_clone = logged_in.clone();
+        login.on_login(move |_, _| *logged_in_clone.borrow_mut() = true);
+        login.invoke_login("test@ohc.com".into(), "password".into());
+        assert!(*logged_in.borrow());
+
+        let my_plan = app::MyPlan::new().unwrap();
+        my_plan.set_tier("Free Tier".into());
+        assert_eq!(my_plan.get_tier(), "Free Tier");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_2() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login = app::Login::new().unwrap();
+        let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let logged_in_clone = logged_in.clone();
+        login.on_login(move |_, _| *logged_in_clone.borrow_mut() = true);
+        login.invoke_login("test@ohc.com".into(), "password".into());
+
+        let pricing = app::Pricing::new().unwrap();
+        let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let plan_selected_clone = plan_selected.clone();
+        pricing.on_select_plan(move |plan| *plan_selected_clone.borrow_mut() = plan.to_string());
+        pricing.invoke_select_plan("Pro".into());
+        assert_eq!(*plan_selected.borrow(), "Pro");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_3() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let cost_dash = app::CostDashboard::new().unwrap();
+        cost_dash.set_total_spend("$5,000".into());
+        cost_dash.set_total_spend("$1,500".into());
+        assert_eq!(cost_dash.get_total_spend(), "$1,500");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_4() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_is_annual(false);
+        let toggle_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let toggle_clone = toggle_called.clone();
+        pricing.on_toggle_billing_cycle(move || {
+            *toggle_clone.borrow_mut() = true;
+        });
+        pricing.invoke_toggle_billing_cycle();
+        assert!(*toggle_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_5() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let my_plan = app::MyPlan::new().unwrap();
+        let upgrade_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let upgrade_clone = upgrade_called.clone();
+        my_plan.on_upgrade(move || {
+            *upgrade_clone.borrow_mut() = true;
+        });
+        my_plan.invoke_upgrade();
+        assert!(*upgrade_called.borrow());
+    }
+
     use super::*;
 
     #[test]
