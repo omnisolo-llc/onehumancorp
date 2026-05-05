@@ -36,6 +36,32 @@ impl DashboardService for MyDashboardService {
         Err(Status::unimplemented("Not implemented"))
     }
 
+    async fn get_documentation(
+        &self,
+        _request: Request<GetDocumentationRequest>,
+    ) -> Result<Response<GetDocumentationResponse>, Status> {
+        use sqlx::Row;
+
+        let mut videos = vec![];
+        if let Ok(rows) = sqlx::query("SELECT id, title, description, url FROM video_tutorials ORDER BY created_at DESC").fetch_all(&self.db.pool).await {
+            for row in rows {
+                videos.push(VideoMetadata { id: row.try_get("id").unwrap_or_default(), title: row.try_get("title").unwrap_or_default(), description: row.try_get("description").unwrap_or_default(), url: row.try_get("url").unwrap_or_default() });
+            }
+        }
+
+        let mut articles = vec![];
+        if let Ok(rows) = sqlx::query("SELECT category, title, description FROM help_articles ORDER BY created_at DESC").fetch_all(&self.db.pool).await {
+            for row in rows {
+                articles.push(HelpArticle { category: row.try_get("category").unwrap_or_default(), title: row.try_get("title").unwrap_or_default(), description: row.try_get("description").unwrap_or_default() });
+            }
+        }
+
+        Ok(Response::new(GetDocumentationResponse {
+            videos,
+            articles,
+        }))
+    }
+
     async fn get_onboarding_state(
         &self,
         request: Request<GetOnboardingStateRequest>,

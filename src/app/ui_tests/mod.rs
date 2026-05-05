@@ -1,3 +1,4 @@
+pub mod tooltips;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;

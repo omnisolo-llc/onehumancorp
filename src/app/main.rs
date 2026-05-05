@@ -17,6 +17,9 @@ pub mod ohc {
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
     }
+    pub mod app {
+        pub use app_proto::ohc::api::v1::*;
+    }
 }
 
 use slint::ComponentHandle;
@@ -326,8 +329,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
-                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                            if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -356,6 +360,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         Box::leak(Box::new(interactive_walkthrough_ui));
                                         Box::leak(Box::new(video_tutorials_ui));
                                         Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
                                         Box::leak(Box::new(release_notes_ui));
                                     }
                                 }
@@ -426,8 +447,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
-                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                            if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -456,6 +478,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Box::leak(Box::new(interactive_walkthrough_ui));
                         Box::leak(Box::new(video_tutorials_ui));
                         Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
                         Box::leak(Box::new(release_notes_ui));
                     }
                 }
@@ -1650,11 +1689,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                 Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let api_docs_handle = api_docs_ui.as_weak();
                 Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
@@ -1699,7 +1756,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
+                    if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                         let _ = ui.show();
                     }
                 });

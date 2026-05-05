@@ -117,6 +117,7 @@ service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
   rpc PostMessage(PostMessageRequest) returns (PostMessageResponse);
   rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
+  rpc GetDocumentation(GetDocumentationRequest) returns (GetDocumentationResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
 }
@@ -143,4 +144,24 @@ message UpdateOnboardingStateRequest {
 
 message UpdateOnboardingStateResponse {
   bool success = 1;
+}
+
+message VideoMetadata {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string url = 4;
+}
+
+message HelpArticle {
+  string category = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message GetDocumentationRequest {}
+
+message GetDocumentationResponse {
+  repeated VideoMetadata videos = 1;
+  repeated HelpArticle articles = 2;
 }
