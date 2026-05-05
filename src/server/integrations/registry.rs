@@ -71,6 +71,9 @@ impl IntegrationsRegistry {
         if let Some(creds) = creds_map.get(integration_id) {
              let text = format!("[{}] {}", from_agent, content);
              match integration_id {
+                 "manychat" => {
+                     println!("Mocking Manychat API call for msg: {}", text);
+                 }
                  "telegram" => {
                      if !creds.bot_token.is_empty() {
                          let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
@@ -81,6 +84,12 @@ impl IntegrationsRegistry {
                      if !creds.webhook_url.is_empty() {
                           tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
                      }
+                 }
+                 "twilio" => {
+                     println!("Mocking Twilio SMS API call to {}: {}", channel, text);
+                 }
+                 "mailchimp" => {
+                     println!("Mocking Mailchimp API call to list {}: {}", channel, text);
                  }
                  _ => {}
              }
@@ -179,6 +188,21 @@ impl IntegrationsRegistry {
     pub fn issues(&self, integration_id: &str) -> Vec<Issue> {
         let issues = self.issues.read().unwrap();
         issues.get(integration_id).cloned().unwrap_or_default()
+    }
+
+    pub fn create_booking(&self, _integration_id: &str, title: &str, _time: &str) -> Result<(), String> {
+        println!("Mocking Calendly/Zoom booking for: {}", title);
+        Ok(())
+    }
+
+    pub fn create_payment(&self, _integration_id: &str, amount: f64) -> Result<(), String> {
+        println!("Mocking Mercado Pago payment for: {}", amount);
+        Ok(())
+    }
+
+    pub fn create_shipping_label(&self, _integration_id: &str, address: &str) -> Result<(), String> {
+        println!("Mocking Shippo shipping label for: {}", address);
+        Ok(())
     }
 
     pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<Issue, String> {
