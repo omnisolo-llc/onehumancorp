@@ -39,6 +39,8 @@ pub struct AgentRunConfig {
     pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
+    pub observation_masking_threshold: usize,
+    pub observation_masking_size_limit: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
@@ -74,6 +76,8 @@ impl Default for AgentRunConfig {
             enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_observation_masking: true,
+            observation_masking_threshold: 3,
+            observation_masking_size_limit: 512,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
@@ -176,6 +180,7 @@ pub struct Agent {
     pub progress: Arc<AgentProgress>,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub observation_store: Arc<dashmap::DashMap<String, String>>,
 }
 
 impl Agent {
@@ -189,6 +194,7 @@ impl Agent {
             progress: Arc::new(AgentProgress::default()),
             memory_store: None,
             checkpointer: None,
+            observation_store: Arc::new(dashmap::DashMap::new()),
         }
     }
 
@@ -955,6 +961,7 @@ impl Agent {
                     Ok(r) => {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
+                        self.observation_store.insert(tc.id.clone(), r.clone());
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1075,6 +1082,7 @@ impl Agent {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
+                            self.observation_store.insert(tc.id.clone(), r.clone());
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -1155,16 +1163,21 @@ impl Agent {
             if cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
-                for m in &mut messages {
-                    if m.role == Role::Tool {
-                        for tr in &mut m.tool_results {
-                            if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked to save context.") {
-                                let bytes = tr.content.len();
-                                if bytes > 150 {
-                                    tr.content = format!(
-                                        "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible so you remember this action.]",
-                                        bytes
-                                    );
+                // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
+                let msg_count = messages.len();
+                for i in 0..msg_count {
+                    if messages[i].role == Role::Tool {
+                        let age = msg_count - i;
+                        if age > cfg.observation_masking_threshold {
+                            for tr in &mut messages[i].tool_results {
+                                if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
+                                    let bytes = tr.content.len();
+                                    if bytes > cfg.observation_masking_size_limit {
+                                        tr.content = format!(
+                                            "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                            bytes, tr.tool_call_id
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -2930,7 +2943,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let mut agent = Agent::new(client, vec![mutating_tool]);
+        let agent = Agent::new(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
         let mut cfg = AgentRunConfig::default();

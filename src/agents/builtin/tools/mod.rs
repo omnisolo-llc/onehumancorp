@@ -31,6 +31,7 @@ pub mod lazy_load;
 pub mod screenshot;
 pub mod generative_visibility;
 pub mod magentic;
+pub mod recall;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -83,6 +84,7 @@ pub fn all_tools(
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
+    observation_store: Arc<dashmap::DashMap<String, String>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::RealCommandRunner);
     let mut tools = vec![
@@ -116,6 +118,7 @@ pub fn all_tools(
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
+        recall::recall_observation_tool(observation_store),
     ];
 
     if let Some(accessor) = memory_accessor {
