@@ -111,7 +111,7 @@ impl ResilientProvider {
             Ok(resp) => Ok(resp),
             Err(e) => {
                 if is_network_error(&e) {
-                    println!("Primary LLM failed with network error, falling back to local: {}", e);
+                    tracing::warn!("Primary LLM failed with network error, falling back to local: {}", e);
                     self.fallback.reason(prompt).await
                 } else {
                     Err(e)
@@ -125,7 +125,7 @@ impl ResilientProvider {
             Ok(emb) => Ok(emb),
             Err(e) => {
                 if is_network_error(&e) {
-                    println!("Primary LLM failed with network error, falling back to local: {}", e);
+                    tracing::warn!("Primary LLM failed with network error, falling back to local: {}", e);
                     self.fallback.generate_embedding(text).await
                 } else {
                     Err(e)
