@@ -136,7 +136,7 @@ impl AgentServiceImpl {
         if !db_url.is_empty() {
             match sqlx::PgPool::connect_lazy(&db_url) {
                 Ok(pool) => {
-                    self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                    self.memory = Some(Arc::new(VectorRepository::new(pool, None, None, None)));
                 }
                 Err(e) => {
                     tracing::error!("Failed to connect to database for memory store: {}", e);

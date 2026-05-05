@@ -48,7 +48,7 @@ mod tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
-        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool, None, None, None));
         let worker = MemoryConsolidationWorker::new(repo);
 
         worker.start();

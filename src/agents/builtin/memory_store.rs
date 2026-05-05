@@ -23,17 +23,26 @@ pub enum VectorMemoryStore {
     Sqlite(sqlx::SqlitePool),
 }
 
+use std::sync::Arc;
+
 pub struct VectorRepository {
     store: VectorMemoryStore,
+    pub tenant_id: Option<String>,
+    pub agent_id: Option<String>,
+    pub llm: Option<Arc<dyn crate::llm::LlmClient>>,
 }
 
 impl VectorRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Postgres(pool) }
+    pub fn new(pool: sqlx::PgPool, tenant_id: Option<String>, agent_id: Option<String>, llm: Option<Arc<dyn crate::llm::LlmClient>>) -> Self {
+        VectorRepository { store: VectorMemoryStore::Postgres(pool), tenant_id, agent_id, llm }
     }
 
-    pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
+    pub fn new_sqlite(pool: sqlx::SqlitePool, tenant_id: Option<String>, agent_id: Option<String>, llm: Option<Arc<dyn crate::llm::LlmClient>>) -> Self {
+        VectorRepository { store: VectorMemoryStore::Sqlite(pool), tenant_id, agent_id, llm }
+    }
+
+    pub fn get_store(&self) -> &VectorMemoryStore {
+        &self.store
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
@@ -836,6 +845,53 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
 }
 
 #[async_trait]
+impl LongTermMemory for VectorRepository {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut query_embedding = vec![0.0; 1536];
+        if let Some(llm) = &self.llm {
+            if let Ok(emb) = llm.generate_embedding(query).await {
+                if emb.len() == 1536 {
+                    query_embedding = emb;
+                }
+            }
+        }
+
+        let tenant = self.tenant_id.as_deref().unwrap_or("system");
+        let records = self.semantic_search(tenant, &query_embedding, limit as i64).await?;
+
+        Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
+        let mut embedding = vec![0.0; 1536];
+        if let Some(llm) = &self.llm {
+            if let Ok(emb) = llm.generate_embedding(content).await {
+                if emb.len() == 1536 {
+                    embedding = emb;
+                }
+            }
+        }
+
+        let record = EmbeddingRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: self.tenant_id.clone().unwrap_or_else(|| "system".to_string()),
+            agent_id: self.agent_id.clone().unwrap_or_else(|| "builtin".to_string()),
+            content: content.to_string(),
+            embedding,
+            source_type: "LONG_TERM_MEMORY".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
+        };
+
+        self.upsert(&record).await
+    }
+}
+
+#[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
@@ -994,7 +1050,7 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = VectorRepository::new_sqlite(pool.clone(), None, None, None);
         let now = chrono::Utc::now();
 
         // 1. Conflict resolved by owner_override
@@ -1140,7 +1196,7 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool);
+        let repo = VectorRepository::new_sqlite(pool, None, None, None);
         let now = chrono::Utc::now();
 
         let record1 = EmbeddingRecord {
