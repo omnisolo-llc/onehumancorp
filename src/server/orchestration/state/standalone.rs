@@ -56,7 +56,7 @@ impl StateManager for StandaloneStateManager {
     async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -71,6 +71,7 @@ impl StateManager for StandaloneStateManager {
         let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
 
         // 1. Verify current state
         let row = sqlx::query(
@@ -172,6 +173,7 @@ impl StateManager for StandaloneStateManager {
         let _lock_guard = SqliteLockGuard::acquire(sqlite_pool, lock_key).await?;
 
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
 
         let rows = sqlx::query(
             r#"
