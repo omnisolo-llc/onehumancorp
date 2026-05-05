@@ -85,7 +85,7 @@ test.describe('Meetings Page', () => {
     const joinBtn = page.locator('button:has-text("Join"), button:has-text("Start")').first();
     if (await joinBtn.isVisible()) {
       await joinBtn.click();
-      await expect(page.locator('text=/meeting.*room|video|audio/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/meeting.*room|video|audio/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -96,7 +96,7 @@ test.describe('Meetings Page', () => {
     const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Delete")').first();
     if (await cancelBtn.isVisible()) {
       await cancelBtn.click();
-      await expect(page.locator('text=/canceled|cancelled/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/canceled|cancelled/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -148,7 +148,7 @@ test.describe('Meetings Page', () => {
   test('should show meeting countdown timer', async ({ page }) => {
     await page.goto('/meetings');
     const timer = page.locator('text=/\\d+:\\d+:\\d+/').first();
-    await expect(timer).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(timer).toBeVisible({ timeout: 3000 });
   });
 });
 
@@ -163,7 +163,7 @@ test.describe('Meetings Video', () => {
     const videoBtn = page.locator('button:has-text("Video"), [class*="video"]').first();
     if (await videoBtn.isVisible()) {
       await videoBtn.click();
-      await expect(page.locator('text=/video.*off|off/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/video.*off|off/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -172,7 +172,7 @@ test.describe('Meetings Video', () => {
     const audioBtn = page.locator('button:has-text("Mute"), [class*="audio"]').first();
     if (await audioBtn.isVisible()) {
       await audioBtn.click();
-      await expect(page.locator('text=/muted|off/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/muted|off/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -181,7 +181,7 @@ test.describe('Meetings Video', () => {
     const shareBtn = page.locator('button:has-text("Share"), button:has-text("Screen")').first();
     if (await shareBtn.isVisible()) {
       await shareBtn.click();
-      await expect(page.locator('text=/sharing|screen.*share/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/sharing|screen.*share/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -190,7 +190,7 @@ test.describe('Meetings Video', () => {
     const endBtn = page.locator('button:has-text("End"), button:has-text("Leave")').first();
     if (await endBtn.isVisible()) {
       await endBtn.click();
-      await expect(page.locator('text=/ended|left/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/ended|left/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -217,7 +217,7 @@ test.describe('Meetings Video', () => {
     const handBtn = page.locator('button:has-text("Hand"), button:has-text("Raise")').first();
     if (await handBtn.isVisible()) {
       await handBtn.click();
-      await expect(page.locator('text=/hand.*raised|raised/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/hand.*raised|raised/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -226,7 +226,7 @@ test.describe('Meetings Video', () => {
     const recordBtn = page.locator('button:has-text("Record"), [class*="record"]').first();
     if (await recordBtn.isVisible()) {
       await recordBtn.click();
-      await expect(page.locator('text=/recording/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/recording/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });
