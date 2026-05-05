@@ -102,8 +102,8 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let run_mode = std::env::var("OHC_STANDALONE").unwrap_or_default();
-        let is_standalone = run_mode == "true";
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+
         
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
@@ -209,10 +209,10 @@ mod tests {
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_ok() {
         let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
         let old_db_url = std::env::var("DATABASE_URL").ok();
 
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
         unsafe { std::env::set_var("DATABASE_URL", "sqlite://local.db"); }
 
         let service = MyWizardService::new();
@@ -225,17 +225,17 @@ mod tests {
         let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
         assert!(has_ok_db);
 
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
         if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_missing() {
         let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
         let old_db_url = std::env::var("DATABASE_URL").ok();
 
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
         unsafe { std::env::remove_var("DATABASE_URL"); }
 
         let service = MyWizardService::new();
@@ -248,17 +248,17 @@ mod tests {
         let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
         assert!(has_missing_db);
 
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
         if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_invalid() {
         let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
         let old_db_url = std::env::var("DATABASE_URL").ok();
 
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db"); }
 
         let service = MyWizardService::new();
@@ -271,7 +271,7 @@ mod tests {
         let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
         assert!(has_invalid_db);
 
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
         if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
