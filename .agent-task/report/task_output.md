@@ -131,12 +131,3 @@
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1
 **Estimated Scope**: Medium
-
-# Documentation Critical Features Scribe Implementation
-1. **In-App Help Center**: Implemented backend integration logic for dynamic fetching, verified via `help.rs`.
-2. **Contextual Tooltips**: Tooltip registry has been fully integrated across `main.rs` and tested via `tooltips.rs` component tests.
-3. **Interactive Walkthroughs**: Functional and verified via `walkthrough.rs`.
-4. **AI-Powered Help Chat**: Functional and verified via `chat_help.rs`.
-5. **Video Tutorials**: Implemented backend integration (`migrations`, `service.rs`, `app.proto`) and wired Slint components dynamically.
-6. **API Documentation**: Advanced user documentation components fully operational (`docs.rs`).
-7. **Release Notes & Changelog**: Operational and verified via `notes.rs`.
