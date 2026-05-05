@@ -187,11 +187,11 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
     }
 });
 
-test('verify advanced options toggle', async ({ page }) => {
+test('verify app settings toggle', async ({ page }) => {
     await page.goto('/');
 
-    // We changed 'App Settings' to 'Advanced Options'
-    await page.click('button:has-text("Advanced Options")');
+    // We changed 'Advanced Options' to 'App Settings'
+    await page.click('button:has-text("App Settings")');
 
     // Expect the settings to be shown
     await expect(page.locator('text="Settings"')).toBeVisible();
