@@ -7,8 +7,8 @@ pub struct MaintenanceWorker {
 }
 
 impl MaintenanceWorker {
-    pub fn new(db: DB) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DB>) -> Self {
+        Self { db: (*db).clone() }
     }
 
     pub fn start(self: Arc<Self>) {
