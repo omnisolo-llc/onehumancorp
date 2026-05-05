@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export struct UiMcpTool {
     id: string,
@@ -18,9 +18,10 @@ export component Integrations inherits Window {
     callback configure_integration(string);
     callback invoke_tool(string);
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    ScrollView {
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
 
         Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
 
@@ -87,6 +88,156 @@ export component Integrations inherits Window {
                     }
                 }
             }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Cal.com"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💬 ManyChat"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("ManyChat"); }
+                    }
+                }
+            }
+        }
+
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Resend"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Shippo"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💳 Mercado Pago"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Local Payment Methods (LATAM)"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Mercado Pago"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💳 Razorpay"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Local Payment Methods (India)"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Razorpay"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Zoom"); }
+                    }
+                }
+            }
         }
 
         Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
@@ -111,6 +262,7 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
+          }
+    }
     }
 }
