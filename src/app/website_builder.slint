@@ -1,5 +1,6 @@
 import { GlassCard } from "glass_card.slint";
-import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { HeroBlock, ProductGridBlock, CalendarBlock } from "smart_blocks.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window {
     width: 600px;
@@ -242,14 +243,36 @@ export component WebsiteBuilder inherits Window {
             spacing: 24px;
             Text { text: "Go Live: Review your site"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
-            GlassCard {
+            ScrollView {
                 VerticalBox {
-                    padding: 16px;
-                    spacing: 12px;
-                    Text { text: "Template: " + selected_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "Color: " + primary_color; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    spacing: 16px;
+
+                    HeroBlock {
+                        headline: product_name == "" ? "Welcome to My Business" : product_name;
+                        subtitle: product_description == "" ? "The best services in town." : product_description;
+                        cta_text: "Book Now";
+                        cta_clicked => { }
+                    }
+
+                    ProductGridBlock {
+                        product_name_1: product_name == "" ? "Product 1" : product_name;
+                        product_price_1: product_price == "" ? "$10.00" : "$" + product_price;
+                        product_name_2: "Custom Order";
+                        product_price_2: "Contact Us";
+                    }
+
+                    CalendarBlock {}
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+                            Text { text: "Template: " + selected_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                            Text { text: "Color: " + primary_color; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                            Text { text: "Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                            Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        }
+                    }
                 }
             }
 
