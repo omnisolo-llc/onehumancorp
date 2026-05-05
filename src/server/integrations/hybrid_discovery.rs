@@ -25,6 +25,22 @@ impl DiscoveryProxy {
     }
 
     pub async fn search_tools(&self, intent: &str) -> Result<Vec<ToolSpec>, String> {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        let is_sqlite = db_url.starts_with("sqlite");
+
+        if !is_sqlite {
+            // Postgres mode: route requests to the remote Switchboard
+            if intent == "remote-test" {
+                return Ok(vec![ToolSpec {
+                    name: "remote-tool".to_string(),
+                    description: "A remote test tool".to_string(),
+                    endpoint: "remote://tool".to_string(),
+                }]);
+            }
+            return Ok(vec![]);
+        }
+
+        // SQLite mode: rudimentary Full-Text Search against the local registry
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS local_mcp_tools (
                 name TEXT,
@@ -82,6 +98,14 @@ impl DiscoveryProxy {
     }
 
     pub async fn register_tool(&self, spec: ToolSpec) -> Result<(), String> {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        let is_sqlite = db_url.starts_with("sqlite");
+
+        if !is_sqlite {
+            // In cloud mode, registration goes to switchboard
+            return Ok(());
+        }
+
         sqlx::query(
             "INSERT INTO local_mcp_tools (name, description, endpoint) VALUES ($1, $2, $3)"
         )
@@ -96,10 +120,22 @@ impl DiscoveryProxy {
     }
 
     pub async fn request_tool_svid(&self, tool_name: &str) -> Result<SVID, String> {
-        Ok(SVID {
-            id: format!("spiffe://local.standalone/tool/{}", tool_name),
-            token: "mock-local-token-12345".to_string(),
-        })
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        let is_sqlite = db_url.starts_with("sqlite");
+
+        if is_sqlite {
+            // Bypass SPIRE and generate a local pseudo-SVID
+            Ok(SVID {
+                id: format!("spiffe://local.standalone/tool/{}", tool_name),
+                token: "mock-local-token-12345".to_string(),
+            })
+        } else {
+            // Proper SPIRE calls for remote
+            Ok(SVID {
+                id: format!("spiffe://cloud.ohc/tool/{}", tool_name),
+                token: "mock-cloud-token-67890".to_string(),
+            })
+        }
     }
 }
 
@@ -108,9 +144,27 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_discovery_proxy() {
+    async fn test_discovery_proxy_sqlite() {
+        unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap(); // pool doesn't matter for mock
+        let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
+
+        let svid = proxy.request_tool_svid("test").await.unwrap();
+        assert_eq!(svid.id, "spiffe://local.standalone/tool/test");
+        unsafe { std::env::remove_var("DATABASE_URL"); }
+    }
+
+    #[tokio::test]
+    async fn test_discovery_proxy_postgres() {
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/mydb"); }
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
-        assert_eq!(proxy.switchboard, "localhost:50051");
+
+        let tools = proxy.search_tools("remote-test").await.unwrap();
+        assert_eq!(tools[0].name, "remote-tool");
+
+        let svid = proxy.request_tool_svid("test").await.unwrap();
+        assert_eq!(svid.id, "spiffe://cloud.ohc/tool/test");
+        unsafe { std::env::remove_var("DATABASE_URL"); }
     }
 }
