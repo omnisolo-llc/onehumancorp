@@ -287,11 +287,16 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
         data
     };
 
-    let decoded = STANDARD.decode(decode_input).map_err(|e| e.to_string())?;
+    let decoded = match STANDARD.decode(decode_input) {
+        Ok(d) => d,
+        Err(_) => return Ok(data.to_vec()), // Fallback for raw JSON data
+    };
     
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
+    if let Err(_) = decoder.read_to_end(&mut decompressed) {
+        return Ok(data.to_vec()); // Fallback for valid base64 but not gzip
+    }
 
     Ok(decompressed)
 }
@@ -326,6 +331,17 @@ mod tests {
         
         let decompressed = decompress_data(b64.as_bytes()).unwrap();
         assert_eq!(data, decompressed.as_slice());
+    }
+
+    #[test]
+    fn test_decompress_fallback() {
+        let invalid_base64 = b"Not valid base64!";
+        let decompressed_invalid = decompress_data(invalid_base64).unwrap();
+        assert_eq!(invalid_base64, decompressed_invalid.as_slice());
+
+        let raw_json = b"{\"some\": \"json\"}";
+        let decompressed_json = decompress_data(raw_json).unwrap();
+        assert_eq!(raw_json, decompressed_json.as_slice());
     }
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
