@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["mesh_api.go"],
+    importpath = "onehumancorp/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["mesh_api_test.go"],
+    embed = [":orchestration"],
+)
