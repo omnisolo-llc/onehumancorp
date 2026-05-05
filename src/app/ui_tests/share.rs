@@ -90,3 +90,12 @@ fn create_verify_share_link() {
     ui.set_share_link("l42".into());
     assert_eq!(ui.get_share_link(), "l42");
 }
+
+#[test] fn share_flow_whatsapp_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_share_to_whatsapp(move || { *c.borrow_mut() = true; });
+    ui.invoke_share_to_whatsapp();
+    assert!(*called.borrow());
+}
