@@ -1,119 +1,51 @@
-# Scout: Tool Integration Research Q2
+# OHC Scout: Tool Integration Research Report
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+## Executive Summary
+This report details the research and evaluation of seven key tools across distinct categories to expand the capabilities of the OneHumanCorp (OHC) platform. The focus remains on tools that abstract complexity and empower non-technical small business owners, adhering to OHC's core values of Radical Simplicity and AI-driven automation.
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
-**Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
-**Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
-**Priority**: P1
-**Estimated Scope**: Large
+## Evaluated Categories & Selected Tools
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+### 1. Social Media Integration: ManyChat (Meta Graph API)
+- **Problem:** Managing DMs across Instagram and Facebook is overwhelming and leads to missed sales.
+- **Solution:** A unified inbox within OHC, powered by ManyChat's robust handling of the Meta Graph API.
+- **Benefit:** Allows the "Customer Success" AI agent to draft auto-replies, saving time and ensuring 24/7 responsiveness.
+- **Priority:** P0 | **Scope:** Large
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
-**Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
-**Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
-**Priority**: P2
-**Estimated Scope**: Medium
+### 2. Calendar & Scheduling: Cal.com
+- **Problem:** Service providers struggle with manual scheduling and double-booking.
+- **Solution:** Integrating Cal.com's open-source scheduling infrastructure.
+- **Benefit:** Seamless, self-serve booking pages with Google/Outlook calendar sync and automated notifications.
+- **Priority:** P0 | **Scope:** Large
 
-## 4. Payment Processing
-**Title**: Expand Payments with Mercado Pago for LATAM Users
-**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
-**Research Report**:
-- Mercado Pago is the dominant payment gateway in LATAM.
-- Supports local payment methods which are critical for conversion (often >50% of transactions).
-- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
-- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
-**Design Doc**:
-- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
-- Setup involves standard OAuth flow or API key drop-in.
-- Supports one-off payments and split payments for the eventual marketplace feature.
-**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
-**Priority**: P1
-**Estimated Scope**: Large
+### 3. Email Marketing: Resend
+- **Problem:** Traditional tools like Mailchimp are too bloated and technical for simple updates.
+- **Solution:** A frictionless email marketing feature powered by Resend's API.
+- **Benefit:** Business owners can use the AI to draft and send clean, professional campaigns to customer segments effortlessly.
+- **Priority:** P1 | **Scope:** Medium
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+### 4. Shipping & Logistics: EasyPost
+- **Problem:** Manually calculating rates and printing labels is tedious for physical goods sellers.
+- **Solution:** EasyPost integration for real-time shipping rates and one-click label generation.
+- **Benefit:** Merchants can manage shipping entirely within OHC, saving time and improving the fulfillment workflow.
+- **Priority:** P1 | **Scope:** Medium
 
-## 6. SMS & Notifications
-**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
-**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
-**Research Report**:
-- Twilio is the industry standard for SMS and WhatsApp messaging globally.
-- Reliable delivery, deep global coverage.
-- Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Go backend.
-- Costs per message, can be passed to the tenant or subsidized in premium tiers.
-**Design Doc**:
-- Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
-- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
-**Priority**: P0
-**Estimated Scope**: Small
+### 5. SMS & Notifications: Twilio
+- **Problem:** Critical updates (like new food orders) need immediate attention that web push or email can't guarantee.
+- **Solution:** Twilio integration for high-urgency SMS alerts.
+- **Benefit:** Reliable, immediate notifications for merchants and customers, especially important for fast-paced businesses.
+- **Priority:** P1 | **Scope:** Medium
 
-## 7. Video Conferencing
-**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
-**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
-**Research Report**:
-- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
-- Requires no account for the student. Works natively in the browser and mobile.
-- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
-- Completely seamless integration with no technical setup required by the user.
-**Design Doc**:
-- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
-- The link is automatically added to the calendar invite and the customer's dashboard.
-- Users just click the link at the scheduled time to join the browser-based call.
-**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
-**Priority**: P2
-**Estimated Scope**: Small
+### 6. Payment Processing: Mercado Pago
+- **Problem:** Stripe lacks sufficient penetration and local payment method support in Latin America.
+- **Solution:** Mercado Pago integration for the LATAM market.
+- **Benefit:** Access to local payment methods (e.g., PIX), opening OHC to a massive international SMB market.
+- **Priority:** P2 | **Scope:** Large
+
+### 7. Video Conferencing: Daily.co
+- **Problem:** Manually generating and sharing Zoom links for virtual services is error-prone.
+- **Solution:** Daily.co integration to auto-generate temporary video rooms.
+- **Benefit:** Seamless virtual sessions with automated link distribution, requiring no software downloads.
+- **Priority:** P2 | **Scope:** Small
+
+## Conclusion & Next Steps
+These seven integrations represent significant value additions for OHC users. Detailed issue briefs for each tool have been created in the `docs/research/` directory. Implementation should prioritize P0 items (ManyChat and Cal.com) to immediately address critical communication and scheduling pain points for our core personas.
