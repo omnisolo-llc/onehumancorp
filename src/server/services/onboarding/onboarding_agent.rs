@@ -16,26 +16,43 @@ impl OnboardingAgent {
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-        if !req.first_product_name.is_empty() {
-             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await?;
-        } else {
-             self.generate_initial_products(&org_id, &business_type).await?;
-        }
-
-        self.seed_default_agents(&org_id).await?;
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
         let password = req.admin_password.clone();
 
-        let password_hash = if !password.is_empty() {
-            tokio::task::spawn_blocking(move || {
-                bcrypt::hash(&password, bcrypt::DEFAULT_COST).map_err(|e| format!("Failed to hash password: {}", e))
-            }).await.map_err(|e| e.to_string())??
-        } else {
-            "".to_string()
+        let req_first_product_name = req.first_product_name.clone();
+        let req_first_product_price = req.first_product_price.clone();
+        let org_id_clone1 = org_id.clone();
+        let org_id_clone2 = org_id.clone();
+        let business_type_clone = business_type.clone();
+
+        let product_future = async {
+            if !req_first_product_name.is_empty() {
+                self.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &business_type_clone).await
+            } else {
+                self.generate_initial_products(&org_id_clone1, &business_type_clone).await
+            }
         };
+
+        let seed_future = self.seed_default_agents(&org_id_clone2);
+
+        let hash_future = async {
+            if !password.is_empty() {
+                tokio::task::spawn_blocking(move || {
+                    bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
+                }).await.map_err(|e| e.to_string())?
+            } else {
+                Ok("".to_string())
+            }
+        };
+
+        let (product_res, seed_res, hash_res) = tokio::join!(product_future, seed_future, hash_future);
+
+        product_res?;
+        seed_res?;
+        let password_hash = hash_res?;
 
         let roles_json = serde_json::to_string(&vec!["admin"]).unwrap_or_default();
         let now = chrono::Utc::now();
