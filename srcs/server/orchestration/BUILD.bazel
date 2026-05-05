@@ -2,14 +2,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "orchestration",
-    srcs = ["tasks_db.go"],
+    srcs = [
+        "mesh.go",
+        "tasks_db.go",
+    ],
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "orchestration_test",
-    srcs = ["tasks_db_test.go"],
+    srcs = [
+        "mesh_test.go",
+        "tasks_db_test.go",
+    ],
     embed = [":orchestration"],
     deps = [
         "@com_github_stretchr_testify//assert",
