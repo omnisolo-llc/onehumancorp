@@ -1266,6 +1266,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
 
+    let webhook_state = crate::api::billing_webhook::WebhookState {
+        rate_limiter: rate_limiter.clone(),
+        db_pool: db.pool.clone(),
+        db: db.clone(),
+    };
+
+    let webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
+        .with_state(webhook_state);
+
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
@@ -1275,7 +1285,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             rate_limiter,
             crate::utils::tier_middleware::tier_middleware,
         ))
-        .with_state(mesh_transport);
+        .with_state(mesh_transport)
+        .merge(webhook_router);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
