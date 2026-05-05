@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "harness",
+    srcs = [
+        "harness.go",
+        "sandbox.go",
+        "docker_backend.go",
+        "local_backend.go",
+        "k8s_backend.go",
+        "sync.go",
+        "lifecycle.go",
+        "telemetry.go",
+    ],
+    importpath = "github.com/onehumancorp/ohc/src/server/go_harness",
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+
+go_test(
+    name = "harness_test",
+    srcs = ["harness_test.go"],
+    embed = [":harness"],
+)
