@@ -19,7 +19,7 @@ pub mod ohc {
     }
 }
 
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Model};
 
 pub mod action_queue;
 
