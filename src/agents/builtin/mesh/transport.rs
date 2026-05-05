@@ -132,6 +132,7 @@ impl MeshTransport for MemoryTransport {
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
+    instance_id: String,
 }
 
 impl IpcTransport {
@@ -187,8 +188,9 @@ impl IpcTransport {
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
         let subs = DashMap::new();
+        let instance_id = uuid::Uuid::new_v4().to_string();
 
-        Ok(IpcTransport { pool, subs })
+        Ok(IpcTransport { pool, subs, instance_id })
     }
 
     pub async fn start_worker(&self) {
@@ -196,7 +198,7 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = self.instance_id.clone();
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -738,18 +740,22 @@ mod tests {
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        transport.publish("ipc_checkpoint_topic", msg).await.unwrap();
+        let _cancel = transport.subscribe("ipc_checkpoint_topic", Box::new(|_| {})).await.unwrap();
 
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        transport.publish("ipc_checkpoint_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        let subscriber_id = transport.instance_id.clone();
         let last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
-            .fetch_one(&transport.pool)
-            .await.unwrap();
+            .fetch_optional(&transport.pool)
+            .await.unwrap().unwrap_or(0);
 
         assert!(last_id > 0);
     }
