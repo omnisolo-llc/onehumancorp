@@ -1,5 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool};
+#[cfg(not(target_arch = "wasm32"))]
 use std::str::FromStr;
 
 #[cfg(not(target_arch = "wasm32"))]
