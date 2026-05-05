@@ -348,6 +348,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
+                                        let help_center_ui = app::HelpCenter::new().unwrap();
+                                        let help_center_handle = help_center_ui.as_weak();
+                                        dashboard.on_open_help_center(move || {
+                                            if let Some(ui) = help_center_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
                                         dashboard.show().unwrap();
                                         Box::leak(Box::new(dashboard));
                                         Box::leak(Box::new(my_plan_ui));
@@ -357,6 +365,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         Box::leak(Box::new(video_tutorials_ui));
                                         Box::leak(Box::new(api_docs_ui));
                                         Box::leak(Box::new(release_notes_ui));
+                                        Box::leak(Box::new(help_center_ui));
                                     }
                                 }
                             }
@@ -448,6 +457,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
+                                        let help_center_ui = app::HelpCenter::new().unwrap();
+                                        let help_center_handle = help_center_ui.as_weak();
+                                        dashboard.on_open_help_center(move || {
+                                            if let Some(ui) = help_center_handle.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+
                         dashboard.show().unwrap();
                         Box::leak(Box::new(dashboard));
                         Box::leak(Box::new(my_plan_ui));
@@ -457,6 +474,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Box::leak(Box::new(video_tutorials_ui));
                         Box::leak(Box::new(api_docs_ui));
                         Box::leak(Box::new(release_notes_ui));
+                        Box::leak(Box::new(help_center_ui));
                     }
                 }
             }

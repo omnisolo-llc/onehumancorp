@@ -2,6 +2,14 @@
 
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 
+### Documentation & In-App Help
+
+- **Interactive In-App Help Center**: A searchable help portal natively accessible from the main dashboard.
+- **Contextual Tooltips**: Added an ecosystem-wide Tooltip Registry enabling quick hints on hover and touch.
+- **Interactive Walkthroughs**: Onboarding, feature setup, and orchestrator training workflows.
+- **AI-Powered Help Chat**: Universal access to a responsive AI assistant for immediate platform help.
+- **Video Tutorials & API Docs**: Centralized viewing of step-by-step guides and advanced developer references.
+
 ### Cloud Scaling Improvements
 
 - Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
