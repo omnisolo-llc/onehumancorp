@@ -140,28 +140,41 @@ impl StateManager for StandaloneStateManager {
         };
 
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let _lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+        let acquire_and_fetch = async {
+            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
 
-        let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+            let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(
-            r#"
-            SELECT t.*
-            FROM swarm_tasks t
-            WHERE t.status = 'PENDING'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM json_each(t.dependencies) as dep_id
-                  JOIN swarm_tasks dep ON dep.id = dep_id.value
-                  WHERE dep.status != 'COMPLETED'
-              )
-            LIMIT ?
-            "#
-        )
-        .bind(limit)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+            let rows = sqlx::query(
+                r#"
+                SELECT t.*
+                FROM swarm_tasks t
+                WHERE t.status = 'PENDING'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM json_each(t.dependencies) as dep_id
+                      JOIN swarm_tasks dep ON dep.id = dep_id.value
+                      WHERE dep.status != 'COMPLETED'
+                  )
+                LIMIT ?
+                "#
+            )
+            .bind(limit)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            Ok::<_, String>((lock_guard, tx, rows))
+        };
+
+        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
+            Ok(Ok(result)) => result,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => {
+                println!("WARNING: Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                return Ok(vec![]);
+            }
+        };
 
         let mut tasks = Vec::new();
         let mut task_ids = Vec::new();
