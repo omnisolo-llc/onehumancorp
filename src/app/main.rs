@@ -2125,6 +2125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
     let _ = welcome_checklist_ui.hide();
 
+
     setup_welcome_checklist_routing(&welcome_checklist_ui);
 
 
