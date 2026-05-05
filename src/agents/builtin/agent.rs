@@ -342,6 +342,9 @@ impl Agent {
 
                 let mut tool_results_json = vec![];
 
+                let mut tool_error_counts: std::collections::HashMap<String, usize> = state.get("tool_error_counts").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+                let mut is_terminal = false;
+
                 for tc_val in tool_calls {
                     let name = tc_val["name"].as_str().unwrap();
                     let args = tc_val["arguments"].clone();
@@ -357,11 +360,34 @@ impl Agent {
                                 }));
                             }
                             Err(e) => {
-                                tool_results_json.push(serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": "",
-                                    "error": e.to_string()
-                                }));
+                                match e {
+                                    crate::types::ToolError::LlmRecoverable(msg) => {
+                                        let count = tool_error_counts.entry(name.to_string()).or_insert(0);
+                                        *count += 1;
+                                        if *count > 2 {
+                                            is_terminal = true;
+                                            tool_results_json.push(serde_json::json!({
+                                                "tool_call_id": id,
+                                                "content": "",
+                                                "error": format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg)
+                                            }));
+                                        } else {
+                                            tool_results_json.push(serde_json::json!({
+                                                "tool_call_id": id,
+                                                "content": "",
+                                                "error": msg
+                                            }));
+                                        }
+                                    }
+                                    _ => {
+                                        is_terminal = true;
+                                        tool_results_json.push(serde_json::json!({
+                                            "tool_call_id": id,
+                                            "content": "",
+                                            "error": e.to_string()
+                                        }));
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -375,6 +401,8 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
+                    "is_terminal": is_terminal,
+                    "tool_error_counts": tool_error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -388,7 +416,11 @@ impl Agent {
         graph.add_edge("tool_node", "llm_call");
 
         graph.add_conditional_edges("llm_call", |state| {
-            if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
+            let has_tool_calls = state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false);
+            let is_terminal = state.get("is_terminal").and_then(|v| v.as_bool()).unwrap_or(false);
+            if is_terminal {
+                crate::langgraph::END.to_string()
+            } else if has_tool_calls {
                 "tool_node".to_string()
             } else {
                 crate::langgraph::END.to_string()
@@ -422,7 +454,9 @@ impl Agent {
 
         let initial_state = serde_json::json!({
             "messages": msgs_json,
-            "has_tool_calls": false
+            "has_tool_calls": false,
+            "is_terminal": false,
+            "tool_error_counts": {}
         });
 
         let final_state = graph.run(initial_state).await.map_err(|e| format!("LangGraph Error: {}", e))?;
@@ -2264,6 +2298,46 @@ mod tests {
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
         assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
         assert_eq!(tool_msg.tool_results[0].content, "");
+
+        // 2b. LLM Recoverable (LangGraph path)
+        let mut cfg_langgraph = cfg.clone();
+        cfg_langgraph.enable_langgraph_mechanic = true;
+        cfg_langgraph.max_iterations = 2; // Prevent infinite loop in test
+
+        let client_llm_lg = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![crate::types::ToolCall {
+                        id: "call_123".to_string(),
+                        name: "recoverable_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: None,
+                },
+                usage: crate::types::Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("res_1".to_string()),
+            }, ChatResponse { // Return normal message to end graph loop
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Done".to_string(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                },
+                usage: crate::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("res_2".to_string()),
+            }]),
+        });
+
+        let agent_langgraph = Agent::new(client_llm_lg.clone(), tools.clone());
+        let mut events_langgraph = vec![];
+        let mut on_event_langgraph = |e| { events_langgraph.push(e); };
+        let _ = agent_langgraph.run(&cfg_langgraph, "Run langgraph llm recoverable", &mut on_event_langgraph).await;
 
         // 3. User Fixable
         let client_user = Arc::new(MockLlmClient {
