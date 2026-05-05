@@ -1379,11 +1379,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.on_go_to_dashboard({
+
+    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
+    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
+    setup_welcome_checklist_routing(&welcome_checklist_ui);
+
+    setup_wizard_ui.on_show_welcome_checklist({
+        let wc_handle = welcome_checklist_handle.clone();
         let ui_handle = setup_wizard_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
+            }
+            if let Some(ui) = wc_handle.upgrade() {
+                let _ = ui.show();
             }
 
     let my_plan_ui = app::MyPlan::new().unwrap();
@@ -2131,11 +2140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(agent_hire_ui));
     Box::leak(Box::new(fix_agent_ui));
 
-    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let _ = welcome_checklist_ui.hide();
 
-
-    setup_welcome_checklist_routing(&welcome_checklist_ui);
 
 
 
@@ -3033,11 +3038,11 @@ mod e2e_tests {
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_go_to_dashboard(move || {
+        ui.on_show_welcome_checklist(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
 
-        ui.invoke_go_to_dashboard();
+        ui.invoke_show_welcome_checklist();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3598,10 +3603,10 @@ mod docs_tests {
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_go_to_dashboard(move || {
+        ui.on_show_welcome_checklist(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-        ui.invoke_go_to_dashboard();
+        ui.invoke_show_welcome_checklist();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
     }
 
@@ -3723,10 +3728,10 @@ mod docs_tests {
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_go_to_dashboard(move || {
+        ui.on_show_welcome_checklist(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-        ui.invoke_go_to_dashboard();
+        ui.invoke_show_welcome_checklist();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         // Final state verification
