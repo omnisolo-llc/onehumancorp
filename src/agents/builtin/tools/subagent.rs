@@ -133,31 +133,34 @@ When finished or if you need to report progress, write your final summary to {}.
             let outbox_path_clone = outbox_path.clone();
             let mailbox_dir_clone = mailbox_dir.clone();
 
+            let script_path = format!("{}/run_teammate.sh", mailbox_dir);
+            let script_content = r#"#!/bin/bash
+ohc_builtin_agent --task "$1" --mailbox "$2" >> "$3" 2>&1 &
+"#;
+            if let Err(e) = tokio::fs::write(&script_path, script_content).await {
+                return Err(ToolError::LlmRecoverable(format!("Failed to write teammate script: {}", e)));
+            }
+
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = runner_clone.run("ohc_builtin_agent", &["--task", &task_clone, "--mailbox", &mailbox_dir_clone], None, envs).await;
+            let output = runner_clone.run(
+                "bash",
+                &[
+                    &script_path,
+                    &task_clone,
+                    &mailbox_dir_clone,
+                    &outbox_path_clone,
+                ],
+                None,
+                envs,
+            )
+            .await;
 
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        stdout
-                    } else {
-                        format!("Subagent error: {}", stderr)
-                    }
-                }
-                Err(e) => format!("Subagent failed: {}", e),
-            };
-
-            use tokio::io::AsyncWriteExt;
-            if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
-                let _ = file.write_all(format!("
-[System: Subagent Process Terminated]
-Final Result: {}", res).as_bytes()).await;
+            if let Err(e) = output {
+                return Err(ToolError::LlmRecoverable(format!("Failed to spawn teammate script: {}", e)));
             }
 
             Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
