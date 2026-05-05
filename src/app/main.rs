@@ -1400,7 +1400,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = ui.show();
         }
     });
-
     let cost_dashboard_handle_clone = cost_dashboard_handle.clone();
     my_plan_ui.on_view_details(move || {
         if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
