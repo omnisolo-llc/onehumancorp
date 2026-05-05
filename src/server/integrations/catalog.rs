@@ -24,5 +24,17 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     ).into_integration_provider();
     catalog.push(nats_provider);
 
+    // We avoid initializing a real TwilioProvider client here just for metadata
+    // to prevent unwanted HTTP client instantiation during registry initialization
+    let twilio_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "twilio".to_string(),
+            name: "Twilio SMS".to_string(),
+            category: "sms".to_string(),
+            base_url: "https://api.twilio.com".to_string(),
+        }
+    };
+    catalog.push(twilio_provider);
+
     catalog
 }
