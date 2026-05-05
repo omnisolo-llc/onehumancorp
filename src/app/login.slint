@@ -11,7 +11,7 @@ export component Login inherits Window {
 
     // Add a property to expose the card width constraint to unit tests
     // Fixed cyclic dependency on width
-    out property <length> login_card_width: min(root.width - 64px, 400px);
+    out property <length> login_card_width: gc.width;
 
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
@@ -36,15 +36,10 @@ export component Login inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    HorizontalLayout {
-        alignment: center;
-
-        VerticalLayout {
-            alignment: center;
-
-            HorizontalLayout {
-                GlassCard {
-                    width: root.login_card_width;
+    gc := GlassCard {
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        width: min(root.width - 64px, 400px);
             VerticalBox {
                 spacing: 16px;
                 padding: 24px;
@@ -139,8 +134,5 @@ export component Login inherits Window {
                     clicked => { open_settings(); }
                 }
             }
-        }
-            }
-        }
     }
 }
