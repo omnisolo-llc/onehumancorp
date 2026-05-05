@@ -253,6 +253,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let _ = setup_wizard_ui.hide();
 
+    let init_setup_wizard_handle = setup_wizard_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_setup_wizard_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
+                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
     login_ui.on_start_setup_wizard({
         let login_handle = login_ui_handle.clone();
@@ -2432,6 +2458,32 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     let _ = setup_wizard_ui.hide();
 
+    let init_setup_wizard_handle = setup_wizard_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_setup_wizard_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
+                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
     login_ui.on_start_setup_wizard({
         let login_handle = login_ui_handle.clone();
@@ -2466,6 +2518,32 @@ mod growth_e2e_tests {
         let setup_wizard_handle = setup_wizard_ui.as_weak();
 
         let _ = setup_wizard_ui.hide();
+
+    let init_setup_wizard_handle = setup_wizard_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_setup_wizard_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
+                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
 
         let setup_wizard_ui_from_login = setup_wizard_handle.clone();
 

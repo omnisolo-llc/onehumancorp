@@ -155,7 +155,7 @@ test.describe('Business Setup Wizard', () => {
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
     await page.fill('input[placeholder="Password"]', 'password123');
     await page.click('text=Next →');
-    await expect(page.locator('text=/template/i')).toBeVisible();
+    await expect(page.locator('text=/Select a Template/i')).toBeVisible();
   });
 
   test('should show domain step', async ({ page }) => {
@@ -176,7 +176,7 @@ test.describe('Business Setup Wizard', () => {
     await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
     await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
     await page.click('text=Next →');
-    await expect(page.locator('text=/domain/i')).toBeVisible();
+    await expect(page.locator('text=/Choose your domain/i')).toBeVisible();
   });
 
   test('should show review and launch step', async ({ page }) => {
