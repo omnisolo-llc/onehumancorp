@@ -269,6 +269,12 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+
+  rpc GetMyPlan(EmptyRequest) returns (MyPlanResponse);
+  rpc GetCostDashboard(EmptyRequest) returns (CostDashboardResponse);
+  rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
+  rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
 }
 
 message StartOnboardingRequest {
@@ -1589,4 +1595,48 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+message MyPlanResponse {
+  string current_plan = 1;
+  int32 ai_actions_used = 2;
+  int32 ai_actions_limit = 3;
+  int64 storage_used_bytes = 4;
+  int64 storage_limit_bytes = 5;
+  int64 next_bill_estimated = 6;
+}
+
+message CostDashboardResponse {
+  int64 total_revenue = 1;
+  int64 total_costs = 2;
+  int64 llm_cost = 3;
+  int64 storage_cost = 4;
+  int64 payment_fees = 5;
+  string period_start = 6;
+  string period_end = 7;
+}
+
+message SelectPlanRequest {
+  string plan_id = 1;
+}
+
+message SelectPlanResponse {
+  bool success = 1;
+  string checkout_url = 2;
+}
+
+message CancelSubscriptionRequest {
+  string plan_id = 1;
+}
+
+message CancelSubscriptionResponse {
+  bool success = 1;
+}
+
+message DownloadInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message DownloadInvoiceResponse {
+  string pdf_url = 1;
 }
