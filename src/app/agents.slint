@@ -26,14 +26,14 @@ export component Agents inherits Window {
     callback hire_agent();
     callback fix_agent(string);
 
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+    }
+
     VerticalBox {
         spacing: 20px;
         padding: 24px;
-
-        if (show_upgrade_prompt) : UpgradePrompt {
-            message: root.upgrade_prompt_message;
-            action_dismiss => { root.show_upgrade_prompt = false; }
-        }
 
         HorizontalBox {
             Text { text: "Helpers"; font-size: 20px; font-weight: 700; color: #1e293b; }

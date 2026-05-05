@@ -76,15 +76,15 @@ export component Dashboard inherits Window {
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
 
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+    }
+
     Flickable {
     VerticalBox {
         spacing: 20px;
         padding: 24px;
-
-        if (show_upgrade_prompt) : UpgradePrompt {
-            message: root.upgrade_prompt_message;
-            action_dismiss => { root.show_upgrade_prompt = false; }
-        }
 
         // Header
         HorizontalBox {
