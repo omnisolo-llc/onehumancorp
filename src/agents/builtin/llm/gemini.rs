@@ -228,9 +228,11 @@ impl LlmClient for GeminiClient {
                 content: text,
                 tool_calls: vec![], // Tools not supported in this simple impl
                 tool_results: vec![],
+                response_id: None,
             },
             usage,
             stop_reason: finish_reason,
+            response_id: None,
         })
     }
 }
