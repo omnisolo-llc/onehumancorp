@@ -1,6 +1,5 @@
-issue_category: maintainer_audit
+issue_category: refactor
 debt_report: |
-  Audited Cloud multi-tenancy isolation and Local Standalone hardening.
-  Verified correct use of Row Level Security (RLS) under `app.current_tenant` in PostgreSQL for Cloud environments.
-  Verified secure `0o700` and `0o600` local file/directory permissions for SQLite `ohc-standalone.db` via SQLCipher.
-  Zero codebase changes required as security standards are already met.
+  Cleaned up compiler warnings regarding unused variables in `src/app/main.rs` (by prefixing them with an underscore).
+  Removed an unused import (`ToolIntegration`) from `src/agents/scout/tests.rs`.
+  Removed unused `Arc` import from `src/server/orchestration/hub.rs`.
