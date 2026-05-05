@@ -5622,3 +5622,133 @@ fn test_business_share_flow() {
         assert_eq!(ui.get_current_version(), "v0.3.4");
         assert_eq!(ui.get_show_latest_only(), false);
     }
+    #[test]
+    fn test_e2e_business_manager_physical() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let business_manager_opened_clone = business_manager_opened.clone();
+
+        dashboard_ui.on_action_add_product(move || {
+            *business_manager_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_add_product();
+        assert!(*business_manager_opened.borrow(), "Business manager should be opened from Dashboard Add action");
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let submitted_clone = submitted.clone();
+
+        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+            assert_eq!(type_, "PHYSICAL");
+            assert_eq!(name, "Soap");
+            assert_eq!(desc, "Clean");
+            assert_eq!(price, "5.00");
+            *submitted_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(manager_ui.get_step(), 0);
+        manager_ui.invoke_select_type("PHYSICAL".into());
+        manager_ui.invoke_next_step();
+        assert_eq!(manager_ui.get_step(), 1);
+
+        manager_ui.set_product_name("Soap".into());
+        manager_ui.set_product_description("Clean".into());
+        manager_ui.set_product_price("5.00".into());
+
+        manager_ui.invoke_submit("PHYSICAL".into(), "Soap".into(), "Clean".into(), "5.00".into(), "".into(), "".into());
+        assert!(*submitted.borrow());
+    }
+
+    #[test]
+    fn test_e2e_business_manager_digital() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let submitted_clone = submitted.clone();
+
+        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+            assert_eq!(type_, "DIGITAL");
+            assert_eq!(name, "Ebook");
+            assert_eq!(desc, "Read me");
+            assert_eq!(price, "10.00");
+            *submitted_clone.borrow_mut() = true;
+        });
+
+        manager_ui.invoke_select_type("DIGITAL".into());
+        manager_ui.invoke_next_step();
+
+        manager_ui.set_product_name("Ebook".into());
+        manager_ui.set_product_description("Read me".into());
+        manager_ui.set_product_price("10.00".into());
+
+        manager_ui.invoke_submit("DIGITAL".into(), "Ebook".into(), "Read me".into(), "10.00".into(), "".into(), "".into());
+        assert!(*submitted.borrow());
+    }
+
+    #[test]
+    fn test_e2e_business_manager_service() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let submitted_clone = submitted.clone();
+
+        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+            assert_eq!(type_, "SERVICE");
+            assert_eq!(name, "Consulting");
+            assert_eq!(desc, "Talk to me");
+            assert_eq!(price, "100.00");
+            assert_eq!(dur, "30");
+            assert_eq!(sch, "{\"mon\":true}");
+            *submitted_clone.borrow_mut() = true;
+        });
+
+        manager_ui.invoke_select_type("SERVICE".into());
+        manager_ui.invoke_next_step();
+
+        manager_ui.set_product_name("Consulting".into());
+        manager_ui.set_product_description("Talk to me".into());
+        manager_ui.set_product_price("100.00".into());
+        manager_ui.set_service_duration("30".into());
+        manager_ui.set_service_schedule("{\"mon\":true}".into());
+
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into());
+        assert!(*submitted.borrow());
+    }
+
+    #[test]
+    fn test_e2e_business_manager_navigation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+        assert_eq!(manager_ui.get_step(), 0);
+        manager_ui.invoke_select_type("PHYSICAL".into());
+        manager_ui.invoke_next_step();
+        assert_eq!(manager_ui.get_step(), 1);
+        manager_ui.invoke_prev_step();
+        assert_eq!(manager_ui.get_step(), 0);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_close() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let closed_clone = closed.clone();
+        manager_ui.on_close(move || {
+            *closed_clone.borrow_mut() = true;
+        });
+        manager_ui.invoke_close();
+        assert!(*closed.borrow());
+    }
