@@ -50,7 +50,7 @@ impl AutoDreamPipeline {
             let embedding = match self.embedding_api.generate_embedding(&context_data).await {
                 Ok(emb) => emb,
                 Err(e) => {
-                    println!("AutoDreamPipeline: failed to generate embedding: {}", e);
+                    tracing::error!("AutoDreamPipeline: failed to generate embedding: {}", e);
                     vec![0.0; 1536]
                 }
             };

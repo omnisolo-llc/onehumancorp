@@ -7,10 +7,6 @@ edition = "2024"
 path = "main.rs"
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "app"
-path = "main.rs"
-
 [dependencies]
 slint = { version = "1.8.0", default-features = false, features = ["backend-winit", "renderer-software", "compat-1-2"] }
 serde = { workspace = true }

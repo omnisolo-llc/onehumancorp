@@ -573,7 +573,7 @@ mod tests {
         let received_clone = received.clone();
         
         let handler = Box::new(move |msg: Message| {
-            println!("Received message: {:?}", msg);
+            tracing::debug!("Received message: {:?}", msg);
             received_clone.store(true, Ordering::SeqCst);
         });
         

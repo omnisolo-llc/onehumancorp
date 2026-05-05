@@ -104,7 +104,7 @@ impl Store {
                 if crate::config::get().multitenant {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
-                println!("warning: falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
+                tracing::warn!("falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
                 random_bytes(32)
             });
 

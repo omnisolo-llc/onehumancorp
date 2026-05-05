@@ -22,7 +22,7 @@ impl AutoDreamPipeline {
             loop {
                 let pipeline = AutoDreamPipeline::new(db.clone(), llm_client.clone());
                 if let Err(e) = pipeline.process_closed_tasks().await {
-                    println!("AutoDreamPipeline worker error: {}", e);
+                    tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
                 sleep(Duration::from_secs(60)).await;
             }
@@ -105,11 +105,11 @@ impl AutoDreamPipeline {
                             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                     }
                     Err(e) => {
-                        println!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
+                        tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
                     }
                 }
             }
-            println!("AutoDreamPipeline: Consolidated task {}", task_id);
+            tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
 
         Ok(())

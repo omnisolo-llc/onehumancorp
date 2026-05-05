@@ -31,7 +31,7 @@ impl OperationsWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            eprintln!("OperationsWorker error: {}", e);
+                            tracing::error!("OperationsWorker error: {}", e);
                             break;
                         }
                     }
@@ -186,7 +186,7 @@ impl CustomerSuccessWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            eprintln!("CustomerSuccessWorker error: {}", e);
+                            tracing::error!("CustomerSuccessWorker error: {}", e);
                             break;
                         }
                     }
