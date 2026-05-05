@@ -67,7 +67,7 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        Ok(inner.result)
+                        Ok(format!("[Subagent (Worktree)] Completed task in isolated branch. Condensed Summary: {}", inner.result))
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -283,5 +283,38 @@ mod tests {
 
         let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
         let _ = tokio::fs::remove_dir_all(parent_dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_subagent_worktree_mode() {
+        struct MockWorktreeRunner;
+        #[async_trait::async_trait]
+        impl crate::runner::CommandRunner for MockWorktreeRunner {
+            async fn run(&self, cmd: &str, _args: &[&str], _working_dir: Option<&std::path::Path>, _envs: Vec<(String, String)>) -> std::io::Result<std::process::Output> {
+                use std::os::unix::process::ExitStatusExt;
+                let stdout = if cmd == "ohc_builtin_agent" {
+                    "Worktree task done".as_bytes().to_vec()
+                } else {
+                    vec![]
+                };
+                Ok(std::process::Output {
+                    status: std::process::ExitStatus::from_raw(0),
+                    stdout,
+                    stderr: vec![],
+                })
+            }
+        }
+
+        let runner = Arc::new(MockWorktreeRunner);
+        let executor = SubagentExecutor { runner };
+        let args = serde_json::json!({
+            "task": "do something isolated",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for worktree mode");
+        let msg = result.unwrap();
+        assert_eq!(msg, "[Subagent (Worktree)] Completed task in isolated branch. Condensed Summary: Worktree task done");
     }
 }
