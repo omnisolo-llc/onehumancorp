@@ -1,10 +1,10 @@
-# 🔍 Scout: Tool Integration Research
+# 🔍 Scout: Tool Integration Research Q2
 
-## [Social Media] Meta Graph API Integration
-**Title**: Integrate Meta Graph API for Unified Social Media Inbox
+## [Social Media] Manychat Integration
+**Title**: Integrate Manychat for Unified Social Media Inbox
 **Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
 **Research Report**:
-- **Tool**: Meta Graph API
+- **Tool**: Manychat
 - **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
 - **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
 - **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
@@ -14,47 +14,47 @@
 - User goes to the Operations dashboard and clicks "Connect Instagram".
 - User authenticates with Facebook/Instagram via OAuth.
 - OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Meta Graph API.
+- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
 - The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Meta Graph API. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
 **Priority**: P0
 **Estimated Scope**: Large
 
-## [Calendar] Google Calendar API Integration
-**Title**: Integrate Google Calendar API for Automated Booking
+## [Calendar] Calendly Integration
+**Title**: Integrate Calendly for Automated Booking
 **Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
 **Research Report**:
-- **Tool**: Google Calendar API
+- **Tool**: Calendly
 - **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
 - **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Google Calendar directly instead of OHC, state might go out of sync without robust webhook handling.
+- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
 - **Pricing**: Free tier available. Premium starts at $10/mo.
 - **Compatibility**: Cloud (OAuth). Standalone (requires API key).
 **Design Doc**:
-- User goes to Sales dashboard and connects Google Calendar API.
+- User goes to Sales dashboard and connects Calendly.
 - OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the native booking interface powered by Google Calendar API.
+- When a customer clicks to book, they are shown the Calendly widget.
 - Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Google account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
 **Priority**: P1
 **Estimated Scope**: Medium
 
-## [Email Marketing] SendGrid/SES Integration
-**Title**: Integrate SendGrid/SES for Customer Re-engagement
+## [Email Marketing] Mailchimp Integration
+**Title**: Integrate Mailchimp for Customer Re-engagement
 **Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
 **Research Report**:
-- **Tool**: SendGrid/SES
+- **Tool**: Mailchimp
 - **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
 - **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
 - **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
 - **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
 - **Compatibility**: Cloud (OAuth). Standalone (API Key).
 **Design Doc**:
-- When a customer buys something, they are automatically added to the OHC audience lists backed by SendGrid/SES with tags (e.g., "Bought: Cake").
+- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
 - The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
-- The user approves the AI-generated email, and OHC triggers SendGrid/SES to send it.
+- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
 - The user sees open rates and clicks in the OHC Marketing dashboard.
-**Implementation Prompt**: Build an integration that syncs OHC customers to a OHC audience lists backed by SendGrid/SES automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the SendGrid/SES API.
+**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
 **Priority**: P1
 **Estimated Scope**: Medium
 
@@ -126,7 +126,7 @@
 - **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
 **Design Doc**:
 - User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via native booking), OHC calls the Zoom API to create a meeting.
+- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
 - The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1
