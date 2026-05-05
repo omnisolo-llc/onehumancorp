@@ -354,7 +354,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
-                    println!("Login as {}...", email);
+                    println!("Login process started...");
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();
                     tokio::spawn(async move {
