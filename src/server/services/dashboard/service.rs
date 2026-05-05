@@ -29,8 +29,7 @@ impl DashboardService for MyDashboardService {
         let db_clone = self.db.clone();
         let org_id_clone = org_id.clone();
 
-        // Phase 2: Parallel Fetching Optimization
-        // Fetch agents, meetings, costs, and organization info concurrently.
+        // Optimized dashboard snapshot with parallel data fetching
         let (agents_res, meetings_res, cost_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents_by_org(&org_id_clone)),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
@@ -75,7 +74,6 @@ impl DashboardService for MyDashboardService {
             agents: vec![],
         };
 
-        // Filter and map meetings to the response format
         let filtered_meetings: Vec<MeetingRoom> = meetings.iter()
             .filter(|m| m.participants.iter().any(|p| p.starts_with(&req.organization_id)))
             .cloned()
@@ -125,7 +123,7 @@ impl DashboardService for MyDashboardService {
         let db_clone = self.db.clone();
         let org_id_clone = org_id.clone();
 
-        // Performance: Avoid fetching full agent and meeting details.
+        // Optimized dashboard for mobile: fetch only counts and summaries
         let (agents_res, meetings_res, cost_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents_by_org(&org_id_clone)),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
