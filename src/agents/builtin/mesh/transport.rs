@@ -273,7 +273,7 @@ impl MeshTransport for IpcTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO NOTHING"
+             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= datetime('now')"
         )
         .bind(resource)
         .bind(owner)
