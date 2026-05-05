@@ -246,7 +246,7 @@ mod tests {
 
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/ohc")
+            .connect_lazy("postgres://dummydatabase:5432/ohc")
             .unwrap();
 
         let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
