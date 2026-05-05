@@ -24,10 +24,19 @@ pub async fn tier_limit_middleware(
     let tenant_id = if let Some(claims) = req.extensions().get::<crate::auth::Claims>() {
         claims.organization_id.clone().unwrap_or_else(|| "default_tenant".to_string())
     } else {
-        "default_tenant".to_string()
+        // Use a 401 Unauthorized if no auth info is available and it's required for limits
+        return (StatusCode::UNAUTHORIZED, Json(GracefulDegradationResponse {
+            error: "unauthorized".to_string(),
+            user_message: "Authentication required to check limits.".to_string(),
+            needs_upgrade: false,
+        })).into_response();
     };
 
-    let agent_id = "default_agent";
+    // We attempt to extract a specific agent ID from path or headers if this is an agent route.
+    // If not, it means it's a general request (not tied to a specific agent).
+    // The exact extraction depends on router path params which are not globally available here easily.
+    // For now, we rate limit at the tenant level.
+    let agent_id = "tenant_global";
 
     match tracker.check_rate_limit(&tenant_id, agent_id).await {
         Ok(status) => {
