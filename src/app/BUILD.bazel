@@ -34,6 +34,7 @@ rust_binary(
     compile_data = ["tooltips.json"],
     data = [
         "agent_config.slint",
+        "billing_wizard.slint",
         "walkthrough.slint",
         "experiments.slint",
         "wizard.slint",
@@ -129,6 +130,7 @@ rust_test(
     crate_root = "main.rs",
     data = [
         "agent_config.slint",
+        "billing_wizard.slint",
         "walkthrough.slint",
         "experiments.slint",
         "wizard.slint",
