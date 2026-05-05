@@ -1,3 +1,18 @@
+use std::cell::RefCell;
+
+
+#[cfg(not(target_arch = "wasm32"))]
+use copypasta::{ClipboardContext, ClipboardProvider};
+
+thread_local! {
+    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
+    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+    #[cfg(not(target_arch = "wasm32"))]
+    static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
+    static UI_INSTANCES: RefCell<Vec<Box<dyn std::any::Any>>> = RefCell::new(Vec::new());
+}
+
+
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
@@ -20,6 +35,7 @@ pub mod ohc {
 }
 
 use slint::ComponentHandle;
+
 #[cfg(not(target_arch = "wasm32"))]
 use slint::Model;
 
@@ -47,27 +63,12 @@ fn open_url(url: &str) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
-use copypasta::{ClipboardContext, ClipboardProvider};
 
 #[cfg(not(target_arch = "wasm32"))]
-thread_local! {
-    static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
-    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
-    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
-}
+#[cfg(test)]
+mod ui_tests;
 
 #[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-
-#[cfg(target_arch = "wasm32")]
-thread_local! {
-    static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
-    static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
-}
-
 #[cfg(test)]
 mod ui_tests;
 
@@ -97,7 +98,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_b) = app::WebsiteBuilder::new() { _b.show().unwrap(); Box::leak(Box::new(_b)); }
+            if let Ok(_b) = app::WebsiteBuilder::new() { _b.show().unwrap(); UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(_b))); }
         }
     });
 
@@ -105,7 +106,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_i) = app::Integrations::new() { _i.show().unwrap(); Box::leak(Box::new(_i)); }
+            if let Ok(_i) = app::Integrations::new() { _i.show().unwrap(); UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(_i))); }
         }
     });
 
@@ -113,7 +114,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_r) = app::Referrals::new() { _r.show().unwrap(); Box::leak(Box::new(_r)); }
+            if let Ok(_r) = app::Referrals::new() { _r.show().unwrap(); UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(_r))); }
         }
     });
 
@@ -121,7 +122,7 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_d) = app::Dashboard::new() { _d.show().unwrap(); Box::leak(Box::new(_d)); }
+            if let Ok(_d) = app::Dashboard::new() { _d.show().unwrap(); UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(_d))); }
         }
     });
 }
@@ -232,7 +233,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -349,14 +349,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         dashboard.show().unwrap();
-                                        Box::leak(Box::new(dashboard));
-                                        Box::leak(Box::new(my_plan_ui));
-                                        Box::leak(Box::new(cost_dashboard_ui));
-                                        Box::leak(Box::new(ai_help_chat_ui));
-                                        Box::leak(Box::new(interactive_walkthrough_ui));
-                                        Box::leak(Box::new(video_tutorials_ui));
-                                        Box::leak(Box::new(api_docs_ui));
-                                        Box::leak(Box::new(release_notes_ui));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(dashboard)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(my_plan_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(cost_dashboard_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(ai_help_chat_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(interactive_walkthrough_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(video_tutorials_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(api_docs_ui)));
+                                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(release_notes_ui)));
                                     }
                                 }
                             }
@@ -449,14 +449,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                         dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                        Box::leak(Box::new(my_plan_ui));
-                        Box::leak(Box::new(cost_dashboard_ui));
-                        Box::leak(Box::new(ai_help_chat_ui));
-                        Box::leak(Box::new(interactive_walkthrough_ui));
-                        Box::leak(Box::new(video_tutorials_ui));
-                        Box::leak(Box::new(api_docs_ui));
-                        Box::leak(Box::new(release_notes_ui));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(dashboard)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(my_plan_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(cost_dashboard_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(ai_help_chat_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(interactive_walkthrough_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(video_tutorials_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(api_docs_ui)));
+                        UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(release_notes_ui)));
                     }
                 }
             }
@@ -982,11 +982,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agent_config_ui));
-    Box::leak(Box::new(prompt_tuning_ui));
-    Box::leak(Box::new(website_builder_ui));
-    Box::leak(Box::new(grow_business_ui));
-    Box::leak(Box::new(email_marketing_ui));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(agent_config_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(prompt_tuning_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(website_builder_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(grow_business_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(email_marketing_ui)));
 
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
@@ -1173,7 +1173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(dashboard)));
             }
         }
     });
@@ -1186,7 +1186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(dashboard)));
             }
         }
     });
@@ -1199,7 +1199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(referrals) = app::Referrals::new() {
                 referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(referrals)));
             }
         }
     });
@@ -1484,7 +1484,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                Box::leak(Box::new(unified_inbox_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(unified_inbox_ui)));
 
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
@@ -1563,7 +1563,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 // Keep strong reference alive indefinitely on the main thread via Box::leak
-                Box::leak(Box::new(business_share_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(business_share_ui)));
 
                 let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
@@ -1632,7 +1632,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(help_center_ui)));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
@@ -1640,25 +1640,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
-                Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(kairos_orchestration_walkthrough_ui)));
 
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(interactive_walkthrough_ui)));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
-                Box::leak(Box::new(video_tutorials_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(video_tutorials_ui)));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let api_docs_handle = api_docs_ui.as_weak();
-                Box::leak(Box::new(api_docs_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(api_docs_ui)));
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
-                Box::leak(Box::new(release_notes_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(release_notes_ui)));
 
                 ai_chat_ui.on_send_message({
                     let chat_handle = ai_chat_handle.clone();
@@ -1671,7 +1671,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 });
-                Box::leak(Box::new(ai_chat_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(ai_chat_ui)));
 
                 dashboard.on_open_help_center(move || {
                     if let Some(ui) = help_center_handle.upgrade() {
@@ -1782,11 +1782,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(dashboard)));
 
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
-                Box::leak(Box::new(pricing_ui));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(my_plan_ui)));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(cost_dashboard_ui)));
+                UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(pricing_ui)));
             }
         }
     });
@@ -1851,12 +1851,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agents_ui));
-    Box::leak(Box::new(agent_hire_ui));
-    Box::leak(Box::new(fix_agent_ui));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(agents_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(agent_hire_ui)));
+    UI_INSTANCES.with(|instances| instances.borrow_mut().push(Box::new(fix_agent_ui)));
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let _welcome_checklist_handle = welcome_checklist_ui.as_weak();
     let _ = welcome_checklist_ui.hide();
 
     setup_welcome_checklist_routing(&welcome_checklist_ui);
@@ -4281,7 +4280,7 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
             // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
+            app::HelpCenter::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
@@ -4292,7 +4291,7 @@ mod dashboard_docs_tests {
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
             // Verify AiHelpChat component can be instantiated
-            let _ai_chat = app::AiHelpChat::new().unwrap();
+            app::AiHelpChat::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
@@ -4302,7 +4301,7 @@ mod dashboard_docs_tests {
         let walkthrough_opened_clone = walkthrough_opened.clone();
         dashboard_ui.on_open_interactive_walkthrough(move || {
             *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
+            app::InteractiveWalkthrough::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
@@ -4312,7 +4311,7 @@ mod dashboard_docs_tests {
         let kairos_walkthrough_opened_clone = kairos_walkthrough_opened.clone();
         dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
             *kairos_walkthrough_opened_clone.borrow_mut() = true;
-            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap();
+            app::KairosOrchestrationWalkthrough::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
         assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
@@ -4322,7 +4321,7 @@ mod dashboard_docs_tests {
         let video_tutorials_opened_clone = video_tutorials_opened.clone();
         dashboard_ui.on_open_video_tutorials(move || {
             *video_tutorials_opened_clone.borrow_mut() = true;
-            let _video_tutorials = app::VideoTutorials::new().unwrap();
+            app::VideoTutorials::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
@@ -4332,7 +4331,7 @@ mod dashboard_docs_tests {
         let release_notes_opened_clone = release_notes_opened.clone();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
+            app::ReleaseNotes::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
@@ -4342,7 +4341,7 @@ mod dashboard_docs_tests {
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
             *api_docs_opened_clone.borrow_mut() = true;
-            let _api_docs = app::ApiDocs::new().unwrap();
+            app::ApiDocs::new().unwrap().hide().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
         assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
