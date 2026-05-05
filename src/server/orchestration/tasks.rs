@@ -183,9 +183,11 @@ impl TaskDecompositionService {
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
                 claimed_counter.add(1, &[]);
 
-                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
-                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
-                }
+                let proto_task = task.clone().into_proto();
+                use prost::Message;
+                let mut payload_bytes = Vec::new();
+                let _ = proto_task.encode(&mut payload_bytes);
+                let _ = self.mesh.publish("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))
             }
@@ -279,9 +281,11 @@ impl TaskDecompositionService {
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
                 claimed_counter.add(1, &[]);
 
-                if let Ok(payload_bytes) = serde_json::to_vec(&task) {
-                    let _ = self.mesh.publish("task.assigned", payload_bytes).await;
-                }
+                let proto_task = task.clone().into_proto();
+                use prost::Message;
+                let mut payload_bytes = Vec::new();
+                let _ = proto_task.encode(&mut payload_bytes);
+                let _ = self.mesh.publish("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))
             }
