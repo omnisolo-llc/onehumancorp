@@ -102,7 +102,7 @@ export component Dashboard inherits Window {
                 }
             }
             Rectangle {} // Spacer
-            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask AI"; height: 44px; clicked => { open_ai_chat(); } } }
+            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask anything"; height: 44px; clicked => { open_ai_chat(); } } }
             TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
         }
 
@@ -409,7 +409,7 @@ export component Dashboard inherits Window {
                     }
 
                     Text {
-                        text: "Ask AI";
+                        text: "Ask anything";
                         color: white;
                         font-size: 14px;
                         font-weight: 700;
