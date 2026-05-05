@@ -354,20 +354,54 @@ impl Agent {
                     let id = tc_val["id"].as_str().unwrap();
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
-                        match tool.execute.execute(args).await {
-                            Ok(res) => {
-                                tool_results_json.push(serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": res,
-                                    "error": ""
-                                }));
-                            }
-                            Err(e) => {
-                                tool_results_json.push(serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": "",
-                                    "error": e.to_string()
-                                }));
+                        let mut retry_count = 0;
+                        let max_retries = 2;
+                        loop {
+                            match tool.execute.execute(args.clone()).await {
+                                Ok(res) => {
+                                    tool_results_json.push(serde_json::json!({
+                                        "tool_call_id": id,
+                                        "content": res,
+                                        "error": ""
+                                    }));
+                                    break;
+                                }
+                                Err(ToolError::Transient(msg)) => {
+                                    if retry_count < max_retries {
+                                        retry_count += 1;
+                                        let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                        tokio::time::sleep(backoff).await;
+                                        continue;
+                                    } else {
+                                        let err = format!("Transient error after retries: {}", msg);
+                                        tool_results_json.push(serde_json::json!({
+                                            "tool_call_id": id,
+                                            "content": "",
+                                            "error": err
+                                        }));
+                                        break;
+                                    }
+                                }
+                                Err(ToolError::LlmRecoverable(msg)) => {
+                                    tool_results_json.push(serde_json::json!({
+                                        "tool_call_id": id,
+                                        "content": "",
+                                        "error": msg
+                                    }));
+                                    break;
+                                }
+                                Err(ToolError::UserFixable(msg)) => {
+                                    return Err(format!("USER_FIXABLE: User intervention required: {}", msg).into());
+                                }
+                                Err(ToolError::Fatal(msg)) => {
+                                    return Err(format!("FATAL: Fatal error: {}", msg).into());
+                                }
+                                Err(ToolError::Unexpected(msg)) => {
+                                    return Err(format!("UNEXPECTED: Unexpected error: {}", msg).into());
+                                }
+                                Err(ToolError::HandoffRequested(target)) => {
+                                    return Err(format!("HANDOFF: Handoff requested to: {}", target).into());
+                                }
                             }
                         }
                     } else {
