@@ -1,0 +1,163 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component BusinessManager inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 600px;
+    title: "Add Offering";
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_type: "";
+
+    // Form fields
+    in-out property <string> product_name: "";
+    in-out property <string> product_description: "";
+    in-out property <string> product_price: "";
+
+    // Service specific
+    in-out property <string> service_duration: "60";
+    in-out property <string> service_schedule: "{}";
+
+    callback next_step();
+    callback prev_step();
+    callback select_type(string);
+    callback submit(string, string, string, string, string, string); // type, name, desc, price, duration, schedule
+    callback close();
+
+    next_step => { step = step + 1; }
+    prev_step => { step = step - 1; }
+    select_type(t) => { selected_type = t; }
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        // Step 0: Select Type
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "PHYSICAL" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "📦 Physical Item"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Shipped to customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("PHYSICAL"); } }
+                    }
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "DIGITAL" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "💻 Digital Download"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Files, templates, etc."; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("DIGITAL"); } }
+                    }
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "SERVICE" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "⏱️ My Time / Service"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Bookings, consultations, etc."; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("SERVICE"); } }
+                    }
+                }
+            }
+        }
+
+        // Step 1: Details
+        if (step == 1) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Details"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Name"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_name; placeholder-text: "E.g. Custom Vegan Cake"; height: 44px; }
+            }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Description"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_description; placeholder-text: "Brief description"; height: 44px; }
+            }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Price (USD)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_price; input-type: decimal; placeholder-text: "0.00"; height: 44px; }
+            }
+
+            if (selected_type == "SERVICE") : VerticalBox {
+                spacing: 16px;
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Duration (minutes)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_duration; input-type: number; placeholder-text: "60"; height: 44px; }
+                }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Schedule (JSON)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_schedule; placeholder-text: "{}"; height: 44px; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : GlassCard {
+                width: 100px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
+            }
+            if (step == 0) : Rectangle { width: 100px; } // spacer
+
+            Rectangle {} // Center spacer
+
+            if (step == 0) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: selected_type != "" ? rgba(168, 85, 247, 0.8) : rgba(100, 116, 139, 0.4);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    enabled: selected_type != "";
+                    clicked => { next_step(); }
+                }
+            }
+
+            if (step == 1) : GlassCard {
+                width: 160px;
+                height: 44px;
+                background: rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    clicked => {
+                        submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule);
+                        close();
+                    }
+                }
+            }
+        }
+    }
+}
