@@ -4981,6 +4981,122 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
+    fn test_e2e_login_error_message_rewrite_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let error_message_set = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let error_message_set_clone = error_message_set.clone();
+
+        login_ui.on_login({
+            let ui_handle = login_ui.as_weak();
+            move |email, _password| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if email == "wrong@example.com" {
+                        ui.set_error_message("We couldn't find an account with that email. Please try again.".into());
+                        *error_message_set_clone.borrow_mut() = true;
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_login("wrong@example.com".into(), "wrong".into());
+        assert!(*error_message_set.borrow(), "Error message should have been updated upon failed login");
+        assert_eq!(login_ui.get_error_message(), "We couldn't find an account with that email. Please try again.");
+    }
+
+    #[test]
+    fn test_e2e_agent_config_dejargon_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let config_ui = app::SecureAgentConfig::new().unwrap();
+        let config_saved = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let config_saved_clone = config_saved.clone();
+
+        config_ui.on_save_config({
+            let ui_handle = config_ui.as_weak();
+            move |token| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if token == "1234" {
+                        *config_saved_clone.borrow_mut() = true;
+                    } else {
+                        ui.set_error_text("That code isn't right. Please check your email and try again.".into());
+                    }
+                }
+            }
+        });
+
+        config_ui.invoke_save_config("wrong".into());
+        assert_eq!(config_ui.get_error_text(), "That code isn't right. Please check your email and try again.");
+
+        config_ui.invoke_save_config("1234".into());
+        assert!(*config_saved.borrow(), "Config should have been saved successfully");
+    }
+
+    #[test]
+    fn test_e2e_login_sso_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let sso_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let sso_invoked_clone = sso_invoked.clone();
+
+        login_ui.on_oauth_login({
+            move |provider| {
+                if provider == "SSO" {
+                    *sso_invoked_clone.borrow_mut() = true;
+                }
+            }
+        });
+
+        login_ui.invoke_oauth_login("SSO".into());
+        assert!(*sso_invoked.borrow(), "SSO should have been invoked");
+    }
+
+    #[test]
+    fn test_e2e_login_resend_verification_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let verification_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let verification_sent_clone = verification_sent.clone();
+
+        login_ui.on_resend_verification({
+            let ui_handle = login_ui.as_weak();
+            move |email| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if email == "test@example.com" {
+                        ui.set_verification_message("We sent a new link to your email.".into());
+                        *verification_sent_clone.borrow_mut() = true;
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_resend_verification("test@example.com".into());
+        assert!(*verification_sent.borrow(), "Verification email should have been resent");
+        assert_eq!(login_ui.get_verification_message(), "We sent a new link to your email.");
+    }
+
+    #[test]
+    fn test_e2e_login_start_business_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let wizard_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let wizard_started_clone = wizard_started.clone();
+
+        login_ui.on_start_setup_wizard({
+            move || {
+                *wizard_started_clone.borrow_mut() = true;
+            }
+        });
+
+        login_ui.invoke_start_setup_wizard();
+        assert!(*wizard_started.borrow(), "Setup wizard should have been started");
+    }
+
+    #[test]
     fn test_e2e_login_ui_friction_fixes_subtitle() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::Login::new().unwrap();

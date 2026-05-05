@@ -6,7 +6,7 @@ export component Login inherits Window {
     min-width: 375px;
     preferred-width: 400px;
     height: 600px;
-    title: "OneHumanCorp - Login";
+    title: "One Human Corp - Login";
 
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
@@ -43,7 +43,7 @@ export component Login inherits Window {
                 }
 
                 Text {
-                    text: "OneHumanCorp";
+                    text: "One Human Corp";
                     font-size: 28px;
                     font-weight: 700;
                     horizontal-alignment: center;
@@ -61,7 +61,7 @@ export component Login inherits Window {
 
                 LineEdit {
                     height: 44px;
-                    placeholder-text: "Email or Username";
+                    placeholder-text: "Your Email";
                     text <=> username;
                 }
 
@@ -97,7 +97,7 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                    text: is_sign_up ? "I already have an account" : "I need to create an account";
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
@@ -110,13 +110,13 @@ export component Login inherits Window {
 
                 Button {
                     height: 44px;
-                    text: "Continue with Google/Apple";
+                    text: "Sign in with Google or Apple";
                     clicked => { oauth_login("SSO"); }
                 }
                 
                 Button {
                     height: 44px;
-                    text: "🚀 Start Business Setup";
+                    text: "🚀 Start New Business";
                     clicked => { start_setup_wizard(); }
                 }
 

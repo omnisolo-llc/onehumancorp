@@ -21,13 +21,13 @@ export component SecureAgentConfig inherits Window {
         Text { text: "Helper Configuration"; font-size: 24px; font-weight: 700; color: #1e293b; }
         
         Text {
-            text: "Enter your secure SPIFFE Enrollment Token to authenticate the agent.";
+            text: "Enter the code you received to connect your helper.";
             color: #64748b;
             wrap: word-wrap;
         }
 
         PasswordInput {
-            placeholder-text: "spiffe://ohc.os/agent/1234";
+            placeholder-text: "Code from your email";
             text <=> token;
         }
         
