@@ -205,6 +205,7 @@ impl LlmClient for GeminiClient {
 
         let candidate = result.candidates.into_iter().next().ok_or("no candidates")?;
         let finish_reason = candidate.finish_reason.unwrap_or_default();
+        let response_id = format!("gemini-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
 
         let text = candidate
             .content
@@ -228,9 +229,11 @@ impl LlmClient for GeminiClient {
                 content: text,
                 tool_calls: vec![], // Tools not supported in this simple impl
                 tool_results: vec![],
+                response_id: Some(response_id.clone()),
             },
             usage,
             stop_reason: finish_reason,
+            response_id: Some(response_id),
         })
     }
 }

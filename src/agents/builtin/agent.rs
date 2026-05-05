@@ -46,6 +46,7 @@ pub struct AgentRunConfig {
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub enable_git_state_checkpointing: bool,
+    pub enable_response_id_chaining: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -82,6 +83,7 @@ impl Default for AgentRunConfig {
             guardrails: None,
             enable_state_checkpointing: false,
             enable_git_state_checkpointing: false,
+            enable_response_id_chaining: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -289,6 +291,7 @@ impl Agent {
                         content,
                         tool_calls,
                         tool_results,
+                        response_id: None,
                     });
                 }
 
@@ -579,6 +582,7 @@ impl Agent {
 
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
+        let mut previous_response_id: Option<String> = None;
 
         if cfg.enable_langgraph_mechanic {
             return self.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
@@ -617,9 +621,17 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            let mut msg = Message::user(initial_message);
+        if cfg.enable_response_id_chaining {
+            msg.response_id = previous_response_id.clone();
+        }
+        messages.push(msg);
         } else if !initial_message.is_empty() {
-            messages.push(Message::user(initial_message));
+            let mut msg = Message::user(initial_message);
+        if cfg.enable_response_id_chaining {
+            msg.response_id = previous_response_id.clone();
+        }
+        messages.push(msg);
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -812,7 +824,12 @@ impl Agent {
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
                     if !resp.message.content.is_empty() {
-                        messages.push(resp.message.clone());
+                        let mut msg = resp.message.clone();
+                        if cfg.enable_response_id_chaining && resp.response_id.is_some() {
+                            previous_response_id = resp.response_id.clone();
+                            msg.response_id = resp.response_id.clone();
+                        }
+                        messages.push(msg);
                     }
                     messages.push(Message::user(&decision.nudge_message));
                     continue;
@@ -822,7 +839,12 @@ impl Agent {
             let tool_calls = resp.message.tool_calls.clone();
 
             // Add assistant message to history (including tool calls).
-            messages.push(resp.message.clone());
+            let mut msg = resp.message.clone();
+            if cfg.enable_response_id_chaining && resp.response_id.is_some() {
+                previous_response_id = resp.response_id.clone();
+                msg.response_id = resp.response_id.clone();
+            }
+            messages.push(msg);
 
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
@@ -1179,6 +1201,7 @@ impl Agent {
                 content: String::new(),
                 tool_calls: vec![],
                 tool_results,
+                response_id: if cfg.enable_response_id_chaining { previous_response_id.clone() } else { None },
             });
 
             // State Management Checkpointing Mechanic
@@ -1395,14 +1418,16 @@ mod tests {
                         message: Message::assistant(plan.to_string()),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
-                    })
+                    response_id: None,
+})
                 } else {
                     // It's the replier phase
                     Ok(ChatResponse {
                         message: Message::assistant("Final plan executed."),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
-                    })
+                    response_id: None,
+})
                 }
             }
         }
@@ -1473,10 +1498,12 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
-                        },
+                        response_id: None,
+},
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
-                    })
+                    response_id: None,
+})
                 } else if *count == 2 {
                     // Turn 2: Another tool call
                     Ok(ChatResponse {
@@ -1489,10 +1516,12 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
-                        },
+                        response_id: None,
+},
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
-                    })
+                    response_id: None,
+})
                 } else if *count == 3 {
                     // Turn 3: Final answer. We check the received messages.
                     // The history should be: User, Assistant(call1), Tool(result1), Assistant(call2), Tool(result2)
@@ -1515,13 +1544,15 @@ mod tests {
                         message: Message::assistant("Final answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
-                    })
+                    response_id: None,
+})
                 } else {
                     Ok(ChatResponse {
                         message: Message::assistant("Extra answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
-                    })
+                    response_id: None,
+})
                 }
             }
         }
@@ -1583,10 +1614,12 @@ mod tests {
                                 arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
                             }],
                             tool_results: vec![],
-                        },
+                        response_id: None,
+},
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
-                    })
+                    response_id: None,
+})
                 } else if *count == 2 {
                     // Assert that HeavyTool IS in the tools list
                     assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
@@ -1601,17 +1634,20 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
-                        },
+                        response_id: None,
+},
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
-                    })
+                    response_id: None,
+})
                 } else {
                     // Done
                     Ok(ChatResponse {
                         message: Message::assistant("Final Answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
-                    })
+                    response_id: None,
+})
                 }
             }
 
@@ -1662,15 +1698,18 @@ mod tests {
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -1722,10 +1761,12 @@ mod tests {
                             ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -1763,10 +1804,12 @@ mod tests {
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -1814,7 +1857,8 @@ mod tests {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                });
+                response_id: None,
+});
             }
             Ok(resps.remove(0))
         }
@@ -1843,10 +1887,12 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
@@ -1857,10 +1903,12 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -1907,40 +1955,48 @@ mod tests {
                         content: "tool call 1".to_string(),
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 2".to_string(),
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
                         content: "tool call 3".to_string(),
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("final answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2000,10 +2056,12 @@ mod tests {
                         arguments: serde_json::Value::Null,
                     }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }]),
+            response_id: None,
+}]),
         });
 
         let tools = vec![Tool {
@@ -2049,10 +2107,12 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
@@ -2063,10 +2123,12 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
@@ -2077,10 +2139,12 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message {
                         role: Role::Assistant,
@@ -2091,10 +2155,12 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                }
+                response_id: None,
+}
             ]),
         });
 
@@ -2163,11 +2229,13 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+            response_id: None,
+}, ChatResponse {
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None
             }]),
         });
         let agent1 = Agent::new(client_transient, tools.clone());
@@ -2197,7 +2265,7 @@ mod tests {
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None })
                 }
             }
         }
@@ -2210,11 +2278,13 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+            response_id: None,
+}, ChatResponse {
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: None
             }]),
         });
         let agent2 = Agent::new(client_llm.clone(), tools.clone());
@@ -2248,10 +2318,12 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }]),
+            response_id: None,
+}]),
         });
         let agent3 = Agent::new(client_user, tools.clone());
         let mut events3 = vec![];
@@ -2275,10 +2347,12 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }]),
+            response_id: None,
+}]),
         });
         let agent4 = Agent::new(client_fatal, tools.clone());
         let mut events4 = vec![];
@@ -2302,10 +2376,12 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
-                },
+                response_id: None,
+},
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
-            }]),
+            response_id: None,
+}]),
         });
         let agent5 = Agent::new(client_unexpected, tools.clone());
         let mut events5 = vec![];
@@ -2336,15 +2412,18 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("This contains the secret password!"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2392,10 +2471,12 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
         let agent = Agent::new(client, vec![
@@ -2422,7 +2503,8 @@ mod tests {
                     message: Message::assistant("Here is the secret data."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
         let agent = Agent::new(client, vec![]);
@@ -2543,15 +2625,18 @@ mod tests {
                             arguments: serde_json::json!({}),
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2582,22 +2667,26 @@ mod tests {
                     message: Message::assistant("Draft answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("REJECT: The answer is incomplete."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Better answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("APPROVE"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2625,7 +2714,8 @@ mod tests {
                     message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 50 },
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2684,15 +2774,18 @@ mod tests {
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2739,7 +2832,8 @@ mod tests {
                     message: Message::assistant("Resumed answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2783,15 +2877,18 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Task done"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                }
+                response_id: None,
+}
             ]),
         });
 
@@ -2853,15 +2950,18 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                },
+                response_id: None,
+},
             ]),
         });
 
@@ -2917,7 +3017,8 @@ mod tests {
                 message: Message::assistant("Final answer"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
-            })
+            response_id: None,
+})
         }
     }
 
@@ -2973,6 +3074,7 @@ mod tests {
                     message: Message::assistant("I have written some code."),
                     usage: Usage { input_tokens: 50, output_tokens: 200 },
                     stop_reason: "length".to_string(), // LLM stopped due to length
+                    response_id: None,
                 }
             ]),
         });
@@ -3019,7 +3121,8 @@ mod tests {
                     message: Message::assistant("Initial thought"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                }
+                response_id: None,
+}
             ]),
         });
 
@@ -3045,15 +3148,18 @@ mod tests {
                             arguments: serde_json::json!({}),
                         }],
                         tool_results: vec![],
-                    },
+                    response_id: None,
+},
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                },
+                response_id: None,
+},
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                }
+                response_id: None,
+}
             ]),
         });
 

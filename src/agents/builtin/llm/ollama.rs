@@ -104,6 +104,7 @@ impl LlmClient for OllamaClient {
         }
 
         let result: OllamaResponse = resp.json().await?;
+        let response_id = format!("ollama-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
 
         Ok(ChatResponse {
             message: Message {
@@ -111,12 +112,14 @@ impl LlmClient for OllamaClient {
                 content: result.message.content,
                 tool_calls: vec![],
                 tool_results: vec![],
+                response_id: Some(response_id.clone()),
             },
             usage: Usage {
                 input_tokens: result.prompt_eval_count,
                 output_tokens: result.eval_count,
             },
             stop_reason: result.done_reason,
+            response_id: Some(response_id),
         })
     }
 }

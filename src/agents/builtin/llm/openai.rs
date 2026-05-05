@@ -142,6 +142,7 @@ struct OpenAIRequest {
 
 #[derive(Deserialize)]
 struct OpenAIResponse {
+    id: String,
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
 }
@@ -299,6 +300,7 @@ impl LlmClient for OpenAIClient {
 
         let choice = result.choices.into_iter().next().ok_or("no choices")?;
         let finish_reason = choice.finish_reason.unwrap_or_default();
+        let response_id = result.id.clone();
 
         let text = choice.message.content.unwrap_or_default();
         let tool_calls: Vec<ToolCall> = choice
@@ -331,9 +333,11 @@ impl LlmClient for OpenAIClient {
                 content: text,
                 tool_calls,
                 tool_results: vec![],
+                response_id: Some(response_id.clone()),
             },
             usage,
             stop_reason: finish_reason,
+            response_id: Some(response_id),
         })
     }
 }
