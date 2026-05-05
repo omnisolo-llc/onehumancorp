@@ -1260,7 +1260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
         if let Ok(mut client) = ohc::billing::billing_service_client::BillingServiceClient::connect(hub_url).await {
             let req = tonic::Request::new(ohc::billing::TokenUsage {
-                organization_id: "default".to_string(), // TODO: use real org ID
+                organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
                 ..Default::default()
             });
 
@@ -1293,6 +1293,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     let cost_dashboard_handle = cost_dashboard_ui.as_weak();
+
+    let cost_dashboard_handle_refresh = cost_dashboard_handle.clone();
+    cost_dashboard_ui.on_refresh_data(move || {
+        let cost_dashboard_handle_fetch = cost_dashboard_handle_refresh.clone();
+        tokio::spawn(async move {
+            let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            if let Ok(mut client) = ohc::billing::billing_service_client::BillingServiceClient::connect(hub_url).await {
+                let req = tonic::Request::new(ohc::billing::TokenUsage {
+                    organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
+                    ..Default::default()
+                });
+
+                if let Ok(resp) = client.get_cost_summary(req).await {
+                    let summary = resp.into_inner();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
+                            ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
+                            ui.set_total_tokens(format!("{}", summary.total_tokens).into());
+
+                            let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
+                                app::UiAgentCost {
+                                    name: ac.agent_id.into(),
+                                    cost: format!("${:.2}", ac.cost_usd).into(),
+                                    roi: format!("{:.1}%", ac.roi).into(),
+                                    efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    pct: ac.pct,
+                                }
+                            }).collect();
+
+                            ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
+                        }
+                    }).unwrap();
+                }
+            }
+        });
+    });
 
     let pricing_handle_toggle = pricing_handle.clone();
     pricing_ui.on_toggle_billing_cycle(move || {
