@@ -52,3 +52,33 @@ fn create_verify_progress() {
     ui.set_progress(50);
     assert_eq!(ui.get_progress(), 50);
 }
+
+#[test]
+fn test_e2e_welcome_checklist_verification() {
+    let ui = create();
+    ui.set_progress(0);
+    assert_eq!(ui.get_progress(), 0);
+
+    // Simulate progressing to 100% completion
+    ui.set_progress(100);
+    ui.set_is_completed(true);
+    assert_eq!(ui.get_progress(), 100);
+    assert!(ui.get_is_completed());
+
+    // Test callbacks for clicking links
+    let clicked_products = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let cp = clicked_products.clone();
+    ui.on_go_to_add_products(move || {
+        *cp.borrow_mut() = true;
+    });
+    ui.invoke_go_to_add_products();
+    assert!(*clicked_products.borrow());
+
+    let clicked_insta = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let ci = clicked_insta.clone();
+    ui.on_go_to_connect_instagram(move || {
+        *ci.borrow_mut() = true;
+    });
+    ui.invoke_go_to_connect_instagram();
+    assert!(*clicked_insta.borrow());
+}
