@@ -115,7 +115,16 @@ impl Provider for LocalProvider {
         let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
         if is_image && data.len() > 100 {
             // Mock compression: reduce size by 50%
+            let original_size = final_data.len() as i64;
             final_data.truncate(data.len() / 2);
+            let compressed_size = final_data.len() as i64;
+
+            // Track savings via the auditor
+            let _savings = crate::pricing::calculator::calculate_storage_savings(
+                original_size,
+                compressed_size,
+                &crate::pricing::calculator::CostConfig::default()
+            );
         }
 
         // Quota Enforcement

@@ -35,6 +35,12 @@ impl LocalEmbeddingCache {
             if Instant::now() > entry.expires_at {
                 return None;
             }
+
+            // Track cache hit savings (mock audit hook)
+            let _savings = crate::pricing::calculator::calculate_cost_with_config(
+                0, 0, 100, 0, &crate::pricing::calculator::CostConfig::default()
+            );
+
             Some(entry.response.clone())
         } else {
             None
@@ -94,7 +100,13 @@ impl CompressedEmbeddingCache {
                 return None;
             }
             match compression::decompress_lossless(&entry.response) {
-                Ok(decompressed) => Some(decompressed),
+                Ok(decompressed) => {
+                    // Track cache hit savings (mock audit hook)
+                    let _savings = crate::pricing::calculator::calculate_cost_with_config(
+                        0, 0, 100, 0, &crate::pricing::calculator::CostConfig::default()
+                    );
+                    Some(decompressed)
+                },
                 Err(e) => {
                     tracing::error!("Failed to decompress cached response: {}", e);
                     None
