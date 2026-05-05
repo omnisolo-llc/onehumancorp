@@ -84,8 +84,13 @@ impl MeshTransport for MemoryTransport {
                 e.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Entry::Occupied(_) => {
-                Ok(false)
+            Entry::Occupied(mut e) => {
+                if e.get().0 == owner {
+                    e.insert((owner.to_string(), expires_at));
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
             }
         }
     }
@@ -296,7 +301,7 @@ impl MeshTransport for IpcTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= datetime('now')"
+             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = excluded.owner"
         )
         .bind(resource)
         .bind(owner)
@@ -413,17 +418,19 @@ impl MeshTransport for RedisTransport {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
-        let res: Option<String> = redis::cmd("SET")
-            .arg(&key)
-            .arg(owner)
-            .arg("NX")
-            .arg("EX")
-            .arg(ttl_seconds)
-            .query_async(&mut *conn)
-            .await
-            .map_err(|e| e.to_string())?;
 
-        Ok(res.is_some())
+        let script = redis::Script::new(r#"
+            local current_owner = redis.call("get", KEYS[1])
+            if not current_owner or current_owner == ARGV[1] then
+                redis.call("set", KEYS[1], ARGV[1], "EX", ARGV[2])
+                return 1
+            else
+                return 0
+            end
+        "#);
+
+        let res: i32 = script.key(&key).arg(owner).arg(ttl_seconds).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        Ok(res == 1)
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
@@ -758,15 +765,24 @@ mod tests {
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
 
-        let acquired = transport.acquire_lock("ipc_resource", "agent_1", 1).await.unwrap();
+        let acquired = transport.acquire_lock("ipc_resource", "agent_1", 10).await.unwrap();
         assert!(acquired);
 
-        let acquired_again = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
+        // Test re-acquisition by same owner
+        let reacquired = transport.acquire_lock("ipc_resource", "agent_1", 20).await.unwrap();
+        assert!(reacquired);
+
+        let acquired_again = transport.acquire_lock("ipc_resource", "agent_2", 10).await.unwrap();
         assert!(!acquired_again);
+
+        // Test attempted release by WRONG owner
+        transport.release_lock("ipc_resource", "agent_2").await.unwrap();
+        let still_locked = transport.acquire_lock("ipc_resource", "agent_3", 10).await.unwrap();
+        assert!(!still_locked);
 
         transport.release_lock("ipc_resource", "agent_1").await.unwrap();
 
-        let acquired_after_release = transport.acquire_lock("ipc_resource", "agent_2", 1).await.unwrap();
+        let acquired_after_release = transport.acquire_lock("ipc_resource", "agent_2", 10).await.unwrap();
         assert!(acquired_after_release);
     }
 
@@ -828,11 +844,20 @@ mod tests {
         let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
         assert!(acquired);
 
+        // Test re-acquisition by same owner
+        let reacquired = transport.acquire_lock("my_resource", "agent_1", 20).await.unwrap();
+        assert!(reacquired);
+
         // Test mutual exclusion
         let acquired_again = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
         assert!(!acquired_again);
 
-        // Test lock release
+        // Test attempted release by WRONG owner
+        transport.release_lock("my_resource", "agent_2").await.unwrap();
+        let still_locked = transport.acquire_lock("my_resource", "agent_3", 10).await.unwrap();
+        assert!(!still_locked);
+
+        // Test lock release by CORRECT owner
         transport.release_lock("my_resource", "agent_1").await.unwrap();
 
         // Test lock acquisition after release

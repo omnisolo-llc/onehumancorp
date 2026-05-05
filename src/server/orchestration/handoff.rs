@@ -34,32 +34,71 @@ impl HandoffManager {
                 let msg_id_for_ack = msg.msg_id.clone();
 
                 tokio::spawn(async move {
-                    let lock_key = format!("handoff:{}:{}", handoff.tenant_id, handoff.state_id);
+                    let lock_key = format!("handoff:{}:{}:{}", handoff.entity_type, handoff.tenant_id, handoff.state_id);
                     if let Ok(true) = mesh.acquire_lock(&lock_key, "handoff_manager", 60).await {
-                        match &db_clone.store {
-                            DbStore::Postgres => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
-                                    .bind(&handoff.state_id)
-                                    .bind(&handoff.tenant_id)
-                                    .bind(&handoff.serialized_state)
-                                    .bind(handoff.timestamp)
-                                    .execute(&db_clone.pool)
-                                    .await
-                                {
-                                    tracing::error!("Failed to save state handoff to Postgres: error={}", e);
+                        let entity_type = if handoff.entity_type.is_empty() { "agent_memories" } else { &handoff.entity_type };
+
+                        match entity_type {
+                            "agent_memories" => {
+                                match &db_clone.store {
+                                    DbStore::Postgres => {
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                            .bind(&handoff.state_id)
+                                            .bind(&handoff.tenant_id)
+                                            .bind(&handoff.serialized_state)
+                                            .bind(handoff.timestamp)
+                                            .execute(&db_clone.pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to save state handoff (agent_memories) to Postgres: error={}", e);
+                                        }
+                                    }
+                                    DbStore::Sqlite(sqlite_pool) => {
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                            .bind(&handoff.state_id)
+                                            .bind(&handoff.tenant_id)
+                                            .bind(&handoff.serialized_state)
+                                            .bind(handoff.timestamp)
+                                            .execute(sqlite_pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to save state handoff (agent_memories) to Sqlite: error={}", e);
+                                        }
+                                    }
                                 }
-                            }
-                            DbStore::Sqlite(sqlite_pool) => {
-                                if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
-                                    .bind(&handoff.state_id)
-                                    .bind(&handoff.tenant_id)
-                                    .bind(&handoff.serialized_state)
-                                    .bind(handoff.timestamp)
-                                    .execute(sqlite_pool)
-                                    .await
-                                {
-                                    tracing::error!("Failed to save state handoff to Sqlite: error={}", e);
+                            },
+                            "shared_tasks" => {
+                                // For shared_tasks, serialized_state is the JSON payload of the task
+                                let payload_str = String::from_utf8_lossy(&handoff.serialized_state).to_string();
+                                match &db_clone.store {
+                                    DbStore::Postgres => {
+                                        let payload_json: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(serde_json::json!({}));
+                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = $1, updated_at = to_timestamp($2::double precision) WHERE id = $3 AND updated_at < to_timestamp($2::double precision)")
+                                            .bind(&payload_json)
+                                            .bind(handoff.timestamp)
+                                            .bind(&handoff.state_id)
+                                            .execute(&db_clone.pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to save state handoff (shared_tasks) to Postgres: error={}", e);
+                                        }
+                                    }
+                                    DbStore::Sqlite(sqlite_pool) => {
+                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = ?, updated_at = datetime(?, 'unixepoch') WHERE id = ? AND updated_at < datetime(?, 'unixepoch')")
+                                            .bind(&payload_str)
+                                            .bind(handoff.timestamp)
+                                            .bind(&handoff.state_id)
+                                            .bind(handoff.timestamp)
+                                            .execute(sqlite_pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to save state handoff (shared_tasks) to Sqlite: error={}", e);
+                                        }
+                                    }
                                 }
+                            },
+                            _ => {
+                                tracing::warn!("Received handoff for unknown entity type: {}", entity_type);
                             }
                         }
                         let _ = mesh.release_lock(&lock_key, "handoff_manager").await;
@@ -76,13 +115,14 @@ impl HandoffManager {
         self.mesh.subscribe("mesh:coordination:handoff", handler).await
     }
 
-    pub async fn initiate_handoff(&self, tenant_id: &str, state_id: &str, state: Vec<u8>) -> Result<(), String> {
+    pub async fn initiate_handoff(&self, tenant_id: &str, state_id: &str, state: Vec<u8>, entity_type: &str) -> Result<(), String> {
         let handoff = SyncStateHandoff {
             tenant_id: tenant_id.to_string(),
             state_id: state_id.to_string(),
             serialized_state: state,
             mode_source: if self.is_cloud { "cloud".to_string() } else { "standalone".to_string() },
             timestamp: chrono::Utc::now().timestamp(),
+            entity_type: entity_type.to_string(),
         };
 
         let mut buf = Vec::new();
@@ -127,7 +167,7 @@ mod tests {
 
         let cancel = manager_arc.start_listener().await.unwrap();
 
-        let res = manager_arc.initiate_handoff("tenant1", "state1", b"some_state".to_vec()).await;
+        let res = manager_arc.initiate_handoff("tenant1", "state1", b"some_state".to_vec(), "agent_memories").await;
 
         // Let listener process loop
         let mut found = false;
@@ -191,6 +231,7 @@ mod tests {
             serialized_state: b"hello_world".to_vec(),
             mode_source: "standalone".to_string(), // Source is different than current mode, so it should process it
             timestamp: chrono::Utc::now().timestamp(),
+            entity_type: "agent_memories".to_string(),
         };
 
         let mut buf = Vec::new();
@@ -216,6 +257,7 @@ mod tests {
             serialized_state: b"older_content".to_vec(),
             mode_source: "standalone".to_string(),
             timestamp: chrono::Utc::now().timestamp() - 100, // Older timestamp
+            entity_type: "agent_memories".to_string(),
         };
         let mut buf_older = Vec::new();
         older_handoff.encode(&mut buf_older).unwrap();
@@ -237,6 +279,7 @@ mod tests {
             serialized_state: b"newer_content".to_vec(),
             mode_source: "standalone".to_string(),
             timestamp: chrono::Utc::now().timestamp() + 100, // Newer timestamp
+            entity_type: "agent_memories".to_string(),
         };
         let mut buf_newer = Vec::new();
         newer_handoff.encode(&mut buf_newer).unwrap();
@@ -258,6 +301,7 @@ mod tests {
             serialized_state: b"should_not_save".to_vec(),
             mode_source: "cloud".to_string(), // Same as is_cloud=true
             timestamp: chrono::Utc::now().timestamp(),
+            entity_type: "agent_memories".to_string(),
         };
 
         let mut buf2 = Vec::new();
