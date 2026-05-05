@@ -41,8 +41,9 @@ fn get_cache() -> &'static RwLock<HashMap<String, CachedJWKS>> {
     JWKS_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
 }
 
-fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
-    if std::env::var("OHC_ALLOW_LOCAL_IPS").map(|v| v == "true").unwrap_or(false) {
+fn is_blocked_ip(ip: std::net::IpAddr, allow_local: Option<bool>) -> bool {
+    let allowed = allow_local.unwrap_or_else(|| std::env::var("OHC_ALLOW_LOCAL_IPS").map(|v| v == "true").unwrap_or(false));
+    if allowed {
         return false;
     }
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
@@ -52,7 +53,7 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     }
 }
 
-async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpAddr), String> {
+async fn validate_url_and_get_ip(url_str: &str, allow_local: Option<bool>) -> Result<(String, std::net::IpAddr), String> {
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
     if url.scheme() != "http" && url.scheme() != "https" {
         return Err("invalid scheme".to_string());
@@ -66,7 +67,7 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     let mut valid_ip = None;
     for addr in addrs {
         let ip = addr.ip();
-        if !is_blocked_ip(ip) {
+        if !is_blocked_ip(ip, allow_local) {
             valid_ip = Some(ip);
             break;
         }
@@ -88,7 +89,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
 
     let disc_url = format!("{}/.well-known/openid-configuration", issuer_url.trim_end_matches('/'));
     
-    let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
+    let (host, ip) = validate_url_and_get_ip(&disc_url, None).await?;
     let client = reqwest::Client::builder()
         .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
         .build()
@@ -102,7 +103,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         .await
         .map_err(|e| e.to_string())?;
         
-    let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
+    let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri, None).await?;
     let jwks_client = reqwest::Client::builder()
         .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
         .build()
@@ -200,41 +201,39 @@ mod tests {
 
     #[test]
     fn test_is_blocked_ip() {
-        assert!(is_blocked_ip("127.0.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("0.0.0.0".parse().unwrap()));
-        assert!(is_blocked_ip("169.254.169.254".parse().unwrap())); // Link local
-        assert!(is_blocked_ip("224.0.0.1".parse().unwrap())); // Multicast
+        assert!(is_blocked_ip("127.0.0.1".parse().unwrap(), None));
+        assert!(is_blocked_ip("0.0.0.0".parse().unwrap(), None));
+        assert!(is_blocked_ip("169.254.169.254".parse().unwrap(), None)); // Link local
+        assert!(is_blocked_ip("224.0.0.1".parse().unwrap(), None)); // Multicast
         
         // Private IPs (assuming OHC_ALLOW_LOCAL_IPS is not set to true)
-        assert!(is_blocked_ip("10.0.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("172.16.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("192.168.0.1".parse().unwrap()));
+        assert!(is_blocked_ip("10.0.0.1".parse().unwrap(), Some(false)));
+        assert!(is_blocked_ip("172.16.0.1".parse().unwrap(), Some(false)));
+        assert!(is_blocked_ip("192.168.0.1".parse().unwrap(), Some(false)));
         
         // Public IP
-        assert!(!is_blocked_ip("8.8.8.8".parse().unwrap()));
+        assert!(!is_blocked_ip("8.8.8.8".parse().unwrap(), None));
     }
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_valid() {
-        let res = validate_url_and_get_ip("https://google.com").await;
+        let res = validate_url_and_get_ip("https://google.com", None).await;
         assert!(res.is_ok());
         let (host, ip) = res.unwrap();
         assert_eq!(host, "google.com");
-        assert!(!is_blocked_ip(ip));
+        assert!(!is_blocked_ip(ip, None));
     }
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_invalid_scheme() {
-        let res = validate_url_and_get_ip("ftp://google.com").await;
+        let res = validate_url_and_get_ip("ftp://google.com", None).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "invalid scheme");
     }
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_blocked() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("OHC_ALLOW_LOCAL_IPS", "false") }
-        let res = validate_url_and_get_ip("http://localhost").await;
+        let res = validate_url_and_get_ip("http://localhost", Some(false)).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("resolves to blocked IP"));
     }

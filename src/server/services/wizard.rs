@@ -100,16 +100,35 @@ impl WizardService for MyWizardService {
 
     async fn verify_onboarding(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let run_mode = std::env::var("OHC_STANDALONE").unwrap_or_default();
+        self.verify_onboarding_internal(request, None).await
+    }
+}
+
+impl MyWizardService {
+    pub async fn verify_onboarding_internal(
+        &self,
+        _request: Request<EmptyRequest>,
+        env_override: Option<std::collections::HashMap<String, String>>,
+    ) -> Result<Response<OnboardingVerifyResponse>, Status> {
+        let get_env = |key: &str| -> String {
+            if let Some(ref env) = env_override {
+                if env.contains_key(key) {
+                    return env.get(key).unwrap().clone();
+                }
+            }
+            std::env::var(key).unwrap_or_default()
+        };
+
+        let run_mode = get_env("OHC_STANDALONE");
         let is_standalone = run_mode == "true";
         
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
 
         if !is_standalone {
-            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+            let db_url = get_env("DATABASE_URL");
             if db_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
@@ -125,7 +144,7 @@ impl WizardService for MyWizardService {
                 });
             }
 
-            let redis_url = std::env::var("REDIS_URL").unwrap_or_default();
+            let redis_url = get_env("REDIS_URL");
             if redis_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
@@ -147,7 +166,7 @@ impl WizardService for MyWizardService {
                 message: "Standalone mode active".to_string(),
             });
 
-            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+            let db_url = get_env("DATABASE_URL");
             if db_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
@@ -175,7 +194,14 @@ impl WizardService for MyWizardService {
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = {
+            let val = get_env("DATABASE_URL");
+            if val.is_empty() {
+                "sqlite::memory:".to_string()
+            } else {
+                val
+            }
+        };
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),
@@ -208,71 +234,56 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_ok() {
-        let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
-        let old_db_url = std::env::var("DATABASE_URL").ok();
-
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
-        unsafe { std::env::set_var("DATABASE_URL", "sqlite://local.db"); }
-
         let service = MyWizardService::new();
         let request = Request::new(EmptyRequest {});
-        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        let mut env_override = std::collections::HashMap::new();
+        env_override.insert("OHC_STANDALONE".to_string(), "true".to_string());
+        env_override.insert("DATABASE_URL".to_string(), "sqlite://local.db".to_string());
+
+        let response = service.verify_onboarding_internal(request, Some(env_override)).await.unwrap().into_inner();
 
         assert_eq!(response.status, "healthy");
         assert_eq!(response.mode, "standalone");
 
         let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
         assert!(has_ok_db);
-
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
-        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_missing() {
-        let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
-        let old_db_url = std::env::var("DATABASE_URL").ok();
-
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
-        unsafe { std::env::remove_var("DATABASE_URL"); }
-
         let service = MyWizardService::new();
         let request = Request::new(EmptyRequest {});
-        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        let mut env_override = std::collections::HashMap::new();
+        env_override.insert("OHC_STANDALONE".to_string(), "true".to_string());
+        env_override.insert("DATABASE_URL".to_string(), "".to_string());
+
+        let response = service.verify_onboarding_internal(request, Some(env_override)).await.unwrap().into_inner();
 
         assert_eq!(response.status, "degraded");
         assert_eq!(response.mode, "standalone");
 
         let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
         assert!(has_missing_db);
-
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
-        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
     #[tokio::test]
     async fn test_verify_onboarding_standalone_sqlite_invalid() {
-        let _guard = env_lock();
-        let old_standalone = std::env::var("OHC_STANDALONE").ok();
-        let old_db_url = std::env::var("DATABASE_URL").ok();
-
-        unsafe { std::env::set_var("OHC_STANDALONE", "true"); }
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db"); }
-
         let service = MyWizardService::new();
         let request = Request::new(EmptyRequest {});
-        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        let mut env_override = std::collections::HashMap::new();
+        env_override.insert("OHC_STANDALONE".to_string(), "true".to_string());
+        env_override.insert("DATABASE_URL".to_string(), "postgres://localhost/db".to_string());
+
+        let response = service.verify_onboarding_internal(request, Some(env_override)).await.unwrap().into_inner();
 
         assert_eq!(response.status, "degraded");
         assert_eq!(response.mode, "standalone");
 
         let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
         assert!(has_invalid_db);
-
-        if let Some(v) = old_standalone { unsafe { std::env::set_var("OHC_STANDALONE", v); } } else { unsafe { std::env::remove_var("OHC_STANDALONE"); } }
-        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
 }

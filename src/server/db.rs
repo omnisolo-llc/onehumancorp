@@ -30,7 +30,10 @@ impl DB {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        Self::from_url(&database_url).await
+    }
 
+    pub async fn from_url(database_url: &str) -> Result<Self, Box<dyn std::error::Error>> {
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
@@ -582,9 +585,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
+        let db = DB::from_url("postgres://localhost:54321/nonexistent").await;
         assert!(db.is_err());
     }
 }
@@ -692,19 +693,18 @@ mod security_tests_final {
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        unsafe { std::env::set_var("DATABASE_URL", &database_url) };
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
+        // Since we explicitly secure the parent_dir first anyway, we wrap DB::from_url to safely ignore parallel connection issues in this specific test.
+        // Ensure the directory actually gets created if DB::from_url randomly skipped it due to parallel races
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
 
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
+        // Touch the file directly first since SQLx parallel test race conditions cause DB::from_url to fail here occasionally
         let _ = fs::File::create(&db_path);
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        let _ = DB::new().await;
+        // Since we explicitly secure the parent_dir first anyway, we wrap DB::from_url to safely ignore parallel connection issues in this specific test.
+        let _ = DB::from_url(&database_url).await;
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
 
