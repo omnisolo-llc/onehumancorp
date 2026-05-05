@@ -5196,8 +5196,27 @@ mod e2e_hybrid_blob_tests {
     #[test]
     fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
         let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
         ui.set_step(6);
         ui.set_product_name("Custom Handyman Job".into());
         ui.set_price_type("request_quote".into());
@@ -5207,6 +5226,124 @@ mod e2e_hybrid_blob_tests {
     }
 
     #[test]
+    fn test_e2e_wizard_flow_step_6_button_rendered() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 7);
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_6_template_modern() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+        ui.invoke_select_template("Modern".into());
+        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_website_template(), "Modern");
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_6_template_classic() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+        ui.invoke_select_template("Classic".into());
+        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_website_template(), "Classic");
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_6_template_bold() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+        ui.invoke_select_template("Bold".into());
+        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_website_template(), "Bold");
+    }
+
     fn test_e2e_wizard_flow_step_6_product_details() {
         crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
