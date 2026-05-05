@@ -1,6 +1,20 @@
 use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
 use chrono::Utc;
+use std::sync::OnceLock;
+use opentelemetry::global;
+use opentelemetry::metrics::UpDownCounter;
+
+static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+
+pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
+    SUB_AGENT_QUEUE_LENGTH_GAUGE.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter.i64_up_down_counter("ohc.sub_agent.queue_length")
+            .with_description("The current number of jobs in the sub-agent task queue")
+            .build()
+    })
+}
 
 pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "autodream_records_synced_total", "counter", count, serde_json::json!({})).await
@@ -40,6 +54,8 @@ pub async fn record_sqlite_retry_exhausted(pool: &PgPool, operation: &str) -> Re
 }
 
 pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dyn std::error::Error>> {
+    get_queue_length_gauge().add(delta as i64, &[]);
+
     let payload = serde_json::json!({ "delta": delta });
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
@@ -167,4 +183,18 @@ fn is_sensitive_key(key: &str) -> bool {
 
 fn is_email(s: &str) -> bool {
     s.contains('@') && s.contains('.')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_queue_length_gauge() {
+        let gauge = get_queue_length_gauge();
+        gauge.add(1, &[]);
+        // Calling it again should return the same instance
+        let gauge2 = get_queue_length_gauge();
+        gauge2.add(1, &[]);
+    }
 }
