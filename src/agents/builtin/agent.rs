@@ -44,6 +44,7 @@ pub struct AgentRunConfig {
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
+    pub enable_git_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -78,6 +79,7 @@ impl Default for AgentRunConfig {
             enable_llm_judge: false,
             guardrails: None,
             enable_state_checkpointing: false,
+            enable_git_state_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -1103,6 +1105,31 @@ impl Agent {
                             iteration,
                             path: scratchpad_path.clone(),
                         });
+                    }
+                }
+            }
+
+            // 3. Git Commit Checkpointing (Claude Code Mechanic)
+            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
+                let current_dir = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let add_res = tokio::process::Command::new("git")
+                    .current_dir(&current_dir)
+                    .args(&["add", "."])
+                    .output()
+                    .await;
+                if add_res.is_ok() {
+                    let commit_res = tokio::process::Command::new("git")
+                        .current_dir(&current_dir)
+                        .args(&["commit", "-m", &format!("Agent checkpoint: iteration {}", iteration)])
+                        .output()
+                        .await;
+                    if let Ok(commit_output) = commit_res {
+                        if commit_output.status.success() {
+                            on_event(AgentEvent::CheckpointSaved {
+                                iteration,
+                                path: "git commit".to_string(),
+                            });
+                        }
                     }
                 }
             }
@@ -2557,6 +2584,76 @@ mod tests {
         } else {
             panic!("Expected TaskComplete");
         }
+    }
+
+    #[tokio::test]
+    async fn test_git_state_checkpointing() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_123".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Task done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                }
+            ]),
+        });
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::Value::Null,
+            is_read_only: false,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let temp_dir = std::env::temp_dir().join(format!("ohc_test_git_ckpt_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["init"]).output().unwrap();
+        let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["config", "user.name", "Test User"]).output().unwrap();
+        let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["config", "user.email", "test@example.com"]).output().unwrap();
+        std::fs::write(temp_dir.join("test.txt"), "hello").unwrap();
+        let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["add", "."]).output().unwrap();
+        let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["commit", "-m", "init"]).output().unwrap();
+        std::fs::write(temp_dir.join("test.txt"), "hello modified").unwrap(); // Uncommitted change
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_git_state_checkpointing = true;
+        cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify event was emitted
+        let mut found_checkpoint_event = false;
+        for e in events {
+            if let AgentEvent::CheckpointSaved { path, .. } = e {
+                if path == "git commit" {
+                    found_checkpoint_event = true;
+                }
+            }
+        }
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        assert!(found_checkpoint_event, "Git checkpoint event was not emitted");
     }
 
     #[tokio::test]
