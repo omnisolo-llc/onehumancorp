@@ -433,11 +433,13 @@ export component Dashboard inherits Window {
         border-width: 1px;
         border-color: rgba(255, 255, 255, 0.2);
 
-        Text {
-            text: TooltipRegistry.active_text;
-            color: white;
+        HorizontalLayout {
             padding: 8px;
-            wrap: word-wrap;
+            Text {
+                text: TooltipRegistry.active_text;
+                color: white;
+                wrap: word-wrap;
+            }
         }
     }
 }

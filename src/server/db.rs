@@ -55,14 +55,14 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                eprintln!("Failed to securely create DB directory: {}", e);
+                                tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                eprintln!("Failed to create DB directory: {}", e);
+                                tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
@@ -174,7 +174,7 @@ impl DB {
     }
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Running migrations...");
+        tracing::info!("Running migrations...");
 
         match &self.store {
             DbStore::Postgres => {
@@ -647,6 +647,28 @@ pub async fn insert_autodream_memory(
         Ok(())
     }
 
+
+    pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
+        let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let affected = match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .execute(sqlite_pool)
+                    .await?.rows_affected()
+            },
+            DbStore::Postgres => {
+                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                    .bind(threshold)
+                    .execute(&self.pool)
+                    .await?.rows_affected()
+            }
+        };
+        if affected > 0 {
+            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+        }
+        Ok(affected)
+    }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {

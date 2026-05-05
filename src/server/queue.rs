@@ -259,7 +259,7 @@ impl Worker {
                 _ = interval.tick() => {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
-                            println!("Worker processing job: {}", job.id);
+                            tracing::debug!("Worker processing job: {}", job.id);
                             let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), self.handler.handle(job.clone())).await;
                             let handler_res = match handle_res {
                                 Ok(Ok(())) => Ok(()),
@@ -268,11 +268,11 @@ impl Worker {
                             };
                             match handler_res {
                                 Ok(_) => {
-                                    println!("Worker successfully processed job: {}", job.id);
+                                    tracing::info!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
-                                    println!("Worker failed to process job: {}, error: {}", job.id, e);
+                                    tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
                                     if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
                                         retry_job.attempts += 1;
@@ -289,12 +289,12 @@ impl Worker {
                             // No job available
                         }
                         Err(e) => {
-                            println!("Worker failed to dequeue job: {}", e);
+                            tracing::error!("Worker failed to dequeue job: {}", e);
                         }
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    println!("Worker shutting down");
+                    tracing::info!("Worker shutting down");
                     break;
                 }
             }
@@ -372,24 +372,24 @@ impl WorkerPool {
             let mut rx = shutdown_rx.subscribe();
             
             tokio::spawn(async move {
-                println!("Worker {} starting", i);
+                tracing::info!("Worker {} starting", i);
                 loop {
                     tokio::select! {
                         res = queue.pop(&topic) => {
                             match res {
                                 Ok(payload) => {
-                                    println!("Worker {} processing job", i);
+                                    tracing::debug!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
-                                        println!("Worker {} handler failed: {}", i, e);
+                                        tracing::error!("Worker {} handler failed: {}", i, e);
                                     }
                                 }
                                 Err(e) => {
-                                    println!("Worker {} failed to pop: {}", i, e);
+                                    tracing::error!("Worker {} failed to pop: {}", i, e);
                                 }
                             }
                         }
                         _ = rx.recv() => {
-                            println!("Worker {} shutting down", i);
+                            tracing::info!("Worker {} shutting down", i);
                             break;
                         }
                     }
@@ -518,7 +518,7 @@ impl QueueManager {
                     loop {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
-                                println!("QueueManager dispatched job: {}", job.id);
+                                tracing::debug!("QueueManager dispatched job: {}", job.id);
                                 let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                 let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
                                 attempts += 1;
@@ -530,11 +530,11 @@ impl QueueManager {
                                 };
                                 match handler_res {
                                     Ok(_) => {
-                                        println!("Job handler succeeded: {}", job.id);
+                                        tracing::info!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id, &job.organization_id).await;
                                     }
                                     Err(e) => {
-                                        println!("Job handler failed: {}, error: {}", job.id, e);
+                                        tracing::error!("Job handler failed: {}, error: {}", job.id, e);
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);
@@ -550,14 +550,14 @@ impl QueueManager {
                                 break;
                             }
                             Err(e) => {
-                                println!("Failed to poll queue: {}", e);
+                                tracing::error!("Failed to poll queue: {}", e);
                                 break;
                             }
                         }
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    println!("QueueManager polling shutting down");
+                    tracing::info!("QueueManager polling shutting down");
                     break;
                 }
             }

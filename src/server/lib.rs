@@ -108,7 +108,7 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
     match crate::auth::parse_spiffe_id(spiffe_id_str) {
         Ok((_org_id, _agent_id)) => {
-            println!("Authenticated SPIFFE ID successfully.");
+            tracing::info!("Authenticated SPIFFE ID successfully.");
         }
         Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
@@ -278,7 +278,7 @@ impl HubService for MyHubService {
         &self,
         _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
-        println!("Received ConfigWizard request in wizard service");
+        tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
             message: "success".to_string(),
@@ -289,7 +289,7 @@ impl HubService for MyHubService {
         &self,
         _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
-        println!("Received PromptTuning request in wizard service");
+        tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
             message: "success".to_string(),
@@ -1117,7 +1117,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ops_worker.start();
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
-    competitor_audit_worker.start();
+
+    // Start Maintenance Worker
+    let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
+    maintenance_worker.start();
 
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
@@ -1196,7 +1199,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
-        eprintln!("Failed to start handoff listener: {}", e);
+        tracing::error!("Failed to start handoff listener: {}", e);
     }
 
 
@@ -1225,7 +1228,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 interval.tick().await;
                 if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "online", 60).await {
-                    eprintln!("Failed to register builtin agent presence: {}", e);
+                    tracing::error!("Failed to register builtin agent presence: {}", e);
                 }
             }
         });
@@ -1280,9 +1283,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
-        println!("Mesh WebSocket server listening on {}", mesh_addr);
+        tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
-            eprintln!("Mesh server error: {}", e);
+            tracing::error!("Mesh server error: {}", e);
         }
     });
 
@@ -1317,10 +1320,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    eprintln!("failed to push pending missions: {}", e);
+                    tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    eprintln!("failed to pull mission updates: {}", e);
+                    tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
         });
@@ -1334,11 +1337,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             interval.tick().await;
             let due = hub_for_sched.scheduler().poll_due();
             for task in due {
-                println!("executing scheduled task: {} ({})", task.name, task.id);
+                tracing::info!("executing scheduled task: {} ({})", task.name, task.id);
                 
                 // Mark as running
                 if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
-                    println!("failed to mark task as running: {}", e);
+                    tracing::error!("failed to mark task as running: {}", e);
                     continue;
                 }
                 
@@ -1358,7 +1361,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                     }
                     Err(e) => {
-                        println!("failed to publish scheduled task message: {}", e);
+                        tracing::error!("failed to publish scheduled task message: {}", e);
                         let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                     }
                 }
@@ -1366,7 +1369,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    println!("Server listening on {}", addr);
+    tracing::info!("Server listening on {}", addr);
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());

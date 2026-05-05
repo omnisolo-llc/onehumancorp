@@ -60,7 +60,7 @@ impl AutoDreamWorker {
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
-                    println!("AutoDream: compress_session_contexts failed: {}", e);
+                    tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db, &counter).await {
                     debug!("AutoDream: DB memories processing failed: {}", e);
@@ -109,7 +109,7 @@ impl AutoDreamWorker {
                     format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
                 },
                 Err(e) => {
-                    println!("AutoDream: failed to generate embedding: {}", e);
+                    tracing::error!("AutoDream: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
              };

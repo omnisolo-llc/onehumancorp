@@ -21,7 +21,7 @@ impl CompetitorAuditWorker {
             loop {
                 interval.tick().await;
                 if let Err(e) = Self::run_audit(&db).await {
-                    eprintln!("CompetitorAuditWorker run_audit failed: {}", e);
+                    tracing::error!("CompetitorAuditWorker run_audit failed: {}", e);
                 }
             }
         });

@@ -54,7 +54,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: error={}", e);
+                    tracing::error!("failed to upsert mission from sync daemon: error={}", e);
                 }
             }
         }
@@ -82,7 +82,7 @@ impl SyncService for MySyncService {
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
         let md = request.metadata().clone();
         let req = request.into_inner();
-        println!("PowerSync received push request.");
+        tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
@@ -141,7 +141,7 @@ impl SyncService for MySyncService {
                     .execute(&mut *tx)
                     .await
                 {
-                    eprintln!("failed to upsert agent_missions via PowerSync: {}", e);
+                    tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
                 }
             }
         }
@@ -158,7 +158,7 @@ impl SyncService for MySyncService {
         request: Request<PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
         use sqlx::Row;
-        println!("PowerSync received pull request");
+        tracing::debug!("PowerSync received pull request");
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
@@ -178,7 +178,7 @@ impl SyncService for MySyncService {
         .await {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("failed to fetch pending agent_missions for pull: {}", e);
+                tracing::error!("failed to fetch pending agent_missions for pull: {}", e);
                 return Err(Status::internal("database error"));
             }
         };
@@ -278,7 +278,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to upsert CRDT delta: error={}", e);
+                    tracing::error!("failed to upsert CRDT delta: error={}", e);
                 }
             }
         }
@@ -341,7 +341,7 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    eprintln!("failed to enqueue escalation job: error={}", e);
+                    tracing::error!("failed to enqueue escalation job: error={}", e);
                 }
             }
         }
