@@ -371,7 +371,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     slint::invoke_from_event_loop(move || {
                                                         if let Some(ui) = vt_handle.upgrade() {
                                                             let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
-                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                            ui.set_videos(std::rc::Rc::new(slint::VecModel::from(slint_videos)).into());
                                                         }
                                                     }).unwrap();
                                                 }
@@ -489,7 +489,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     slint::invoke_from_event_loop(move || {
                                                         if let Some(ui) = vt_handle.upgrade() {
                                                             let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
-                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                            ui.set_videos(std::rc::Rc::new(slint::VecModel::from(slint_videos)).into());
                                                         }
                                                     }).unwrap();
                                                 }
@@ -1706,7 +1706,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     slint::invoke_from_event_loop(move || {
                                                         if let Some(ui) = vt_handle.upgrade() {
                                                             let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
-                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                            ui.set_videos(std::rc::Rc::new(slint::VecModel::from(slint_videos)).into());
                                                         }
                                                     }).unwrap();
                                                 }

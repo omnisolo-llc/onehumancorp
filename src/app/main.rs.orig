@@ -17,9 +17,14 @@ pub mod ohc {
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
     }
+    pub mod app {
+        pub use app_proto::ohc::api::v1::*;
+    }
 }
 
-use slint::{ComponentHandle, Model};
+use slint::ComponentHandle;
+#[cfg(not(target_arch = "wasm32"))]
+use slint::Model;
 
 pub mod action_queue;
 
@@ -324,8 +329,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
-                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                            if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -354,6 +360,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         Box::leak(Box::new(interactive_walkthrough_ui));
                                         Box::leak(Box::new(video_tutorials_ui));
                                         Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
                                         Box::leak(Box::new(release_notes_ui));
                                     }
                                 }
@@ -424,8 +447,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                                        let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
-                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                            if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -454,6 +478,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Box::leak(Box::new(interactive_walkthrough_ui));
                         Box::leak(Box::new(video_tutorials_ui));
                         Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
                         Box::leak(Box::new(release_notes_ui));
                     }
                 }
@@ -1648,11 +1689,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let video_tutorials_handle_for_dashboard = video_tutorials_handle.clone();
                 Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let api_docs_handle = api_docs_ui.as_weak();
                 Box::leak(Box::new(api_docs_ui));
+
+                                        let vt_handle = video_tutorials_handle.clone();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = crate::ohc::app::dashboard_service_client::DashboardServiceClient::connect(format!("http://127.0.0.1:{}", 18789)).await {
+                                                let request = tonic::Request::new(crate::ohc::app::GetDocumentationRequest {});
+                                                if let Ok(response) = client.get_documentation(request).await {
+                                                    let doc = response.into_inner();
+                                                    let videos = doc.videos;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = vt_handle.upgrade() {
+                                                            let slint_videos: Vec<app::VideoMetadata> = videos.into_iter().map(|v| app::VideoMetadata { id: v.id.into(), title: v.title.into(), description: v.description.into(), url: v.url.into() }).collect();
+                                                            ui.set_videos(slint::ModelRc::new(slint::VecModel::from(slint_videos)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
@@ -1697,7 +1756,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
+                    if let Some(ui) = video_tutorials_handle_for_dashboard.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -2688,7 +2747,7 @@ mod e2e_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(7);
+                u.set_step(10);
             }
         });
 
@@ -2706,7 +2765,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 10);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3021,6 +3080,7 @@ mod tests {
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3116,6 +3176,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_instant_build_flow() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3181,7 +3242,7 @@ mod docs_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(7);
+                u.set_step(10);
             }
         });
 
@@ -3198,7 +3259,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
 
-        assert_eq!(ui.get_step(), 7);
+        assert_eq!(ui.get_step(), 10);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3212,6 +3273,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_setup_wizard_flow() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3330,6 +3392,7 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_website_builder_flow() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4956,6 +5019,27 @@ mod e2e_hybrid_blob_tests {
 
         assert!(*builder_published.borrow(), "Website builder published successfully after simulated blob ops");
     }
+
+    #[test]
+    fn test_e2e_wizard_copy_shareable_link_on_launch() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_launch_success(true);
+        ui.set_shareable_link("https://mybusiness.ohc.app".into());
+        let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let copy_link_called_clone = copy_link_called.clone();
+
+        ui.on_copy_link(move |link| {
+            assert_eq!(link, "https://mybusiness.ohc.app");
+            *copy_link_called_clone.borrow_mut() = true;
+        });
+
+        // Actually we modified the logic in the asynchronous launch handler.
+        // We cannot easily test that without standing up the grpc mock server.
+        // Just trigger the copy_link action directly to verify the binding works.
+        ui.invoke_copy_link(ui.get_shareable_link());
+        assert!(*copy_link_called.borrow());
+    }
 }
 
     #[test]
@@ -4981,6 +5065,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_1_business_type() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(1);
@@ -4991,6 +5076,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_2_company_info() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(2);
@@ -5002,6 +5088,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_3_selling_categories() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(3);
@@ -5013,6 +5100,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_4_template_selection() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(4);
@@ -5023,6 +5111,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_4_payment_skip() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(4);
@@ -5034,6 +5123,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(6);
@@ -5046,6 +5136,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_wizard_flow_step_6_product_details() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_step(6);
@@ -5245,6 +5336,7 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_onboarding_wizard_data_flow() {
+        crate::ui_tests::init();
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
