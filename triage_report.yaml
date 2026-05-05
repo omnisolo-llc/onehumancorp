@@ -1,6 +1,4 @@
-issue_category: cleanup
 status: resolved
-details:
-  - Fixed flaky timeouts in src/server:server_test by correctly specifying size="large" in BUILD.bazel to accommodate for test execution duration.
-  - Verified codebase health and ensuring all tests pass successfully with bazelisk test //...
-  - Verified agent_missions sanitization logic is properly handled within sip.rs and orchestration sync daemon.
+issue_category: cleanup
+debt_report: |
+  Fixed compiler warnings about unused variables and imports across multiple source files.

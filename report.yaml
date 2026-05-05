@@ -1,4 +1,4 @@
+status: resolved
 issue_category: cleanup
 debt_report: |
-  Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
-status: resolved
+  Fixed compiler warnings about unused variables and imports across multiple source files.
