@@ -295,7 +295,8 @@ impl Agent {
                     messages: msgs,
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
-                    temperature: llm_cfg_c.temperature, previous_response_id: None,
+                    temperature: llm_cfg_c.temperature,
+                    previous_response_id: None,
                 };
 
                 match llm_client_c.chat(req).await {
