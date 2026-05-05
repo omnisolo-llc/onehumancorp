@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybrid_sync",
+    srcs = ["hybrid_sync.go"],
+    importpath = "onehumancorp/srcs/server/orchestration/hybrid_sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration:orchestration",
+    ],
+)
+
+go_test(
+    name = "hybrid_sync_test",
+    srcs = ["hybrid_sync_test.go"],
+    embed = [":hybrid_sync"],
+    deps = [
+        "//srcs/server/orchestration:orchestration",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+    ],
+)
