@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "db",
+    srcs = ["db.go"], # placeholder if needed, or omit if no go files
+    importpath = "onehumancorp/srcs/server/db",
+    visibility = ["//visibility:public"],
+    embedsrcs = glob(["migrations/*.sql"]),
+)
