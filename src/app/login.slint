@@ -100,11 +100,19 @@ export component Login inherits Window {
                     clicked => { login(username, password); }
                 }
 
-                Button {
+                TouchArea {
                     height: 44px;
-                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
                     clicked => {
                         is_sign_up = !is_sign_up;
+                    }
+                    Text {
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                        color: #a855f7;
+                        font-family: "Inter";
+                        font-size: 14px;
+                        font-weight: 700;
                     }
                 }
 
@@ -119,10 +127,18 @@ export component Login inherits Window {
                     clicked => { oauth_login("SSO"); }
                 }
 
-                Button {
+                TouchArea {
                     height: 44px;
-                    text: "App Settings";
                     clicked => { open_settings(); }
+                    Text {
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        text: "App Settings";
+                        color: #a8b2c1;
+                        font-size: 14px;
+                        font-family: "Inter";
+                        font-weight: 400;
+                    }
                 }
             }
         }

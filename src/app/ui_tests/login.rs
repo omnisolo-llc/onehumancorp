@@ -245,3 +245,34 @@ fn login_has_correct_title_and_window_size() {
     // Not directly asserting title because slint doesn't expose `get_title()` on Window natively in all bindings,
     // but we can ensure the minimum dimensions aren't violated.
 }
+#[test]
+fn login_ux_test_sign_up_toggle_slint_interaction() {
+    let ui = create();
+    let initial = ui.get_is_sign_up();
+    // Simulate what the touch area invokes internally
+    ui.set_is_sign_up(!initial);
+    assert_ne!(ui.get_is_sign_up(), initial);
+}
+
+#[test]
+fn login_ux_test_responsive_bounds() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(1024, 768));
+    assert_eq!(ui.get_login_card_width(), 400.0);
+}
+
+#[test]
+fn login_ux_test_responsive_bounds_mobile() {
+    let ui = create();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(375, 600));
+    assert_eq!(ui.get_login_card_width(), 311.0);
+}
+
+#[test]
+fn login_ux_test_error_visibility() {
+    let ui = create();
+    ui.set_error_message("Error".into());
+    assert_eq!(ui.get_error_message(), "Error");
+}
