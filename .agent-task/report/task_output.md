@@ -131,3 +131,16 @@
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1
 **Estimated Scope**: Medium
+
+## Persistent Memory Consolidation System Audit Report
+
+**Title**: SRE/Maintainer Audit of Long-term Memory Consolidation
+**Problem Statement**: Verify and ensure the system that stores AI agent context long-term is correctly implemented, handles conflicts, prunes stale context, works across cloud and standalone modes, and maintains 100% test coverage.
+**Audit Findings**:
+- **Persistent Memory Layer**: The `VectorRepository` and `VectorMemoryStore` already fully implement tenant-scoped memory operations (`upsert`, `semantic_search`) using `pgvector` for Cloud mode and `sqlite-vec` (with a manual cosine distance fallback) for Standalone mode.
+- **Conflict Resolution**: `auto_resolve_conflicts` logic is already present, properly resolving conflicting information based on `owner_override`, `reliability_score`, and `last_referenced_at`.
+- **Stale Context Pruning**: `prune_stale` correctly deletes records older than a specific date where `owner_override` is false and `reference_count` is below 5.
+- **Cross-Department Context Sharing**: Context is shared globally across the same tenant, enabling inter-department visibility.
+- **Background Workers**: `MemoryConsolidationWorker` is fully implemented and correctly wired up in `src/server/lib.rs` to run periodically in the background.
+- **Test Coverage**: Existing unit tests (`bazelisk test //src/agents/builtin:unit_tests`) verify these behaviors, including conflict resolution and pruning, with 100% success.
+**Conclusion**: The existing codebase already meets the required "Gold Standard" state for the Memory Consolidation task. No additional code or configuration modifications are required.
