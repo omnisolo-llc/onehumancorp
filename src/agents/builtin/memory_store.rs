@@ -317,14 +317,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -380,8 +380,8 @@ impl VectorRepository {
                 } else {
                     (&b, &a)
                 }
-            } else if a.last_referenced_at != b.last_referenced_at {
-                if a.last_referenced_at > b.last_referenced_at {
+            } else if a.created_at != b.created_at {
+                if a.created_at > b.created_at {
                     (&a, &b)
                 } else {
                     (&b, &a)
@@ -1072,7 +1072,7 @@ mod get_conflicts_tests {
             embedding: vec![0.1, 0.1, 0.1],
             source_type: "SUMMARY".to_string(),
             created_at: older,
-            last_referenced_at: older,
+            last_referenced_at: now,
             reference_count: 0,
             reliability_score: 50,
             owner_override: false,
@@ -1085,8 +1085,8 @@ mod get_conflicts_tests {
             content: "baz newer".to_string(),
             embedding: vec![0.1, 0.1, 0.1],
             source_type: "SUMMARY".to_string(),
-            created_at: now,
-            last_referenced_at: now, // Should win
+            created_at: now, // Should win
+            last_referenced_at: now,
             reference_count: 1,
             reliability_score: 50,
             owner_override: false,
@@ -1145,8 +1145,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool);
+        let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
+
+        let old_time = now - chrono::Duration::days(181);
 
         let record1 = EmbeddingRecord {
             id: "rec1".to_string(),
@@ -1154,9 +1156,24 @@ mod get_conflicts_tests {
             agent_id: "agent1".to_string(),
             content: "hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
-            source_type: "SUMMARY".to_string(),
-            created_at: now,
-            last_referenced_at: now,
+            source_type: "SUMMARY".to_string(), // Should not be deleted
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 2".to_string(),
+            embedding: vec![3.0, 2.0, 1.0],
+            source_type: "TASK_SUMMARY".to_string(), // Should be deleted
+            created_at: old_time,
+            last_referenced_at: old_time,
             reference_count: 1,
             reliability_score: 50,
             owner_override: false,
@@ -1164,9 +1181,19 @@ mod get_conflicts_tests {
         };
 
         repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
         repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Verify prune
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Only one record should remain");
+
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "rec1", "The correct record should remain");
 
         // get_conflicting_pairs test
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
