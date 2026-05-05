@@ -55,10 +55,33 @@ pub async fn bench_dashboard_snapshot() {
         }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
+    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
+
+    let meeting_id = format!("meeting-{}", Uuid::new_v4());
+    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
+    for i in 0..50 {
+        let msg = crate::ohc::agent::AgentMessage {
+            id: format!("msg-{}", i),
+            from_agent_id: "test_agent".to_string(),
+            to_agent_id: "all".to_string(),
+            message_type: "chat".to_string(),
+            content: "Hello world this is a test message".to_string(),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: meeting_id.clone(),
+        };
+        let _ = hub.clone().publish(ohc_builtin_agent::proto::hub::Message {
+            id: msg.id,
+            from_agent: msg.from_agent_id,
+            to_agent: msg.to_agent_id,
+            r#type: msg.message_type,
+            content: msg.content,
+            occurred_at_unix: msg.occurred_at_unix,
+            meeting_id: msg.meeting_id,
+        });
+    }
 
     for i in 0..50 {
         hub.register_agent(crate::ohc::orchestration::Agent {
@@ -95,6 +118,25 @@ pub async fn bench_dashboard_snapshot() {
 
     fetch_times.sort();
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+
+    // Test mobile optimized vs not optimized payload size
+    let req_mobile = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+    let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+
+    use crate::ohc::app::dashboard_service_server::DashboardService;
+    let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db, hub.clone());
+
+    let res_mobile = dashboard_service.get_dashboard(tonic::Request::new(req_mobile)).await.unwrap().into_inner();
+    let res_desktop = dashboard_service.get_dashboard(tonic::Request::new(req_desktop)).await.unwrap().into_inner();
+
+    println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
+    if !res_mobile.meetings.is_empty() {
+        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
+        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
+        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
+        assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
+    }
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)

@@ -30,6 +30,7 @@ message DashboardSnapshot {
 
 message GetDashboardRequest {
   string organization_id = 1;
+  bool mobile_optimized = 2;
 }
 
 message PostMessageRequest {
