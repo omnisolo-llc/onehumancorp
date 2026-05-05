@@ -462,6 +462,8 @@ impl Agent {
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
+        let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
@@ -839,6 +841,7 @@ impl Agent {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
                     Ok(r) => {
+                        tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
@@ -867,6 +870,14 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
+                        let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
+                        *count += 1;
+                        if *count > 2 {
+                            let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
+                            return Err(fatal_msg.into());
+                        }
+
                         // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
@@ -950,6 +961,7 @@ impl Agent {
                 loop {
                     match self.execute_tool(&tc, &session_tools, &messages).await {
                         Ok(r) => {
+                            tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
@@ -979,6 +991,14 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
+                            let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
+                            *count += 1;
+                            if *count > 2 {
+                                let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                                on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
+                                return Err(fatal_msg.into());
+                            }
+
                             // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
