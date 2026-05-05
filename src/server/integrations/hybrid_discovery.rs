@@ -25,10 +25,9 @@ impl DiscoveryProxy {
     }
 
     pub async fn search_tools(&self, intent: &str) -> Result<Vec<ToolSpec>, String> {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let is_sqlite = db_url.starts_with("sqlite");
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
-        if !is_sqlite {
+        if !is_standalone {
             // Postgres mode: route requests to the remote Switchboard
             if intent == "remote-test" {
                 return Ok(vec![ToolSpec {
@@ -98,10 +97,9 @@ impl DiscoveryProxy {
     }
 
     pub async fn register_tool(&self, spec: ToolSpec) -> Result<(), String> {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let is_sqlite = db_url.starts_with("sqlite");
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
-        if !is_sqlite {
+        if !is_standalone {
             // In cloud mode, registration goes to switchboard
             return Ok(());
         }
@@ -120,10 +118,9 @@ impl DiscoveryProxy {
     }
 
     pub async fn request_tool_svid(&self, tool_name: &str) -> Result<SVID, String> {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let is_sqlite = db_url.starts_with("sqlite");
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
-        if is_sqlite {
+        if is_standalone {
             // Bypass SPIRE and generate a local pseudo-SVID
             Ok(SVID {
                 id: format!("spiffe://local.standalone/tool/{}", tool_name),
@@ -145,18 +142,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_discovery_proxy_sqlite() {
-        unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap(); // pool doesn't matter for mock
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
 
         let svid = proxy.request_tool_svid("test").await.unwrap();
         assert_eq!(svid.id, "spiffe://local.standalone/tool/test");
-        unsafe { std::env::remove_var("DATABASE_URL"); }
+        unsafe { std::env::remove_var("STANDALONE_MODE"); }
     }
 
     #[tokio::test]
     async fn test_discovery_proxy_postgres() {
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/mydb"); }
+        unsafe { std::env::set_var("STANDALONE_MODE", "false"); }
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
 
@@ -165,6 +162,6 @@ mod tests {
 
         let svid = proxy.request_tool_svid("test").await.unwrap();
         assert_eq!(svid.id, "spiffe://cloud.ohc/tool/test");
-        unsafe { std::env::remove_var("DATABASE_URL"); }
+        unsafe { std::env::remove_var("STANDALONE_MODE"); }
     }
 }
