@@ -253,3 +253,72 @@ func TestSyncDaemon_SyncCompletedEscalations_CloudGetError(t *testing.T) {
 	err = syncCompletedEscalations(context.Background(), localStore, cloudStore)
 	assert.NoError(t, err)
 }
+
+// ClearSemaphore drains the throttleSemaphore to prevent test deadlocks.
+func ClearSemaphore() {
+	for {
+		select {
+		case <-throttleSemaphore:
+		default:
+			return
+		}
+	}
+}
+
+func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
+	// Clean up global semaphore before and after the test
+	ClearSemaphore()
+	defer ClearSemaphore()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	createTableQuery := `
+	CREATE TABLE agent_missions (
+		id TEXT PRIMARY KEY,
+		status TEXT NOT NULL,
+		payload BLOB,
+		synced_to_cloud BOOLEAN DEFAULT FALSE
+	);
+	`
+	_, err = db.Exec(createTableQuery)
+	require.NoError(t, err)
+
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
+	('mission-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE),
+	('mission-3', 'COMPLETED', '{"key": "value3"}', FALSE),
+	('mission-4', 'CLOUD_ESCALATION', '{"key": "value4"}', TRUE);
+	`
+	_, err = db.Exec(insertDataQuery)
+	require.NoError(t, err)
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+
+	err = daemon.SyncPendingMissions(context.Background())
+	require.NoError(t, err)
+
+	rows, err := db.Query("SELECT id, synced_to_cloud FROM agent_missions")
+	require.NoError(t, err)
+	defer rows.Close()
+
+	expectedState := map[string]bool{
+		"mission-1": true,
+		"mission-2": true,
+		"mission-3": false,
+		"mission-4": true,
+	}
+
+	for rows.Next() {
+		var id string
+		var synced bool
+		err := rows.Scan(&id, &synced)
+		require.NoError(t, err)
+
+		expected, ok := expectedState[id]
+		require.True(t, ok)
+		require.Equal(t, expected, synced)
+	}
+}
