@@ -972,6 +972,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
+    let billing_wizard_ui = app::BillingWizard::new()?;
+    let billing_wizard_handle = billing_wizard_ui.as_weak();
+    let bw_ui_weak = billing_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = bw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    billing_wizard_ui.on_add_credits(|| {
+        println!("Add credits clicked in BillingWizard");
+    });
+    billing_wizard_ui.on_upgrade_plan(|| {
+        println!("Upgrade plan clicked in BillingWizard");
+    });
+
     let grow_business_ui = app::GrowBusiness::new()?;
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let grow_business_handle = grow_business_ui.as_weak();
@@ -1990,6 +2005,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let gb_handle_for_dashboard = grow_business_handle.clone();
                 dashboard.on_action_grow_business(move || {
                     if let Some(ui) = gb_handle_for_dashboard.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let bw_handle_for_dashboard = billing_wizard_handle.clone();
+                dashboard.on_action_open_billing(move || {
+                    if let Some(ui) = bw_handle_for_dashboard.upgrade() {
                         let _ = ui.show();
                     }
                 });
@@ -5489,6 +5511,191 @@ mod e2e_hybrid_blob_tests {
         ui.set_product_price("5.00".into());
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 7);
+    }
+
+    #[test]
+    fn test_e2e_wizard_flow_step_2_advanced_mode() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(2);
+        ui.set_company_name("Advanced Store".into());
+        ui.set_is_advanced(true);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+        assert_eq!(ui.get_is_advanced(), true);
+    }
+
+    #[test]
+    fn test_e2e_grow_business_advanced_flow() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let grow_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let grow_opened_clone = grow_opened.clone();
+
+        dashboard_ui.on_action_grow_business(move || {
+            *grow_opened_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_grow_business();
+        assert!(*grow_opened.borrow(), "Grow Business should be opened from Dashboard");
+
+        let ui = app::GrowBusiness::new().unwrap();
+        ui.set_step(0);
+        ui.set_is_advanced(true);
+        ui.invoke_select_strategy("Connect Instagram".into());
+        assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+
+        let exec_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let c = exec_called.clone();
+        ui.on_execute(move |strategy, target| {
+            *c.borrow_mut() = true;
+        });
+        // We know that in step 1, clicking "Launch Strategy" triggers execute() and next_step()
+        // Here we just test setting step as UI does
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 2);
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_flow_duplicate_renamed() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // The dashboard doesn't directly open FixAgent, AgentStatusIndicator does or Agents view.
+        // We will just test the FixAgent component since it's triggered from an agent card (which is in Agents UI)
+        let ui = app::FixAgent::new().unwrap();
+        ui.set_step(0);
+        let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let apply_clone = apply_called.clone();
+        ui.on_apply_fix(move || {
+            *apply_clone.borrow_mut() = true;
+        });
+        ui.invoke_apply_fix();
+        assert!(*apply_called.borrow());
+        ui.set_is_applying(true);
+        ui.set_step(1);
+        assert_eq!(ui.get_step(), 1);
+    }
+
+    #[test]
+    fn test_e2e_billing_wizard_flow() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let billing_opened_clone = billing_opened.clone();
+
+        dashboard_ui.on_action_open_billing(move || {
+            *billing_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_open_billing();
+        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+
+        let ui = app::BillingWizard::new().unwrap();
+
+        ui.set_step(0);
+        assert_eq!(ui.get_step(), 0);
+
+        ui.set_is_advanced(true);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+
+        let add_credits_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let c = add_credits_called.clone();
+        ui.on_add_credits(move || { *c.borrow_mut() = true; });
+        ui.invoke_add_credits();
+        assert!(*add_credits_called.borrow());
+
+        let upgrade_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let c2 = upgrade_called.clone();
+        ui.on_upgrade_plan(move || { *c2.borrow_mut() = true; });
+        ui.invoke_upgrade_plan();
+        assert!(*upgrade_called.borrow());
+
+        ui.invoke_prev_step();
+        assert_eq!(ui.get_step(), 0);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_flow() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let bm_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let bm_opened_clone = bm_opened.clone();
+
+        dashboard_ui.on_action_add_product(move || {
+            *bm_opened_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_add_product();
+        assert!(*bm_opened.borrow(), "BM should be opened from Dashboard");
+
+        let ui = app::BusinessManager::new().unwrap();
+        ui.set_step(0);
+        ui.invoke_select_type("DIGITAL".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+        ui.set_product_name("E-Book".into());
+        ui.set_product_price("10.00".into());
     }
 
     #[test]

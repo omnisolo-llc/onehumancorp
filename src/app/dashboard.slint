@@ -65,6 +65,7 @@ export component Dashboard inherits Window {
     callback action_share_store();
     callback action_open_referrals();
     callback action_grow_business();
+    callback action_open_billing();
     callback action_mark_order_ready();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -246,6 +247,7 @@ export component Dashboard inherits Window {
                 spacing: 8px;
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
+                TooltipElement { tooltip_id: "billing"; Button { text: "Billing"; height: 44px; clicked => { action_open_billing(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
                     height: 44px;

@@ -1,0 +1,136 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component BillingWizard inherits Window {
+    min-width: 375px;
+    preferred-width: 400px;
+    height: 600px;
+    title: "Billing & Credits";
+
+    in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+
+    in-out property <string> current_plan: "Starter";
+    in-out property <string> projected_cost: "$0.00";
+    in-out property <int> tokens_used: 0;
+
+    callback next_step();
+    callback prev_step();
+    callback add_credits();
+    callback upgrade_plan();
+    callback save_state();
+
+    next_step => { step = step + 1; save_state(); }
+    prev_step => { step = step - 1; save_state(); }
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Billing & Credits"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            HorizontalBox {
+                spacing: 8px;
+                alignment: end;
+                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { is_advanced = !is_advanced; save_state(); }
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 4px;
+                        border-color: #a855f7;
+                        border-width: 1px;
+                        background: is_advanced ? #a855f7 : transparent;
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
+
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "What does this cost?"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "AI usage is billed based on activity."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    alignment: center;
+                    Text { text: "Current Usage"; color: white; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "$42.50"; font-size: 32px; font-weight: 700; color: #a855f7; font-family: "Outfit"; }
+                    Text { text: "Projected monthly cost: " + projected_cost; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+
+                    if (is_advanced) : VerticalBox {
+                        Rectangle { height: 16px; }
+                        Text { text: "Token Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "• gpt-4o: 1,245,000 tokens"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "• gemini-pro: " + tokens_used + " tokens"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    }
+                }
+            }
+        }
+
+        if (step == 1) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Manage Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Add credits to keep your AI running, or upgrade for a fixed monthly rate."; font-size: 14px; font-family: "Inter"; color: #94a3b8; wrap: word-wrap; }
+
+            GlassCard {
+                height: 80px;
+                background: rgba(168, 85, 247, 0.2);
+                VerticalBox {
+                    alignment: center; padding: 12px;
+                    Text { text: "➕ Add Credits"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: "Pay as you go"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                }
+                TouchArea { clicked => { add_credits(); } }
+            }
+
+            GlassCard {
+                height: 80px;
+                background: rgba(16, 185, 129, 0.2);
+                VerticalBox {
+                    alignment: center; padding: 12px;
+                    Text { text: "⭐ Upgrade Plan"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: "Unlimited AI tasks"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                }
+                TouchArea { clicked => { upgrade_plan(); } }
+            }
+
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Stripe Integration"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "cus_123456789"; font-family: "Inter"; font-size: 12px; color: #64748b; }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        HorizontalBox {
+            if (step > 0) : GlassCard {
+                width: 100px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
+            }
+            if (step == 0) : Rectangle { width: 100px; } // spacer
+
+            Rectangle {} // Center spacer
+
+            if (step == 0) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { next_step(); } }
+            }
+        }
+    }
+}
