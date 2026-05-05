@@ -109,6 +109,24 @@ pub async fn record_swarm_job_latency_by_entity(pool: &PgPool, mode: &str, entit
     .await
 }
 
+
+pub async fn record_token_budget_alert(pool: &PgPool, org_id: &str, alert_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_token_budget_alert_total", "counter", 1.0, serde_json::json!({ "organization_id": org_id, "alert_type": alert_type })).await
+}
+
+
+
+pub async fn record_capability_violation(pool: &PgPool, agent_id: &str, capability: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "capability_violation_total", "counter", 1.0, serde_json::json!({ "agent_id": agent_id, "capability": capability })).await
+}
+
+
+
+pub async fn record_rag_escalation(pool: &PgPool, org_id: &str, error: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_rag_escalation_total", "counter", 1.0, serde_json::json!({ "organization_id": org_id, "error": error })).await
+}
+
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

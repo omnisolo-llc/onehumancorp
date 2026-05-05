@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "kairos",
+    srcs = ["metrics.go"],
+    importpath = "github.com/onehumancorp/ohc-mono/srcs/server/orchestration/kairos",
+    visibility = ["//visibility:public"],
+)
