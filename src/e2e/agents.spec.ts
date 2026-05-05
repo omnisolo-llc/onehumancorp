@@ -121,7 +121,7 @@ test.describe('Agent Hire Flow', () => {
     await page.locator('button:has-text("Hire Agent")').click();
     await page.locator('text=Sales').click();
     await page.locator('button:has-text("Hire"), button:has-text("Confirm")').click();
-    await expect(page.locator('text=/success| hired/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/success| hired/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should cancel hire flow', async ({ page }) => {
@@ -182,7 +182,7 @@ test.describe('Agent Configuration', () => {
     const saveBtn = page.locator('button:has-text("Save"), button:has-text("Finish")');
     if (await saveBtn.isVisible()) {
       await saveBtn.click();
-      await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 5000 });
     }
   });
 

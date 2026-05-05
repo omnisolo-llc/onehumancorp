@@ -98,7 +98,7 @@ test.describe('Help Center', () => {
       page.locator('button:has-text("Help Center")').first().click()
     ]);
     const chatBtn = page.locator('button:has-text("Chat"), button:has-text("Live Chat")').first();
-    await expect(chatBtn).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(chatBtn).toBeVisible({ timeout: 3000 });
   });
 
   test('should display keyboard shortcuts', async ({ page }) => {
@@ -134,7 +134,7 @@ test.describe('Help Center', () => {
       page.locator('button:has-text("Help Center")').first().click()
     ]);
     const status = page.locator('text=/status|system|operational/i').first();
-    await expect(status).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(status).toBeVisible({ timeout: 3000 });
   });
 
   test('should submit support ticket', async ({ page }) => {
@@ -205,7 +205,7 @@ test.describe('AI Help Chat', () => {
     if (await input.isVisible()) {
       await input.fill('How do I set up agents?');
       await page.locator('button:has-text("Send"), button:has-text("Ask")').click();
-      await expect(page.locator('text=/agent|setup|configure/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/agent|setup|configure/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -218,7 +218,7 @@ test.describe('AI Help Chat', () => {
     if (await input.isVisible()) {
       await input.fill('How do I set up agents?');
       await page.locator('button:has-text("Send"), button:has-text("Ask")').click();
-      await expect(page.locator('text=/typing|thinking|processing/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/typing|thinking|processing/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -228,7 +228,7 @@ test.describe('AI Help Chat', () => {
       page.locator('button:has-text("Ask AI")').first().click()
     ]);
     const suggestion = page.locator('button:has-text("How"), button:has-text("What")').first();
-    await expect(suggestion).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(suggestion).toBeVisible({ timeout: 3000 });
   });
 
   test('should show help suggestions', async ({ page }) => {
@@ -237,7 +237,7 @@ test.describe('AI Help Chat', () => {
       page.locator('button:has-text("Ask AI")').first().click()
     ]);
     const suggestion = page.locator('text=/suggestion|recommended|try/i').first();
-    await expect(suggestion).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(suggestion).toBeVisible({ timeout: 3000 });
   });
 
   test('should clear chat history', async ({ page }) => {
@@ -248,7 +248,7 @@ test.describe('AI Help Chat', () => {
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Reset")').first();
     if (await clearBtn.isVisible()) {
       await clearBtn.click();
-      await expect(page.locator('text=/cleared|new.*chat/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/cleared|new.*chat/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });
@@ -318,7 +318,7 @@ test.describe('Interactive Walkthrough', () => {
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const highlight = page.locator('[class*="highlight"], [class*="spotlight"]').first();
-    await expect(highlight).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(highlight).toBeVisible({ timeout: 3000 });
   });
 
   test('should complete walkthrough', async ({ page }) => {
@@ -329,7 +329,7 @@ test.describe('Interactive Walkthrough', () => {
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Done")').first();
     if (await finishBtn.isVisible()) {
       await finishBtn.click();
-      await expect(page.locator('text=/complete|finished|congratulations/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/complete|finished|congratulations/i')).toBeVisible({ timeout: 5000 });
     }
   });
 });
@@ -380,7 +380,7 @@ test.describe('Video Tutorials', () => {
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
     if (await playBtn.isVisible()) {
       await playBtn.click();
-      await expect(page.locator('text=/pause|volume|fullscreen/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/pause|volume|fullscreen/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -439,6 +439,6 @@ test.describe('Video Tutorials', () => {
     ]);
     const videoItem = page.locator('[class*="video"]').first();
     await videoItem.click();
-    await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 });
   });
 });

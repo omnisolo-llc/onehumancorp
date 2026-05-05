@@ -47,7 +47,7 @@ test.describe('Integrations Page', () => {
     const slackBtn = page.locator('button:has-text("Connect"), button:has-text("Slack")').first();
     if (await slackBtn.isVisible()) {
       await slackBtn.click();
-      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -58,7 +58,7 @@ test.describe('Integrations Page', () => {
     const disconnectBtn = page.locator('button:has-text("Disconnect"), button:has-text("Remove")').first();
     if (await disconnectBtn.isVisible()) {
       await disconnectBtn.click();
-      await expect(page.locator('text=/disconnected|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/disconnected|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -161,7 +161,7 @@ test.describe('Pipeline Management', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -176,7 +176,7 @@ test.describe('Pipeline Management', () => {
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Execute")').first();
     if (await runBtn.isVisible()) {
       await runBtn.click();
-      await expect(page.locator('text=/running|executing/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/running|executing/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -194,7 +194,7 @@ test.describe('Pipeline Management', () => {
     const pauseBtn = page.locator('button:has-text("Pause"), button:has-text("Disable")').first();
     if (await pauseBtn.isVisible()) {
       await pauseBtn.click();
-      await expect(page.locator('text=/paused|disabled/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/paused|disabled/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -203,7 +203,7 @@ test.describe('Pipeline Management', () => {
     const resumeBtn = page.locator('button:has-text("Resume"), button:has-text("Enable")').first();
     if (await resumeBtn.isVisible()) {
       await resumeBtn.click();
-      await expect(page.locator('text=/active|running/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/active|running/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -214,7 +214,7 @@ test.describe('Pipeline Management', () => {
     const duplicateBtn = page.locator('button:has-text("Duplicate"), button:has-text("Copy")').first();
     if (await duplicateBtn.isVisible()) {
       await duplicateBtn.click();
-      await expect(page.locator('text=/duplicated|copied/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/duplicated|copied/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });

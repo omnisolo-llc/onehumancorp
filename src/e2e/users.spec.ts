@@ -65,7 +65,7 @@ test.describe('User Management', () => {
       await inviteBtn.click();
       await page.fill('input[type="email"]', 'newuser@example.com');
       await page.locator('button:has-text("Send"), button:has-text("Invite")').click();
-      await expect(page.locator('text=/invited|sent/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/invited|sent/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -111,7 +111,7 @@ test.describe('User Management', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed|confirm/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed|confirm/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -132,7 +132,7 @@ test.describe('User Management', () => {
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
     if (await exportBtn.isVisible()) {
       await exportBtn.click();
-      await expect(page.locator('text=/download|csv/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/download|csv/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -153,7 +153,7 @@ test.describe('User Management', () => {
       const resendBtn = page.locator('button:has-text("Resend"), button:has-text("Re-send")').first();
       if (await resendBtn.isVisible()) {
         await resendBtn.click();
-        await expect(page.locator('text=/sent|resent/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+        await expect(page.locator('text=/sent|resent/i')).toBeVisible({ timeout: 3000 });
       }
     }
   });
@@ -166,7 +166,7 @@ test.describe('User Management', () => {
       const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Withdraw")').first();
       if (await cancelBtn.isVisible()) {
         await cancelBtn.click();
-        await expect(page.locator('text=/canceled|withdrawn/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+        await expect(page.locator('text=/canceled|withdrawn/i')).toBeVisible({ timeout: 3000 });
       }
     }
   });
@@ -226,7 +226,7 @@ test.describe('Role Management', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 

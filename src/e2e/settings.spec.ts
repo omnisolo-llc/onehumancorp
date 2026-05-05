@@ -26,7 +26,7 @@ test.describe('Settings Page', () => {
     const emailToggle = page.locator('input[type="checkbox"]').first();
     if (await emailToggle.isVisible()) {
       await emailToggle.check();
-      await expect(page.locator('text=/saved|enabled/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/saved|enabled/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -76,7 +76,7 @@ test.describe('Settings Page', () => {
     const darkOption = page.locator('text=/dark|night/i').first();
     if (await darkOption.isVisible()) {
       await darkOption.click();
-      await expect(page.locator('[class*="dark"], [class*="dark-theme"]').first()).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('[class*="dark"], [class*="dark-theme"]').first()).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -104,7 +104,7 @@ test.describe('Settings Page', () => {
   test('should save settings', async ({ page }) => {
     await page.goto('/settings');
     await page.locator('button:has-text("Save")').click();
-    await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show cancel button', async ({ page }) => {
