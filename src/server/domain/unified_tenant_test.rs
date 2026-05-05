@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use sqlx::{postgres::PgPoolOptions, Row};
+#[allow(unused_imports)]
 use std::env;
 
 #[cfg(test)]

@@ -718,6 +718,7 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
+    use super::*;
 
     #[tokio::test]
     async fn test_tenant_data_isolation() {
