@@ -2,13 +2,12 @@ package memory
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,29 +20,10 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 	return []float32{0.1, 0.2, 0.3}, nil
 }
 
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open test db: %v", err)
-	}
-
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS memory_embeddings (
-			id TEXT PRIMARY KEY,
-			content TEXT,
-			vector_embedding BLOB
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create table: %v", err)
-	}
-
-	return db
-}
-
 func TestAutoDreamDaemon(t *testing.T) {
-	// Setup db
-	db := setupTestDB(t)
+	// Setup sqlmock
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
 	defer db.Close()
 
 	// Setup directories
@@ -52,7 +32,8 @@ func TestAutoDreamDaemon(t *testing.T) {
 
 	// Create test files
 	doneFile := filepath.Join(memDir, "done.md")
-	err := os.WriteFile(doneFile, []byte("memory execution\nstatus: DONE\nresults..."), 0644)
+	doneContent := "memory execution\nstatus: DONE\ntenant_id: org-123\nagent_id: agent-456\ntask_id: task-789\nresults..."
+	err = os.WriteFile(doneFile, []byte(doneContent), 0644)
 	assert.NoError(t, err)
 
 	notDoneFile := filepath.Join(memDir, "not_done.md")
@@ -67,17 +48,24 @@ func TestAutoDreamDaemon(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Setup mock expectations
+	mock.ExpectBegin()
+	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
+	// Vector format comes from json marshal
+	expectedEmbedding := "[0.1,0.2,0.3]"
+	mock.ExpectExec("INSERT INTO autodream_memories").
+		WithArgs("done.md", "org-123", "agent-456", "task-789", doneContent, expectedEmbedding, "autodream").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
 	// Run process directories directly instead of starting the ticker to avoid races in tests
 	daemon.processDirectories(ctx)
 
 	// Check if mock LLM was called
 	assert.True(t, mockLLM.called, "expected mock LLM to be called")
 
-	// Check if DB has the embedding
-	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM memory_embeddings").Scan(&count)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count, "expected 1 embedding in database")
+	// Ensure all db expectations were met
+	assert.NoError(t, mock.ExpectationsWereMet())
 
 	// Check if file was renamed
 	_, err = os.Stat(doneFile + ".processed")
