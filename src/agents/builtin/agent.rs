@@ -2956,7 +2956,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let mut agent = Agent::new_for_test(client, vec![mutating_tool]);
+        let agent = Agent::new_for_test(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
         let mut cfg = AgentRunConfig::default();
