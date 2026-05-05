@@ -3109,6 +3109,15 @@ mod docs_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
+
+        let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let link_copied_clone = link_copied.clone();
+        ui.on_copy_link(move |link| {
+            assert_eq!(link, "https://subdomain.ohc.app");
+            *link_copied_clone.borrow_mut() = true;
+        });
+
+        let _ui_weak_for_launch = ui.as_weak();
         let ui_weak = ui.as_weak();
         ui.set_website_template("Classic".into());
         ui.set_product_name("My First Product".into());
@@ -3122,6 +3131,8 @@ mod docs_tests {
             assert_eq!(domain_choice, "subdomain");
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
+                let link = format!("https://{}.ohc.app", domain_choice);
+                u.invoke_copy_link(link.into());
                 u.set_launching(false);
                 u.set_step(10);
             }
@@ -3141,6 +3152,7 @@ mod docs_tests {
             ui.get_domain_choice()
         );
         assert!(*launch_called.borrow());
+        assert!(*link_copied.borrow(), "Shareable link should be automatically copied on launch completion");
         assert_eq!(ui.get_launching(), false);
         assert_eq!(ui.get_step(), 10);
 
