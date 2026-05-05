@@ -4,12 +4,13 @@ use crate::ohc::app::dashboard_service_server::DashboardService;
 use std::sync::Arc;
 
 pub struct MyDashboardService {
+    hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
 }
 
 impl MyDashboardService {
-    pub fn new(db: Arc<crate::db::DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self { db, hub }
     }
 }
 
@@ -17,9 +18,51 @@ impl MyDashboardService {
 impl DashboardService for MyDashboardService {
     async fn get_dashboard(
         &self,
-        _request: Request<GetDashboardRequest>,
+        request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        Err(Status::unimplemented("Not implemented"))
+        let req = request.into_inner();
+
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let hub3 = self.hub.clone();
+
+        let (agents_res, meetings_res, cost_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || {
+                let cost_auditor = hub3.get_cost_auditor();
+                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+            })
+        );
+
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
+
+        let mut status_map = std::collections::HashMap::new();
+        for a in agents.iter() {
+            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        }
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+
+        let cost_summary = crate::ohc::billing::CostSummary {
+            organization_id: req.organization_id.clone(),
+            total_cost_usd: total_cost,
+            total_tokens,
+            projected_monthly_usd: 0.0,
+            agents: vec![],
+        };
+
+        Ok(Response::new(DashboardSnapshot {
+            organization: None, // Need to query DB for org info
+            agents: vec![],
+            meetings: vec![],
+            cost_summary: Some(cost_summary),
+            statuses,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+        }))
     }
 
     async fn post_message(
