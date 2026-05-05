@@ -308,9 +308,18 @@ impl Agent {
 
                 match llm_client_c.chat(req).await {
                     Ok(resp) => {
+                        let total_tokens_this_turn = resp.usage.input_tokens + resp.usage.output_tokens;
+                        let mut current_total = state.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        current_total += total_tokens_this_turn;
+
+                        if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
+                            return Err(format!("Terminal condition reached: token budget exhausted ({} / {}).", current_total, llm_cfg_c.max_task_tokens));
+                        }
+
                         let has_tool_calls = !resp.message.tool_calls.is_empty();
                         let mut update = serde_json::json!({
                             "has_tool_calls": has_tool_calls,
+                            "total_tokens": current_total,
                             "last_message": {
                                 "role": "assistant",
                                 "content": resp.message.content,
@@ -472,7 +481,8 @@ impl Agent {
 
         let initial_state = serde_json::json!({
             "messages": msgs_json,
-            "has_tool_calls": false
+            "has_tool_calls": false,
+            "total_tokens": 0
         });
 
         match graph.run(initial_state).await {
@@ -3129,6 +3139,50 @@ mod tests {
             }
         }
         assert!(found_task_error);
+    }
+
+
+    #[tokio::test]
+    async fn test_langgraph_token_budget_exhaustion() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("This takes 100 tokens"),
+                    usage: Usage { input_tokens: 50, output_tokens: 50 },
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-1".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("This takes 200 tokens"),
+                    usage: Usage { input_tokens: 100, output_tokens: 100 },
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-2".to_string()),
+                }
+            ]),
+        });
+
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_langgraph_mechanic = true;
+        cfg.max_task_tokens = 80; // Budget is lower than the first response's 100 tokens
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("token budget exhausted (100 / 80)"));
     }
 
     #[tokio::test]
