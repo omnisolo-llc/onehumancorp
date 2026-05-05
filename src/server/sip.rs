@@ -84,6 +84,8 @@ impl SipDB {
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
+                    } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        return Err(err);
                     } else {
                         return Err(err);
                     }

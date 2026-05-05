@@ -144,7 +144,7 @@ struct AnthropicRequest {
     tools: Vec<AnthropicToolDef>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct AnthropicResponse {
     id: Option<String>,
     content: Vec<AnthropicResponseContent>,
@@ -152,7 +152,7 @@ struct AnthropicResponse {
     stop_reason: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct AnthropicResponseContent {
     r#type: String,
     text: Option<String>,
@@ -161,7 +161,7 @@ struct AnthropicResponseContent {
     input: Option<Value>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct AnthropicUsage {
     input_tokens: i32,
     output_tokens: i32,
@@ -179,6 +179,11 @@ impl LlmClient for AnthropicClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
+        }
+
         let req = super::minify_chat_request(req);
         let mut messages: Vec<AnthropicMessage> = Vec::new();
 
@@ -321,12 +326,20 @@ impl LlmClient for AnthropicClient {
             .await?;
 
         if !resp.status().is_success() {
+            cb.record_failure();
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("anthropic api error (status {}): {}", status, body).into());
         }
 
-        let result: AnthropicResponse = resp.json().await?;
+        let result = resp.json::<AnthropicResponse>().await;
+        if result.is_err() {
+            cb.record_failure();
+            return Err(format!("anthropic api error: failed to parse response: {:?}", result.unwrap_err()).into());
+        }
+        let result = result.unwrap();
+        cb.record_success();
+
 
         // Extract content + tool calls from response
         let mut text_content = String::new();

@@ -20,7 +20,13 @@ impl DistributedLock {
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
-        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let con_future = self.client.get_multiplexed_async_connection();
+        let con_result = tokio::time::timeout(std::time::Duration::from_secs(2), con_future).await;
+        let mut con = match con_result {
+            Ok(Ok(c)) => c,
+            Ok(Err(e)) => return Err(e.to_string()),
+            Err(_) => return Err("timeout connecting to redis".to_string()),
+        };
         let start = std::time::Instant::now();
         
         loop {
@@ -47,7 +53,13 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
-        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let con_future = self.client.get_multiplexed_async_connection();
+        let con_result = tokio::time::timeout(std::time::Duration::from_secs(2), con_future).await;
+        let mut con = match con_result {
+            Ok(Ok(c)) => c,
+            Ok(Err(e)) => return Err(e.to_string()),
+            Err(_) => return Err("timeout connecting to redis".to_string()),
+        };
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
