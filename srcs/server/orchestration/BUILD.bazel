@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["tasks_db.go"],
+    importpath = "onehumancorp/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["tasks_db_test.go"],
+    embed = [":orchestration"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+    ],
+)
