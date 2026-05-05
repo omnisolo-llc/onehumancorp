@@ -55,7 +55,7 @@ pub async fn bench_dashboard_snapshot() {
         }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool));
+    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
@@ -77,18 +77,45 @@ pub async fn bench_dashboard_snapshot() {
         let hub1 = hub.clone();
         let hub2 = hub.clone();
         let hub3 = hub.clone();
+        let db1 = pg_pool.clone();
+        let db2 = pg_pool.clone();
+        let db3 = pg_pool.clone();
+        let org_id_1 = "system".to_string();
+        let org_id_2 = "system".to_string();
+        let org_id_3 = "system".to_string();
 
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res, org_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+            }),
+            async move {
+                sqlx::query("SELECT tenant_id as id, business_name as name, tier FROM tenants WHERE tenant_id = $1")
+                    .bind(&org_id_1)
+                    .fetch_optional(&db1)
+                    .await
+            },
+            async move {
+                sqlx::query("SELECT id, organization_id, name, description, price_cents, currency, fulfillment_strategy FROM products WHERE organization_id = $1 OR tenant_id = $1 LIMIT 50")
+                    .bind(&org_id_2)
+                    .fetch_all(&db2)
+                    .await
+            },
+            async move {
+                sqlx::query("SELECT id, customer_id, total_amount, status FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 10")
+                    .bind(&org_id_3)
+                    .fetch_all(&db3)
+                    .await
+            }
         );
         let _ = agents_res.unwrap_or_default();
         let _ = meetings_res.unwrap_or_default();
         let _ = cost_res.unwrap_or_default();
+        let _ = org_res.unwrap_or_default();
+        let _ = products_res.unwrap_or_default();
+        let _ = orders_res.unwrap_or_default();
 
         fetch_times.push(start.elapsed().as_micros());
     }

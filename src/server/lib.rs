@@ -127,6 +127,7 @@ pub mod ohc {
         pub use billing_proto::ohc::billing::*;
     }
     pub mod agent {
+        pub use agent_proto::ohc::agent::*;
         pub mod service {
             pub use agent_service_proto::ohc::agent::service::*;
         }

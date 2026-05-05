@@ -19,6 +19,13 @@ message StatusCount {
   uint32 count = 2;
 }
 
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  double total_amount = 3;
+  string status = 4;
+}
+
 message DashboardSnapshot {
   ohc.organization.Organization organization = 1;
   repeated ohc.agent.Agent agents = 2;
@@ -26,6 +33,8 @@ message DashboardSnapshot {
   ohc.billing.CostSummary cost_summary = 4;
   repeated StatusCount statuses = 5;
   string updated_at = 6;
+  repeated ohc.organization.Product products = 7;
+  repeated Order recent_orders = 8;
 }
 
 message GetDashboardRequest {
