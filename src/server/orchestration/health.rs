@@ -13,8 +13,8 @@ pub async fn run_health_monitor(
     loop {
         interval.tick().await;
         let mut to_fire_now: Vec<String> = Vec::new();
-        match monitor_transport.get_active_agents().await {
-            Ok(agents) => {
+        match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_transport.get_active_agents()).await {
+            Ok(Ok(agents)) => {
                 if agents.is_empty() {
                     tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
                 }
@@ -32,16 +32,12 @@ pub async fn run_health_monitor(
                     }
                 }
                 for agent_id in to_fire {
-                    if is_cloud {
-                        let count = pending_fires.entry(agent_id.clone()).or_insert(0);
-                        *count += 1;
-                        if *count >= 2 {
-                            to_fire_now.push(agent_id.clone());
-                        } else {
-                            tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive in Cloud. Retrying next tick.", agent_id);
-                        }
-                    } else {
+                    let count = pending_fires.entry(agent_id.clone()).or_insert(0);
+                    *count += 1;
+                    if *count >= 3 {
                         to_fire_now.push(agent_id.clone());
+                    } else {
+                        tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k));
@@ -51,8 +47,11 @@ pub async fn run_health_monitor(
                     pending_fires.remove(&agent_id);
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 tracing::error!("HEALTH MONITOR: Failed to get active agents: {}", e);
+            }
+            Err(_) => {
+                tracing::error!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
             }
         }
     }
@@ -160,7 +159,7 @@ mod tests {
             run_health_monitor(monitor_transport, monitor_hub, true, std::time::Duration::from_millis(10)).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }

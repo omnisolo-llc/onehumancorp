@@ -133,6 +133,7 @@ message SyncStateHandoff {
   bytes serialized_state = 3;
   string mode_source = 4; // "cloud" or "standalone"
   int64 timestamp = 5;
+  string entity_type = 6; // e.g., "agent_memories", "shared_tasks"
 }
 
 message PublishTeammateMeshEventRequest {
