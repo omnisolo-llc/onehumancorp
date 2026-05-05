@@ -6059,6 +6059,124 @@ mod e2e_hybrid_blob_tests {
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
     }
 
+
+    #[test]
+    fn test_e2e_landing_to_dashboard_cuj_service() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Service Business".into());
+        ui.set_company_name("My E2E Service".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_services();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin2@e2e.test".into());
+        ui.invoke_next_step();
+        ui.invoke_select_template("Classic".into());
+        ui.set_product_name("Plumbing".into());
+        ui.invoke_next_step();
+        ui.invoke_select_domain("subdomain".into());
+        ui.set_launch_success(true);
+        ui.set_step(10);
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow());
+    }
+
+    #[test]
+    fn test_e2e_landing_to_dashboard_cuj_food() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Food Cart".into());
+        ui.set_company_name("My E2E Food".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_food();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("inperson".into());
+        ui.set_admin_email("admin3@e2e.test".into());
+        ui.invoke_next_step();
+        ui.invoke_select_template("Bold".into());
+        ui.set_product_name("Tacos".into());
+        ui.invoke_next_step();
+        ui.invoke_select_domain("subdomain".into());
+        ui.set_launch_success(true);
+        ui.set_step(10);
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow());
+    }
+
+    #[test]
+    fn test_e2e_landing_to_dashboard_cuj_creative() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Creative".into());
+        ui.set_company_name("My E2E Portfolio".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_digital();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("both".into());
+        ui.set_admin_email("admin4@e2e.test".into());
+        ui.invoke_next_step();
+        ui.invoke_select_template("Modern".into());
+        ui.set_product_name("Artwork".into());
+        ui.invoke_next_step();
+        ui.invoke_select_domain("custom".into());
+        ui.set_launch_success(true);
+        ui.set_step(10);
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow());
+    }
+
+    #[test]
+    fn test_e2e_landing_to_dashboard_cuj_advanced() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::SetupWizard::new().unwrap();
+        ui.invoke_toggle_advanced();
+        ui.invoke_next_step();
+        ui.invoke_select_business_type("Online Store".into());
+        ui.set_company_name("My E2E Advanced".into());
+        ui.invoke_next_step();
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        ui.invoke_select_payment_pref("online".into());
+        ui.set_admin_email("admin5@e2e.test".into());
+        ui.invoke_next_step();
+        ui.invoke_select_template("Modern".into());
+        ui.set_product_name("Widget Pro".into());
+        ui.invoke_next_step();
+        ui.invoke_select_domain("subdomain".into());
+        ui.set_launch_success(true);
+        ui.set_step(10);
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow());
+    }
+
     #[test]
     fn test_landing_cuj() {
         crate::ui_tests::init();
