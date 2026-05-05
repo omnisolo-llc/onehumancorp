@@ -127,6 +127,7 @@ impl MeshTransport for MemoryTransport {
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
+    subscriber_id: String,
 }
 
 impl IpcTransport {
@@ -174,17 +175,35 @@ impl IpcTransport {
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mesh_subscribers (
+                subscriber_id TEXT PRIMARY KEY,
+                last_id INTEGER NOT NULL DEFAULT 0
+            )"
+        ).execute(&pool).await.map_err(|e| e.to_string())?;
+
         let subs = DashMap::new();
 
-        Ok(IpcTransport { pool, subs })
+        let subscriber_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| "standalone_default".to_string());
+
+        Ok(IpcTransport { pool, subs, subscriber_id })
     }
 
     pub async fn start_worker(&self) {
         use prost::Message as ProstMessage;
         let pool = self.pool.clone();
         let subs = self.subs.clone();
+        let subscriber_id = self.subscriber_id.clone();
 
-        let mut last_id = 0;
+        let mut last_id: i64 = 0;
+        if let Ok(row) = sqlx::query_as::<_, (i64,)>("SELECT last_id FROM mesh_subscribers WHERE subscriber_id = ?")
+            .bind(&subscriber_id)
+            .fetch_one(&pool)
+            .await
+        {
+            last_id = row.0;
+        }
+
         loop {
             // Poll for new messages
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
@@ -195,13 +214,22 @@ impl IpcTransport {
             .await;
 
             if let Ok(rows) = rows {
-                for (id, topic, payload) in rows {
-                    last_id = id;
-                    if let Some(tx) = subs.get(&topic) {
+                for (id, topic, payload) in &rows {
+                    last_id = *id;
+                    if let Some(tx) = subs.get(topic) {
                         if let Ok(message) = Message::decode(&payload[..]) {
                             let _ = tx.send(message);
                         }
                     }
+                }
+
+                if !rows.is_empty() {
+                    let _ = sqlx::query("INSERT INTO mesh_subscribers (subscriber_id, last_id) VALUES (?, ?) ON CONFLICT(subscriber_id) DO UPDATE SET last_id = ?")
+                        .bind(&subscriber_id)
+                        .bind(last_id)
+                        .bind(last_id)
+                        .execute(&pool)
+                        .await;
                 }
             }
 
