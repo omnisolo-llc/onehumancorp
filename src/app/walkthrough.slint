@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Walkthrough inherits Window {
     width: 600px;
     height: 500px;
-    title: "Automated Setup Guide";
+    title: "App Data Sync Guide";
 
     property <int> current_step: 0;
 
@@ -14,7 +14,7 @@ export component Walkthrough inherits Window {
         padding: 24px;
         alignment: center;
 
-        Text { text: "Interactive Guide: Sync Lifecycle"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Interactive Guide: Setup Lifecycle"; font-size: 24px; font-weight: 700; color: #1e293b; }
 
         Rectangle {
             background: white;
@@ -28,26 +28,26 @@ export component Walkthrough inherits Window {
                 spacing: 16px;
                 
                 Text {
-                    text: current_step == 0 ? "1. Generate & Insert Vector" :
-                          current_step == 1 ? "2. Query Pending Vectors" :
-                          current_step == 2 ? "3. Return Batched Vectors" :
-                          current_step == 3 ? "4. Push over mTLS" :
-                          current_step == 4 ? "5. Upsert to Global" :
-                          current_step == 5 ? "6. Acknowledge Success" :
-                          "7. Update sync_status";
+                    text: current_step == 0 ? "1. Save your knowledge locally" :
+                          current_step == 1 ? "2. Check for new knowledge to share" :
+                          current_step == 2 ? "3. Prepare knowledge for sharing" :
+                          current_step == 3 ? "4. Send securely to the cloud" :
+                          current_step == 4 ? "5. Save to your cloud backup" :
+                          current_step == 5 ? "6. Confirm saving is complete" :
+                          "7. Mark as shared locally";
                     font-size: 20px;
                     font-weight: 700;
                     color: #0284c7;
                 }
                 
                 Text {
-                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
-                          current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
-                          current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
-                          current_step == 3 ? "Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS." :
-                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories)." :
-                          current_step == 5 ? "Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon." :
-                          "Sync Daemon updates the local records in SQLite, marking them as sync_status='synced'.";
+                    text: current_step == 0 ? "Your agent writes down what it learned and saves it on your computer." :
+                          current_step == 1 ? "The system checks your computer for any new knowledge that hasn't been shared yet." :
+                          current_step == 2 ? "The system gathers all the new knowledge together to send it out." :
+                          current_step == 3 ? "The system safely sends your gathered knowledge over the internet to your cloud backup." :
+                          current_step == 4 ? "Your cloud backup receives the knowledge and saves it permanently." :
+                          current_step == 5 ? "The cloud backup sends a message back saying everything was saved successfully." :
+                          "Your computer marks the knowledge as 'shared' so it won't be sent again.";
                     color: #1e293b;
                     wrap: word-wrap;
                 }
@@ -61,13 +61,13 @@ export component Walkthrough inherits Window {
                         spacing: 12px;
                         Text { text: "🔄"; color: #0284c7; }
                         Text {
-                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local SQLite DB" :
-                                  current_step == 1 ? "Sync Daemon -> Local SQLite DB" :
-                                  current_step == 2 ? "Local SQLite DB -> Sync Daemon" :
-                                  current_step == 3 ? "Sync Daemon -> Cloud API Gateway" :
-                                  current_step == 4 ? "Cloud API Gateway -> Cloud PostgreSQL" :
-                                  current_step == 5 ? "Cloud API Gateway -> Sync Daemon" :
-                                  "Sync Daemon -> Local SQLite DB";
+                            text: current_step == 0 ? "Computer -> Saved" :
+                                  current_step == 1 ? "System -> Checking" :
+                                  current_step == 2 ? "System -> Gathering" :
+                                  current_step == 3 ? "System -> Sending" :
+                                  current_step == 4 ? "Cloud Backup -> Saved" :
+                                  current_step == 5 ? "Cloud Backup -> Confirmed" :
+                                  "Computer -> Completed";
                             color: #0284c7;
                             wrap: word-wrap;
                         }
