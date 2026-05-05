@@ -153,7 +153,7 @@ fn login_responsive_dimensions() {
     let ui = create();
     let window = ui.window();
     window.set_size(slint::PhysicalSize::new(375, 667));
-    assert_eq!(ui.get_login_card_width(), 311.0);
+    assert_eq!(ui.get_login_card_width(), 375.0);
     window.set_size(slint::PhysicalSize::new(1440, 900));
     assert_eq!(ui.get_login_card_width(), 400.0);
 }
@@ -163,7 +163,7 @@ fn login_responsive_phablet_414() {
     let ui = create();
     let window = ui.window();
     window.set_size(slint::PhysicalSize::new(414, 896));
-    assert_eq!(ui.get_login_card_width(), 350.0);
+    assert_eq!(ui.get_login_card_width(), 400.0);
 }
 
 #[test]

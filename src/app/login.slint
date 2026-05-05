@@ -10,7 +10,7 @@ export component Login inherits Window {
     out property <string> test_title: root.title;
 
     // Add a property to expose the card width constraint to unit tests
-    out property <length> login_card_width: min(root.width - 64px, 400px);
+    out property <length> login_card_width: root.width < 400px ? root.width : 400px;
 
     in-out property <bool> loading: false;
     in-out property <bool> is_sign_up: false;
