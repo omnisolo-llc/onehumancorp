@@ -46,7 +46,7 @@ trap cleanup EXIT
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true && docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
+docker run -d --privileged --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true && docker run -d --privileged --name e2e_redis -p 6379:6379 redis:7-alpine || true
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."

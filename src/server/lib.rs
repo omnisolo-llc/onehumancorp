@@ -998,7 +998,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
 
-    let addr = "[::1]:18789".parse()?;
+    let addr = "127.0.0.1:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     

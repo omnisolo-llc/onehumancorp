@@ -34,7 +34,7 @@ impl DB {
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+                .connect_lazy("postgres://ohc:ohc@127.0.0.1:5432/ohc")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
             let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
@@ -130,7 +130,7 @@ impl DB {
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-                .acquire_timeout(std::time::Duration::from_millis(500))
+                .acquire_timeout(std::time::Duration::from_secs(60))
 
                 .connect(&database_url)
                 .await?;
@@ -626,7 +626,7 @@ mod autodream_db_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://ohc:ohc@127.0.0.1:5432/ohc";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -648,7 +648,7 @@ mod autodream_db_tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://ohc:ohc@127.0.0.1:5432/ohc";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -684,7 +684,7 @@ mod autodream_db_tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://ohc:ohc@127.0.0.1:5432/ohc";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -777,7 +777,7 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://ohc:ohc@127.0.0.1:5432/ohc";
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
