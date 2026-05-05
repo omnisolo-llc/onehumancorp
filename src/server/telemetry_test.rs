@@ -264,7 +264,10 @@ mod tests {
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
                                lower_line.contains("session_id") ||
-                               lower_line.contains("payload") {
+                               lower_line.contains("payload") ||
+                               lower_line.contains("email") ||
+                               lower_line.contains("password") ||
+                               lower_line.contains("pii") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
