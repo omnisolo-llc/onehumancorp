@@ -44,6 +44,7 @@ pub struct AgentServiceImpl {
     cfg: AgentConfig,
     auth: AuthMode,
     memory: Option<Arc<VectorRepository>>,
+    pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
 }
@@ -127,12 +128,21 @@ impl AgentServiceImpl {
             auth,
             memory: None,
             llm_override: None,
+            anthropic_memory: None,
         }
     }
 
     pub async fn init_memory(&mut self) {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
+            let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR").unwrap_or_else(|_| ".agent-memory".to_string());
+            if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
+                self.anthropic_memory = Some(Arc::new(store));
+            } else {
+                tracing::warn!("Failed to initialize Anthropic3TierMemoryStore");
+            }
+        }
 
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             match sqlx::PgPool::connect_lazy(&db_url) {
                 Ok(pool) => {
@@ -398,8 +408,10 @@ impl AgentService for AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
         
         // Inject memory accessor if using Anthropic3TierMemoryStore
-        let accessor = if let Some(_mem) = &memory {
-            None
+        let anthropic_memory = self.anthropic_memory.clone();
+        let accessor = if let Some(mem) = &anthropic_memory {
+            use crate::memory_store::LongTermMemory;
+            mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
 
@@ -936,5 +948,36 @@ pub async fn start_builtin_agent(
         tracing::error!("Failed to subscribe to 'ralph_jobs' on mesh transport: {}", e);
     } else {
         tracing::info!("Subscribed to mesh channel 'ralph_jobs'");
+    }
+
+
+}
+
+#[cfg(test)]
+mod memory_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_anthropic_memory_initialization_and_accessor() {
+        unsafe {
+            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
+            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
+        }
+
+        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        service.init_memory().await;
+
+        assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
+        let mem = service.anthropic_memory.as_ref().unwrap();
+
+        use crate::memory_store::LongTermMemory;
+        let accessor = mem.as_anthropic_accessor();
+        assert!(accessor.is_some(), "Should return the anthropic memory accessor");
+
+        unsafe {
+            std::env::remove_var("OHC_ENABLE_ANTHROPIC_MEMORY");
+            std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
+        }
+        let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
     }
 }
