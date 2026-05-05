@@ -48,18 +48,31 @@ impl RalphLoop {
                 break;
             }
 
-            let feature = &progress.features[progress.current_feature_index];
-            if feature.status == "completed" {
+            let feature_name = progress.features[progress.current_feature_index].name.clone();
+            let feature_status = progress.features[progress.current_feature_index].status.clone();
+
+            if feature_status == "completed" {
                 progress.current_feature_index += 1;
                 continue;
             }
 
-            tracing::info!("Ralph Loop: Starting work on feature: {}", feature.name);
+            tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
             
+            let mut checkpoint_summary = String::new();
+            if let Some(cp) = &self.agent.checkpointer {
+                let thread_id = self.config.thread_id.clone().unwrap_or_else(|| "default".to_string());
+                if let Ok(checkpoints) = cp.list_checkpoints(&thread_id).await {
+                    checkpoint_summary.push_str("\nRecent Checkpoints (Git Log Orientation):\n");
+                    for c in checkpoints.iter().rev().take(5) {
+                        checkpoint_summary.push_str(&format!("- [{}] {}\n", c.created_at, c.metadata));
+                    }
+                }
+            }
+
             // Execute the agent run for this specific feature
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, feature.name
+                "You are continuing a long-running task.\nOverall Task: {}\nFeature to implement now: {}{}\nExecute steps to complete this feature, verify it, and then stop.",
+                progress.task_description, feature_name, checkpoint_summary
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
@@ -75,13 +88,26 @@ impl RalphLoop {
 
             match self.agent.run(&feature_config, &feature_prompt, &mut on_event).await {
                 Ok(result) => {
-                    tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature.name, result);
+                    tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
+
+                    if let Some(cp) = &self.agent.checkpointer {
+                        let thread_id = self.config.thread_id.clone().unwrap_or_else(|| "default".to_string());
+                        let checkpoint = crate::checkpointer::Checkpoint {
+                            thread_id,
+                            checkpoint_id: uuid::Uuid::new_v4().to_string(),
+                            parent_id: None,
+                            data: serde_json::json!({}),
+                            metadata: serde_json::json!({"ralph_status": format!("Ralph Loop: Completed feature {}", feature_name)}),
+                            created_at: chrono::Utc::now(),
+                        };
+                        let _ = cp.put_checkpoint(checkpoint).await;
+                    }
                 }
                 Err(e) => {
-                    tracing::error!("Ralph Loop failed on feature {}: {}", feature.name, e);
+                    tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
                     // For demo purposes, we break on error. A robust system would retry or mark failed.
                     break;
                 }
@@ -128,6 +154,22 @@ impl RalphLoop {
         };
 
         self.save_progress(&progress).await?;
+
+        if let Some(cp) = &self.agent.checkpointer {
+            let thread_id = self.config.thread_id.clone().unwrap_or_else(|| "default".to_string());
+            let checkpoint = crate::checkpointer::Checkpoint {
+                thread_id,
+                checkpoint_id: uuid::Uuid::new_v4().to_string(),
+                parent_id: None,
+                data: serde_json::json!({}),
+                metadata: serde_json::json!({"ralph_status": "Ralph Initializer: Task broken down"}),
+                created_at: chrono::Utc::now(),
+            };
+            if let Err(e) = cp.put_checkpoint(checkpoint).await {
+                tracing::error!("Failed to save initial ralph checkpoint: {}", e);
+            }
+        }
+
         Ok(progress)
     }
 
@@ -135,5 +177,99 @@ impl RalphLoop {
         let json = serde_json::to_string_pretty(progress)?;
         fs::write(&self.progress_file_path, json).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checkpointer::{Checkpoint, CheckpointSaver};
+    use async_trait::async_trait;
+    use std::sync::Mutex;
+
+    struct MockCheckpointer {
+        checkpoints: Mutex<Vec<Checkpoint>>,
+    }
+
+    impl MockCheckpointer {
+        fn new() -> Self {
+            Self {
+                checkpoints: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl CheckpointSaver for MockCheckpointer {
+        async fn get_checkpoint(&self, _thread_id: &str, _checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+            Ok(None)
+        }
+
+        async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
+            self.checkpoints.lock().unwrap().push(checkpoint);
+            Ok(())
+        }
+
+        async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
+            let cps = self.checkpoints.lock().unwrap();
+            Ok(cps.iter().filter(|c| c.thread_id == thread_id).cloned().collect())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_mechanic() {
+        use crate::llm::LlmClient;
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+
+        struct MockLlm;
+        #[async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                // Mock responses based on the phase
+                let content = if req.messages.last().unwrap().content.contains("Break down the following task") {
+                    r#"["Phase 1 Setup", "Phase 2 Core"]"#.to_string()
+                } else {
+                    "Feature executed successfully.".to_string()
+                };
+
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content,
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage { input_tokens: 0, output_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+        }
+
+        let cp = Arc::new(MockCheckpointer::new());
+        let llm: Arc<dyn LlmClient> = Arc::new(MockLlm);
+        let agent = Arc::new(Agent::new(llm, vec![]).with_checkpointer(cp.clone()));
+
+        let mut config = AgentRunConfig::default();
+        config.thread_id = Some("test_ralph_thread".to_string());
+
+        let progress_file = format!(".ralph_test_{}.json", uuid::Uuid::new_v4());
+        let ralph = RalphLoop::new(agent, config, &progress_file);
+
+        let res = ralph.run("Build a small web server").await;
+        assert!(res.is_ok());
+
+        // Validate checkpoints were saved correctly
+        let checkpoints = cp.checkpoints.lock().unwrap();
+        // Should have 1 for initializer and 2 for features (as mocked above)
+        assert_eq!(checkpoints.len(), 3);
+
+        assert!(checkpoints[0].metadata.to_string().contains("Ralph Initializer"));
+        assert!(checkpoints[1].metadata.to_string().contains("Completed feature Phase 1 Setup"));
+        assert!(checkpoints[2].metadata.to_string().contains("Completed feature Phase 2 Core"));
+
+        // Cleanup
+        let _ = fs::remove_file(&progress_file).await;
     }
 }
