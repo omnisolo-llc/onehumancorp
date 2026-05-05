@@ -12,7 +12,7 @@ test.describe('Help Center', () => {
   test('should display help center page', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     await expect(page.locator('text=/help|center|support/i')).toBeVisible();
   });
@@ -20,7 +20,7 @@ test.describe('Help Center', () => {
   test('should show help center header', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     await expect(page.locator('text=Help')).toBeVisible();
   });
@@ -28,7 +28,7 @@ test.describe('Help Center', () => {
   test('should display search bar', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     await expect(page.locator('input[type="search"], input[placeholder*="search" i]')).toBeVisible();
   });
@@ -36,7 +36,7 @@ test.describe('Help Center', () => {
   test('should search for help topics', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
     if (await searchInput.isVisible()) {
@@ -49,7 +49,7 @@ test.describe('Help Center', () => {
   test('should show help categories', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const category = page.locator('[class*="category"], [class*="topic"]').first();
     await expect(category).toBeVisible();
@@ -58,7 +58,7 @@ test.describe('Help Center', () => {
   test('should display getting started guide', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const gettingStarted = page.locator('text=/getting started|beginner|tutorial/i').first();
     await expect(gettingStarted).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('Help Center', () => {
   test('should show faq section', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     await expect(page.locator('text=/faq|questions/i')).toBeVisible();
   });
@@ -75,7 +75,7 @@ test.describe('Help Center', () => {
   test('should expand faq item', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const faqItem = page.locator('[class*="faq"], [class*="question"]').first();
     if (await faqItem.isVisible()) {
@@ -87,7 +87,7 @@ test.describe('Help Center', () => {
   test('should show contact support option', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     await expect(page.locator('text=/contact|support|email/i')).toBeVisible();
   });
@@ -95,7 +95,7 @@ test.describe('Help Center', () => {
   test('should show live chat option', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const chatBtn = page.locator('button:has-text("Chat"), button:has-text("Live Chat")').first();
     await expect(chatBtn).toBeVisible({ timeout: 3000 });
@@ -104,7 +104,7 @@ test.describe('Help Center', () => {
   test('should display keyboard shortcuts', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const shortcuts = page.locator('text=/shortcut|keyboard|ctrl/i').first();
     await expect(shortcuts).toBeVisible();
@@ -113,7 +113,7 @@ test.describe('Help Center', () => {
   test('should link to video tutorials', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const videoLink = page.locator('text=/video|tutorial|learn/i').first();
     await expect(videoLink).toBeVisible();
@@ -122,7 +122,7 @@ test.describe('Help Center', () => {
   test('should link to documentation', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const docLink = page.locator('text=/docs|documentation|guide/i').first();
     await expect(docLink).toBeVisible();
@@ -131,7 +131,7 @@ test.describe('Help Center', () => {
   test('should show system status', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const status = page.locator('text=/status|system|operational/i').first();
     await expect(status).toBeVisible({ timeout: 3000 });
@@ -140,7 +140,7 @@ test.describe('Help Center', () => {
   test('should submit support ticket', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const ticketBtn = page.locator('button:has-text("Submit"), button:has-text("Ticket")').first();
     if (await ticketBtn.isVisible()) {
@@ -152,7 +152,7 @@ test.describe('Help Center', () => {
   test('should show popular articles', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Help Center")').first().click()
+      page.locator('text="?"').first().click()
     ]);
     const popular = page.locator('text=/popular|trending|articles/i').first();
     await expect(popular).toBeVisible();
@@ -171,7 +171,7 @@ test.describe('AI Help Chat', () => {
   test('should display AI help chat', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     await expect(page.locator('text=/ai.*help|assistant|chat/i')).toBeVisible();
   });
@@ -179,7 +179,7 @@ test.describe('AI Help Chat', () => {
   test('should show chat input', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     await expect(page.locator('input[type="text"], textarea').last()).toBeVisible();
   });
@@ -187,7 +187,7 @@ test.describe('AI Help Chat', () => {
   test('should send message to AI', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (await input.isVisible()) {
@@ -199,7 +199,7 @@ test.describe('AI Help Chat', () => {
   test('should show AI response', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (await input.isVisible()) {
@@ -212,7 +212,7 @@ test.describe('AI Help Chat', () => {
   test('should show typing indicator', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (await input.isVisible()) {
@@ -225,7 +225,7 @@ test.describe('AI Help Chat', () => {
   test('should suggest follow-up questions', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const suggestion = page.locator('button:has-text("How"), button:has-text("What")').first();
     await expect(suggestion).toBeVisible({ timeout: 3000 });
@@ -234,7 +234,7 @@ test.describe('AI Help Chat', () => {
   test('should show help suggestions', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const suggestion = page.locator('text=/suggestion|recommended|try/i').first();
     await expect(suggestion).toBeVisible({ timeout: 3000 });
@@ -243,7 +243,7 @@ test.describe('AI Help Chat', () => {
   test('should clear chat history', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('button:has-text("Ask AI")').first().click()
+      page.locator('text="Ask AI"').first().click()
     ]);
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Reset")').first();
     if (await clearBtn.isVisible()) {
@@ -265,6 +265,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should start walkthrough', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     await expect(page.locator('text=/walkthrough|tour|guide/i')).toBeVisible();
@@ -273,6 +274,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should show step indicator', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const step = page.locator('text=/step \\d+ of \\d+/i').first();
@@ -282,6 +284,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should navigate to next step', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
@@ -293,6 +296,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should navigate to previous step', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const backBtn = page.locator('button:has-text("Back"), button:has-text("Previous")').first();
@@ -304,6 +308,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should skip walkthrough', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const skipBtn = page.locator('button:has-text("Skip"), button:has-text("Skip Tour")').first();
@@ -315,6 +320,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should highlight UI elements', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const highlight = page.locator('[class*="highlight"], [class*="spotlight"]').first();
@@ -324,6 +330,7 @@ test.describe('Interactive Walkthrough', () => {
   test('should complete walkthrough', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Done")').first();
@@ -346,6 +353,7 @@ test.describe('Video Tutorials', () => {
   test('should display video tutorials page', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     await expect(page.locator('text=/video|tutorial|learn/i')).toBeVisible();
@@ -354,6 +362,7 @@ test.describe('Video Tutorials', () => {
   test('should show video thumbnails', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const thumbnail = page.locator('[class*="thumbnail"], [class*="video"]').first();
@@ -363,6 +372,7 @@ test.describe('Video Tutorials', () => {
   test('should play video', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
@@ -375,6 +385,7 @@ test.describe('Video Tutorials', () => {
   test('should show video controls', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
@@ -387,6 +398,7 @@ test.describe('Video Tutorials', () => {
   test('should pause video', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
@@ -402,6 +414,7 @@ test.describe('Video Tutorials', () => {
   test('should categorize videos', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const categoryTab = page.locator('button:has-text("Beginner"), button:has-text("Advanced")').first();
@@ -414,6 +427,7 @@ test.describe('Video Tutorials', () => {
   test('should search videos', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
@@ -426,6 +440,7 @@ test.describe('Video Tutorials', () => {
   test('should show video duration', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const duration = page.locator('text=/\\d+:\\d+/').first();
@@ -435,6 +450,7 @@ test.describe('Video Tutorials', () => {
   test('should mark video as watched', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const videoItem = page.locator('[class*="video"]').first();
