@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use serde_json::json;
 use async_trait::async_trait;
 use std::sync::Arc;
+use opentelemetry::{global, KeyValue};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
@@ -47,6 +48,7 @@ impl SandboxManager {
 
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
+    #[tracing::instrument(skip(self), name = "wrap_command")]
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
         // Record wrapping metrics if pool available
         if let Some(pool) = &self.pool {
@@ -61,6 +63,14 @@ impl SandboxAdapter for SandboxManager {
         }
 
         if !self.evaluator.evaluate(cmd) {
+            // Emit OpenTelemetry counter for sandbox violations
+            let meter = global::meter("ohc.harness.telemetry");
+            let violation_counter = meter.u64_counter("ohc_sandbox_violation_total").build();
+            violation_counter.add(1, &[
+                KeyValue::new("violation_type", "blocked_command"),
+                KeyValue::new("harness_mode", "standalone"),
+            ]);
+
             // Record violation via ViolationStore
             let details = json!({ "command": cmd });
             let _ = self.violation_store.record_violation(

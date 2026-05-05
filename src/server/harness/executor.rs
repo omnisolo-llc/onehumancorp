@@ -16,6 +16,7 @@ impl LocalShellTask {
         self.manager.update_config(policy_json).await
     }
 
+    #[tracing::instrument(skip(self), name = "execute_task")]
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,

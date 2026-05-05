@@ -55,12 +55,6 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In standalone mode, do not sync telemetry to cloud
-    let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-    if is_standalone {
-        return Ok(());
-    }
-
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 

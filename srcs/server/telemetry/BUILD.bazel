@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "telemetry",
+    srcs = ["mcp_sync_worker.go", "sqlite_exporter.go", "registry.go"],
+    importpath = "onehumancorp/srcs/server/telemetry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "telemetry_test",
+    srcs = ["mcp_sync_worker_test.go", "sqlite_exporter_test.go"],
+    embed = [":telemetry"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
