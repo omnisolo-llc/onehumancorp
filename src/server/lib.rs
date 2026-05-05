@@ -1272,7 +1272,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
-            rate_limiter,
+            rate_limiter.clone(),
             crate::utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport);
@@ -1296,7 +1296,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
-    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), rate_limiter.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if NOT in standalone mode)

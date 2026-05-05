@@ -7,9 +7,12 @@ use chrono::Utc;
 use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
 use crate::utils::auth_utils::set_org_context;
+use std::sync::Arc;
+use crate::pricing::rate_limit::{RedisRateLimiter, PlanTier};
 
 pub struct MyGrowthService {
     pool: PgPool,
+    rate_limiter: Arc<RedisRateLimiter>,
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
@@ -18,9 +21,10 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: PgPool, rate_limiter: Arc<RedisRateLimiter>) -> Self {
         MyGrowthService {
             pool,
+            rate_limiter,
             experiments: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
@@ -473,28 +477,21 @@ impl GrowthService for MyGrowthService {
         request: Request<GetQuotaRequest>,
     ) -> Result<Response<QuotaMetrics>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
-        let req = request.into_inner();
+
+        let tier = self.rate_limiter.get_tenant_tier(&org_id).await.unwrap_or(PlanTier::Free);
+        let max_quota = tier.max_products().unwrap_or(0) as i32;
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut query = "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
-        if !req.user_id.is_empty() {
-            query.push_str(" AND user_id = $2");
-        }
-
-        let row = if req.user_id.is_empty() {
-            sqlx::query(&query).bind(&org_id).fetch_one(&mut *tx).await
-        } else {
-            sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
-        }.map_err(|e| Status::internal(e.to_string()))?;
+        let row = sqlx::query("SELECT count(*) FROM products WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_one(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        let used: i64 = row.try_get(0).unwrap_or(0);
 
-        let total_conversions: i64 = row.try_get(0).unwrap_or(0);
-        let max_quota = 50 + (total_conversions as i32) * 10;
-        
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
+        Ok(Response::new(QuotaMetrics { used: used as i32, max: max_quota }))
     }
 
     async fn get_waitlist(
@@ -538,7 +535,9 @@ mod tests {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match PgPool::connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let service = MyGrowthService::new(pool);
+        let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+        let rate_limiter = Arc::new(RedisRateLimiter::new(client));
+        let service = MyGrowthService::new(pool, rate_limiter);
 
         let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),
