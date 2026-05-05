@@ -48,6 +48,18 @@ pub async fn record_token_usage_forecast(pool: &PgPool, org_id: &str, forecast: 
     buffer_metric(pool, "ohc_token_usage_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
 }
 
+pub async fn record_token_burn_rate_predicted_24h(pool: &PgPool, tenant_id: &str, mode: &str, burn_rate: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_token_burn_rate_predicted_24h", "gauge", burn_rate, serde_json::json!({ "tenant_id": tenant_id, "deployment_mode": mode })).await
+}
+
+pub async fn record_token_budget_alert_total(pool: &PgPool, tenant_id: &str, mode: &str, alert_count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_token_budget_alert_total", "counter", alert_count, serde_json::json!({ "tenant_id": tenant_id, "deployment_mode": mode })).await
+}
+
+pub async fn record_mission_dead_letter_total(pool: &PgPool, tenant_id: &str, mode: &str, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_mission_dead_letter_total", "counter", count, serde_json::json!({ "tenant_id": tenant_id, "deployment_mode": mode })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

@@ -50,6 +50,84 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_record_token_burn_rate_predicted_24h() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_token_burn_rate_predicted_24h(&pool, "tenant_a", "cloud", 50.5).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 50.5);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["tenant_id"], "tenant_a");
+        assert_eq!(parsed["deployment_mode"], "cloud");
+    }
+
+    #[tokio::test]
+    async fn test_record_token_budget_alert_total() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_token_budget_alert_total(&pool, "tenant_b", "standalone", 1.0).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_budget_alert_total' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 1.0);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["tenant_id"], "tenant_b");
+        assert_eq!(parsed["deployment_mode"], "standalone");
+    }
+
+    #[tokio::test]
+    async fn test_record_mission_dead_letter_total() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_mission_dead_letter_total(&pool, "tenant_c", "cloud", 3.0).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_mission_dead_letter_total' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 3.0);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["tenant_id"], "tenant_c");
+        assert_eq!(parsed["deployment_mode"], "cloud");
+    }
+
+    #[tokio::test]
     async fn test_buffer_metric_persistence() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {

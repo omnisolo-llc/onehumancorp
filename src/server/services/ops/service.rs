@@ -175,7 +175,7 @@ impl OpsService for MyOpsService {
         
         let alert = BudgetAlert {
             id: format!("alert-{}", Utc::now().timestamp()),
-            organization_id: req.organization_id,
+            organization_id: req.organization_id.clone(),
             threshold_usd: req.threshold_usd,
             notify_at_pct: req.notify_at_pct,
             predictive: req.predictive,
@@ -184,8 +184,17 @@ impl OpsService for MyOpsService {
             created_at_unix: Utc::now().timestamp(),
         };
         
-        let mut alerts = self.budget_alerts.write().unwrap();
-        alerts.push(alert.clone());
+        {
+            let mut alerts = self.budget_alerts.write().unwrap();
+            alerts.push(alert.clone());
+        }
+
+        let deployment_mode = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            "standalone"
+        } else {
+            "cloud"
+        };
+        let _ = crate::telemetry::record_token_budget_alert_total(&self.hub.pool, &req.organization_id, deployment_mode, 1.0).await;
         
         Ok(Response::new(alert))
     }

@@ -484,16 +484,16 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                let row: Option<(String, String)> = sqlx::query_as(
+                    "SELECT status, organization_id FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, organization_id) = match row {
+                    Some(r) => r,
                     None => return Err("Task not found".to_string())
                 };
 
@@ -527,21 +527,29 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                let deployment_mode = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+                    "standalone"
+                } else {
+                    "cloud"
+                };
+                let _ = crate::telemetry::record_mission_dead_letter_total(&self.db.pool, &organization_id, deployment_mode, 1.0).await;
+
                 Ok(())
             },
             DbStore::Sqlite(pool) => {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                let row: Option<(String, String)> = sqlx::query_as(
+                    "SELECT status, organization_id FROM shared_tasks_decomposition WHERE id = ?"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, organization_id) = match row {
+                    Some(r) => r,
                     None => return Err("Task not found".to_string())
                 };
 
@@ -575,6 +583,14 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                let deployment_mode = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+                    "standalone"
+                } else {
+                    "cloud"
+                };
+                let _ = crate::telemetry::record_mission_dead_letter_total(&self.db.pool, &organization_id, deployment_mode, 1.0).await;
+
                 Ok(())
             }
         }

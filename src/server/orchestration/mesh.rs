@@ -20,6 +20,7 @@ pub struct CentrifugeNode {
     transport: Arc<dyn MeshTransport>,
     publish_counter: Counter<u64>,
     receive_counter: Counter<u64>,
+    lock_contention_counter: Counter<u64>,
 }
 
 impl CentrifugeNode {
@@ -27,7 +28,8 @@ impl CentrifugeNode {
         let meter = global::meter("ohc.orchestration.mesh");
         let publish_counter = meter.u64_counter("mesh.messages.published").build();
         let receive_counter = meter.u64_counter("mesh.messages.received").build();
-        Self { transport, publish_counter, receive_counter }
+        let lock_contention_counter = meter.u64_counter("ohc_redis_lock_contention_total").build();
+        Self { transport, publish_counter, receive_counter, lock_contention_counter }
     }
 }
 
@@ -57,7 +59,19 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+        let result = self.transport.acquire_lock(resource, owner, ttl_seconds).await;
+        match &result {
+            Ok(false) | Err(_) => {
+                let tenant_id = if resource.contains(":") {
+                    resource.split(':').next().unwrap_or("unknown")
+                } else {
+                    "unknown"
+                };
+                self.lock_contention_counter.add(1, &[KeyValue::new("tenant_id", tenant_id.to_string()), KeyValue::new("operation", "acquire_lock")]);
+            }
+            _ => {}
+        }
+        result
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {

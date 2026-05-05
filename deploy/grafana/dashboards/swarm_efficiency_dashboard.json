@@ -1,0 +1,163 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 8,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style> * { font-family: 'Outfit', 'Inter', sans-serif; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 12px; } </style>"
+      },
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "sum(ohc_token_burn_rate_predicted_24h) by (tenant_id, deployment_mode)",
+          "legendFormat": "{{tenant_id}} - {{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Token Burn Rate per Tenant (Cloud vs Standalone)",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "sum(rate(ohc_redis_lock_contention_total[5m])) by (tenant_id, deployment_mode)",
+          "legendFormat": "{{tenant_id}} - {{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Redis Lock Contention Rate",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "sum(rate(ohc_mission_dead_letter_total[5m])) by (tenant_id, deployment_mode)",
+          "legendFormat": "{{tenant_id}} - {{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Dead Letter Queue Transitions",
+      "type": "timeseries",
+      "transparent": true
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "OHC Swarm Efficiency",
+  "uid": "swarm-efficiency",
+  "version": 1
+}
