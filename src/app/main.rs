@@ -1003,12 +1003,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let business_manager_ui = app::BusinessManager::new().unwrap();
+    let business_manager_handle = business_manager_ui.as_weak();
+    Box::leak(Box::new(business_manager_ui));
+
     let em_handle_for_gb = email_marketing_handle.clone();
+    let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+    let business_manager_handle_for_gb = business_manager_handle.clone();
     grow_business_ui.on_execute({
         move |strategy, _kpi| {
             if strategy == "Run your first email campaign" {
                 if let Some(ui) = em_handle_for_gb.upgrade() {
                     let _ = ui.show();
+                }
+            } else if strategy == "Connect Instagram" {
+                if let Some(dash) = dashboard_handle_for_gb.upgrade() {
+                    let mut current_tasks = Vec::new();
+                    let current = dash.get_pending_approvals();
+                    for i in 0..current.row_count() {
+                        if let Some(item) = current.row_data(i) {
+                            current_tasks.push(item);
+                        }
+                    }
+                    current_tasks.push(app::UiPendingApproval {
+                        task_id: "ig-post-1".into(),
+                        title: "Drafted Instagram Post".into(),
+                        proposed_content: "Check out our new products! 🚀 #newarrival".into(),
+                    });
+                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                }
+            } else if strategy == "Add 5 more products" {
+                if let Some(bm) = business_manager_handle_for_gb.upgrade() {
+                    let _ = bm.show();
                 }
             }
         }
@@ -4129,7 +4155,13 @@ mod docs_tests {
         ui.invoke_return_to_dashboard();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_strategy(), "");
+
+        ui.invoke_return_to_dashboard();
+        assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_selected_strategy(), "");
     }
+
+
 
     #[test]
     fn test_e2e_agent_hire_flow() {

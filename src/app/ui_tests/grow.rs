@@ -163,3 +163,24 @@ fn grow_business_test_callbacks() {
     ui.invoke_return_to_dashboard();
     assert!(*return_to_dashboard_called.borrow());
 }
+
+#[test]
+fn grow_business_test_social_media_connect_instagram() {
+    let ui = create();
+    ui.set_selected_strategy("Connect Instagram".into());
+    assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+}
+
+#[test]
+fn grow_business_test_social_media_run_email_campaign() {
+    let ui = create();
+    ui.set_selected_strategy("Run your first email campaign".into());
+    assert_eq!(ui.get_selected_strategy(), "Run your first email campaign");
+}
+
+#[test]
+fn grow_business_test_social_media_add_products() {
+    let ui = create();
+    ui.set_selected_strategy("Add 5 more products".into());
+    assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
+}
