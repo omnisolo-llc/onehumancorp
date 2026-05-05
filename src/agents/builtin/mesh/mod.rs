@@ -302,4 +302,35 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst), "Should receive state handoff message");
     }
+
+    #[tokio::test]
+    async fn test_mesh_publish_with_ack() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+
+        let transport_clone = transport.clone();
+        tokio::spawn(async move {
+            let _ = transport_clone.subscribe("test_ack_topic", Box::new({
+                let t = transport_clone.clone();
+                move |msg: crate::mesh::transport::Message| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let t_clone = t.clone();
+                    tokio::spawn(async move {
+                        let _ = t_clone.publish(&ack_topic, crate::mesh::transport::Message {
+                            agent_id: "test".to_string(),
+                            action: ack_topic.clone(),
+                            status: "ok".to_string(),
+                            payload: b"ack".to_vec(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        }).await;
+                    });
+                }
+            })).await;
+        });
+
+        sleep(Duration::from_millis(50)).await;
+        let result = mesh.publish_with_ack("test_ack_topic", b"payload".to_vec()).await;
+        assert!(result.is_ok());
+    }
 }
