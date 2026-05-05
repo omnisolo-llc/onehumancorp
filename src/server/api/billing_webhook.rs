@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 use serde_json::Value;
 
@@ -64,7 +64,7 @@ pub async fn stripe_webhook_handler(
 
 
                 // Update Redis Rate Limiter
-                if let Err(e) = state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
+                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -95,7 +95,7 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
-                if let Err(e) = res {
+                if let Err(_e) = res {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -114,7 +114,7 @@ pub async fn stripe_webhook_handler(
             if let Some(tenant_id) = tenant_id_opt {
 
                 // Update Redis
-                if let Err(e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
+                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -138,7 +138,7 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
-                if let Err(e) = res {
+                if let Err(_e) = res {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 

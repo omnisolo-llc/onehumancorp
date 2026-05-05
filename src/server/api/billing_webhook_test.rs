@@ -1,6 +1,4 @@
 use axum::{
-    body::Body,
-    http::{Request, StatusCode},
     routing::post,
     Router,
 };
@@ -33,6 +31,12 @@ async fn test_stripe_webhook_handler_completed() {
         db: std::sync::Arc::new(db.clone()),
     };
 
+    // Seed the database with a test tenant
+    sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Starter') ON CONFLICT DO NOTHING")
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
         .with_state(webhook_state);
@@ -49,13 +53,6 @@ async fn test_stripe_webhook_handler_completed() {
             }
         }
     });
-
-    let req = Request::builder()
-        .method("POST")
-        .uri("/api/v1/webhooks/stripe")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&payload).unwrap()))
-        .unwrap();
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -75,11 +72,9 @@ async fn test_stripe_webhook_handler_completed() {
     let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
         .fetch_one(&db.pool)
         .await
-        .unwrap_or(("".to_string(),));
+        .expect("tenant row not found");
 
-    // Wait, the DB test memory db might not have the table created or the row seeded.
-    // The webhook handler updates with `UPDATE tenants SET tier = ...` which does not insert.
-    // We expect OK but maybe row is not there in SQLite in-memory without insert.
+    assert_eq!(row.0, "Pro");
 }
 
 #[tokio::test]
@@ -105,6 +100,12 @@ async fn test_stripe_webhook_handler_deleted() {
         db: std::sync::Arc::new(db.clone()),
     };
 
+    // Seed the database with a test tenant
+    sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Pro') ON CONFLICT DO NOTHING")
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
         .with_state(webhook_state);
@@ -121,13 +122,6 @@ async fn test_stripe_webhook_handler_deleted() {
         }
     });
 
-    let req = Request::builder()
-        .method("POST")
-        .uri("/api/v1/webhooks/stripe")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&payload).unwrap()))
-        .unwrap();
-
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
@@ -141,4 +135,12 @@ async fn test_stripe_webhook_handler_deleted() {
     // Verify Redis Tier
     let current_tier = rate_limiter.get_tenant_tier("test_tenant").await.unwrap();
     assert_eq!(current_tier, PlanTier::Free);
+
+    // Verify Database Tier
+    let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("tenant row not found");
+
+    assert_eq!(row.0, "Free");
 }
