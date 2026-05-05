@@ -51,10 +51,10 @@ fn test_ui_setup_wizard_hero_flow_simulation() {
 
     let ui = app::SetupWizard::new().unwrap();
 
-    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let save_called_clone = save_called.clone();
     ui.on_save_state(move || {
-        *save_called_clone.borrow_mut() = true;
+        *save_called_clone.lock().unwrap() = true;
     });
 
     assert_eq!(ui.get_step(), 0);
@@ -75,7 +75,7 @@ fn test_ui_setup_wizard_hero_flow_simulation() {
     ui.invoke_select_payment_pref("online".into());
     assert_eq!(ui.get_step(), 5);
 
-    assert!(*save_called.borrow(), "Save state callback should be triggered when simulating steps.");
+    assert!(*save_called.lock().unwrap(), "Save state callback should be triggered when simulating steps.");
 }
 
 #[test]
@@ -99,14 +99,14 @@ fn test_ui_setup_wizard_checklist_navigation() {
     let ui = app::SetupWizard::new().unwrap();
     ui.set_step(10);
 
-    let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let add_products_clicked = std::sync::Arc::new(std::sync::Mutex::new(false));
     let add_products_clone = add_products_clicked.clone();
     ui.on_go_to_add_products(move || {
-        *add_products_clone.borrow_mut() = true;
+        *add_products_clone.lock().unwrap() = true;
     });
 
     ui.invoke_go_to_add_products();
-    assert!(*add_products_clicked.borrow(), "Add products callback should be triggered on SetupWizard Checklist");
+    assert!(*add_products_clicked.lock().unwrap(), "Add products callback should be triggered on SetupWizard Checklist");
 }
 
 #[test]
