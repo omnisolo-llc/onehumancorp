@@ -7,12 +7,14 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
-    let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .expect("Failed to initialize database");
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
 
     match &db.store {
         DbStore::Postgres => {
@@ -158,12 +160,14 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
-    let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .expect("Failed to initialize database");
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(
@@ -217,6 +221,18 @@ async fn test_task_decomposition_dag_blocked() {
                     action_risk TEXT,
                     approval_status TEXT,
                     proposed_content TEXT
+                );
+                "#
+            ).execute(sqlite_pool).await.unwrap();
+            sqlx::query(
+                r#"
+                CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                    id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
@@ -286,12 +302,14 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
-    unsafe {
-        std::env::set_var("DATABASE_URL", "sqlite::memory:");
-        std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-    }
-    let db_builder = DB::new().await;
-    let db = match db_builder { Ok(db) => db, Err(_) => return, };
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .expect("Failed to initialize database");
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(

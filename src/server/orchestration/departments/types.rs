@@ -64,6 +64,7 @@ pub struct ApprovalRequest {
     pub department: DepartmentType,
     pub description: String,
     pub status: ApprovalStatus,
+    pub action_risk: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

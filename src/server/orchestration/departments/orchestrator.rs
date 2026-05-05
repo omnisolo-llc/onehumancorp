@@ -2,8 +2,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use uuid::Uuid;
+use chrono::Utc;
+use std::str::FromStr;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
+use crate::db::DbStore;
 
 #[async_trait::async_trait]
 pub trait Department: Send + Sync {
@@ -63,6 +66,7 @@ impl Department for DummyDepartment {
             department: self.dep_type,
             description,
             status: ApprovalStatus::Pending,
+            action_risk: "HIGH".to_string(),
         };
         self.orchestrator.add_approval_request(req.clone()).await;
         Ok(req)
@@ -78,17 +82,17 @@ impl Department for DummyDepartment {
 }
 
 pub struct DepartmentOrchestrator {
+    db: Arc<crate::db::DB>,
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
-    approvals: RwLock<Vec<ApprovalRequest>>,
 }
 
 impl DepartmentOrchestrator {
-    pub fn new() -> Self {
+    pub fn new(db: Arc<crate::db::DB>) -> Self {
         Self {
+            db,
             departments: RwLock::new(HashMap::new()),
             event_subscriptions: RwLock::new(HashMap::new()),
-            approvals: RwLock::new(Vec::new()),
         }
     }
 
@@ -119,32 +123,153 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
-        self.approvals.write().await.push(req);
+        let now = Utc::now();
+        let status_str = match req.status {
+            ApprovalStatus::Pending => "PENDING",
+            ApprovalStatus::Approved => "APPROVED",
+            ApprovalStatus::Rejected => "REJECTED",
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query(
+                    "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                )
+                .bind(&req.id)
+                .bind(&req.tenant_id)
+                .bind(req.department.to_string())
+                .bind(&req.description)
+                .bind(status_str)
+                .bind(&req.action_risk)
+                .bind(now)
+                .bind(now)
+                .execute(&self.db.pool)
+                .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query(
+                    "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&req.id)
+                .bind(&req.tenant_id)
+                .bind(req.department.to_string())
+                .bind(&req.description)
+                .bind(status_str)
+                .bind(&req.action_risk)
+                .bind(now)
+                .bind(now)
+                .execute(pool)
+                .await;
+            }
+        }
     }
 
     pub async fn get_pending_approvals(&self, tenant_id: &str) -> Vec<ApprovalRequest> {
-        self.approvals.read().await.iter()
-            .filter(|r| r.tenant_id == tenant_id && r.status == ApprovalStatus::Pending)
-            .cloned()
-            .collect()
+        let mut results = Vec::new();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let fetch_res = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING'")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await;
+                if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let status = match status_str.as_str() {
+                            "PENDING" => ApprovalStatus::Pending,
+                            "APPROVED" => ApprovalStatus::Approved,
+                            "REJECTED" => ApprovalStatus::Rejected,
+                            _ => ApprovalStatus::Pending,
+                        };
+                        results.push(ApprovalRequest {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            department,
+                            description: row.get("description"),
+                            status,
+                            action_risk: row.get("action_risk"),
+                        });
+                    }
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                let fetch_res = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING'")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await;
+                if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let status = match status_str.as_str() {
+                            "PENDING" => ApprovalStatus::Pending,
+                            "APPROVED" => ApprovalStatus::Approved,
+                            "REJECTED" => ApprovalStatus::Rejected,
+                            _ => ApprovalStatus::Pending,
+                        };
+                        results.push(ApprovalRequest {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            department,
+                            description: row.get("description"),
+                            status,
+                            action_risk: row.get("action_risk"),
+                        });
+                    }
+                }
+            }
+        };
+
+        results
     }
 
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
-        let mut approvals = self.approvals.write().await;
-        if let Some(req) = approvals.iter_mut().find(|r| r.id == request_id) {
-            if req.tenant_id != tenant_id {
-                return Err("Unauthorized".to_string());
+        let new_status = if approved { "APPROVED" } else { "REJECTED" };
+        let now = Utc::now();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let update_res = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+                    .bind(new_status)
+                    .bind(now)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(&self.db.pool)
+                    .await;
+                match update_res {
+                    Ok(result) => {
+                        if result.rows_affected() > 0 { Ok(()) } else { Err("Unauthorized".to_string()) }
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
             }
-            req.status = if approved { ApprovalStatus::Approved } else { ApprovalStatus::Rejected };
-            Ok(())
-        } else {
-            Err("Approval request not found".to_string())
+            DbStore::Sqlite(pool) => {
+                let update_res = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(new_status)
+                    .bind(now)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await;
+                match update_res {
+                    Ok(result) => {
+                        if result.rows_affected() > 0 { Ok(()) } else { Err("Unauthorized".to_string()) }
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
+            }
         }
     }
 }
 
-pub async fn setup_dummy_orchestrator() -> Arc<DepartmentOrchestrator> {
-    let orchestrator = Arc::new(DepartmentOrchestrator::new());
+pub async fn setup_dummy_orchestrator(db: Arc<crate::db::DB>) -> Arc<DepartmentOrchestrator> {
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
 
     let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
         DepartmentType::Operations,
@@ -204,7 +329,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_routing() {
-        let orchestrator = Arc::new(DepartmentOrchestrator::new());
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    action_risk TEXT NOT NULL DEFAULT 'HIGH',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
 
         let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
             DepartmentType::Operations,
@@ -252,7 +403,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_approval_workflow_tenant_isolation() {
-        let orchestrator = setup_dummy_orchestrator().await;
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    action_risk TEXT NOT NULL DEFAULT 'HIGH',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let orchestrator = setup_dummy_orchestrator(db).await;
 
         let req = ApprovalRequest {
             id: "req1".to_string(),
@@ -260,6 +437,7 @@ mod tests {
             department: DepartmentType::CustomerSuccess,
             description: "Reply to angry customer".to_string(),
             status: ApprovalStatus::Pending,
+            action_risk: "HIGH".to_string(),
         };
 
         orchestrator.add_approval_request(req).await;
