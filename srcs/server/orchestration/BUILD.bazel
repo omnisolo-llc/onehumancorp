@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["autodream.go"],
+    importpath = "github.com/onehumancorp/ohc/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["autodream_test.go"],
+    embed = [":orchestration"],
+)
