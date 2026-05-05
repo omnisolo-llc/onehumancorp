@@ -48,6 +48,10 @@ pub struct Hub {
 }
 
 impl Hub {
+    pub fn tracker(&self) -> &Tracker {
+        &self.tracker
+    }
+
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);

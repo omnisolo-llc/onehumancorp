@@ -90,6 +90,22 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
+    pub async fn get_tenant_monthly_action_count(&self, tenant_id: &str) -> Result<u32, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+        let count: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+        Ok(count.unwrap_or(0))
+    }
+
+    pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+        let bytes: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+        Ok(bytes.unwrap_or(0))
+    }
+
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let tier = self.get_tenant_tier(tenant_id).await?;

@@ -171,26 +171,31 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
-        let _tenant_id = request.metadata().get("x-tenant-id")
+        let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
 
-        // Use the actual database connection to track metrics where possible
-        // Let's store cost tracking data in the Hub Redis connection
-        // For MyPlan we query PostgreSQL using the hub's db handle if it existed in the prompt
-        // We will do a generic calculation logic for tokens for cost transparency.
-        let _pool = &self.hub.pool;
-        let plan_name = "Starter".to_string();
-        let ai_used = 42;
-        let ai_limit = 1000;
-        let storage_limit = 5368709120; // 5GB
+        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
+
+        let plan_name = match tier {
+            crate::pricing::rate_limit::PlanTier::Free => "Free",
+            crate::pricing::rate_limit::PlanTier::Starter => "Starter",
+            crate::pricing::rate_limit::PlanTier::Pro => "Pro",
+            crate::pricing::rate_limit::PlanTier::Business => "Business",
+        }.to_string();
+
+        let ai_used = self.hub.tracker().get_tenant_monthly_action_count(tenant_id).await.unwrap_or(0) as i32;
+        let ai_limit = tier.monthly_action_limit().map(|v| v as i32).unwrap_or(-1);
+
+        let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let storage_limit_bytes = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024).unwrap_or(-1);
 
         Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used,
             ai_actions_limit: ai_limit,
-            storage_used_bytes: 1024 * 1024 * 100, // Still mock storage
-            storage_limit_bytes: storage_limit,
+            storage_used_bytes,
+            storage_limit_bytes,
             next_bill_estimated: 0,
         }))
     }

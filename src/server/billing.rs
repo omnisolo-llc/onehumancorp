@@ -96,6 +96,30 @@ impl Tracker {
         }
     }
 
+    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<crate::pricing::rate_limit::PlanTier, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.get_tenant_tier(tenant_id).await
+        } else {
+            Ok(crate::pricing::rate_limit::PlanTier::Free)
+        }
+    }
+
+    pub async fn get_tenant_monthly_action_count(&self, tenant_id: &str) -> Result<u32, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.get_tenant_monthly_action_count(tenant_id).await
+        } else {
+            Ok(0)
+        }
+    }
+
+    pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.get_tenant_storage_used(tenant_id).await
+        } else {
+            Ok(0)
+        }
+    }
+
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await
