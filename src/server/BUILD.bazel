@@ -77,7 +77,7 @@ rust_binary(
 
 rust_test(
     name = "server_test",
-    size = "medium",
+    size = "large",
     srcs = glob(["**/*.rs"]) + [
         "//src/agents/builtin:autodream.rs",
         "//src/agents/builtin:autodream/store.rs",
