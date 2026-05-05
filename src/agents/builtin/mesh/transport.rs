@@ -133,6 +133,7 @@ pub struct IpcTransport {
 impl IpcTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+        use uuid::Uuid;
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
@@ -184,7 +185,7 @@ impl IpcTransport {
 
         let subs = DashMap::new();
 
-        let subscriber_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| "standalone_default".to_string());
+        let subscriber_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| Uuid::new_v4().to_string());
 
         Ok(IpcTransport { pool, subs, subscriber_id })
     }
