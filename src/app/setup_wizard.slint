@@ -199,7 +199,7 @@ export component SetupWizard inherits Window {
                             Text { text: "🛒"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Online Store"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Online Store"); } }
+                        TouchArea { clicked => { select_business_type("Online Store"); save_state(); } }
                     }
                     GlassCard {
                         height: 100px;
@@ -207,7 +207,7 @@ export component SetupWizard inherits Window {
                             Text { text: "🔧"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Service Business"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Service Business"); } }
+                        TouchArea { clicked => { select_business_type("Service Business"); save_state(); } }
                     }
                 }
                 HorizontalBox {
@@ -219,7 +219,7 @@ export component SetupWizard inherits Window {
                             Text { text: "🍔"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Food & Drink"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Restaurant / Food"); } }
+                        TouchArea { clicked => { select_business_type("Restaurant / Food"); save_state(); } }
                     }
                     GlassCard {
                         height: 100px;
@@ -227,7 +227,7 @@ export component SetupWizard inherits Window {
                             Text { text: "🎨"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Creative"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Creative / Portfolio"); } }
+                        TouchArea { clicked => { select_business_type("Creative / Portfolio"); save_state(); } }
                     }
                 }
                 HorizontalBox {
@@ -239,7 +239,7 @@ export component SetupWizard inherits Window {
                             Text { text: "🏪"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Local Shop"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Local Business"); } }
+                        TouchArea { clicked => { select_business_type("Local Business"); save_state(); } }
                     }
                     GlassCard {
                         height: 100px;
@@ -247,7 +247,7 @@ export component SetupWizard inherits Window {
                             Text { text: "✨"; font-size: 32px; horizontal-alignment: center; }
                             Text { text: "Other"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
                         }
-                        TouchArea { clicked => { select_business_type("Other"); } }
+                        TouchArea { clicked => { select_business_type("Other"); save_state(); } }
                     }
                 }
             }
@@ -331,7 +331,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_payment_pref("online"); } }
+                    TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -340,7 +340,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Tap to pay on phone (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_payment_pref("inperson"); } }
+                    TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -349,7 +349,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Online & In-person"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_payment_pref("both"); } }
+                    TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
                 }
                 GlassCard {
                     height: 70px;
@@ -358,7 +358,7 @@ export component SetupWizard inherits Window {
                         Text { text: "⏭️ Receive money later"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Skip Stripe connection for now"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_payment_pref("skip"); } }
+                    TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
             }
 
@@ -431,7 +431,7 @@ export component SetupWizard inherits Window {
                         Text { text: "✨ Modern"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Clean, minimal design perfect for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_template("Modern"); } }
+                    TouchArea { clicked => { select_template("Modern"); save_state(); } }
                 }
                 GlassCard {
                     height: 80px;
@@ -440,7 +440,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Traditional, elegant layout for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_template("Classic"); } }
+                    TouchArea { clicked => { select_template("Classic"); save_state(); } }
                 }
                 GlassCard {
                     height: 80px;
@@ -449,7 +449,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Vibrant, high-contrast style for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_template("Bold"); } }
+                    TouchArea { clicked => { select_template("Bold"); save_state(); } }
                 }
             }
 
@@ -547,7 +547,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_domain("subdomain"); } }
+                    TouchArea { clicked => { select_domain("subdomain"); save_state(); } }
                 }
                 GlassCard {
                     height: 80px;
@@ -556,7 +556,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🌍 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_domain("custom"); } }
+                    TouchArea { clicked => { select_domain("custom"); save_state(); } }
                 }
             }
 
@@ -693,12 +693,12 @@ export component SetupWizard inherits Window {
             if (step > 0 && !launching && step < 10) : GlassCard {
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; } }
+                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; save_state(); } }
             }
             if (step == 11 && !launching) : GlassCard {
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { is_instant_build = false; step = 0; } }
+                TouchArea { clicked => { is_instant_build = false; step = 0; save_state(); } }
             }
             if (step == 0 || step == 10) : Rectangle { width: 80px; } // spacer
 

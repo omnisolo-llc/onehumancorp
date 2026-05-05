@@ -530,6 +530,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
             ]);
 
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
@@ -569,6 +570,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
@@ -659,6 +661,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
@@ -762,6 +765,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
@@ -871,6 +875,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
@@ -929,6 +934,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = std::collections::HashMap::from([
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
