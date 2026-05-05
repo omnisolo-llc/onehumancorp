@@ -5,61 +5,17 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use sqlx::Row;
 use chrono::Utc;
-use redis::AsyncCommands;
-
-struct RedisLockGuard {
-    client: Option<redis::Client>,
-    key: String,
-}
-
-impl RedisLockGuard {
-    async fn acquire(client: Option<&redis::Client>, key: String) -> Result<Self, String> {
-        if let Some(c) = client {
-            let mut conn = c.get_multiplexed_async_connection().await.map_err(|e| format!("Failed to connect to Redis: {}", e))?;
-            let acquired: redis::RedisResult<Option<String>> = redis::cmd("SET")
-                .arg(&key)
-                .arg("locked")
-                .arg("NX")
-                .arg("EX")
-                .arg(30)
-                .query_async(&mut conn)
-                .await;
-
-            match acquired {
-                Ok(Some(resp)) if resp == "OK" => {
-                    Ok(Self { client: Some(c.clone()), key })
-                }
-                _ => {
-                    Err(format!("Task {} is currently locked via Redis", key))
-                }
-            }
-        } else {
-            Ok(Self { client: None, key })
-        }
-    }
-}
-
-impl Drop for RedisLockGuard {
-    fn drop(&mut self) {
-        if let Some(client) = self.client.take() {
-            let key = self.key.clone();
-            tokio::spawn(async move {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: redis::RedisResult<()> = conn.del(&key).await;
-                }
-            });
-        }
-    }
-}
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+use super::MeshLockGuard;
 
 pub struct CloudStateManager {
     db: Arc<DB>,
-    redis_client: Option<redis::Client>,
+    transport: Arc<dyn MeshTransport>,
 }
 
 impl CloudStateManager {
-    pub fn new(db: Arc<DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new(db: Arc<DB>, transport: Arc<dyn MeshTransport>) -> Self {
+        Self { db, transport }
     }
 
     async fn transition_state_inner(
@@ -70,7 +26,7 @@ impl CloudStateManager {
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
-        _lock_guard: &RedisLockGuard,
+        _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -178,7 +134,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     ) -> Result<(), String> {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let lock_guard = RedisLockGuard::acquire(self.redis_client.as_ref(), lock_key).await?;
+        let owner = agent_id.unwrap_or("system").to_string();
+        let lock_guard = MeshLockGuard::acquire(self.transport.clone(), lock_key, owner, 30).await?;
 
         // Will drop automatically when block exits
         self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
