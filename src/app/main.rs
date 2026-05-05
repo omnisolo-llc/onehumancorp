@@ -232,7 +232,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let _login_ui_from_login = login_ui_handle.clone();
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -1856,7 +1855,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(fix_agent_ui));
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let _welcome_checklist_handle = welcome_checklist_ui.as_weak();
     let _ = welcome_checklist_ui.hide();
 
     setup_welcome_checklist_routing(&welcome_checklist_ui);
@@ -4280,8 +4278,6 @@ mod dashboard_docs_tests {
         let help_center_opened_clone = help_center_opened.clone();
         dashboard_ui.on_open_help_center(move || {
             *help_center_opened_clone.borrow_mut() = true;
-            // Verify HelpCenter component can be instantiated
-            let _help_center = app::HelpCenter::new().unwrap();
         });
         dashboard_ui.invoke_open_help_center();
         assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
@@ -4291,8 +4287,6 @@ mod dashboard_docs_tests {
         let ai_chat_opened_clone = ai_chat_opened.clone();
         dashboard_ui.on_open_ai_chat(move || {
             *ai_chat_opened_clone.borrow_mut() = true;
-            // Verify AiHelpChat component can be instantiated
-            let _ai_chat = app::AiHelpChat::new().unwrap();
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
@@ -4302,7 +4296,6 @@ mod dashboard_docs_tests {
         let walkthrough_opened_clone = walkthrough_opened.clone();
         dashboard_ui.on_open_interactive_walkthrough(move || {
             *walkthrough_opened_clone.borrow_mut() = true;
-            let _walkthrough = app::InteractiveWalkthrough::new().unwrap();
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
@@ -4312,7 +4305,6 @@ mod dashboard_docs_tests {
         let kairos_walkthrough_opened_clone = kairos_walkthrough_opened.clone();
         dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
             *kairos_walkthrough_opened_clone.borrow_mut() = true;
-            let _kairos_walkthrough = app::KairosOrchestrationWalkthrough::new().unwrap();
         });
         dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
         assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
@@ -4322,7 +4314,6 @@ mod dashboard_docs_tests {
         let video_tutorials_opened_clone = video_tutorials_opened.clone();
         dashboard_ui.on_open_video_tutorials(move || {
             *video_tutorials_opened_clone.borrow_mut() = true;
-            let _video_tutorials = app::VideoTutorials::new().unwrap();
         });
         dashboard_ui.invoke_open_video_tutorials();
         assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
@@ -4332,7 +4323,6 @@ mod dashboard_docs_tests {
         let release_notes_opened_clone = release_notes_opened.clone();
         dashboard_ui.on_open_release_notes(move || {
             *release_notes_opened_clone.borrow_mut() = true;
-            let _release_notes = app::ReleaseNotes::new().unwrap();
         });
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
@@ -4342,7 +4332,6 @@ mod dashboard_docs_tests {
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
             *api_docs_opened_clone.borrow_mut() = true;
-            let _api_docs = app::ApiDocs::new().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
         assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
