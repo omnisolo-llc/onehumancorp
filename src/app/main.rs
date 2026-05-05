@@ -102,16 +102,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
-                    agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
+                    helper: Some(Helper {
+                        id: "helper_1".into(),
+                        name: "Rust Helper".into(),
                         role: "Worker".into(),
                         organization_id: "org_1".into(),
                         status: "Running".into(),
                         provider_type: "Standard".into(),
                     }),
                 });
-                match client.register_agent(request).await {
+                match client.register_helper(request).await {
                     Ok(response) => println!("RESPONSE={:?}", response),
                     Err(e) => println!("ERR={:?}", e),
                 }
@@ -374,30 +374,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agent_config_ui = app::AgentConfig::new()?;
-    agent_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let agent_config_handle = agent_config_ui.as_weak();
-    let ac_ui_weak = agent_config_handle.clone();
+    let helper_config_ui = app::AgentConfig::new()?;
+    helper_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let helper_config_handle = helper_config_ui.as_weak();
+    let ac_ui_weak = helper_config_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = ac_ui_weak.upgrade() {
             ui.set_is_advanced(val);
         }
     }));
-    let init_agent_config_handle = agent_config_handle.clone();
+    let init_helper_config_handle = helper_config_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_helper_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
         }
     });
-    agent_config_ui.on_save_state({
-        let ui_handle = agent_config_handle.clone();
+    helper_config_ui.on_save_state({
+        let ui_handle = helper_config_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
@@ -412,9 +412,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
-    agent_config_ui.on_activate_agent({
-        let ui_handle = agent_config_handle.clone();
-        move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+    helper_config_ui.on_activate_helper({
+        let ui_handle = helper_config_handle.clone();
+        move |helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
@@ -435,7 +435,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         };
 
                         let mut req = tonic::Request::new(ohc::orchestration::AgentConfig {
-                            role: agent.to_string(),
+                            role: helper.to_string(),
                             provider: "default".to_string(),
                             capabilities,
                             work_hours,
@@ -626,7 +626,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let prompt = format!("Write a short, engaging one-sentence product description for {}.", name);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
-                            from_agent_id: "website_builder".into(),
+                            from_helper_id: "website_builder".into(),
                         });
                         if let Ok(resp) = client.reason(request).await {
                             let desc = resp.into_inner().content;
@@ -772,7 +772,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agent_config_ui));
+    Box::leak(Box::new(helper_config_ui));
     Box::leak(Box::new(prompt_tuning_ui));
     Box::leak(Box::new(website_builder_ui));
     Box::leak(Box::new(grow_business_ui));
@@ -1010,7 +1010,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_handle_fetch = cost_dashboard_ui.as_weak();
     tokio::spawn(async move {
-        if let Ok(mut client) = ohc::orchestration::agent_manager_service_client::AgentManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        if let Ok(mut client) = ohc::orchestration::helper_manager_service_client::HelperManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
             if let Ok(resp) = client.get_dashboard_snapshot(req).await {
                 let snapshot = resp.into_inner();
@@ -1025,7 +1025,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     name: ac.name.into(),
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
-                                    efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    efficiency: format!("{:.1} AI/$", ac.efficiency).into(),
                                     pct: ac.pct,
                                 }
                             }).collect();
@@ -1419,30 +1419,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
-    let fix_agent_ui = app::FixAgent::new()?;
+    let helpers_ui = app::Agents::new()?;
+    let helper_hire_ui = app::AgentHire::new()?;
+    let fix_helper_ui = app::FixAgent::new()?;
 
-    let agents_ui_handle = agents_ui.as_weak();
-    let agent_hire_handle = agent_hire_ui.as_weak();
+    let helpers_ui_handle = helpers_ui.as_weak();
+    let helper_hire_handle = helper_hire_ui.as_weak();
 
-    agents_ui.on_hire_agent(move || {
-        let agents_ui_handle_inner = agents_ui_handle.clone();
-        let agent_hire_handle_inner = agent_hire_handle.clone();
+    helpers_ui.on_hire_helper(move || {
+        let helpers_ui_handle_inner = helpers_ui_handle.clone();
+        let helper_hire_handle_inner = helper_hire_handle.clone();
 
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                 if let Ok(resp) = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
                     let analytics = resp.into_inner();
-                    let total_agents = analytics.total_agents;
+                    let total_helpers = analytics.total_helpers;
                     slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = agents_ui_handle_inner.upgrade() {
-                            if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                        if let Some(ui) = helpers_ui_handle_inner.upgrade() {
+                            if total_helpers >= 1 {
+                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 helper. Upgrade to unlock more power!".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
-                                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                                if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                                     let _ = hire_ui.show();
                                 }
                             }
@@ -1454,7 +1454,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Fallback if network fails
             slint::invoke_from_event_loop(move || {
-                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                     let _ = hire_ui.show();
                 }
             }).unwrap();
@@ -1463,8 +1463,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_arch = "wasm32")]
         wasm_bindgen_futures::spawn_local(async move {
             slint::invoke_from_event_loop(move || {
-                if let Some(_ui) = agents_ui_handle_inner.upgrade() {
-                    if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                if let Some(_ui) = helpers_ui_handle_inner.upgrade() {
+                    if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                         let _ = hire_ui.show();
                     }
                 }
@@ -1472,16 +1472,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
-    let fix_agent_handle = fix_agent_ui.as_weak();
-    agents_ui.on_fix_agent(move |_id| {
-        if let Some(ui) = fix_agent_handle.upgrade() {
+    let fix_helper_handle = fix_helper_ui.as_weak();
+    helpers_ui.on_fix_helper(move |_id| {
+        if let Some(ui) = fix_helper_handle.upgrade() {
             let _ = ui.show();
         }
     });
 
-    Box::leak(Box::new(agents_ui));
-    Box::leak(Box::new(agent_hire_ui));
-    Box::leak(Box::new(fix_agent_ui));
+    Box::leak(Box::new(helpers_ui));
+    Box::leak(Box::new(helper_hire_ui));
+    Box::leak(Box::new(fix_helper_ui));
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
     let welcome_checklist_handle = welcome_checklist_ui.as_weak();
@@ -1573,7 +1573,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
-                            from_agent_id: "setup_wizard".into(),
+                            from_helper_id: "setup_wizard".into(),
                         });
                         let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                         if let Ok(resp) = response {
@@ -1623,7 +1623,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let prompt = format!("Generate a catchy 1-sentence tagline/description for a business named \"{}\" which is a \"{}\".", name, biz_type);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                         prompt,
-                        from_agent_id: "setup_wizard".into(),
+                        from_helper_id: "setup_wizard".into(),
                     });
                     let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                     if let Ok(resp) = response {
@@ -1651,7 +1651,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                         prompt,
-                        from_agent_id: "setup_wizard".into(),
+                        from_helper_id: "setup_wizard".into(),
                     });
                     let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                     if let Ok(resp) = response {
@@ -2418,7 +2418,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_hire_next_button_disabled_by_default() {
+    fn test_helper_hire_next_button_disabled_by_default() {
         crate::ui_tests::init();
 
 
@@ -2429,7 +2429,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_hire_next_button_enabled_after_role_selection() {
+    fn test_helper_hire_next_button_enabled_after_role_selection() {
         crate::ui_tests::init();
 
 
@@ -2449,7 +2449,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agents_creation() {
+    fn test_helpers_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Agents::new().unwrap();
     }
@@ -2708,7 +2708,7 @@ mod tests {
         app::TaskList::new().unwrap();
     }
     #[test]
-    fn test_fix_agent_creation() {
+    fn test_fix_helper_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::FixAgent::new().unwrap();
     }
@@ -3093,7 +3093,7 @@ mod docs_tests {
 
         assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
         assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
+        assert!(*docs_opened.borrow(), "Connect Apps should be opened via the button");
         assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
         assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
@@ -3317,7 +3317,7 @@ mod docs_tests {
         app::ApiDocs::new().unwrap();
     }
     #[test]
-    fn test_e2e_agent_config_flow() {
+    fn test_e2e_helper_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -3340,8 +3340,8 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
-            assert_eq!(agent, "Customer Support");
+        ui.on_activate_helper(move |helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+            assert_eq!(helper, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
             assert_eq!(can_write_descriptions, true);
@@ -3350,14 +3350,14 @@ mod docs_tests {
             *publish_success_clone.borrow_mut() = true;
         });
 
-        // Step 0: Choose Agent -> Step 1
+        // Step 0: Choose Helper -> Step 1
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_is_advanced(), false);
         ui.set_is_advanced(true);
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("Customer Support".into());
+        ui.set_selected_helper("Customer Support".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -3370,8 +3370,8 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 3: Review
-        ui.invoke_activate_agent(
-            ui.get_selected_agent(),
+        ui.invoke_activate_helper(
+            ui.get_selected_helper(),
             ui.get_can_reply(),
             ui.get_can_social(),
             ui.get_can_write_descriptions(),
@@ -3380,7 +3380,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "Customer Support");
+        assert_eq!(ui.get_selected_helper(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);
@@ -3562,7 +3562,7 @@ mod docs_tests {
     }
 
     #[test]
-    fn test_e2e_agent_hire_flow() {
+    fn test_e2e_helper_hire_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -3579,16 +3579,16 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
-        let agent_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let agent_hire_opened_clone = agent_hire_opened.clone();
+        let helpers_ui = app::Agents::new().unwrap();
+        let helper_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let helper_hire_opened_clone = helper_hire_opened.clone();
 
-        agents_ui.on_hire_agent(move || {
-            *agent_hire_opened_clone.borrow_mut() = true;
+        helpers_ui.on_hire_helper(move || {
+            *helper_hire_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(*agent_hire_opened.borrow(), "Agent Hire should be opened from Agents screen");
+        helpers_ui.invoke_hire_helper();
+        assert!(*helper_hire_opened.borrow(), "Helper Hire should be opened from Agents screen");
 
         let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
@@ -3627,22 +3627,22 @@ mod docs_tests {
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
-        // Test agents limit soft paywall
-        let agents_ui = app::Agents::new().unwrap();
-        let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
-            if let Some(ui) = agents_ui_handle.upgrade() {
+        // Test helpers limit soft paywall
+        let helpers_ui = app::Agents::new().unwrap();
+        let helpers_ui_handle = helpers_ui.as_weak();
+        helpers_ui.on_hire_helper(move || {
+            if let Some(ui) = helpers_ui_handle.upgrade() {
                 ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        helpers_ui.invoke_hire_helper();
+        assert!(helpers_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring helper beyond free tier limit");
     }
 
     #[test]
-    fn test_e2e_fix_agent_flow() {
+    fn test_e2e_fix_helper_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -3659,17 +3659,17 @@ mod docs_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
+        let helpers_ui = app::Agents::new().unwrap();
+        let fix_helper_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_helper_opened_clone = fix_helper_opened.clone();
 
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
+        helpers_ui.on_fix_helper(move |id| {
+            assert_eq!(id, "helper_1");
+            *fix_helper_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+        helpers_ui.invoke_fix_helper("helper_1".into());
+        assert!(*fix_helper_opened.borrow(), "Fix Helper should be opened from Agents screen");
     }
 
     #[test]
@@ -3849,7 +3849,7 @@ mod dashboard_docs_tests {
         dashboard_ui.invoke_open_release_notes();
         assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
 
-        // 8. Test API Docs
+        // 8. Test Connect Apps
         let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let api_docs_opened_clone = api_docs_opened.clone();
         dashboard_ui.on_open_api_docs(move || {
@@ -3857,7 +3857,7 @@ mod dashboard_docs_tests {
             let _api_docs = app::ApiDocs::new().unwrap();
         });
         dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+        assert!(*api_docs_opened.borrow(), "Connect Apps should be opened from Dashboard");
     }
 }
 
@@ -3908,7 +3908,7 @@ mod remaining_e2e_tests {
         // Assert properties to make sure new plain-language labels exist and work
         dashboard_ui.set_todays_sales("$125.50".into());
         dashboard_ui.set_new_orders_count(3);
-        dashboard_ui.set_active_helpers_count(2);
+        dashboard_ui.set_active_agents_count(2);
         dashboard_ui.set_tasks_in_progress_count(1);
         dashboard_ui.set_generative_score("85".into());
 
@@ -4074,9 +4074,9 @@ mod remaining_e2e_tests {
             }
         });
 
-        let agent_config = app::AgentConfig::new().unwrap();
-        agent_config.set_is_advanced(false);
-        let ac_weak = agent_config.as_weak();
+        let helper_config = app::AgentConfig::new().unwrap();
+        helper_config.set_is_advanced(false);
+        let ac_weak = helper_config.as_weak();
         add_advanced_listener(Box::new(move |val| {
             if let Some(ui) = ac_weak.upgrade() {
                 ui.set_is_advanced(val);
@@ -4107,7 +4107,7 @@ mod remaining_e2e_tests {
         assert_eq!(setup_wizard.get_is_advanced(), true);
 
         // Verify that the global state is now updated in others
-        assert_eq!(agent_config.get_is_advanced(), true);
+        assert_eq!(helper_config.get_is_advanced(), true);
         assert_eq!(settings_ui.get_is_advanced(), true);
 
         // Toggle it off in Settings
@@ -4116,7 +4116,7 @@ mod remaining_e2e_tests {
 
         // Verify global state is false everywhere
         assert_eq!(setup_wizard.get_is_advanced(), false);
-        assert_eq!(agent_config.get_is_advanced(), false);
+        assert_eq!(helper_config.get_is_advanced(), false);
     }
 
     #[test]
@@ -4231,13 +4231,13 @@ mod remaining_e2e_tests {
 
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
-                name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                name: "Customer Support Helper".into(),
+                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 AI/$".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
-                name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                name: "Marketing Helper".into(),
+                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 AI/$".into(),
                 pct: 0.45,
             }
         ]));
@@ -4249,9 +4249,9 @@ mod remaining_e2e_tests {
 
         let retrieved_costs = cost_ui.get_agent_costs();
         assert_eq!(retrieved_costs.row_count(), 2);
-        let first_agent = retrieved_costs.row_data(0).unwrap();
-        assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        let first_helper = retrieved_costs.row_data(0).unwrap();
+        assert_eq!(first_helper.name, "Customer Support Helper");
+        assert_eq!(first_helper.cost, "$25.00"); assert_eq!(first_helper.roi, "150%"); assert_eq!(first_helper.efficiency, "100 AI/$");
     }
 
     #[test]

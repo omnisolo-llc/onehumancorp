@@ -1,85 +1,72 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component ReleaseNotes inherits Window {
     preferred-width: 600px;
     preferred-height: 800px;
     min-width: 375px;
     title: "What's New";
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
 
-    HorizontalBox {
-        alignment: center;
-        VerticalBox {
-            max-width: 600px;
-            width: 100%;
-            padding: 16px;
-            spacing: 20px;
+    VerticalBox {
+        padding: 24px;
+        spacing: 24px;
 
-            Text {
-                text: "What's New in OHC";
-                font-size: 24px;
-                font-weight: 700;
-                color: #0f172a;
-            }
+        Text {
+            text: "What's New in OHC";
+            font-size: 32px;
+            font-family: "Outfit";
+            font-weight: 700;
+            color: white;
+            horizontal-alignment: center;
+        }
 
-            ScrollView {
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
                 VerticalBox {
-                    spacing: 24px;
-
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                        Rectangle {
-                            background: white; border-radius: 8px;
-                            VerticalBox {
-                                padding: 16px; spacing: 12px;
-                                Text { text: "🎉 Better Team Collaboration & Offline Reliability"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                                Text { text: "Your agents can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection."; color: #475569; wrap: word-wrap; }
-                            }
-                        }
+                    spacing: 12px;
+                    Text {
+                        text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)";
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        font-size: 16px;
+                        color: #a855f7;
                     }
-
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Version 0.3.2 (Cloud) / v0.3.2+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                        Rectangle {
-                            background: white; border-radius: 8px;
-                            VerticalBox {
-                                padding: 16px; spacing: 12px;
-                                Text { text: "🚀 Enhanced Privacy & New Walkthrough"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                                Text { text: "We have strengthened the way we store your business data to keep it completely private. We also added your task list directly to the main dashboard and included a new guide to help you sync your website with AutoDream."; color: #475569; wrap: word-wrap; }
+                    GlassCard {
+                        VerticalBox {
+                            padding: 20px;
+                            spacing: 12px;
+                            Text {
+                                text: "🎉 Better Team Collaboration & Offline Reliability";
+                                font-family: "Outfit";
+                                font-weight: 700;
+                                font-size: 20px;
+                                color: white;
                             }
-                        }
-                    }
-
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Version 0.3.1 (Cloud) / v0.3.1+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                        Rectangle {
-                            background: white; border-radius: 8px;
-                            VerticalBox {
-                                padding: 16px; spacing: 12px;
-                                Text { text: "🔍 Smarter Knowledge Retrieval"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                                Text { text: "Your AI agents can now search and read your business documents much faster to answer questions. This even works if you are running the app fully offline on your own device."; color: #475569; wrap: word-wrap; }
-                            }
-                        }
-                    }
-
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Version 0.3.0 (Cloud) / v0.3.0+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
-                        Rectangle {
-                            background: white; border-radius: 8px;
-                            VerticalBox {
-                                padding: 16px; spacing: 12px;
-                                Text { text: "🔗 Faster Team Communication"; font-weight: 700; font-size: 18px; color: #0f172a; }
-                                Text { text: "We upgraded the behind-the-scenes system that lets your AI agents talk to each other in real-time. If you use the standalone app, they can now chat together seamlessly without needing an external internet server."; color: #475569; wrap: word-wrap; }
+                            Text {
+                                text: "Your helpers can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection.";
+                                font-family: "Inter";
+                                color: #94a3b8;
+                                wrap: word-wrap;
+                                font-size: 15px;
                             }
                         }
                     }
                 }
+            }
+        }
+
+        HorizontalBox {
+            alignment: center;
+            Button {
+                text: "Got it!";
+                height: 48px;
+                width: 120px;
+                clicked => { root.visible = false; }
             }
         }
     }

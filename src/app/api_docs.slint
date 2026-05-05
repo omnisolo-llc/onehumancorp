@@ -1,48 +1,89 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component ApiDocs inherits Window {
     preferred-width: 800px;
     preferred-height: 600px;
     min-width: 375px;
-    title: "Connect Custom Software";
-    background: #f8fafc;
+    title: "Connect Apps";
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
 
-    HorizontalBox {
-        alignment: center;
-        VerticalBox {
-            max-width: 800px;
-            width: 100%;
-            padding: 16px;
-            spacing: 20px;
+    VerticalBox {
+        padding: 24px;
+        spacing: 24px;
 
+        HorizontalBox {
+            alignment: space-between;
             Text {
-                text: "Custom Integration";
-                font-size: 24px;
+                text: "Connect Apps";
+                font-size: 32px;
+                font-family: "Outfit";
                 font-weight: 700;
-                color: #0f172a;
+                color: white;
             }
 
-            Text {
-                text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
-                color: #ef4444; // red warning
-                wrap: word-wrap;
-            }
-
-            ScrollView {
+            GlassCard {
+                width: 150px;
+                background: rgba(239, 68, 68, 0.1);
+                border-color: #ef4444;
                 VerticalBox {
-                    spacing: 24px;
+                    padding: 8px;
+                    Text { text: "Advanced Only"; color: #ef4444; font-family: "Outfit"; font-weight: 700; horizontal-alignment: center; font-size: 14px;}
+                }
+            }
+        }
 
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: #334155; }
-                        Rectangle {
-                            background: #1e293b; border-radius: 8px; // dark theme for code
-                            VerticalBox {
-                                padding: 16px; spacing: 8px;
-                                Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
-                                Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+        Text {
+            text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+            color: #94a3b8;
+            font-family: "Inter";
+            wrap: word-wrap;
+            font-size: 16px;
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                VerticalBox {
+                    spacing: 12px;
+                    Text {
+                        text: "Product Data Access";
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        font-size: 20px;
+                        color: #a855f7;
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 20px;
+                            spacing: 12px;
+                            HorizontalBox {
+                                spacing: 8px;
+                                alignment: start;
+                                Rectangle {
+                                    width: 48px; height: 24px;
+                                    background: #10b981;
+                                    border-radius: 4px;
+                                    Text { text: "GET"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; font-size: 12px;}
+                                }
+                                Text {
+                                    text: "Read Product List";
+                                    font-family: "Outfit";
+                                    font-weight: 700;
+                                    color: white;
+                                    font-size: 18px;
+                                }
+                            }
+                            Text {
+                                text: "Returns a list of all products in your store.";
+                                font-family: "Inter";
+                                color: #94a3b8;
+                                wrap: word-wrap;
+                                font-size: 14px;
                             }
                         }
                     }

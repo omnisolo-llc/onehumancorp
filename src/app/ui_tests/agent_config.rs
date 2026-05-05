@@ -7,8 +7,8 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 #[test] fn agentcfg_xss_name() {
     let ui = create();
     let xss = "<script>alert('agentcfg')</script>";
-    ui.set_selected_agent(xss.into());
-    assert_eq!(ui.get_selected_agent(), xss);
+    ui.set_selected_helper(xss.into());
+    assert_eq!(ui.get_selected_helper(), xss);
 }
 
 #[test] fn agentcfg_step_bounds() {
@@ -31,10 +31,10 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
     let ui = create();
     let called_agent = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_agent.clone();
-    ui.on_activate_agent(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
+    ui.on_activate_helper(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
 
-    ui.set_selected_agent("Robot".into());
-    ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into());
+    ui.set_selected_helper("Robot".into());
+    ui.invoke_activate_helper("Robot".into(), true, false, false, false, "Daily".into());
     assert_eq!(*called_agent.borrow(), "Robot");
 }
 
@@ -51,14 +51,14 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 // --- Consolidated Verified Tests ---
 
 #[test]
-fn create_verify_selected_agent() {
+fn create_verify_selected_helper() {
     let ui = create();
-    ui.set_selected_agent("Data Scientist".into());
-    assert_eq!(ui.get_selected_agent(), "Data Scientist");
-    ui.set_selected_agent("a11".into());
-    assert_eq!(ui.get_selected_agent(), "a11");
-    ui.set_selected_agent("a12".into());
-    assert_eq!(ui.get_selected_agent(), "a12");
+    ui.set_selected_helper("Data Scientist".into());
+    assert_eq!(ui.get_selected_helper(), "Data Scientist");
+    ui.set_selected_helper("a11".into());
+    assert_eq!(ui.get_selected_helper(), "a11");
+    ui.set_selected_helper("a12".into());
+    assert_eq!(ui.get_selected_helper(), "a12");
 }
 
 #[test]

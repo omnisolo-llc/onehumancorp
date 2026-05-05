@@ -13,7 +13,7 @@ fn create() -> app::Handoffs { crate::ui_tests::init(); app::Handoffs::new().unw
         app::UiHandoff {
             id: "1".into(),
             intent: xss.into(),
-            agent_name: "Agent".into(),
+            helper_name: "Agent".into(),
             description: "desc".into(),
             date: "now".into(),
             status: "pending".into(),
@@ -30,14 +30,14 @@ fn create() -> app::Handoffs { crate::ui_tests::init(); app::Handoffs::new().unw
         app::UiHandoff {
             id: "2".into(),
             intent: "Escalation".into(),
-            agent_name: inj.into(),
+            helper_name: inj.into(),
             description: "desc".into(),
             date: "today".into(),
             status: "new".into(),
         }
     ]);
     ui.set_handoffs(Rc::new(handoffs).into());
-    assert_eq!(ui.get_handoffs().row_data(0).unwrap().agent_name, inj);
+    assert_eq!(ui.get_handoffs().row_data(0).unwrap().helper_name, inj);
 }
 
 #[test] fn handoffs_massive_list() {
@@ -45,7 +45,7 @@ fn create() -> app::Handoffs { crate::ui_tests::init(); app::Handoffs::new().unw
     let v: Vec<app::UiHandoff> = (0..300).map(|i| app::UiHandoff {
         id: format!("h-{}", i).into(),
         intent: "Transfer".into(),
-        agent_name: "Bot".into(),
+        helper_name: "Bot".into(),
         description: "desc".into(),
         date: "2024".into(),
         status: "open".into(),

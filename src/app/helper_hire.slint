@@ -1,6 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
-export struct UiAgentProvider {
+export struct UiHelperProvider {
     type_: string,
     label: string,
     description: string,
@@ -14,14 +14,14 @@ export component AgentHire inherits Window {
     in-out property <int> step: 0;
     in-out property <string> selected_role: "";
     in-out property <string> selected_provider: "";
-    in-out property <string> agent_name: "";
+    in-out property <string> helper_name: "";
     
     out property <bool> next_enabled: step != 0 || selected_role != "";
     
     in property <[string]> roles;
-    in property <[UiAgentProvider]> providers;
+    in property <[UiHelperProvider]> providers;
     
-    callback deploy_agent(string, string, string);
+    callback deploy_helper(string, string, string);
     property <bool> cap_email: false;
     property <bool> cap_message: false;
 
@@ -42,7 +42,7 @@ export component AgentHire inherits Window {
                 spacing: 10px;
                 for role in roles : Button {
                     text: role;
-                    clicked => { selected_role = role; agent_name = "Senior " + role; }
+                    clicked => { selected_role = role; helper_name = "Senior " + role; }
                 }
             }
             Text { text: "Selected: " + selected_role; color: #a855f7; }
@@ -66,7 +66,7 @@ export component AgentHire inherits Window {
             Text { text: "Step 3 — Helper Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
             LineEdit {
                 placeholder-text: "Helper Name";
-                text <=> agent_name;
+                text <=> helper_name;
             }
         }
 
@@ -111,7 +111,7 @@ export component AgentHire inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Name: " + agent_name; color: #1e293b; }
+                    Text { text: "Name: " + helper_name; color: #1e293b; }
                     Text { text: "Role: " + selected_role; color: #1e293b; }
                     Text { text: "Provider: " + selected_provider; color: #1e293b; }
                 }
@@ -134,7 +134,7 @@ export component AgentHire inherits Window {
                     if (step < 6) {
                         step = step + 1;
                     } else {
-                        deploy_agent(agent_name, selected_role, selected_provider);
+                        deploy_helper(helper_name, selected_role, selected_provider);
                     }
                 }
             }

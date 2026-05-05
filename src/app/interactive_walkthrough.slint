@@ -25,18 +25,20 @@ export component InteractiveWalkthrough inherits Window {
                 padding-right: current_step == 2 || current_step == 3 ? 20px : 0;
 
                 GlassCard {
-                    width: 335px;
+                    width: 350px;
+                    border-color: #a855f7;
+                    border-width: 2px;
 
                     VerticalBox {
-                        padding: 20px;
-                        spacing: 16px;
+                        padding: 24px;
+                        spacing: 20px;
 
                         Text {
                             text: current_step == 0 ? "Welcome to your store!" :
                                   current_step == 1 ? "Add your first product" :
                                   current_step == 2 ? "Set up payments" :
                                   "You're all set!";
-                            font-size: 20px;
+                            font-size: 24px;
                             font-family: "Outfit";
                             font-weight: 700;
                             color: white;
@@ -50,6 +52,7 @@ export component InteractiveWalkthrough inherits Window {
                             color: #94a3b8;
                             font-family: "Inter";
                             wrap: word-wrap;
+                            font-size: 16px;
                         }
 
                         HorizontalBox {
@@ -58,11 +61,13 @@ export component InteractiveWalkthrough inherits Window {
 
                             Button {
                                 text: "Skip tour";
+                                height: 44px;
                                 clicked => { root.visible = false; }
                             }
 
                             Button {
                                 text: current_step < 3 ? "Next" : "Done";
+                                height: 44px;
                                 clicked => {
                                     if (current_step < 3) {
                                         current_step += 1;

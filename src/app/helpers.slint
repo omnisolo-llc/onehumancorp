@@ -23,8 +23,8 @@ export component Agents inherits Window {
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
 
-    callback hire_agent();
-    callback fix_agent(string);
+    callback hire_helper();
+    callback fix_helper(string);
 
     VerticalBox {
         spacing: 20px;
@@ -38,7 +38,7 @@ export component Agents inherits Window {
         HorizontalBox {
             Text { text: "Helpers"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Hire Helper"; clicked => { hire_agent(); } }
+            Button { text: "Hire Helper"; clicked => { hire_helper(); } }
         }
 
         VerticalBox {
@@ -78,7 +78,7 @@ export component Agents inherits Window {
                             color: agent.is_running ? #10b981 : #ef4444; 
                             horizontal-alignment: center; 
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_helper(agent.id); } }
                     }
                 }
             }

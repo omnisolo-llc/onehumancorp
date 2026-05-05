@@ -13,8 +13,8 @@ fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().u
 
 #[test] fn dash_overflow_helpers() {
     let ui = create();
-    ui.set_active_helpers_count(2147483647);
-    assert_eq!(ui.get_active_helpers_count(), 2147483647);
+    ui.set_active_agents_count(2147483647);
+    assert_eq!(ui.get_active_agents_count(), 2147483647);
 }
 
 #[test] fn dash_xss_milestone_title() {
@@ -46,9 +46,9 @@ fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().u
     let ui = create();
     for i in 0..100 {
         ui.set_new_orders_count(i);
-        ui.set_active_helpers_count(i * 2);
+        ui.set_active_agents_count(i * 2);
         assert_eq!(ui.get_new_orders_count(), i);
-        assert_eq!(ui.get_active_helpers_count(), i * 2);
+        assert_eq!(ui.get_active_agents_count(), i * 2);
     }
 }
 
@@ -178,14 +178,14 @@ fn create_verify_new_orders_count() {
 }
 
 #[test]
-fn create_verify_active_helpers_count() {
+fn create_verify_active_agents_count() {
     let ui = create();
-    ui.set_active_helpers_count(26);
-    assert_eq!(ui.get_active_helpers_count(), 26);
-    ui.set_active_helpers_count(27);
-    assert_eq!(ui.get_active_helpers_count(), 27);
-    ui.set_active_helpers_count(28);
-    assert_eq!(ui.get_active_helpers_count(), 28);
+    ui.set_active_agents_count(26);
+    assert_eq!(ui.get_active_agents_count(), 26);
+    ui.set_active_agents_count(27);
+    assert_eq!(ui.get_active_agents_count(), 27);
+    ui.set_active_agents_count(28);
+    assert_eq!(ui.get_active_agents_count(), 28);
 }
 
 #[test]
