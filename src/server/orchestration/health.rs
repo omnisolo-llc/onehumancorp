@@ -61,7 +61,7 @@ pub async fn run_health_monitor(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::Duration;
+
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
 
     #[tokio::test]

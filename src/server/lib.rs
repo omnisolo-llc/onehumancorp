@@ -127,6 +127,7 @@ pub mod ohc {
         pub use billing_proto::ohc::billing::*;
     }
     pub mod agent {
+        pub use agent_proto::ohc::agent::*;
         pub mod service {
             pub use agent_service_proto::ohc::agent::service::*;
         }
@@ -136,6 +137,11 @@ pub mod ohc {
     }
     pub mod common {
         pub use common_proto::ohc::common::*;
+    }
+    pub mod api {
+        pub mod v1 {
+            pub use app_proto::ohc::api::v1::*;
+        }
     }
     pub mod app {
         pub use app_proto::ohc::api::v1::*;
@@ -1254,7 +1260,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
