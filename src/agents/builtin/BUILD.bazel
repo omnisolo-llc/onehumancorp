@@ -47,6 +47,7 @@ rust_library(
         "harness.rs",
         "legacy_mesh.rs",
         "langgraph.rs",
+        "autogen.rs",
         "lib.rs",
         "memory_store.rs",
         "mesh/mod.rs",

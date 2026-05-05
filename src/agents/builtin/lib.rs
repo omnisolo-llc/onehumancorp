@@ -35,3 +35,5 @@ pub mod checkpointer;
 pub mod harness;
 pub mod legacy_mesh;
 pub mod langgraph;
+
+pub mod autogen;
