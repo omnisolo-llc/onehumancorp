@@ -5668,7 +5668,7 @@ fn test_business_share_flow() {
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let submitted_clone = submitted.clone();
 
-        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
             assert_eq!(type_, "PHYSICAL");
             assert_eq!(name, "Soap");
             assert_eq!(desc, "Clean");
@@ -5698,7 +5698,7 @@ fn test_business_share_flow() {
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let submitted_clone = submitted.clone();
 
-        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
             assert_eq!(type_, "DIGITAL");
             assert_eq!(name, "Ebook");
             assert_eq!(desc, "Read me");
