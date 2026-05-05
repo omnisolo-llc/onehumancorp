@@ -67,7 +67,7 @@ impl ActionQueue {
             {
                 Ok(rows) => rows,
                 Err(e) => {
-                    tracing::error!("ActionQueue: Failed to fetch pending actions: {}", e);
+                    eprintln!("ActionQueue: Failed to fetch pending actions: {}", e);
                     continue;
                 }
             };
