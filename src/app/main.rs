@@ -1313,31 +1313,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(not(target_arch = "wasm32"))]
                     tokio::spawn(async move {
                         if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            if let Ok(resp) = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await {
-                                let quota = resp.into_inner();
-                                let used = quota.used;
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                        if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
-                                            ui.set_show_upgrade_prompt(true);
-                                        } else {
-                                            // Handle success case
-                                            // We could log or do something else here, but to avoid regressions, we don't block
-                                        }
+                            match client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await {
+                                Ok(_) => {},
+                                Err(status) => {
+                                    if status.code() == tonic::Code::ResourceExhausted {
+                                        let msg = status.message().to_string();
+                                        slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = dashboard_handle_inner.upgrade() {
+                                                ui.invoke_invoke_action_failed(msg.into());
+                                            }
+                                        }).unwrap();
                                     }
-                                }).unwrap();
+                                }
                             }
                         }
                     });
 
                     #[cfg(target_arch = "wasm32")]
                     wasm_bindgen_futures::spawn_local(async move {
-                        // WASM fallback
-                        // Simulating a success behavior or API call here.
                         slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                // For WASM target, we mock it currently to avoid the E0433 errors and keep WASM functioning
+                            if let Some(_ui) = dashboard_handle_inner.upgrade() {
                             }
                         }).unwrap();
                     });
@@ -1777,31 +1772,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                if let Ok(resp) = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
-                    let analytics = resp.into_inner();
-                    let total_agents = analytics.total_agents;
-                    slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = agents_ui_handle_inner.upgrade() {
-                            if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
-                                ui.set_show_upgrade_prompt(true);
-                            } else {
-                                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
-                                    let _ = hire_ui.show();
-                                }
+                match client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                    Ok(_) => {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                                let _ = hire_ui.show();
                             }
+                        }).unwrap();
+                    },
+                    Err(status) => {
+                        if status.code() == tonic::Code::ResourceExhausted {
+                            let msg = status.message().to_string();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = agents_ui_handle_inner.upgrade() {
+                                    ui.invoke_invoke_action_failed(msg.into());
+                                }
+                            }).unwrap();
                         }
-                    }).unwrap();
-                    return;
+                    }
                 }
             }
-
-            // Fallback if network fails
-            slint::invoke_from_event_loop(move || {
-                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
-                    let _ = hire_ui.show();
-                }
-            }).unwrap();
         });
 
         #[cfg(target_arch = "wasm32")]
@@ -4020,8 +4010,7 @@ mod docs_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've added 10 products! Upgrade to our Pro plan to list even more items and grow your store.".into());
-                ui.set_show_upgrade_prompt(true);
+                ui.invoke_invoke_action_failed("You've added 10 products! Upgrade to our Pro plan to list even more items and grow your store.".into());
             }
         });
 
@@ -4033,8 +4022,7 @@ mod docs_tests {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
-                ui.set_show_upgrade_prompt(true);
+                ui.invoke_invoke_action_failed("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
             }
         });
 

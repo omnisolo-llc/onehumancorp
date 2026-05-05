@@ -24,6 +24,10 @@ export component Agents inherits Window {
     in-out property <string> upgrade_prompt_message: "";
 
     callback hire_agent();
+    public function invoke_action_failed(msg: string) {
+        root.upgrade_prompt_message = msg;
+        root.show_upgrade_prompt = true;
+    }
     callback fix_agent(string);
 
     VerticalBox {

@@ -494,7 +494,12 @@ impl GrowthService for MyGrowthService {
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
         
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
+        let used = 10;
+        if used >= 10 {
+            return Err(Status::resource_exhausted("Youve reached your free tier limit of 10 products. Upgrade to add more!".to_string()));
+        }
+
+        Ok(Response::new(QuotaMetrics { used, max: max_quota }))
     }
 
     async fn get_waitlist(

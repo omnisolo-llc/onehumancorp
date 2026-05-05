@@ -113,6 +113,10 @@ impl OrgService for MyOrgService {
         
 
         
+        if total_agents >= 1 {
+            return Err(Status::resource_exhausted("Youve reached your free tier limit of 1 agent. Upgrade to unlock more power!".to_string()));
+        }
+
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,

@@ -57,6 +57,10 @@ export component Dashboard inherits Window {
     callback open_billing();
 
     callback action_add_product();
+    public function invoke_action_failed(msg: string) {
+        root.upgrade_prompt_message = msg;
+        root.show_upgrade_prompt = true;
+    }
     callback action_view_orders();
     callback action_check_messages();
     callback action_see_analytics();
