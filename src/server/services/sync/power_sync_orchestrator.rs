@@ -23,10 +23,10 @@ impl PowerSyncOrchestrator {
             loop {
                 interval.tick().await;
                 if let Err(e) = self.push_sync().await {
-                    eprintln!("PowerSync push failed: {}", e);
+                    tracing::error!("PowerSync push failed: {}", e);
                 }
                 if let Err(e) = self.pull_sync().await {
-                    eprintln!("PowerSync pull failed: {}", e);
+                    tracing::error!("PowerSync pull failed: {}", e);
                 }
             }
         });
@@ -178,7 +178,7 @@ impl PowerSyncOrchestrator {
                     .execute(sqlite_pool)
                     .await
                 {
-                    eprintln!("PowerSync pull failed to save to database: error={}", e);
+                    tracing::error!("PowerSync pull failed to save to database: error={}", e);
                 }
             }
         }

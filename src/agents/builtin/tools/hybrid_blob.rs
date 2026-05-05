@@ -28,7 +28,7 @@ impl HybridBlobManager {
             let tmp_dir = env::var("OHC_BLOB_DIR").unwrap_or_else(|_| "/tmp/ohc_blobs".to_string());
             let path = PathBuf::from(tmp_dir);
             if let Err(e) = fs::create_dir_all(&path).await {
-                eprintln!("Failed to create local blob directory: {}", e);
+                tracing::error!("Failed to create local blob directory: {}", e);
             }
             Some(path)
         } else {
@@ -45,7 +45,7 @@ impl HybridBlobManager {
     // Test injection constructor
     pub async fn new_for_test(local_dir: PathBuf) -> Self {
         if let Err(e) = fs::create_dir_all(&local_dir).await {
-            eprintln!("Failed to create test local blob directory: {}", e);
+            tracing::error!("Failed to create test local blob directory: {}", e);
         }
         Self {
             is_cloud: false,
@@ -78,7 +78,7 @@ impl BlobManager for HybridBlobManager {
 
         if self.is_cloud {
             // Mock S3 put object
-            println!("Cloud: Writing to S3 key {}", safe_key);
+            tracing::debug!("Cloud: Writing to S3 key {}", safe_key);
             self.cloud_mock_store.insert(safe_key, data.to_vec());
             Ok(())
         } else {
@@ -103,7 +103,7 @@ impl BlobManager for HybridBlobManager {
 
         if self.is_cloud {
             // Mock S3 get object
-            println!("Cloud: Reading from S3 key {}", safe_key);
+            tracing::debug!("Cloud: Reading from S3 key {}", safe_key);
             if let Some(data) = self.cloud_mock_store.get(&safe_key) {
                 Ok(data.clone())
             } else {
@@ -179,7 +179,7 @@ pub fn hybrid_blob_tool() -> Tool {
         let path = PathBuf::from(tmp_dir);
         // We do synchronous dir creation here since this is tool init
         if let Err(e) = std::fs::create_dir_all(&path) {
-            eprintln!("Failed to create tool local blob directory: {}", e);
+            tracing::error!("Failed to create tool local blob directory: {}", e);
         }
         Some(path)
     } else {

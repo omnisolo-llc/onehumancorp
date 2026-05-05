@@ -96,7 +96,7 @@ impl CompressedEmbeddingCache {
             match compression::decompress_lossless(&entry.response) {
                 Ok(decompressed) => Some(decompressed),
                 Err(e) => {
-                    eprintln!("Failed to decompress cached response: {}", e);
+                    tracing::error!("Failed to decompress cached response: {}", e);
                     None
                 }
             }
@@ -118,7 +118,7 @@ impl CompressedEmbeddingCache {
                 });
             }
             Err(e) => {
-                eprintln!("Failed to compress cache response: {}", e);
+                tracing::error!("Failed to compress cache response: {}", e);
             }
         }
     }
