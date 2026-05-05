@@ -36,6 +36,7 @@ export component VideoTutorials inherits Window {
                                 height: 200px;
                                 background: #0f172a;
                                 border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "How to add your first product"; is_playing = true; } }
                                 Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
                             }
                             Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: white; }
@@ -50,10 +51,131 @@ export component VideoTutorials inherits Window {
                                 height: 200px;
                                 background: #0f172a;
                                 border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Setting up AI Helpers"; is_playing = true; } }
                                 Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
                             }
                             Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: white; }
                             Text { text: "Learn how to let AI handle your customer emails and social media."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Getting Paid with Stripe"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Getting Paid with Stripe"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "How to connect your bank account and accept online payments securely."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Designing your Website"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Designing your Website"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Use the website builder to customize the look and feel of your storefront."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Managing Orders"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Managing Orders"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Track and fulfill your daily customer orders from the dashboard."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Creating Discount Codes"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Creating Discount Codes"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Learn how to generate promotional codes for marketing campaigns."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Setting up a Custom Domain"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Setting up a Custom Domain"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Link your own branded website domain (like yourname.com) to your store."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Connecting Social Media"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Connecting Social Media"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Automatically post your new products to Instagram and Facebook."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Understanding your Analytics"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Understanding your Analytics"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "A walk-through of your daily sales and traffic reports."; color: white; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #0f172a;
+                                border-radius: 8px;
+                                TouchArea { clicked => { selected_video_title = "Handling Customer Messages"; is_playing = true; } }
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                            }
+                            Text { text: "Handling Customer Messages"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: "Reply to customer inquiries across all channels using the Unified Inbox."; color: white; wrap: word-wrap; }
                         }
                     }
                 }

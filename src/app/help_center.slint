@@ -28,6 +28,8 @@ export component HelpCenter inherits Window {
         { category: "Account & Billing", title: "How to change your subscription", description: "Find out how to upgrade or downgrade your plan and view past invoices." }
     ];
 
+    in property <[HelpArticle]> filtered_articles: root.articles;
+
     HorizontalBox {
         alignment: center;
         VerticalBox {
@@ -52,7 +54,7 @@ export component HelpCenter inherits Window {
                 VerticalBox {
                     spacing: 16px;
 
-                    for article in articles : VerticalBox {
+                    for article in filtered_articles : VerticalBox {
                         spacing: 16px;
 
                         Text { text: article.category; font-weight: 700; font-size: 18px; color: white; }

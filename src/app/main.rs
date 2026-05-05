@@ -1508,28 +1508,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             a.description.to_lowercase().contains(&query) ||
                             a.category.to_lowercase().contains(&query)
                         }).cloned().collect();
-                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                        ui.set_filtered_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
                     }
                 });
 
-                let _help_center_handle = help_center_ui.as_weak();
+                let help_center_handle = help_center_ui.as_weak();
                 Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
 
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
-
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
                 Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
-
-                let help_center_ui = app::HelpCenter::new().unwrap();
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
@@ -1552,9 +1543,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     move || {
                         if let Some(ui) = chat_handle.upgrade() {
                             let input = ui.get_user_input();
+                            if input.is_empty() { return; }
                             println!("User asked AI Help: {}", input);
+
+                            let mut msgs: Vec<app::AiChatMessage> = ui.get_messages().iter().collect();
+                            msgs.push(app::AiChatMessage {
+                                text: input.clone(),
+                                is_user: true,
+                            });
+                            msgs.push(app::AiChatMessage {
+                                text: format!("I am checking the documentation for '{}'...", input).into(),
+                                is_user: false,
+                            });
+                            ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
                             ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
                         }
                     }
                 });
@@ -3418,7 +3420,7 @@ mod docs_tests {
                     a.description.to_lowercase().contains(&query) ||
                     a.category.to_lowercase().contains(&query)
                 }).cloned().collect();
-                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                ui.set_filtered_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
             }
         });
 
