@@ -31,6 +31,49 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn test_release_notes_creation_and_defaults() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::ReleaseNotes::new().unwrap();
+    assert_eq!(ui.get_current_version(), "v0.3.4");
+    assert_eq!(ui.get_show_latest_only(), false);
+}
+
+#[test]
+fn test_video_tutorials_creation_and_defaults() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::VideoTutorials::new().unwrap();
+    assert_eq!(ui.get_is_playing(), false);
+    assert_eq!(ui.get_selected_video_title(), "");
+}
+
+#[test]
+fn test_ai_help_chat_creation_and_defaults() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AiHelpChat::new().unwrap();
+    assert_eq!(ui.get_user_input(), "");
+    ui.set_user_input("How do I add a product?".into());
+    assert_eq!(ui.get_user_input(), "How do I add a product?");
+}
+
+#[test]
+fn test_interactive_walkthrough_creation_and_defaults() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::InteractiveWalkthrough::new().unwrap();
+    assert_eq!(ui.get_current_step(), 0);
+    ui.set_current_step(2);
+    assert_eq!(ui.get_current_step(), 2);
+}
+
+#[test]
+fn test_help_center_creation_and_defaults() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::HelpCenter::new().unwrap();
+    assert_eq!(ui.get_search_query(), "");
+    ui.set_search_query("payment".into());
+    assert_eq!(ui.get_search_query(), "payment");
+}
+
+#[test]
 fn create_verify_api_key() {
     let ui = create();
     ui.set_api_key("sk_live_555".into());

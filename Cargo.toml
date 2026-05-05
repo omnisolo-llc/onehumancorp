@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 build = "src/server/build.rs"
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "server"
 path = "src/server/main.rs"
