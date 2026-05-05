@@ -158,7 +158,7 @@ impl DB {
                 migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let schema = "
+                let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
@@ -178,7 +178,10 @@ impl DB {
                         content TEXT NOT NULL,
                         embedding BLOB,
                         source_type TEXT,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
@@ -202,7 +205,9 @@ impl DB {
                         parent_plan_id TEXT,
                         dependencies TEXT NOT NULL DEFAULT '[]',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
 
                     CREATE TABLE IF NOT EXISTS shared_tasks (
@@ -247,7 +252,10 @@ impl DB {
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
                         tenant_id TEXT NOT NULL,
@@ -257,6 +265,8 @@ impl DB {
                         state_json TEXT NOT NULL DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, organization_id)
                     );
                     CREATE TABLE IF NOT EXISTS customers (
@@ -265,7 +275,11 @@ impl DB {
                         email TEXT,
                         phone TEXT,
                         name TEXT,
-                        preferences TEXT DEFAULT '{}'
+                        preferences TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
@@ -273,7 +287,10 @@ impl DB {
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,
@@ -281,7 +298,11 @@ impl DB {
                         order_id TEXT,
                         product_id TEXT,
                         quantity INTEGER,
-                        price REAL
+                        price REAL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS bookings (
                         id TEXT PRIMARY KEY,
@@ -290,7 +311,11 @@ impl DB {
                         service_id TEXT,
                         start_time TEXT,
                         end_time TEXT,
-                        status TEXT
+                        status TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
@@ -306,8 +331,57 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS referrals (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        referral_code TEXT UNIQUE NOT NULL,
+                        clicks INTEGER DEFAULT 0,
+                        conversions INTEGER DEFAULT 0,
+                        created_at_unix BIGINT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS competitor_metrics (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        competitor_name TEXT NOT NULL,
+                        metrics_data TEXT NOT NULL,
+                        probed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS agent_violations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        agent_id TEXT NOT NULL,
+                        session_id TEXT NOT NULL,
+                        violation_type TEXT NOT NULL,
+                        details TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        local_path TEXT NOT NULL,
+                        cloud_path TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'FILE_SYNC_PENDING',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
@@ -332,7 +406,8 @@ impl DB {
                         source_type TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        topic TEXT DEFAULT ''
                     );
                     CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
@@ -345,7 +420,9 @@ impl DB {
                         reason TEXT,
                         occurred_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         task_id TEXT,
-                        transitioned_at TEXT
+                        transitioned_at TEXT,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
@@ -361,7 +438,7 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                ";
+"#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
         }
