@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"net/http"
+	"net/http/httptest"
 
 	// Using the blank import for modern sqlite driver
 	_ "github.com/mattn/go-sqlite3"
@@ -98,5 +100,118 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		if synced != expected {
 			t.Errorf("Mission %s: expected synced_to_cloud=%v, got %v", id, expected, synced)
 		}
+	}
+}
+
+func TestHybridMCPRAGDaemon_CheckSyncHealth(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// 1. Test healthy
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+	err := daemon.CheckSyncHealth(context.Background())
+	if err != nil {
+		t.Errorf("CheckSyncHealth failed unexpectedly: %v", err)
+	}
+
+	// 2. Test mock HTTP cloud api
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	daemonHTTP := NewHybridMCPRAGDaemon(db, ts.URL)
+	err = daemonHTTP.CheckSyncHealth(context.Background())
+	if err != nil {
+		t.Errorf("CheckSyncHealth failed unexpectedly on real HTTP: %v", err)
+	}
+
+	// 3. Test backlog critically high
+	for i := 0; i < 1005; i++ {
+		_, _ = db.Exec("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES (?, 'CLOUD_ESCALATION', 'p', FALSE)", i)
+	}
+
+	err = daemonHTTP.CheckSyncHealth(context.Background())
+	if err == nil {
+		t.Errorf("Expected CheckSyncHealth to fail due to critical backlog")
+	}
+
+	// 4. Test closed db
+	db.Close()
+	err = daemon.CheckSyncHealth(context.Background())
+	if err == nil {
+		t.Errorf("Expected CheckSyncHealth to fail on closed db")
+	}
+}
+
+func TestHybridMCPRAGDaemon_SanitizeBacklog(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Insert test data
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
+	('mission-valid', 'CLOUD_ESCALATION', '{"key": "value"}', FALSE),
+	('mission-stuck-null', 'CLOUD_ESCALATION', NULL, FALSE),
+	('mission-stuck-empty', 'CLOUD_ESCALATION', '', FALSE);
+	`
+	_, err := db.Exec(insertDataQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+
+	err = daemon.SanitizeBacklog(context.Background())
+	if err != nil {
+		t.Fatalf("SanitizeBacklog failed: %v", err)
+	}
+
+	rows, _ := db.Query("SELECT id, status FROM agent_missions")
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, status string
+		_ = rows.Scan(&id, &status)
+		if id == "mission-valid" && status != "CLOUD_ESCALATION" {
+			t.Errorf("Valid mission status altered")
+		}
+		if (id == "mission-stuck-null" || id == "mission-stuck-empty") && status != "FAILED" {
+			t.Errorf("Stuck mission status not FAILED: %s is %s", id, status)
+		}
+	}
+}
+
+func TestHybridMCPRAGDaemon_SyncPendingMissions_ErrorPaths(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.fail")
+
+	_, _ = db.Exec("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('mission-fail', 'CLOUD_ESCALATION', 'p', FALSE)")
+
+	err := daemon.SyncPendingMissions(context.Background())
+	if err != nil {
+		t.Errorf("Expected no overall error on single mission sync fail, got: %v", err)
+	}
+
+	// Should not be synced
+	var synced bool
+	_ = db.QueryRow("SELECT synced_to_cloud FROM agent_missions WHERE id = 'mission-fail'").Scan(&synced)
+	if synced {
+		t.Errorf("Mission was synced when failure was expected")
+	}
+
+	// Close db to force query error
+	db.Close()
+	err = daemon.SyncPendingMissions(context.Background())
+	if err == nil {
+		t.Errorf("Expected error on closed DB")
 	}
 }
