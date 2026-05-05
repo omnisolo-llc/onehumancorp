@@ -42,7 +42,7 @@ impl AutoDreamService for MyAutoDreamService {
         let embedding = match client.generate_embedding(&req.query_text).await {
             Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
             Err(e) => {
-                println!("AutoDream service: failed to generate embedding: {}", e);
+                tracing::error!("AutoDream service: failed to generate embedding: {}", e);
                 format!("[{}]", vec!["0.0"; 1536].join(", "))
             }
         };

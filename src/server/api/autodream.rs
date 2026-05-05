@@ -56,7 +56,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
             let embedding = match client.generate_embedding(&params.text).await {
                 Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
                 Err(e) => {
-                    println!("AutoDream API: failed to generate embedding: {}", e);
+                    tracing::error!("AutoDream API: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
             };

@@ -59,9 +59,11 @@ export component FixAgent inherits Window {
                         Text { text: "Raw Error Log:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
-                            padding: 8px;
                             border-radius: 4px;
-                            Text { text: "{\"error\": \"timeout\", \"service\": \"postgres\", \"latency_ms\": 5000}"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            HorizontalLayout {
+                                padding: 8px;
+                                Text { text: "{\"error\": \"timeout\", \"service\": \"postgres\", \"latency_ms\": 5000}"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            }
                         }
                     }
                 }
@@ -82,9 +84,11 @@ export component FixAgent inherits Window {
                         Text { text: "CLI Command:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
-                            padding: 8px;
                             border-radius: 4px;
-                            Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            HorizontalLayout {
+                                padding: 8px;
+                                Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                            }
                         }
                     }
                 }

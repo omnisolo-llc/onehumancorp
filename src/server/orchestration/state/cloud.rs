@@ -174,7 +174,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             Ok(Ok(rows)) => rows,
             Ok(Err(e)) => return Err(e.to_string()),
             Err(_) => {
-                println!("WARNING: Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                tracing::warn!("Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
             }
         };
