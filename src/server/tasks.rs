@@ -27,6 +27,29 @@ pub struct SharedTask {
     pub proposed_content: Option<String>,
 }
 
+impl SharedTask {
+    pub fn into_proto(self) -> crate::ohc::orchestration::SharedTask {
+        crate::ohc::orchestration::SharedTask {
+            id: self.id,
+            organization_id: self.organization_id,
+            parent_plan_id: self.parent_plan_id,
+            dependencies: self.dependencies,
+            title: self.title,
+            description: self.description.unwrap_or_default(),
+            status: self.status,
+            assigned_agent_id: self.assigned_agent_id.unwrap_or_default(),
+            priority: self.priority,
+            payload: self.payload,
+            locked_until_unix: self.locked_until.map(|dt| dt.timestamp()).unwrap_or(0),
+            created_at_unix: self.created_at.timestamp(),
+            updated_at_unix: self.updated_at.timestamp(),
+            action_risk: self.action_risk.unwrap_or(ActionRisk::Unspecified).to_proto() as i32,
+            approval_status: self.approval_status.unwrap_or_default(),
+            proposed_content: self.proposed_content.unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "VARCHAR")]
@@ -34,6 +57,16 @@ pub enum ActionRisk {
     Unspecified,
     Low,
     High,
+}
+
+impl ActionRisk {
+    pub fn to_proto(&self) -> crate::ohc::orchestration::ActionRisk {
+        match self {
+            ActionRisk::Unspecified => crate::ohc::orchestration::ActionRisk::Unspecified,
+            ActionRisk::Low => crate::ohc::orchestration::ActionRisk::Low,
+            ActionRisk::High => crate::ohc::orchestration::ActionRisk::High,
+        }
+    }
 }
 
 impl ActionRisk {
