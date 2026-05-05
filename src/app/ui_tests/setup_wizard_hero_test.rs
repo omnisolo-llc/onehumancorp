@@ -10,6 +10,7 @@ fn test_ui_setup_wizard_hero_animation_pulse_scale() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
 
     assert_eq!(ui.get_step(), 0);
 
@@ -25,6 +26,7 @@ fn test_ui_setup_wizard_hero_timer_state() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
 
     ui.set_step(9);
     ui.set_launching(false);
@@ -38,6 +40,7 @@ fn test_ui_setup_wizard_pulse_scale_state() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
     assert_eq!(ui.get_step(), 0);
 }
 
@@ -47,6 +50,12 @@ fn test_ui_setup_wizard_hero_flow_simulation() {
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
+
+    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called_clone = save_called.clone();
+    ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
 
     assert_eq!(ui.get_step(), 0);
     ui.invoke_next_step();
@@ -65,6 +74,8 @@ fn test_ui_setup_wizard_hero_flow_simulation() {
 
     ui.invoke_select_payment_pref("online".into());
     assert_eq!(ui.get_step(), 5);
+
+    assert!(*save_called.borrow(), "Save state callback should be triggered when simulating steps.");
 }
 
 #[test]
@@ -73,6 +84,7 @@ fn test_ui_setup_wizard_hero_animation() {
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
 
     assert_eq!(ui.get_step(), 0);
     ui.invoke_next_step();

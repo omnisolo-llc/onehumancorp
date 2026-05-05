@@ -1,6 +1,11 @@
 use crate::app;
 
-fn create() -> app::SetupWizard { crate::ui_tests::init(); app::SetupWizard::new().unwrap() }
+fn create() -> app::SetupWizard {
+    crate::ui_tests::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
+    ui
+}
 
 // --- Specialized / Hacking Cases ---
 
