@@ -18,7 +18,7 @@ mod tests {
     async fn test_sipdb_chaos_parity() {
         let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
