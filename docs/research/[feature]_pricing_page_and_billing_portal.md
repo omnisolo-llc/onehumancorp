@@ -10,5 +10,5 @@ The system implements a `TierService` as middleware within the orchestration and
 ## UI Flow
 When a user attempts an action that exceeds their current tier's limits, the UI gracefully intercepts the request. Instead of displaying a technical error, the UI shows a plain-language prompt explaining the limitation and offering a simple, one-click upgrade path using Stripe Checkout.
 
-## Implementation
+## Implementation Prompt
 Implemented the Multi-Tenant SaaS Tier Architecture as outlined above. This includes creating the `TierService` middleware, defining the tier structures in the database, integrating with Stripe webhooks for billing sync, and updating the frontend components to handle graceful degradation and upgrade prompts using Slint tests.

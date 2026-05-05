@@ -1110,7 +1110,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
-        .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .route("/api/v1/stripe/webhook", axum::routing::post(api::stripe_webhook::handle_webhook).with_state(std::sync::Arc::new(billing::Tracker::new())))
+        .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()).layer(axum::middleware::from_fn_with_state(std::sync::Arc::new(billing::Tracker::new()), pricing::tier_service::tier_limit_middleware)))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
 
         .with_state(mesh_transport);

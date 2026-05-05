@@ -11,6 +11,7 @@ use ohc_builtin_agent::memory_store::EmbeddingRecord;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 
+#[allow(dead_code)]
 pub struct AutoDreamWorker {
     db: Arc<DB>,
     embedded_counter: Counter<u64>,
