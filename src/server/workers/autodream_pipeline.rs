@@ -143,7 +143,7 @@ mod tests {
             .unwrap();
 
         // Insert test data
-        sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess1', 'agent1', 'some context');")
+        sqlx::query("INSERT INTO agent_session_data (tenant_id, session_id, agent_id, context_data) VALUES ('system', 'sess1', 'agent1', 'some context');")
             .execute(&pool)
             .await
             .unwrap();
@@ -161,7 +161,7 @@ mod tests {
         assert_eq!(mem_count.0, 1);
 
         // Test fallback (error embedding)
-        sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess2', 'agent1', 'some context error');")
+        sqlx::query("INSERT INTO agent_session_data (tenant_id, session_id, agent_id, context_data) VALUES ('system', 'sess2', 'agent1', 'some context error');")
             .execute(&pool)
             .await
             .unwrap();
@@ -200,7 +200,7 @@ mod tests {
         sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
 
         // Insert test data
-        sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess_pg1', 'agent1', 'some context pg');")
+        sqlx::query("INSERT INTO agent_session_data (tenant_id, session_id, agent_id, context_data) VALUES ('system', 'sess_pg1', 'agent1', 'some context pg');")
             .execute(&pool)
             .await
             .unwrap();

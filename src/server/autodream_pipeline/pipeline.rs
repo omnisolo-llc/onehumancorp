@@ -154,7 +154,7 @@ mod tests {
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        sqlx::query("INSERT INTO shared_tasks (tenant_id, id, organization_id, mission_id, title, status, priority, payload) VALUES ('system', $1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
             .bind(task_id)
             .execute(&pool)
             .await

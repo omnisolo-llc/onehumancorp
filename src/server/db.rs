@@ -188,6 +188,7 @@ impl DB {
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = "
                     CREATE TABLE IF NOT EXISTS agent_session_data (
+                        tenant_id TEXT,
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
@@ -209,6 +210,7 @@ impl DB {
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
+                        tenant_id TEXT,
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
                         embedding BLOB,
@@ -219,6 +221,7 @@ impl DB {
                     );
 
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+                        tenant_id VARCHAR,
                         id VARCHAR PRIMARY KEY,
                         organization_id VARCHAR NOT NULL,
                         title VARCHAR NOT NULL,
@@ -338,6 +341,7 @@ impl DB {
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS department_tasks (
+                        tenant_id TEXT,
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         department TEXT NOT NULL,
@@ -498,8 +502,8 @@ impl DB {
 
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (tenant_id, memory_id, context, embedding) VALUES ('system', ?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { sqlx::query("INSERT INTO swarm_truth_embeddings (tenant_id, memory_id, context, embedding) VALUES ('system', $1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
                 .bind(embedding)

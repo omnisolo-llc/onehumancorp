@@ -118,12 +118,12 @@ impl OperationsWorker {
                 crate::db::DbStore::Postgres => {
                     sqlx::query(
                         r#"
-                        INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
-                        VALUES ($1, $2, 'customer_success', 'OrderProcessed', $3)
+                        INSERT INTO department_tasks (tenant_id, id, department, event_type, payload)
+                        VALUES ($2, $1, 'customer_success', 'OrderProcessed', $3)
                         "#
                     )
-                    .bind(&new_task_id)
                     .bind(&tenant_id)
+                    .bind(&new_task_id)
                     .bind(&new_payload)
                     .execute(&db.pool)
                     .await
@@ -138,12 +138,12 @@ impl OperationsWorker {
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
                         r#"
-                        INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
+                        INSERT INTO department_tasks (tenant_id, id, department, event_type, payload)
                         VALUES (?, ?, 'customer_success', 'OrderProcessed', ?)
                         "#
                     )
-                    .bind(&new_task_id)
                     .bind(&tenant_id)
+                    .bind(&new_task_id)
                     .bind(new_payload.to_string())
                     .execute(sqlite_pool)
                     .await

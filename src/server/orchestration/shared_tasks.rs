@@ -42,11 +42,12 @@ impl SharedTaskOrchestrator {
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_v4 (
-                        id, organization_id, title, description, status, agent_id,
+                        tenant_id, id, organization_id, title, description, status, agent_id,
                         priority, payload, parent_plan_id, dependencies, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                     "#
                 )
+                .bind(&task.organization_id)
                 .bind(&task_id)
                 .bind(&task.organization_id)
                 .bind(&task.title)
@@ -67,11 +68,12 @@ impl SharedTaskOrchestrator {
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_v4 (
-                        id, organization_id, title, description, status, agent_id,
+                        tenant_id, id, organization_id, title, description, status, agent_id,
                         priority, payload, parent_plan_id, dependencies, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
+                .bind(&task.organization_id)
                 .bind(&task_id)
                 .bind(&task.organization_id)
                 .bind(&task.title)
