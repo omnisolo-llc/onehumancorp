@@ -99,6 +99,7 @@ pub struct Usage {
 
 /// Tool definition for the LLM.
 #[derive(Debug, Clone)]
+#[derive(serde::Serialize)]
 pub struct ToolDefinition {
     pub name: String,
     pub description: String,
