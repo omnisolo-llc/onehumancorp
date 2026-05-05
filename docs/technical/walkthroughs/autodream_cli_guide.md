@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); padding: 24px; border-radius: 16px; color: #fff;">
 
 # Interactive CLI Guide for AutoDream
 
@@ -54,6 +54,6 @@ ohc-cli autodream prune --max-age 2h
 This ensures that the ephemeral `agent_session_data` older than two hours is safely truncated, freeing up storage while relying on the Vector DB for long-term semantic recall.
 
 ---
-*For a high-level architectural overview, see the [AutoDream Pipeline Visual Walkthrough](./autodream_pipeline.md).*
+*For a high-level architectural overview, see the [AutoDream Pipeline Walkthrough](./autodream_pipeline.md).*
 
 </div>
