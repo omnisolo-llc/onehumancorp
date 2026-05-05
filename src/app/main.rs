@@ -1802,6 +1802,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                let em_handle_for_open = email_marketing_handle.clone();
+                dashboard.on_action_open_email_marketing(move || {
+                    if let Some(ui) = em_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 dashboard.on_action_share_store(move || {
                     *share_store_called_clone.borrow_mut() = true;
                     if let Some(ui) = bs_handle_clone.upgrade() {
