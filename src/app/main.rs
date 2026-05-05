@@ -5364,10 +5364,10 @@ mod e2e_hybrid_blob_tests {
             ui.get_company_description(),
             ui.get_payment_pref(),
             ui.get_admin_email(),
-            "Modern".into(),
-            "Vegan Chocolate Cake".into(),
-            "45.00".into(),
-            "custom".into()
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice()
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
