@@ -212,6 +212,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
 
+    setup_wizard_ui.on_save_state({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+            #[cfg(target_arch = "wasm32")]
+            wasm_bindgen_futures::spawn_local(async move {
+                // HTTP call in WASM stubbed
+            });
+        }
+    });
+
     let _ = setup_wizard_ui.hide();
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
@@ -2259,6 +2298,45 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    setup_wizard_ui.on_save_state({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+            #[cfg(target_arch = "wasm32")]
+            wasm_bindgen_futures::spawn_local(async move {
+                // HTTP call in WASM stubbed
+            });
+        }
+    });
 
     let _ = setup_wizard_ui.hide();
 
