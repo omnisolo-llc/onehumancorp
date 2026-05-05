@@ -2,11 +2,15 @@ package harness
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
+
+	"onehumancorp/srcs/server/telemetry"
 )
 
 // SandboxAdapter interface matches the expected operations for a sandboxed execution wrapper.
@@ -39,7 +43,14 @@ func NewMacOSSandboxManager() *MacOSSandboxManager {
 // WrapCommand implements SandboxAdapter.WrapCommand
 func (m *MacOSSandboxManager) WrapCommand(cmd string) (string, error) {
 	if !m.evaluate(cmd) {
+		telemetry.RecordHarnessViolation(context.Background(), "policy_denied")
 		return "", fmt.Errorf("Command execution denied by sandbox policy")
+	}
+
+	// For metrics, try to extract the base command name (e.g. "ls" from "ls -la")
+	cmdParts := strings.Fields(cmd)
+	if len(cmdParts) > 0 {
+		telemetry.RecordHarnessToolInvocation(context.Background(), cmdParts[0])
 	}
 
 	profile := "(version 1)\n(allow default)\n"
@@ -107,6 +118,12 @@ func (m *MacOSSandboxManager) evaluate(cmd string) bool {
 
 // Execute is a helper that wraps the command and executes it locally for testing
 func (m *MacOSSandboxManager) Execute(cmd string) (string, error) {
+	start := time.Now()
+	defer func() {
+		durationSecs := time.Since(start).Seconds()
+		telemetry.RecordHarnessExecutionDuration(context.Background(), durationSecs)
+	}()
+
 	wrapped, err := m.WrapCommand(cmd)
 	if err != nil {
 		return "", err
