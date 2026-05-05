@@ -320,6 +320,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
                 let _ = wizard.show();
+                if let Some(ui) = login_handle.upgrade() {
+                    let _ = ui.hide();
+                }
             }
             if let Some(ui) = login_handle.upgrade() {
                 let _ = ui.hide();
@@ -2436,17 +2439,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
-    login_ui.on_start_setup_wizard({
-        let login_handle = login_ui_handle.clone();
-        move || {
-            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
-                let _ = wizard.show();
-            }
-            if let Some(ui) = login_handle.upgrade() {
-                let _ = ui.hide();
-            }
-        }
-    });
 
     login_ui.run()?;
 
