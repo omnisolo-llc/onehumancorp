@@ -45,7 +45,6 @@ pub struct AgentRunConfig {
     pub enable_llm_judge: bool,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
-    pub enable_git_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -81,7 +80,6 @@ impl Default for AgentRunConfig {
             enable_llm_judge: false,
             guardrails: None,
             enable_state_checkpointing: false,
-            enable_git_state_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -1220,30 +1218,6 @@ impl Agent {
                 }
             }
 
-            // 3. Git Commit Checkpointing (Claude Code Mechanic)
-            if cfg.enable_git_state_checkpointing && !mutating_calls.is_empty() {
-                let current_dir = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                let add_res = tokio::process::Command::new("git")
-                    .current_dir(&current_dir)
-                    .args(&["add", "."])
-                    .output()
-                    .await;
-                if add_res.is_ok() {
-                    let commit_res = tokio::process::Command::new("git")
-                        .current_dir(&current_dir)
-                        .args(&["commit", "-m", &format!("Agent checkpoint: iteration {}", iteration)])
-                        .output()
-                        .await;
-                    if let Ok(commit_output) = commit_res {
-                        if commit_output.status.success() {
-                            on_event(AgentEvent::CheckpointSaved {
-                                iteration,
-                                path: "git commit".to_string(),
-                            });
-                        }
-                    }
-                }
-            }
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
@@ -2815,10 +2789,12 @@ mod tests {
         let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["add", "."]).output().unwrap();
         let _ = std::process::Command::new("git").current_dir(&temp_dir).args(&["commit", "-m", "init"]).output().unwrap();
         std::fs::write(temp_dir.join("test.txt"), "hello modified").unwrap(); // Uncommitted change
+        let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
+        agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_state_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
+        cfg.thread_id = Some("test-thread".to_string());
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
@@ -2830,7 +2806,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path == "git commit" {
+                if path.starts_with("db:") {
                     found_checkpoint_event = true;
                 }
             }
