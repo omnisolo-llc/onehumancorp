@@ -231,8 +231,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("price_type".to_string(), ui.get_price_type().to_string()),
+                ("product_sku".to_string(), ui.get_product_sku().to_string()),
+                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -307,7 +313,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                                     if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                                     if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                                    if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                                     if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                                    if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
                                     if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
                                     if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                                     if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
@@ -618,6 +626,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                         if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
                         if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
@@ -652,6 +661,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
                 ("price_type".to_string(), ui.get_price_type().to_string()),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
@@ -1344,11 +1354,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
+            GLOBAL_WEBSITE_BUILDER.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 
@@ -1358,11 +1368,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
-            }
+            GLOBAL_INTEGRATIONS.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 
