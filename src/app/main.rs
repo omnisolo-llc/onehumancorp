@@ -315,9 +315,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -415,9 +415,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let _interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) = _interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
                                         });
@@ -1601,116 +1601,87 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
-                let help_center_ui = app::HelpCenter::new().unwrap();
-
-                let all_articles = vec![
-                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
-                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
-                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
-                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
-                ];
-                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
-
-                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
-
-                let hc_weak_for_search = help_center_ui.as_weak();
-                let articles_for_search = all_articles_rc.clone();
-                help_center_ui.on_execute_search(move || {
-                    if let Some(ui) = hc_weak_for_search.upgrade() {
-                        let query = ui.get_search_query().to_string().to_lowercase();
-                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
-                            a.title.to_lowercase().contains(&query) ||
-                            a.description.to_lowercase().contains(&query) ||
-                            a.category.to_lowercase().contains(&query)
-                        }).cloned().collect();
-                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
-                    }
-                });
-
-                let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
-
-                let ai_chat_ui = app::AiHelpChat::new().unwrap();
-                let ai_chat_handle = ai_chat_ui.as_weak();
-
-
-                let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
-                let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
-                Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
-
-
-
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
-
-                let video_tutorials_ui = app::VideoTutorials::new().unwrap();
-                let video_tutorials_handle = video_tutorials_ui.as_weak();
-                Box::leak(Box::new(video_tutorials_ui));
-
-                let api_docs_ui = app::ApiDocs::new().unwrap();
-                let api_docs_handle = api_docs_ui.as_weak();
-                Box::leak(Box::new(api_docs_ui));
-
-                let release_notes_ui = app::ReleaseNotes::new().unwrap();
-                let release_notes_handle = release_notes_ui.as_weak();
-                Box::leak(Box::new(release_notes_ui));
-
-                ai_chat_ui.on_send_message({
-                    let chat_handle = ai_chat_handle.clone();
-                    move || {
-                        if let Some(ui) = chat_handle.upgrade() {
-                            let input = ui.get_user_input();
-                            println!("User asked AI Help: {}", input);
-                            ui.set_user_input("".into());
-                            // In a real implementation this would query the backend
-                        }
-                    }
-                });
-                Box::leak(Box::new(ai_chat_ui));
-
                 dashboard.on_open_help_center(move || {
-                    if let Some(ui) = help_center_handle.upgrade() {
+                    if let Ok(ui) = app::HelpCenter::new() {
+                        let all_articles = vec![
+                            app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+                            app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
+                            app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
+                            app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
+                            app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                            app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
+                        ];
+                        let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
+
+                        let hc_weak_for_search = ui.as_weak();
+                        let articles_for_search = all_articles_rc.clone();
+                        ui.on_execute_search(move || {
+                            if let Some(ui) = hc_weak_for_search.upgrade() {
+                                let query = ui.get_search_query().to_string().to_lowercase();
+                                let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                                    a.title.to_lowercase().contains(&query) ||
+                                    a.description.to_lowercase().contains(&query) ||
+                                    a.category.to_lowercase().contains(&query)
+                                }).cloned().collect();
+                                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                            }
+                        });
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
-
 
                 dashboard.on_open_kairos_orchestration_walkthrough(move || {
-                    if let Some(ui) = kairos_orchestration_walkthrough_handle.upgrade() {
+                    if let Ok(ui) = app::KairosOrchestrationWalkthrough::new() {
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
 
                 dashboard.on_open_ai_chat(move || {
-                    if let Some(ui) = ai_chat_handle.upgrade() {
+                    if let Ok(ui) = app::AiHelpChat::new() {
+                        let ai_chat_handle = ui.as_weak();
+                        ui.on_send_message({
+                            let chat_handle = ai_chat_handle.clone();
+                            move || {
+                                if let Some(ui) = chat_handle.upgrade() {
+                                    let input = ui.get_user_input();
+                                    println!("User asked AI Help: {}", input);
+                                    ui.set_user_input("".into());
+                                }
+                            }
+                        });
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
 
                 dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                    if let Ok(ui) = app::InteractiveWalkthrough::new() {
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
 
                 dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
+                    if let Ok(ui) = app::VideoTutorials::new() {
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
 
                 dashboard.on_open_api_docs(move || {
-                    if let Some(ui) = api_docs_handle.upgrade() {
+                    if let Ok(ui) = app::ApiDocs::new() {
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
 
                 dashboard.on_open_release_notes(move || {
-                    if let Some(ui) = release_notes_handle.upgrade() {
+                    if let Ok(ui) = app::ReleaseNotes::new() {
                         let _ = ui.show();
+                        Box::leak(Box::new(ui));
                     }
                 });
                 let gb_handle_for_dashboard = grow_business_handle.clone();
