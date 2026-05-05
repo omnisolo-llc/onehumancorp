@@ -136,7 +136,8 @@ impl IpcTransport {
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true)
             .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal);
+            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+            .busy_timeout(std::time::Duration::from_secs(5));
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
 
         // Initialize schema
@@ -199,6 +200,7 @@ impl IpcTransport {
             .unwrap_or(Some(0))
             .unwrap_or(0);
 
+        let mut loop_count = 0u64;
         loop {
             // Poll for new messages, joining with processed_messages to avoid re-processing
             let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
@@ -241,10 +243,13 @@ impl IpcTransport {
                 }
             }
 
-            // Cleanup old messages (keep last 1 hour)
-            let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
-                .execute(&pool)
-                .await;
+            // Cleanup old messages less frequently (every ~30 seconds if loop is 50ms)
+            loop_count += 1;
+            if loop_count % 600 == 0 {
+                let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
+                    .execute(&pool)
+                    .await;
+            }
 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
