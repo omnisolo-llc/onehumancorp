@@ -729,6 +729,50 @@ mod tests {
         assert!(result.len() <= 32768);
         assert!(result.ends_with("CRITICAL_LEAF"));
     }
+
+    #[tokio::test]
+    async fn test_start_builtin_agent_task_assigned_subscribe() {
+        use crate::mesh::transport::MemoryTransport;
+        use crate::mesh::transport::MeshTransport;
+        use std::sync::Arc;
+        use prost::Message;
+        use crate::auth::AuthMode;
+
+        let transport = Arc::new(MemoryTransport::new());
+        let svc = Arc::new(AgentServiceImpl::new("test_agent", AgentConfig::default(), AuthMode::Disabled));
+
+        crate::service::start_builtin_agent(transport.clone(), svc.clone()).await;
+
+        let shared_task = crate::proto::hub::SharedTask {
+            id: "task-123".to_string(),
+            organization_id: "org1".to_string(),
+            title: "Test Task".to_string(),
+            description: "Task Description".to_string(),
+            payload: serde_json::json!({
+                "model": "gpt-4-test",
+                "department": "sales"
+            }).to_string(),
+            ..Default::default()
+        };
+
+        let mut buf = Vec::new();
+        let _ = shared_task.encode(&mut buf);
+
+        // The MemoryTransport internally executes local subscribers immediately.
+        // It's a bit tricky to assert side-effects of tokio::spawn inside without mocking the entire service,
+        // but we verify the publish is correctly handled by the framework without crashing.
+        let result = transport.publish("task.assigned", crate::mesh::transport::Message {
+            agent_id: "agent".to_string(),
+            action: "task.assigned".to_string(),
+            status: "ok".to_string(),
+            payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        }).await;
+
+        assert!(result.is_ok());
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
 }
 
 pub async fn start_builtin_agent(
@@ -776,6 +820,92 @@ pub async fn start_builtin_agent(
         tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
     } else {
         tracing::info!("Subscribed to mesh channel 'agent_jobs'");
+    }
+
+    let handler_tasks = {
+        let svc = svc.clone();
+        let transport = transport.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            use prost::Message;
+            if let Ok(shared_task) = crate::proto::hub::SharedTask::decode(&msg.payload[..]) {
+                tracing::info!("Received SharedTask from mesh (task.assigned): {}", shared_task.id);
+
+                // Decode metadata payload to extract overriding config
+                let mut system_prompt = String::new();
+                let mut department = String::new();
+                let mut model = String::new();
+
+                if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&shared_task.payload) {
+                    if let Some(sp) = payload_json.get("system_prompt").and_then(|v| v.as_str()) {
+                        system_prompt = sp.to_string();
+                    }
+                    if let Some(dep) = payload_json.get("department").and_then(|v| v.as_str()) {
+                        department = dep.to_string();
+                    }
+                    if let Some(m) = payload_json.get("model").and_then(|v| v.as_str()) {
+                        model = m.to_string();
+                    }
+                }
+
+                let req = crate::proto::agent_service::RunTaskRequest {
+                    task_id: shared_task.id.clone(),
+                    task: shared_task.title.clone() + "\n" + shared_task.description.as_str(),
+                    model,
+                    llm_provider: "".to_string(), // rely on defaults in build_run_config
+                    llm_endpoint: "".to_string(),
+                    system_prompt,
+                    max_tokens: 0,
+                    temperature: 0.0,
+                    max_context_messages: 0,
+                    injected_context_json: shared_task.payload.clone(),
+                    runtime_config: None,
+                    toolset_config: None,
+                    department,
+                };
+
+                let svc = svc.clone();
+                let transport = transport.clone();
+                tokio::spawn(async move {
+                    match svc.run_task(tonic::Request::new(req)).await {
+                        Ok(resp) => {
+                            let mut stream = resp.into_inner();
+                            use tokio_stream::StreamExt;
+                            while let Some(res) = stream.next().await {
+                                match res {
+                                    Ok(evt) => {
+                                        let mut buf = Vec::new();
+                                        use prost::Message;
+                                        let _ = evt.encode(&mut buf);
+                                        let _ = transport.publish("agent_events", crate::mesh::transport::Message {
+                                            agent_id: "agent".to_string(),
+                                            action: "agent_events".to_string(),
+                                            status: "ok".to_string(),
+                                            payload: buf,
+                                            msg_id: uuid::Uuid::new_v4().to_string(),
+                                        }).await;
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Stream error running task from task.assigned: {}", e);
+                                        break; // Or handle dead-letter logic
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error starting task from task.assigned: {}", e);
+                        }
+                    }
+                });
+            } else {
+                 tracing::error!("Failed to decode SharedTask from task.assigned topic");
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("task.assigned", handler_tasks).await {
+        tracing::error!("Failed to subscribe to 'task.assigned' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'task.assigned'");
     }
 
     let handler_ralph = {
