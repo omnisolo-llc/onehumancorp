@@ -2930,7 +2930,7 @@ mod e2e_tests {
 
         let ui = app::SetupWizard::new().unwrap();
 
-        // Step 0: Welcome -> Step 1
+        // Step 0: Welcome
         assert_eq!(ui.get_step(), 0);
 
         // Verify advanced state correctly saves using native callback simulation
@@ -2938,6 +2938,7 @@ mod e2e_tests {
         ui.invoke_toggle_advanced();
         assert_eq!(ui.get_is_advanced(), true);
 
+        // Manual setup fallback is still Step 1
         ui.invoke_next_step();
 
         // Step 1: Type -> Step 2
@@ -3609,48 +3610,26 @@ mod docs_tests {
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
 
-        // Step 0: Welcome -> Step 1
+        // Step 0: Welcome -> Magic Onboarding
         assert_eq!(ui.get_step(), 0);
-        ui.invoke_next_step();
+        ui.set_instant_bio("I run a local bakery called My E2E Store, specializing in custom vegan orders".into());
 
-        // Step 1: Type -> Step 2
-        ui.invoke_select_business_type("Online Store".into());
+        // Mock generation
+        let ui_weak = ui.as_weak();
+        ui.on_generate_instant_preview(move || {
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_company_name("My E2E Store".into());
+                u.set_business_type("Online Store".into());
+                u.set_sell_physical(true);
+                u.set_payment_pref("online".into());
+                u.set_admin_email("admin@e2e.test".into());
+                u.set_step(9);
+            }
+        });
 
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.invoke_next_step();
-
-        // Step 3: What do you sell -> Step 4
-        ui.invoke_toggle_sell_physical();
-        ui.invoke_next_step();
-
-        // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
-
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 6);
-
-        // New steps in onboarding
-        ui.invoke_select_template("Classic".into());
-        assert_eq!(ui.get_step(), 7);
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.0".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
-        // Test going back from step 9 to step 11
-        ui.set_is_instant_build(true);
-        ui.set_step(11);
-        ui.set_instant_bio("A cool test bakery".into());
         ui.invoke_generate_instant_preview();
-        // Since we are simulating, reset to 9 and launching=true
-        ui.set_is_instant_build(false);
-        ui.set_step(9);
+
+        assert_eq!(ui.get_step(), 9);
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();

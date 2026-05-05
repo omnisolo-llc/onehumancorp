@@ -140,7 +140,7 @@ export component SetupWizard inherits Window {
         }
 
         ScrollView {
-            // Step 0: Welcome
+            // Step 0: Welcome / Magic Onboarding
             if (step == 0) : VerticalBox {
                 spacing: 24px;
                 alignment: center;
@@ -151,32 +151,57 @@ export component SetupWizard inherits Window {
                     animate opacity { duration: 500ms; easing: ease-in-out; }
 
                     Text {
-                        text: "Your business,\nlive in minutes.";
+                        text: "What are you building today?";
                         font-size: 32px;
                         font-family: "Outfit";
                         font-weight: 700;
                         color: white;
                         horizontal-alignment: center;
+                        wrap: word-wrap;
                     }
                 }
                 Text {
-                    text: "Zero tech skills needed. We do the heavy lifting.";
+                    text: "Write a short description. AI will design your storefront, menu, and catalog instantly.";
                     font-size: 16px;
                     font-family: "Inter";
                     color: #94a3b8;
                     horizontal-alignment: center;
+                    wrap: word-wrap;
                 }
-                GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 0.8);
-                    VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { next_step(); } }
+
+                LineEdit {
+                    placeholder-text: "e.g. I run a local bakery called Maya's Cakes, specializing in custom vegan orders...";
+                    text <=> instant_bio;
+                    height: 140px;
+                    enabled: !is_generating_instant_preview;
                 }
-                GlassCard {
+
+                if (is_generating_instant_preview) : GlassCard {
                     height: 54px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                    background: rgba(168, 85, 247, 0.5);
+                    VerticalBox { alignment: center; Text { text: "✨ AI is designing your business... ✨"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                }
+
+                if (!is_generating_instant_preview) : GlassCard {
+                    height: 54px;
+                    background: rgba(168, 85, 247, 1.0);
+                    VerticalBox { alignment: center; Text { text: "Generate My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea {
+                        enabled: instant_bio != "";
+                        clicked => {
+                            is_instant_build = true;
+                            is_generating_instant_preview = true;
+                            save_state();
+                            generate_instant_preview();
+                        }
+                    }
+                }
+
+                // Advanced/Manual fallback
+                TouchArea {
+                    height: 30px;
+                    clicked => { next_step(); }
+                    Text { text: "Or use manual guided setup"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center;  }
                 }
             }
 
@@ -605,38 +630,7 @@ export component SetupWizard inherits Window {
                 }
             }
 
-            // Step 11: Instant Build
-            if (step == 11) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Tell us about your business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Write a short paragraph. AI will figure out the rest."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                LineEdit {
-                    placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
-                    text <=> instant_bio;
-                    height: 120px;
-                    enabled: !is_generating_instant_preview;
-                }
-
-                if (is_generating_instant_preview) : GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 0.5);
-                    VerticalBox { alignment: center; Text { text: "AI is brainstorming... 🧠"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                }
-
-                if (!is_generating_instant_preview) : GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 1.0);
-                    VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea {
-                        enabled: instant_bio != "";
-                        clicked => {
-                            is_generating_instant_preview = true;
-                            generate_instant_preview();
-                        }
-                    }
-                }
-            }
 
             // Step 10: Checklist
             if (false) : VerticalBox {
@@ -733,12 +727,7 @@ export component SetupWizard inherits Window {
             if (step > 0 && !launching && step < 10 && step != 100) : GlassCard {
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; save_state(); } }
-            }
-            if (step == 11 && !launching) : GlassCard {
-                height: 44px;
-                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { is_instant_build = false; step = 0; save_state(); } }
+                TouchArea { clicked => { step = step == 9 && is_instant_build ? 0 : step - 1; save_state(); } }
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 

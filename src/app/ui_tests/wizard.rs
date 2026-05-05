@@ -498,6 +498,7 @@ fn wizard_copy_link_integration() {
 fn test_e2e_wizard_instant_build_flow() {
     use slint::ComponentHandle;
     let ui = create();
+    ui.set_step(0);
     ui.set_is_instant_build(true);
     ui.set_instant_bio("I run a local bakery called Maya's Cakes".into());
 
