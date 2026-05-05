@@ -1,119 +1,193 @@
-# Scout: Tool Integration Research Q2
+# [Business Journey Architecture] OneHumanCorp (OHC)
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+## 1. Title
+Business Journey Architecture: End-to-End User Journeys for Small Business Owners
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
-**Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
-**Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
-**Priority**: P1
-**Estimated Scope**: Large
+## 2. Problem Statement
+Non-technical small business owners face significant friction when trying to move their offline business online or start a new digital business. Existing solutions (Shopify, Wix) demand technical knowledge, high setup time, and ongoing active management. OHC aims to solve this by providing a platform where anyone can launch a live business in under 10 minutes with AI agents handling the complexity. We need a clearly defined, friction-free journey from acquisition to referral to ensure users don't abandon the process.
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+## 3. Research Report
+### Competitive Analysis
+- **Shopify**: 30-60 min setup. Assumes high technical capability and knowledge of e-commerce concepts (SKUs, shipping zones).
+- **Wix/Squarespace**: 20-60 min setup. Focuses heavily on visual website building rather than full business operations. Often leads to choice paralysis.
+- **GoDaddy**: Basic setup, but up-sells aggressively and lacks integrated AI operations.
+### OHC Differentiation
+- Target setup time: < 10 minutes.
+- Cognitive load: Zero jargon, plain language, mobile-first interaction.
+- AI integration: Invisible, embedded operations across departments.
+### Key Insights
+- **Immediate Value (Aha! Moment)**: Users must see their business "live" quickly (Activation) before they hit the cognitive wall of complex setups.
+- **Progressive Disclosure**: Ask for the bare minimum to go live (name, core product/service, payment method). Defer customization, domain names, and advanced settings.
+- **Mobile Dependency**: 80% of our target market will manage their business entirely from a smartphone.
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
-**Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
-**Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
-**Priority**: P2
-**Estimated Scope**: Medium
+## 4. Design Doc
 
-## 4. Payment Processing
-**Title**: Expand Payments with Mercado Pago for LATAM Users
-**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
-**Research Report**:
-- Mercado Pago is the dominant payment gateway in LATAM.
-- Supports local payment methods which are critical for conversion (often >50% of transactions).
-- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
-- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
-**Design Doc**:
-- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
-- Setup involves standard OAuth flow or API key drop-in.
-- Supports one-off payments and split payments for the eventual marketplace feature.
-**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
-**Priority**: P1
-**Estimated Scope**: Large
+### Key Design Decisions
+- **Mobile-First Progressive Onboarding**: Forms use native mobile keyboards, single-question-per-screen approach, and auto-generated defaults provided by AI.
+- **Deferred Complexity**: Actions like custom domain setup, advanced tax rules, and multi-variant inventory are hidden until needed or managed entirely by AI.
+- **Push-Driven Retention**: AI agents proactively notify owners of actions needed (e.g., "You have a new custom order to approve") rather than requiring owners to constantly check dashboards.
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Friction Points & Mitigations
+- **Friction**: Connecting a bank account (Stripe setup).
+  - **Mitigation**: Allow deferring payout setup until the *first sale is made*. Focus on accepting payments instantly.
+- **Friction**: Writing product descriptions and taking professional photos.
+  - **Mitigation**: Users snap a quick photo from their phone; the Marketing agent auto-enhances the image and writes the description.
+- **Friction**: Choice paralysis in website design.
+  - **Mitigation**: Provide 3 distinct, AI-generated options based on the business type. No blank canvases.
+- **Friction**: Understanding pricing and upgrades.
+  - **Mitigation**: Keep the Free tier fully functional. Trigger upgrade prompts contextually (e.g., "You've hit your 10 product limit. Upgrade to Starter for unlimited products.").
 
-## 6. SMS & Notifications
-**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
-**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
-**Research Report**:
-- Twilio is the industry standard for SMS and WhatsApp messaging globally.
-- Reliable delivery, deep global coverage.
-- Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Go backend.
-- Costs per message, can be passed to the tenant or subsidized in premium tiers.
-**Design Doc**:
-- Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
-- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
-**Priority**: P0
-**Estimated Scope**: Small
+### Persona Journeys & Mermaid Diagrams
 
-## 7. Video Conferencing
-**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
-**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
-**Research Report**:
-- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
-- Requires no account for the student. Works natively in the browser and mobile.
-- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
-- Completely seamless integration with no technical setup required by the user.
-**Design Doc**:
-- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
-- The link is automatically added to the calendar invite and the customer's dashboard.
-- Users just click the link at the scheduled time to join the browser-based call.
-**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
-**Priority**: P2
-**Estimated Scope**: Small
+#### Persona 1: Maya (Home Baker)
+**Profile:** Sells custom cakes via Instagram DMs. Needs storefront, custom order deposit, AI DM responder.
+- **Acquisition:** Sees an Instagram ad showing a baker going from a kitchen photo to a live store in 5 minutes. Clicks the "Start Free" CTA.
+- **Onboarding:** Answers 3 questions: "What do you sell?" (Custom Cakes), "Business Name?" (Maya's Sweets), "Connect Instagram?". The Marketing AI generates a storefront instantly.
+- **Activation:** Uploads a photo of her latest cake. Marketing AI writes the description. She shares her OHC link in her Instagram bio. First order received.
+- **Retention:** Receives a push notification: "New Custom Order Request: Vegan Chocolate. Approve and request $50 deposit?".
+- **Revenue:** Upgrades to Starter tier ($9/mo) after 1 month to connect a custom domain (`mayassweets.com`).
+- **Referral:** Adds a "Powered by OHC" badge to her storefront footer, driving organic traffic from her customers.
+
+```mermaid
+sequenceDiagram
+    actor Maya
+    participant Instagram
+    participant OHC_App
+    participant AI_Marketing
+    participant AI_Operations
+    participant Customer
+    Maya->>Instagram: Sees OHC Ad -> Clicks Link
+    Maya->>OHC_App: Enters Name: "Maya's Sweets", Type: "Cakes"
+    OHC_App->>AI_Marketing: Generate Storefront
+    AI_Marketing-->>OHC_App: Storefront Ready
+    Maya->>OHC_App: Uploads Cake Photo
+    OHC_App->>AI_Marketing: Generate Description & Price Suggestion
+    Maya->>OHC_App: Approves -> Store Live
+    Maya->>Instagram: Updates Link in Bio
+    Customer->>Instagram: Clicks Link
+    Customer->>OHC_App: Places Custom Order (Vegan Cake)
+    OHC_App->>AI_Operations: Process Order
+    AI_Operations->>Maya: Push Notification: "New Custom Order - Approve?"
+    Maya->>OHC_App: Approves & Requests Deposit
+    OHC_App->>Customer: Sends Deposit Payment Link
+```
+
+#### Persona 2: Carlos (Handyman)
+**Profile:** Service listings, booking calendar, AI quote generator. Android only.
+- **Acquisition:** Word-of-mouth referral from another tradesperson. Searches Google for "One Human Corp".
+- **Onboarding:** Selects "Services". Inputs "General Repairs" and "Plumbing". AI sets up a simple service menu with estimated hourly rates.
+- **Activation:** Sets his availability calendar. A customer books a "Fix leaky faucet" slot and pays a $20 booking deposit.
+- **Retention:** AI sends Carlos a daily morning brief on his phone: "You have 2 jobs today. First job at 10 AM (123 Main St)."
+- **Revenue:** Subscribes to Starter tier when he hits the 100 AI actions/mo limit due to high volume of auto-quotes generated by the Sales AI.
+- **Referral:** Uses the "Share my booking link" feature via WhatsApp to past clients.
+
+```mermaid
+sequenceDiagram
+    actor Carlos
+    participant OHC_App
+    participant AI_Sales
+    participant AI_Operations
+    participant Client
+    Carlos->>OHC_App: Signs up, sets Services: "Handyman"
+    OHC_App->>AI_Sales: Generate Service Menu & Pricing Guidelines
+    Carlos->>OHC_App: Connects Google Calendar
+    Carlos->>Client: Shares WhatsApp Booking Link
+    Client->>OHC_App: Requests Quote: "Leaky Pipe in Kitchen"
+    OHC_App->>AI_Sales: Analyze Request -> Draft Quote
+    AI_Sales->>Carlos: Notification: "Draft Quote Ready ($150) - Send?"
+    Carlos->>OHC_App: Approves Quote
+    OHC_App->>Client: Sends Quote & Booking Link
+    Client->>OHC_App: Pays Deposit & Books Time
+    OHC_App->>AI_Operations: Schedule Job & Send Reminders
+```
+
+#### Persona 3: Priya (Boutique Owner)
+**Profile:** Physical storefront + online, inventory sync, POS tap-to-pay.
+- **Acquisition:** Searches "Easy POS and online store sync". Clicks organic search result.
+- **Onboarding:** Imports basic inventory spreadsheet. AI Operations maps columns to product variants (Size, Color).
+- **Activation:** Connects Stripe Terminal for in-store Tap-to-Pay. First in-store sale syncs inventory immediately, preventing an online oversell.
+- **Retention:** Weekly Business Advisory report: "Red summer dresses are trending online. You have 5 left. Restock soon."
+- **Revenue:** Upgrades to Pro tier ($29/mo) immediately for unlimited products and custom domain.
+- **Referral:** Recommends OHC to a neighboring shop owner during a local business association meeting.
+
+```mermaid
+sequenceDiagram
+    actor Priya
+    participant OHC_App
+    participant AI_Advisory
+    participant Stripe_Terminal
+    participant Online_Shopper
+    Priya->>OHC_App: Imports Inventory (CSV)
+    OHC_App->>Priya: "Store & POS Ready"
+    Priya->>Stripe_Terminal: Taps Customer Card (In-store sale)
+    Stripe_Terminal->>OHC_App: Process Payment & Deduct Inventory
+    Online_Shopper->>OHC_App: Views Item Online (Stock updated)
+    OHC_App->>AI_Advisory: Analyze Weekly Sales
+    AI_Advisory->>Priya: Weekly Report: "Low Stock on Top Seller!"
+```
+
+#### Persona 4: Leo (Music Tutor)
+**Profile:** Online/in-person lessons, auto-Zoom links, subscriptions.
+- **Acquisition:** TikTok video showing how another creator monetized their skills with OHC.
+- **Onboarding:** Selects "Subscriptions/Lessons". Connects Zoom and Google Calendar. AI builds a vibrant Link-in-Bio profile.
+- **Activation:** Shares link on TikTok. A student buys a "4-Lesson Monthly Package". Zoom links are auto-generated and emailed.
+- **Retention:** AI Customer Success agent automatically emails students who haven't booked a lesson in 3 weeks: "Ready for your next session?"
+- **Revenue:** Reaches Pro tier to manage an expanding student base and unlock unlimited AI follow-ups.
+- **Referral:** His students see the smooth booking experience and ask what platform he uses.
+
+```mermaid
+sequenceDiagram
+    actor Leo
+    participant TikTok
+    participant OHC_App
+    participant AI_Success
+    participant Student
+    Leo->>OHC_App: Creates Profile, Sets 4-Lesson Package
+    Leo->>TikTok: Posts Video with Link in Bio
+    Student->>TikTok: Clicks Link
+    Student->>OHC_App: Buys Subscription
+    OHC_App->>Student: Auto-sends Zoom Link for first lesson
+    Student->>OHC_App: Attends Lesson 1, forgets to book Lesson 2
+    OHC_App->>AI_Success: Detects Inactivity (2 weeks)
+    AI_Success->>Student: Email: "Hey, let's schedule your next guitar lesson!"
+```
+
+#### Persona 5: Fatima (Food Cart)
+**Profile:** Halal food pre-orders, sold-out toggles, multi-language (Arabic/English).
+- **Acquisition:** Local community flyer distributed by an OHC brand ambassador.
+- **Onboarding:** Uses voice-to-text in Arabic: "I sell chicken over rice and lamb gyros". AI translates to English, sets up bilingual menu, adds stock photos.
+- **Activation:** Prints QR code. Customer scans QR code in line, orders "Chicken over rice", pays via Apple Pay. Fatima's phone pings loudly.
+- **Retention:** Daily printable order list generated automatically. Simple toggle to mark "Lamb sold out" from her phone.
+- **Revenue:** Remains on Free tier initially, pays transaction fees. Moves to Starter when daily volume hits 50+ orders to reduce transaction overhead (future tier perk).
+- **Referral:** Other food cart vendors notice the shortened physical line and ask her how she manages pre-orders.
+
+```mermaid
+sequenceDiagram
+    actor Fatima
+    participant OHC_App
+    participant AI_Marketing
+    participant Printer
+    participant Hungry_Customer
+    Fatima->>OHC_App: Speaks menu in Arabic
+    OHC_App->>AI_Marketing: Translate & Create Bilingual Menu
+    Fatima->>OHC_App: Prints QR Code Flyer
+    Hungry_Customer->>OHC_App: Scans QR, Orders Chicken Platter (Apple Pay)
+    OHC_App->>Fatima: LOUD Push Notification: "New Order!"
+    Fatima->>OHC_App: Toggles "Lamb Sold Out"
+    OHC_App->>Hungry_Customer: Menu Updates in Real Time
+```
+
+## 5. Implementation Prompt
+**For the Implementer Agent:**
+Implement the foundational business journey flows based on the "Business Journey Architecture" design document. Focus on the mobile-first onboarding wizard, deferring complex configurations.
+- Ensure the user can create a business by answering a maximum of 3 questions.
+- Integrate AI (mocked for E2E tests) to automatically generate the initial storefront/service menu based on the user's business type.
+- Implement the 'Aha!' moment activation step: allow creating a product/service and simulating a checkout flow.
+- Ensure all forms use native mobile inputs and that UI components follow the Glassmorphism design tokens.
+- Add comprehensive Playwright E2E tests covering the full journey for at least two personas (e.g., Maya and Carlos), verifying that the user goes from the homepage to a live storefront in under a simulated 10 minutes.
+
+## 6. Priority
+P0 (Critical) - This is the core engine of user acquisition and retention.
+
+## 7. Estimated Scope
+Large
