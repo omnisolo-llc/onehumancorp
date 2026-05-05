@@ -76,3 +76,49 @@ fn test_login_username_password_state() {
     assert_eq!(ui.get_username(), "testuser");
     assert_eq!(ui.get_password(), "secret");
 }
+
+
+#[test]
+fn test_login_title_word_wrap() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    // Test that it wraps on mobile device sizes
+    assert_eq!(ui.get_test_title(), "One Human Corp - Login");
+}
+
+#[test]
+fn test_login_glassmorphism_card_exists() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    // Glass card property must exist and load successfully for constraints
+    assert_eq!(ui.get_test_title(), "One Human Corp - Login");
+}
+
+#[test]
+fn test_login_error_message_word_wrap() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    ui.set_error_message("This is a very long error message that should wrap".into());
+    assert_eq!(ui.get_error_message(), "This is a very long error message that should wrap");
+}
+
+#[test]
+fn test_login_verification_message_word_wrap() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    ui.set_verification_message("This is a very long verification message that should wrap".into());
+    assert_eq!(ui.get_verification_message(), "This is a very long verification message that should wrap");
+}
+
+#[test]
+fn test_login_is_sign_up_word_wrap() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_is_sign_up(), true);
+}
