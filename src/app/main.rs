@@ -3052,7 +3052,7 @@ mod e2e_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(100);
             }
         });
 
@@ -3072,7 +3072,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 100);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3618,7 +3618,7 @@ mod docs_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(100);
             }
         });
 
@@ -3729,7 +3729,7 @@ mod docs_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(100);
             }
         });
 
