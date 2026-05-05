@@ -22,6 +22,7 @@ pub struct MissionPayload {
     pub role: String,
     pub task: String,
     pub context: Option<String>,
+    pub action_risk: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -204,6 +205,7 @@ mod tests {
                 role: "agent".to_string(),
                 task: "task".to_string(),
                 context: None,
+                action_risk: None,
             },
         };
 
