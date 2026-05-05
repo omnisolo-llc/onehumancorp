@@ -420,6 +420,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                                        let local_models = std::sync::Arc::new(std::sync::Mutex::new(Vec::<app::VideoMetadata>::new()));
+
+                                        let vt_weak_for_search = video_tutorials_ui.as_weak();
+                                        let local_models_clone_filter = local_models.clone();
+                                        video_tutorials_ui.on_filter_videos(move || {
+                                            if let Some(ui) = vt_weak_for_search.upgrade() {
+                                                let query = ui.get_search_query().to_string().to_lowercase();
+                                                let category = ui.get_active_category().to_string();
+                                                let all_videos = local_models_clone_filter.lock().unwrap();
+                                                let filtered: Vec<app::VideoMetadata> = all_videos.iter().filter(|v| {
+                                                    let match_query = query.is_empty() || v.title.to_lowercase().contains(&query) || v.description.to_lowercase().contains(&query);
+                                                    let match_category = category.is_empty() || v.category.to_string() == category;
+                                                    match_query && match_category
+                                                }).cloned().collect();
+                                                ui.set_videos(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                                            }
+                                        });
+
+                                        let vt_weak_for_watch = video_tutorials_ui.as_weak();
+                                        let local_models_clone_watch = local_models.clone();
+                                        video_tutorials_ui.on_mark_video_watched(move |title| {
+                                            if let Some(ui) = vt_weak_for_watch.upgrade() {
+                                                {
+                                                    let mut all_videos = local_models_clone_watch.lock().unwrap();
+                                                    if let Some(v) = all_videos.iter_mut().find(|v| v.title == title) {
+                                                        v.watched = true;
+                                                    }
+                                                }
+                                                ui.invoke_filter_videos();
+                                            }
+                                        });
+
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
@@ -428,6 +460,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 #[cfg(not(target_arch = "wasm32"))]
                                                 {
                                                     let ui_weak = ui.as_weak();
+                                                    let local_models = local_models.clone();
                                                     tokio::spawn(async move {
                                                         use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
                                                         use ohc::api::v1::GetVideoTutorialsRequest;
@@ -444,17 +477,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                         duration_sec: v.duration_sec,
                                                                         url: v.url.into(),
                                                                         thumbnail_url: v.thumbnail_url.into(),
+                                                                        watched: false,
+                                                                        category: "Beginner".into(),
                                                                     });
                                                                 }
+                                                                let models_for_closure = models.clone();
                                                                 let _ = slint::invoke_from_event_loop(move || {
-                                                                    let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
                                                                     if let Some(ui) = ui_weak.upgrade() {
-                                                                        ui.set_videos(model_rc.into());
+                                                                        {
+                                                                            let mut all_videos = local_models.lock().unwrap();
+                                                                            *all_videos = models_for_closure;
+                                                                        }
+                                                                        ui.invoke_filter_videos();
                                                                     }
                                                                 });
                                                             }
                                                         }
                                                     });
+                                                }
+                                                #[cfg(target_arch = "wasm32")]
+                                                {
+                                                    let mut models: Vec<app::VideoMetadata> = Vec::new();
+                                                    models.push(app::VideoMetadata {
+                                                        title: "Getting Started (WASM fallback)".into(),
+                                                        description: "Fallback description.".into(),
+                                                        duration_sec: 120,
+                                                        url: "".into(),
+                                                        thumbnail_url: "".into(),
+                                                        watched: false,
+                                                        category: "Beginner".into(),
+                                                    });
+                                                    let models_for_closure = models.clone();
+                                                    let mut all_videos = local_models.lock().unwrap();
+                                                    *all_videos = models_for_closure;
+                                                    if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                        ui.invoke_filter_videos();
+                                                    }
                                                 }
                                                 let _ = ui.show();
                                             }
@@ -554,6 +612,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                                        let local_models = std::sync::Arc::new(std::sync::Mutex::new(Vec::<app::VideoMetadata>::new()));
+
+                                        let vt_weak_for_search = video_tutorials_ui.as_weak();
+                                        let local_models_clone_filter = local_models.clone();
+                                        video_tutorials_ui.on_filter_videos(move || {
+                                            if let Some(ui) = vt_weak_for_search.upgrade() {
+                                                let query = ui.get_search_query().to_string().to_lowercase();
+                                                let category = ui.get_active_category().to_string();
+                                                let all_videos = local_models_clone_filter.lock().unwrap();
+                                                let filtered: Vec<app::VideoMetadata> = all_videos.iter().filter(|v| {
+                                                    let match_query = query.is_empty() || v.title.to_lowercase().contains(&query) || v.description.to_lowercase().contains(&query);
+                                                    let match_category = category.is_empty() || v.category.to_string() == category;
+                                                    match_query && match_category
+                                                }).cloned().collect();
+                                                ui.set_videos(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                                            }
+                                        });
+
+                                        let vt_weak_for_watch = video_tutorials_ui.as_weak();
+                                        let local_models_clone_watch = local_models.clone();
+                                        video_tutorials_ui.on_mark_video_watched(move |title| {
+                                            if let Some(ui) = vt_weak_for_watch.upgrade() {
+                                                {
+                                                    let mut all_videos = local_models_clone_watch.lock().unwrap();
+                                                    if let Some(v) = all_videos.iter_mut().find(|v| v.title == title) {
+                                                        v.watched = true;
+                                                    }
+                                                }
+                                                ui.invoke_filter_videos();
+                                            }
+                                        });
+
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
@@ -4254,6 +4344,8 @@ mod docs_tests {
                 duration_sec: 60,
                 url: "url".into(),
                 thumbnail_url: "thumb".into(),
+                watched: false,
+                category: "Beginner".into(),
             }
         ];
         video_tutorials.set_videos(std::rc::Rc::new(slint::VecModel::from(models)).into());

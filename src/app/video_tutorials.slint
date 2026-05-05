@@ -1,3 +1,4 @@
+import { LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
@@ -7,6 +8,8 @@ export struct VideoMetadata {
     duration_sec: int,
     url: string,
     thumbnail_url: string,
+    watched: bool,
+    category: string,
 }
 
 export component VideoTutorials inherits Window {
@@ -17,7 +20,13 @@ export component VideoTutorials inherits Window {
     background: #0f172a;
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
+    in-out property <string> search_query: "";
+    in-out property <string> active_category: "Beginner";
+    callback filter_videos();
+    changed search_query => { root.filter_videos(); }
+    changed active_category => { root.filter_videos(); }
     in-out property <[VideoMetadata]> videos: [];
+    callback mark_video_watched(string);
 
     HorizontalBox {
         alignment: center;
@@ -34,21 +43,65 @@ export component VideoTutorials inherits Window {
                 color: white;
             }
 
+            LineEdit {
+                placeholder-text: "Search video tutorials...";
+                text <=> search_query;
+            }
+
+            HorizontalBox {
+                spacing: 12px;
+                Button {
+                    text: "Beginner";
+                    clicked => { active_category = "Beginner"; }
+                }
+                Button {
+                    text: "Advanced";
+                    clicked => { active_category = "Advanced"; }
+                }
+            }
+
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
 
-                    for video in videos : GlassCard {
+                    for video[index] in videos : GlassCard {
+                        visible: true;
                         VerticalBox {
                             padding: 16px; spacing: 12px;
                             Rectangle {
                                 height: 200px;
                                 background: #0f172a;
                                 border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                                property <string> thumbnail_class: "thumbnail";
+                                property <string> video_class: "video";
+                                if (!is_playing || selected_video_title != video.title): Button {
+                                    text: "▶ Play Video";
+                                    clicked => { selected_video_title = video.title; is_playing = true; }
+                                }
+                                if (is_playing && selected_video_title == video.title): VerticalBox {
+                                    alignment: center;
+                                    Text { text: "Playing Video..."; color: white; horizontal-alignment: center; }
+                                    HorizontalBox {
+                                        alignment: center;
+                                        spacing: 16px;
+                                        Button { text: "Pause"; clicked => { is_playing = false; } }
+                                        Text { text: "Volume: 50%"; color: white; vertical-alignment: center; }
+                                        Text { text: "Fullscreen"; color: white; vertical-alignment: center; }
+                                    }
+                                }
                             }
-                            Text { text: video.title; font-weight: 700; font-size: 18px; color: white; }
-                            Text { text: video.description; color: white; wrap: word-wrap; }
+                            TouchArea {
+                                clicked => {
+                                    root.mark_video_watched(video.title);
+                                }
+                                VerticalBox {
+                                    spacing: 8px;
+                                    Text { text: video.title; font-weight: 700; font-size: 18px; color: white; }
+                                    Text { text: video.description; color: white; wrap: word-wrap; }
+                                    Text { text: "Duration: " + Math.floor(video.duration_sec / 60) + ":" + (Math.mod(video.duration_sec, 60) < 10 ? "0" : "") + Math.mod(video.duration_sec, 60); color: #94a3b8; }
+                                    if (video.watched): Text { text: "Watched"; color: #10b981; }
+                                }
+                            }
                         }
                     }
                 }
