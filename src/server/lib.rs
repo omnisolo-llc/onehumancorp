@@ -991,6 +991,17 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+
+    async fn add_product(
+        &self,
+        request: Request<crate::ohc::orchestration::AddProductRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::AddProductResponse>, Status> {
+        let req = request.into_inner();
+        match self.onboarding_agent.add_product(req).await {
+            Ok(resp) => Ok(Response::new(resp)),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {

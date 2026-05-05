@@ -259,6 +259,7 @@ service HubService {
   rpc VerifyEnvironment(VerifyEnvironmentRequest) returns (VerifyEnvironmentResponse);
   rpc GenerateConfig(GenerateConfigRequest) returns (GenerateConfigResponse);
   rpc SaveWizardState(SaveWizardStateRequest) returns (SaveWizardStateResponse);
+  rpc AddProduct(AddProductRequest) returns (AddProductResponse);
   rpc GetWizardState(GetWizardStateRequest) returns (GetWizardStateResponse);
   rpc ResetWizardState(ResetWizardStateRequest) returns (ResetWizardStateResponse);
   rpc Provision(ProvisionRequest) returns (ProvisionResponse);
@@ -1588,4 +1589,21 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+message AddProductRequest {
+  string organization_id = 1;
+  string business_type = 2;
+  string product_name = 3;
+  string product_description = 4;
+  string product_price = 5;
+  string fulfillment_strategy = 6;
+  string service_duration = 7;
+  string service_schedule = 8;
+}
+
+message AddProductResponse {
+  bool success = 1;
+  string message = 2;
+  string product_id = 3;
 }

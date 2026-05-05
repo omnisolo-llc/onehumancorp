@@ -62,6 +62,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_BUSINESS_MANAGER: RefCell<Option<slint::Weak<app::BusinessManager>>> = RefCell::new(None);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -76,6 +77,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_BUSINESS_MANAGER: RefCell<Option<slint::Weak<app::BusinessManager>>> = RefCell::new(None);
 }
 
 #[cfg(test)]
@@ -1384,6 +1386,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 let dashboard_handle = dashboard.as_weak();
+
+                if let Ok(business_manager_ui) = app::BusinessManager::new() {
+                    GLOBAL_BUSINESS_MANAGER.with(|g| *g.borrow_mut() = Some(business_manager_ui.as_weak()));
+
+                    business_manager_ui.on_close({
+                        let bm_handle = business_manager_ui.as_weak();
+                        move || {
+                            if let Some(ui) = bm_handle.upgrade() {
+                                let _ = ui.hide();
+                            }
+                        }
+                    });
+
+                    business_manager_ui.on_submit({
+                        let bm_handle = business_manager_ui.as_weak();
+                        move |type_, name, desc, price, dur, sch| {
+                            let type_clone = type_.to_string();
+                            let name_clone = name.to_string();
+                            let desc_clone = desc.to_string();
+                            let price_clone = price.to_string();
+                            let dur_clone = dur.to_string();
+                            let sch_clone = sch.to_string();
+
+                            let handle_inner = bm_handle.clone();
+                            tokio::spawn(async move {
+                                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                    let req = tonic::Request::new(crate::ohc::orchestration::AddProductRequest {
+                                        organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default_org".to_string()),
+                                        business_type: type_clone.clone(),
+                                        product_name: name_clone,
+                                        product_description: desc_clone,
+                                        product_price: price_clone,
+                                        fulfillment_strategy: type_clone,
+                                        service_duration: dur_clone,
+                                        service_schedule: sch_clone,
+                                    });
+                                    let _ = client.add_product(req).await;
+                                }
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(ui) = handle_inner.upgrade() {
+                                        let _ = ui.hide();
+                                    }
+                                }).unwrap();
+                            });
+                        }
+                    });
+                }
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
 
@@ -1406,8 +1455,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             ui.set_show_upgrade_prompt(true);
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
-                                            // Handle success case
-                                            // We could log or do something else here, but to avoid regressions, we don't block
+                                            GLOBAL_BUSINESS_MANAGER.with(|global| {
+                                                if let Some(bm) = global.borrow().as_ref().and_then(|w| w.upgrade()) {
+                                                    let _ = bm.show();
+                                                }
+                                            });
                                         }
                                     }
                                 }).unwrap();
@@ -5660,10 +5712,12 @@ fn test_business_share_flow() {
         let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let business_manager_opened_clone = business_manager_opened.clone();
 
+        // Simulate what happens in main app
+        let dashboard_handle = dashboard_ui.as_weak();
+        let add_product_called_clone = business_manager_opened_clone.clone();
         dashboard_ui.on_action_add_product(move || {
-            *business_manager_opened_clone.borrow_mut() = true;
+            *add_product_called_clone.borrow_mut() = true;
         });
-
         dashboard_ui.invoke_action_add_product();
         assert!(*business_manager_opened.borrow(), "Business manager should be opened from Dashboard Add action");
 

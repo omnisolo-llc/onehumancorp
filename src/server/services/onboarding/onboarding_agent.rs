@@ -163,6 +163,48 @@ impl OnboardingAgent {
         Ok(())
     }
 
+    pub async fn add_product(&self, req: crate::ohc::orchestration::AddProductRequest) -> Result<crate::ohc::orchestration::AddProductResponse, String> {
+        let org_id = if req.organization_id.is_empty() {
+            std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default_org".to_string())
+        } else {
+            req.organization_id.clone()
+        };
+
+        let strategy = req.fulfillment_strategy;
+        let mut metadata = serde_json::json!({});
+        if !req.service_duration.is_empty() {
+            metadata["duration"] = serde_json::json!(req.service_duration);
+        }
+        if !req.service_schedule.is_empty() {
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&req.service_schedule) {
+                metadata["schedule"] = json_val;
+            } else {
+                metadata["schedule"] = serde_json::json!(req.service_schedule);
+            }
+        }
+
+        let price_cents = (req.product_price.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+        let id = format!("prod-{}", uuid::Uuid::new_v4());
+
+        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(&id)
+            .bind(&org_id)
+            .bind(&req.product_name)
+            .bind(&req.product_description)
+            .bind(price_cents)
+            .bind(&strategy)
+            .bind(metadata)
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(crate::ohc::orchestration::AddProductResponse {
+            success: true,
+            message: "Product added successfully".to_string(),
+            product_id: id,
+        })
+    }
+
     async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
         let default_agents = vec![
             ("Operations", "The Manager", "Operations"),
