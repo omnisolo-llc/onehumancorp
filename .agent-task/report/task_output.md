@@ -131,4 +131,3 @@
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1
 **Estimated Scope**: Medium
-issue_id: 7739
