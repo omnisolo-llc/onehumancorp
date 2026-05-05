@@ -75,7 +75,7 @@ test.describe('Logs Page', () => {
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
     if (await exportBtn.isVisible()) {
       await exportBtn.click();
-      await expect(page.locator('text=/download|csv|json/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/download|csv|json/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -100,7 +100,7 @@ test.describe('Logs Page', () => {
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Delete")').first();
     if (await clearBtn.isVisible()) {
       await clearBtn.click();
-      await expect(page.locator('text=/cleared|deleted/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/cleared|deleted/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -116,7 +116,7 @@ test.describe('Logs Page', () => {
     const errorEntry = page.locator('[class*="log"]').first();
     await errorEntry.click();
     const stackTrace = page.locator('text=/at |line \\d+|stack/i').first();
-    await expect(stackTrace).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(stackTrace).toBeVisible({ timeout: 3000 });
   });
 
   test('should filter logs by date range', async ({ page }) => {
@@ -167,7 +167,7 @@ test.describe('Logs Page', () => {
     const copyBtn = page.locator('button:has-text("Copy"), [class*="copy"]').first();
     if (await copyBtn.isVisible()) {
       await copyBtn.click();
-      await expect(page.locator('text=/copied/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/copied/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });

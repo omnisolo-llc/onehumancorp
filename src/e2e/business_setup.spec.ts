@@ -332,7 +332,7 @@ test.describe('Business Setup Wizard Validation', () => {
     const nextBtn = page.locator('text=Next →');
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
-      await expect(page.locator('text=/select.*type|choose.*type/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/select.*type|choose.*type/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -340,7 +340,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Guided Setup →');
     await page.locator('text=Online Store').click();
     await page.click('text=Next →'); // To step 3
-    await expect(page.locator('text=/required|name.*required/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/required|name.*required/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate email format', async ({ page }) => {
@@ -355,7 +355,7 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.fill('input[placeholder="you@email.com"]', 'invalidemail');
     await page.click('text=Next →');
-    await expect(page.locator('text=/invalid.*email|email.*invalid/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/invalid.*email|email.*invalid/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate password strength', async ({ page }) => {
@@ -369,7 +369,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="Password"]', 'weak');
-    await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 });
   });
 });
 

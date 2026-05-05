@@ -43,7 +43,7 @@ test.describe('Referral Program', () => {
     const copyBtn = page.locator('button:has-text("Copy"), [class*="copy"]').first();
     if (await copyBtn.isVisible()) {
       await copyBtn.click();
-      await expect(page.locator('text=/copied|success/i')).toBeVisible({ timeout: 10000 }).catch(() => {});
+      await expect(page.locator('text=/copied|success/i')).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -111,7 +111,7 @@ test.describe('Referral Program', () => {
   test('should refresh referral data', async ({ page }) => {
     await page.goto('/referrals');
     await page.locator('button:has-text("Refresh")').click();
-    await expect(page.locator('text=/loading|updating/i')).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(page.locator('text=/loading|updating/i')).toBeVisible({ timeout: 10000 });
   });
 
   test('should show referral history', async ({ page }) => {
@@ -128,7 +128,7 @@ test.describe('Referral Program', () => {
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
     if (await exportBtn.isVisible()) {
       await exportBtn.click();
-      await expect(page.locator('text=/download|csv|excel/i')).toBeVisible({ timeout: 10000 }).catch(() => {});
+      await expect(page.locator('text=/download|csv|excel/i')).toBeVisible({ timeout: 10000 });
     }
   });
 

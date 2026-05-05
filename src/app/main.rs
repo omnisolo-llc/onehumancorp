@@ -5855,6 +5855,86 @@ mod e2e_hybrid_blob_tests {
     }
 
 #[test]
+    fn test_login_start_setup_cuj() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+        let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let start_setup_called_clone = start_setup_called.clone();
+        login_ui.on_start_setup_wizard(move || {
+            *start_setup_called_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_start_setup_wizard();
+        assert!(*start_setup_called.borrow(), "Start setup wizard should be invoked from Login UI");
+    }
+
+    #[test]
+    fn test_login_open_settings_cuj() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+        let open_settings_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let open_settings_called_clone = open_settings_called.clone();
+        login_ui.on_open_settings(move || {
+            *open_settings_called_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_open_settings();
+        assert!(*open_settings_called.borrow(), "Open settings should be invoked from Login UI");
+    }
+
+    #[test]
+    fn test_login_oauth_cuj() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+        let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let oauth_called_clone = oauth_called.clone();
+        login_ui.on_oauth_login(move |provider| {
+            assert_eq!(provider, "SSO");
+            *oauth_called_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_oauth_login("SSO".into());
+        assert!(*oauth_called.borrow(), "OAuth login should be invoked from Login UI");
+    }
+
+    #[test]
+    fn test_landing_continue_to_dashboard_cuj() {
+        crate::ui_tests::init();
+        let landing_ui = app::Landing::new().unwrap();
+        let continue_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let continue_called_clone = continue_called.clone();
+        landing_ui.on_continue_to_dashboard(move || {
+            *continue_called_clone.borrow_mut() = true;
+        });
+        landing_ui.invoke_continue_to_dashboard();
+        assert!(*continue_called.borrow(), "Continue to dashboard should be invoked");
+    }
+
+    #[test]
+    fn test_landing_download_cuj() {
+        crate::ui_tests::init();
+        let landing_ui = app::Landing::new().unwrap();
+        let download_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let download_called_clone = download_called.clone();
+        landing_ui.on_download(move |os| {
+            assert_eq!(os, "Mac");
+            *download_called_clone.borrow_mut() = true;
+        });
+        landing_ui.invoke_download("Mac".into());
+        assert!(*download_called.borrow(), "Download should be invoked");
+    }
+
+    #[test]
+    fn test_landing_cuj() {
+        crate::ui_tests::init();
+        let landing_ui = app::Landing::new().unwrap();
+        let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let start_setup_called_clone = start_setup_called.clone();
+        landing_ui.on_start_business_setup(move || {
+            *start_setup_called_clone.borrow_mut() = true;
+        });
+        landing_ui.invoke_start_business_setup();
+        assert!(*start_setup_called.borrow(), "Start business setup should be invoked");
+    }
+
+#[test]
 fn test_business_share_flow() {
     crate::ui_tests::init();
 

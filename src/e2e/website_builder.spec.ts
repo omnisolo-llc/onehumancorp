@@ -31,7 +31,7 @@ test.describe('Website Builder', () => {
     const templateCard = page.locator('[class*="template"], [class*="card"]').first();
     if (await templateCard.isVisible()) {
       await templateCard.click();
-      await expect(page.locator('text=/selected|chosen/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/selected|chosen/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -91,7 +91,7 @@ test.describe('Website Builder', () => {
     const publishBtn = page.locator('button:has-text("Publish"), button:has-text("Launch")').first();
     if (await publishBtn.isVisible()) {
       await publishBtn.click();
-      await expect(page.locator('text=/published|live|launched/i')).toBeVisible({ timeout: 10000 }).catch(() => {});
+      await expect(page.locator('text=/published|live|launched/i')).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -100,7 +100,7 @@ test.describe('Website Builder', () => {
     const saveBtn = page.locator('button:has-text("Save"), button:has-text("Draft")').first();
     if (await saveBtn.isVisible()) {
       await saveBtn.click();
-      await expect(page.locator('text=/saved|draft/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/saved|draft/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -128,7 +128,7 @@ test.describe('Website Builder', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -227,7 +227,7 @@ test.describe('Prompt Tuning', () => {
     const resetBtn = page.locator('button:has-text("Reset"), button:has-text("Default")').first();
     if (await resetBtn.isVisible()) {
       await resetBtn.click();
-      await expect(page.locator('text=/reset|default/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/reset|default/i')).toBeVisible({ timeout: 3000 });
     }
   });
 

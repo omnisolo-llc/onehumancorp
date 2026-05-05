@@ -12,7 +12,7 @@ test.describe('Viral Storefront E2E', () => {
     await loginEmailInput.fill('test@example.com');
     await loginPasswordInput.fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
-    await page.waitForURL('**/dashboard**', { timeout: 10000 }).catch(() => {});
+    await page.waitForURL('**/dashboard**', { timeout: 10000 });
 
     // Navigate to the website builder
     await page.goto('/website-builder');

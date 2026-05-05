@@ -71,20 +71,20 @@ test.describe('Onboarding Flow', () => {
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Complete")').first();
     if (await finishBtn.isVisible()) {
       await finishBtn.click();
-      await expect(page.locator('text=/dashboard|welcome/i')).toBeVisible({ timeout: 10000 }).catch(() => {});
+      await expect(page.locator('text=/dashboard|welcome/i')).toBeVisible({ timeout: 10000 });
     }
   });
 
   test('should save onboarding progress', async ({ page }) => {
     await page.goto('/onboarding');
-    await page.fill('input[type="text"]', 'Test Company').catch(() => {});
+    await page.fill('input[type="text"]', 'Test Company');
     await page.locator('button:has-text("Save"), button:has-text("Continue")').click();
-    await expect(page.locator('text=/saved|progress/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/saved|progress/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should resume onboarding from saved state', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.locator('text=/resume|continue.*where.*left.*off/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/resume|continue.*where.*left.*off/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should verify email and auto-generate product description and show confetti', async ({ page }) => {
@@ -96,8 +96,8 @@ test.describe('Onboarding Flow', () => {
       await signUpToggle.click();
     }
 
-    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test@example.com').catch(() => {});
-    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('password123').catch(() => {});
+    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test@example.com');
+    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('password123');
 
     // Click "Sign Up"
     const signUpBtn = page.locator('button:has-text("Sign Up")').first();
@@ -106,7 +106,7 @@ test.describe('Onboarding Flow', () => {
     }
 
     // Verify "Check your email" shows
-    await expect(page.locator('text=/Check your email|verify your account/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/Check your email|verify your account/i')).toBeVisible({ timeout: 5000 });
 
     // Click "Resend Verification"
     const resendBtn = page.locator('button:has-text("Resend Verification Email"), button:has-text("Resend")').first();
@@ -115,7 +115,7 @@ test.describe('Onboarding Flow', () => {
     }
 
     // Verify it navigates to Setup Wizard
-    await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 });
 
     // Advance through steps to get to product add step
     for (let i = 0; i < 6; i++) {
@@ -139,7 +139,7 @@ test.describe('Onboarding Flow', () => {
     // Verify product description was generated
     const descInput = page.locator('input[placeholder*="Description"], input:has-text("A premium")').first();
     if (await descInput.isVisible()) {
-      await expect(descInput).toHaveValue(/A premium.*/).catch(() => {});
+      await expect(descInput).toHaveValue(/A premium.*/);
     }
 
     // Finish the wizard
@@ -151,7 +151,7 @@ test.describe('Onboarding Flow', () => {
     }
 
     // Verify Confetti success and Copy Link button are visible
-    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
     const copyLinkBtn = page.locator('button:has-text("Copy Shareable Link")').first();
     if (await copyLinkBtn.isVisible()) {
       await copyLinkBtn.click();
@@ -176,7 +176,7 @@ test.describe('Onboarding Welcome Checklist', () => {
     const checkbox = page.locator('input[type="checkbox"]').first();
     if (await checkbox.isVisible()) {
       await checkbox.check();
-      await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -202,7 +202,7 @@ test.describe('Onboarding Welcome Checklist', () => {
     for (let i = 0; i < count; i++) {
       await checkboxes.nth(i).check();
     }
-    await expect(page.locator('text=/congratulations|complete|awesome/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/congratulations|complete|awesome/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should link to documentation', async ({ page }) => {

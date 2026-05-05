@@ -19,7 +19,7 @@ test.describe('Diagnostics Page', () => {
   test('should show all systems operational indicator', async ({ page }) => {
     await page.goto('/diagnostics');
     const status = page.locator('text=/operational|healthy|all.*good/i').first();
-    await expect(status).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(status).toBeVisible({ timeout: 3000 });
   });
 
   test('should display component health indicators', async ({ page }) => {
@@ -93,7 +93,7 @@ test.describe('Diagnostics Page', () => {
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Test")').first();
     if (await runBtn.isVisible()) {
       await runBtn.click();
-      await expect(page.locator('text=/running|testing/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/running|testing/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -102,7 +102,7 @@ test.describe('Diagnostics Page', () => {
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Test")').first();
     if (await runBtn.isVisible()) {
       await runBtn.click();
-      await expect(page.locator('text=/result|passed|failed/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/result|passed|failed/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -114,7 +114,7 @@ test.describe('Diagnostics Page', () => {
   test('should show recent errors', async ({ page }) => {
     await page.goto('/diagnostics');
     const errorsSection = page.locator('text=/error|failure|exception/i').first();
-    await expect(errorsSection).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(errorsSection).toBeVisible({ timeout: 3000 });
   });
 
   test('should export diagnostics report', async ({ page }) => {
@@ -122,7 +122,7 @@ test.describe('Diagnostics Page', () => {
     const exportBtn = page.locator('button:has-text("Export"), button:has-text("Download")').first();
     if (await exportBtn.isVisible()) {
       await exportBtn.click();
-      await expect(page.locator('text=/download|report/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/download|report/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -172,7 +172,7 @@ test.describe('Service Manager', () => {
     const startBtn = page.locator('button:has-text("Start"), button:has-text("Start Service")').first();
     if (await startBtn.isVisible()) {
       await startBtn.click();
-      await expect(page.locator('text=/starting|running/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/starting|running/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -181,7 +181,7 @@ test.describe('Service Manager', () => {
     const stopBtn = page.locator('button:has-text("Stop"), button:has-text("Stop Service")').first();
     if (await stopBtn.isVisible()) {
       await stopBtn.click();
-      await expect(page.locator('text=/stopped|stopping/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/stopped|stopping/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -190,7 +190,7 @@ test.describe('Service Manager', () => {
     const restartBtn = page.locator('button:has-text("Restart"), button:has-text("Reload")').first();
     if (await restartBtn.isVisible()) {
       await restartBtn.click();
-      await expect(page.locator('text=/restarting|running/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=/restarting|running/i')).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -272,7 +272,7 @@ test.describe('Scaling Configuration', () => {
     const increaseBtn = page.locator('button:has-text("+"), button:has-text("Increase")').first();
     if (await increaseBtn.isVisible()) {
       await increaseBtn.click();
-      await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -281,7 +281,7 @@ test.describe('Scaling Configuration', () => {
     const decreaseBtn = page.locator('button:has-text("-"), button:has-text("Decrease")').first();
     if (await decreaseBtn.isVisible()) {
       await decreaseBtn.click();
-      await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -299,14 +299,14 @@ test.describe('Scaling Configuration', () => {
     const autoScaleToggle = page.locator('text=/auto.*scale|automatic/i').locator('input[type="checkbox"]').first();
     if (await autoScaleToggle.isVisible()) {
       await autoScaleToggle.check();
-      await expect(page.locator('text=/enabled|active/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/enabled|active/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
   test('should show scaling recommendations', async ({ page }) => {
     await page.goto('/scaling');
     const recommendations = page.locator('text=/recommend|suggest|optimize/i').first();
-    await expect(recommendations).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(recommendations).toBeVisible({ timeout: 3000 });
   });
 
   test('should show scaling history', async ({ page }) => {
