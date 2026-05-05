@@ -119,6 +119,7 @@ service DashboardService {
   rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
+  rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
 }
 
 // Onboarding State
@@ -143,4 +144,20 @@ message UpdateOnboardingStateRequest {
 
 message UpdateOnboardingStateResponse {
   bool success = 1;
+}
+
+// Video Tutorial messages
+message VideoMetadata {
+  string title = 1;
+  string description = 2;
+  int32 duration_sec = 3;
+  string url = 4;
+  string thumbnail_url = 5;
+}
+
+message GetVideoTutorialsRequest {
+}
+
+message GetVideoTutorialsResponse {
+  repeated VideoMetadata videos = 1;
 }
