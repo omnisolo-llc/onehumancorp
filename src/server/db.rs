@@ -103,10 +103,10 @@ impl DB {
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-                .acquire_timeout(std::time::Duration::from_millis(500))
+                .acquire_timeout(std::time::Duration::from_millis(5000))
 
-                .connect(&database_url)
-                .await?;
+                .connect_lazy(&database_url)
+                ?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
@@ -574,8 +574,9 @@ mod tests {
     async fn test_db_new_fails_without_server() {
         // SAFETY: Test-only code setting environment variables
         unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
-        assert!(db.is_err());
+        let db = DB::new().await.expect("connect_lazy should not fail immediately");
+        let res = sqlx::query("SELECT 1").execute(&db.pool).await;
+        assert!(res.is_err(), "query should fail because the database is nonexistent");
     }
 }
 
