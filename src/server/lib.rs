@@ -1185,8 +1185,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
-    // Start Telemetry Sync Daemon (if in standalone mode)
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && crate::config::get().telemetry_enabled {
+    // Start Telemetry Sync Daemon (if NOT in standalone mode)
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" && crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
