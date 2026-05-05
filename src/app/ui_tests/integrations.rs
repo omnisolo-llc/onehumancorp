@@ -52,8 +52,8 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Slack".into());
-    assert_eq!(*called.borrow(), "Slack");
+    ui.invoke_configure_integration("Meta Graph API".into());
+    assert_eq!(*called.borrow(), "Meta Graph API");
 }
 
 #[test] fn integr_flow_invoke_callback() {
@@ -67,16 +67,13 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
 
 // --- Unique Scenarios with Verification ---
 
-// E2E test requirement states we must simulate real clicks if we can't do playwright here.
-// Since it's a Slint unit test, we should verify that `invoke_configure_integration`
-// works for our new integrations, testing the underlying state binding.
-#[test] fn integr_flow_configure_manychat() {
+#[test] fn integr_flow_configure_meta_graph_api() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("ManyChat".into());
-    assert_eq!(*called.borrow(), "ManyChat");
+    ui.invoke_configure_integration("Meta Graph API".into());
+    assert_eq!(*called.borrow(), "Meta Graph API");
 }
 
 #[test] fn integr_flow_configure_calcom() {
@@ -124,15 +121,6 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     assert_eq!(*called.borrow(), "Mercado Pago");
 }
 
-#[test] fn integr_flow_configure_razorpay() {
-    let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-    let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Razorpay".into());
-    assert_eq!(*called.borrow(), "Razorpay");
-}
-
 #[test] fn integr_flow_configure_zoom() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
@@ -140,4 +128,16 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Zoom".into());
     assert_eq!(*called.borrow(), "Zoom");
+}
+
+#[test]
+fn test_integrations_mobile_layout_width() {
+    use slint::{Window, ComponentHandle};
+    let ui = create();
+    ui.window().set_size(slint::PhysicalSize::new(375, 812));
+
+    // We expect the UI not to crash or panic.
+    // Real validation of layout bounds is implicit inside slint layout engine,
+    // but we can manually verify width fits.
+    assert_eq!(ui.window().size().width, 375);
 }

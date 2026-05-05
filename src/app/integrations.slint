@@ -23,246 +23,168 @@ export component Integrations inherits Window {
             spacing: 20px;
             padding: 24px;
 
-        Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
 
-        HorizontalBox {
-            spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
-                    Button { 
-                        text: "Configure"; 
-                        clicked => { configure_integration("Telegram"); }
-                    }
-                }
-            }
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
-                    Button { 
-                        text: "Configure"; 
-                        clicked => { configure_integration("Discord"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Twilio"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Cal.com"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💬 ManyChat"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("ManyChat"); }
-                    }
-                }
-            }
-        }
-
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Resend"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Shippo"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💳 Mercado Pago"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Local Payment Methods (LATAM)"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Mercado Pago"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💳 Razorpay"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Local Payment Methods (India)"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Razorpay"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Zoom"); }
-                    }
-                }
-            }
-        }
-
-        Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
-        Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
-
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-            
             VerticalBox {
-                padding: 16px;
-                spacing: 10px;
-                
-                for tool in tools : HorizontalBox {
-                    Text { text: "🛠️ " + tool.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {} 
-                    Button { 
-                        text: "Invoke"; 
-                        clicked => { invoke_tool(tool.id); }
+                spacing: 16px;
+
+                // 1. Social Media Integration
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💬 Meta Graph API"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Unified Social Media DMs (Instagram, Facebook, WhatsApp)"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Connect";
+                            clicked => { configure_integration("Meta Graph API"); }
+                        }
+                    }
+                }
+
+                // 2. Calendar & Scheduling
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Cal.com"); }
+                        }
+                    }
+                }
+
+                // 3. Email Marketing
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Resend"); }
+                        }
+                    }
+                }
+
+                // 4. Payment Processing (LATAM Focus)
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💳 Mercado Pago"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Local Payment Methods (LATAM)"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Mercado Pago"); }
+                        }
+                    }
+                }
+
+                // 5. Shipping & Logistics
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Shippo"); }
+                        }
+                    }
+                }
+
+                // 6. SMS & Notifications
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📱 Twilio"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Twilio"); }
+                        }
+                    }
+                }
+
+                // 7. Video Conferencing
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                        Text { text: "Native Link Generation for Appointments"; color: #64748b; wrap: word-wrap; font-family: "Inter"; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Zoom"); }
+                        }
                     }
                 }
             }
-          }
-    }
+
+            Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; font-family: "Inter"; }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+
+                    for tool in tools : HorizontalBox {
+                        Text { text: "🛠️ " + tool.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; font-family: "Outfit"; }
+                        Rectangle {}
+                        Button {
+                            text: "Invoke";
+                            clicked => { invoke_tool(tool.id); }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
