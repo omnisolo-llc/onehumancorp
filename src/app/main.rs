@@ -306,7 +306,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak_wizard = wizard.as_weak();
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                        let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                         if let Ok(resp) = client.get_wizard_state(req).await {
                             let state = resp.into_inner().state;
                             slint::invoke_from_event_loop(move || {
@@ -350,7 +350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
-        move |email, _password| {
+        move |_email, _password| {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
                 if ui.get_is_sign_up() {
@@ -363,7 +363,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
                         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                            let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             if let Ok(resp) = client.get_wizard_state(req).await {
                                 let state = resp.into_inner().state;
                                 // In the SetupWizard, step 10 is the final welcome checklist.
@@ -736,7 +736,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             _ => 2.0,
                         };
 
-                        let mut req = tonic::Request::new(ohc::orchestration::AgentConfig {
+                        let req = tonic::Request::new(ohc::orchestration::AgentConfig {
                             role: agent.to_string(),
                             provider: "default".to_string(),
                             capabilities,
@@ -840,7 +840,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
                         if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
 
-                        let mut prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
                             personality: tone.to_string(),
                             domain_focus,
                         });
