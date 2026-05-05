@@ -171,7 +171,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
+        let _tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
 
@@ -199,7 +199,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
+        let _tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
         // Simulated cost calculation from actual metrics DB
