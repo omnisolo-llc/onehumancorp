@@ -43,6 +43,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    pub mod tier;
     pub mod b2b;
     pub mod integration;
     pub mod ops;
@@ -122,6 +123,9 @@ pub mod ohc {
     }
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
+        pub mod tier_service_server {
+            pub use billing_proto::ohc::billing::tier_service_server::*;
+        }
     }
     pub mod agent {
         pub mod service {
@@ -1204,10 +1208,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
     println!("Server listening on {}", addr);
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_client = redis::Client::open(redis_url).unwrap_or_else(|_| redis::Client::open("redis://127.0.0.1/").unwrap());
+    let rate_limiter = std::sync::Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(redis_client));
+    let tier_service = crate::services::tier::service::MyTierService::new(std::sync::Arc::new(db.pool.clone()), rate_limiter);
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -1215,6 +1224,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(crate::ohc::billing::tier_service_server::TierServiceServer::with_interceptor(tier_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

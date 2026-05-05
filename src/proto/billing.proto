@@ -41,3 +41,15 @@ service BillingService {
   rpc TrackTokenUsage(TokenUsage) returns (TokenUsage);
   rpc GetCostSummary(TokenUsage) returns (CostSummary);
 }
+
+message SyncStripeWebhookRequest {
+  string payload_json = 1;
+}
+
+message SyncStripeWebhookResponse {
+  bool success = 1;
+}
+
+service TierService {
+  rpc SyncStripeWebhook(SyncStripeWebhookRequest) returns (SyncStripeWebhookResponse);
+}
