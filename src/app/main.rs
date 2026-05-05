@@ -906,7 +906,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     website_builder_ui.on_generate_description({
         let ui_weak = website_builder_handle.clone();
-        move || {
+        move |_| {
             let ui_handle = ui_weak.clone();
             if let Some(ui) = ui_handle.upgrade() {
                 let name = ui.get_product_name().to_string();
@@ -3617,25 +3617,14 @@ mod docs_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // New steps in onboarding
-        ui.invoke_select_template("Classic".into());
-        assert_eq!(ui.get_step(), 7);
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.0".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
-        // Test going back from step 9 to step 11
+        // Test going back from step 6 to step 11
         ui.set_is_instant_build(true);
         ui.set_step(11);
         ui.set_instant_bio("A cool test bakery".into());
         ui.invoke_generate_instant_preview();
-        // Since we are simulating, reset to 9 and launching=true
+        // Since we are simulating, reset to 6 and launching=true
         ui.set_is_instant_build(false);
-        ui.set_step(9);
+        ui.set_step(6);
 
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
@@ -3753,7 +3742,7 @@ mod docs_tests {
 
         ui.on_upload_logo(|| {});
         ui.on_generate_logo(|| {});
-        ui.on_generate_description(|| {});
+        ui.on_generate_description(|_| {});
         ui.on_upload_photo(|| {});
         ui.on_save_state(|| {});
 
@@ -5919,20 +5908,6 @@ mod e2e_hybrid_blob_tests {
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 6);
 
-        // Step 6: Choose a Template
-        ui.invoke_select_template("Modern".into());
-        assert_eq!(ui.get_step(), 7);
-
-        // Step 7: Add your first product
-        ui.set_product_name("Vegan Chocolate Cake".into());
-        ui.set_product_price("45.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        // Step 8: Choose a Domain
-        ui.invoke_select_domain("custom".into());
-        assert_eq!(ui.get_step(), 9);
-
         // In a real E2E environment we would click through all the UI buttons
         // Here we just test the propagation mechanism by invoking the callback
         // The implementation we added to src/app/main.rs actually binds this.
@@ -5962,6 +5937,50 @@ mod e2e_hybrid_blob_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");
+
+        // Now trigger the Website Builder flow!
+        let builder_ui = app::WebsiteBuilder::new().unwrap();
+
+        assert_eq!(builder_ui.get_step(), 0);
+        builder_ui.set_selected_template("Modern".into());
+        builder_ui.set_step(1);
+
+        builder_ui.set_primary_color("#34C759".into());
+        builder_ui.set_step(2);
+
+        builder_ui.set_product_name("Vegan Chocolate Cake".into());
+        builder_ui.set_product_price("45.00".into());
+        builder_ui.set_product_description("Delicious cake".into());
+        builder_ui.set_step(3);
+
+        builder_ui.set_domain_choice("custom".into());
+        builder_ui.set_step(4);
+
+        let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let publish_success_clone = publish_success.clone();
+
+        builder_ui.on_publish_site(move |template, color, product, price, description, domain| {
+            assert_eq!(template, "Modern");
+            assert_eq!(color, "#34C759");
+            assert_eq!(product, "Vegan Chocolate Cake");
+            assert_eq!(price, "45.00");
+            assert_eq!(description, "Delicious cake");
+            assert_eq!(domain, "custom");
+            *publish_success_clone.borrow_mut() = true;
+        });
+
+        builder_ui.set_is_publishing(true);
+        builder_ui.invoke_publish_site(
+            builder_ui.get_selected_template(),
+            builder_ui.get_primary_color(),
+            builder_ui.get_product_name(),
+            builder_ui.get_product_price(),
+            builder_ui.get_product_description(),
+            builder_ui.get_domain_choice()
+        );
+
+        assert!(*publish_success.borrow(), "Website builder published successfully");
+
     }
 
 
