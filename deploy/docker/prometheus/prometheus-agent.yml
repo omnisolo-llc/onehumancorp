@@ -1,7 +1,10 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s
 remote_write:
   - url: "http://localhost:9090/api/v1/write"
+    queue_config:
+      capacity: 500
+      max_shards: 2
 scrape_configs:
   - job_name: 'ohc-standalone'
     static_configs:
