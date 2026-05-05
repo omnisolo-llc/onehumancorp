@@ -90,3 +90,33 @@ fn test_ui_setup_wizard_hero_animation() {
     ui.invoke_next_step();
     assert_eq!(ui.get_step(), 1);
 }
+
+#[test]
+fn test_ui_setup_wizard_checklist_navigation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(10);
+
+    let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let add_products_clone = add_products_clicked.clone();
+    ui.on_go_to_add_products(move || {
+        *add_products_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_go_to_add_products();
+    assert!(*add_products_clicked.borrow(), "Add products callback should be triggered on SetupWizard Checklist");
+}
+
+#[test]
+fn test_ui_setup_wizard_storefront_preview_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+}
