@@ -176,7 +176,7 @@
     },
     {
       "type": "timeseries",
-      "title": "SQLite Lock Contention",
+      "title": "PostgreSQL SKIP LOCKED Rate",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -189,7 +189,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(sqlite_lock_contention_total[5m]))",
+          "expr": "sum(rate(ohc_postgres_skip_locked_total[5m]))",
           "legendFormat": "Lock Contention",
           "refId": "A"
         }
