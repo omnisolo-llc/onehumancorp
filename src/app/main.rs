@@ -5957,6 +5957,108 @@ mod e2e_hybrid_blob_tests {
         assert!(*download_called.borrow(), "Download should be invoked");
     }
 
+
+    #[test]
+    fn test_e2e_landing_to_dashboard_cuj() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let landing_ui = app::Landing::new().unwrap();
+
+        // 1. Landing Page -> Click Start Business Setup
+        let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let start_setup_called_clone = start_setup_called.clone();
+        landing_ui.on_start_business_setup(move || {
+            *start_setup_called_clone.borrow_mut() = true;
+        });
+
+        landing_ui.invoke_start_business_setup();
+        assert!(*start_setup_called.borrow(), "Start business setup should be invoked");
+
+        // 2. Setup Wizard Start
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        // Step 1: Type -> Step 2
+        ui.invoke_select_business_type("Online Store".into());
+
+        // Step 2: Name -> Step 3
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+
+        // Step 3: What do you sell -> Step 4
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+
+        // Step 4: Payments -> Step 5
+        ui.invoke_select_payment_pref("online".into());
+
+        // Step 5: Admin -> Step 6
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+
+        // Step 6: Template -> Step 7
+        ui.invoke_select_template("Modern".into());
+
+        // Step 7: First product -> Step 8
+        ui.set_product_name("Widget".into());
+        ui.invoke_next_step();
+
+        // Step 8: Domain -> Step 9 (Launch)
+        ui.invoke_select_domain("subdomain".into());
+        assert_eq!(ui.get_step(), 9);
+
+        // Launch Business
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+        ui.on_launch(move |bt, cn, _, pp, ae, wt, pn, _, dc, _, _| {
+            assert_eq!(bt, "Online Store");
+            assert_eq!(cn, "My E2E Store");
+            assert_eq!(pp, "online");
+            assert_eq!(ae, "admin@e2e.test");
+            assert_eq!(wt, "Modern");
+            assert_eq!(pn, "Widget");
+            assert_eq!(dc, "subdomain");
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_launch(
+            "Online Store".into(),
+            "My E2E Store".into(),
+            "".into(),
+            "online".into(),
+            "admin@e2e.test".into(),
+            "Modern".into(),
+            "Widget".into(),
+            "".into(),
+            "subdomain".into(),
+            "".into(),
+            "".into()
+        );
+        assert!(*launch_called.borrow(), "Launch callback should be triggered");
+
+        // Simulate successful launch
+        ui.set_launch_success(true);
+
+        // User views generated storefront (step 100) -> Step 10
+        ui.set_step(100);
+        ui.set_step(10); // user continues to setup checklist
+
+        // Go to dashboard
+        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let dashboard_opened_clone = dashboard_opened.clone();
+        ui.on_go_to_dashboard(move || {
+            *dashboard_opened_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_go_to_dashboard();
+        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+    }
+
     #[test]
     fn test_landing_cuj() {
         crate::ui_tests::init();
