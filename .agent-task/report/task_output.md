@@ -1,119 +1,240 @@
-# Scout: Tool Integration Research Q2
+# Issue Brief: Complete Architecture Design Suite for OHC Core Systems
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+This report consolidates the required architecture design tasks into a single comprehensive output, addressing Business Journeys, Data Models, AI Agent Departments, Website Builder, Mobile-First constraints, and SaaS Tiers.
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
-**Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
-**Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
-**Priority**: P1
-**Estimated Scope**: Large
+---
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+## 1. Business Journey Architecture
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
-**Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
-**Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
-**Priority**: P2
-**Estimated Scope**: Medium
+### Title
+End-to-End Business Journey Mapping for OHC Personas
 
-## 4. Payment Processing
-**Title**: Expand Payments with Mercado Pago for LATAM Users
-**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
-**Research Report**:
-- Mercado Pago is the dominant payment gateway in LATAM.
-- Supports local payment methods which are critical for conversion (often >50% of transactions).
-- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
-- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
-**Design Doc**:
-- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
-- Setup involves standard OAuth flow or API key drop-in.
-- Supports one-off payments and split payments for the eventual marketplace feature.
-**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
-**Priority**: P1
-**Estimated Scope**: Large
+### Problem Statement
+The OHC platform must serve diverse small business owners (Maya, Carlos, Priya, Leo, Fatima) seamlessly. The current journeys lack a unified architectural view, risking friction during critical phases (Onboarding, Activation, Retention). We must map these journeys to guarantee a sub-10-minute "time-to-live" experience.
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Research Report
+- **Personas**: Needs range from simple pre-orders (Fatima) to omnichannel sync (Priya) and subscription management (Leo).
+- **Stages**:
+  - **Acquisition**: Landing page CTA must promise 10-minute setup.
+  - **Onboarding**: Must be progressive, deferring complex settings (custom domains, full bank details).
+  - **Activation**: The Day 1 "Aha!" moment (first product added, first booking made).
+  - **Retention**: Driven by actionable notifications and AI insights, not complex dashboards.
+  - **Revenue/Referral**: Contextual upgrade prompts and built-in sharing mechanisms.
 
-## 6. SMS & Notifications
-**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
-**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
-**Research Report**:
-- Twilio is the industry standard for SMS and WhatsApp messaging globally.
-- Reliable delivery, deep global coverage.
-- Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Go backend.
-- Costs per message, can be passed to the tenant or subsidized in premium tiers.
-**Design Doc**:
-- Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
-- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
-**Priority**: P0
-**Estimated Scope**: Small
+### Design Doc
 
-## 7. Video Conferencing
-**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
-**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
-**Research Report**:
-- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
-- Requires no account for the student. Works natively in the browser and mobile.
-- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
-- Completely seamless integration with no technical setup required by the user.
-**Design Doc**:
-- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
-- The link is automatically added to the calendar invite and the customer's dashboard.
-- Users just click the link at the scheduled time to join the browser-based call.
-**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
-**Priority**: P2
-**Estimated Scope**: Small
+**Key Decisions**:
+- **Progressive Profiling**: Minimal initial input; AI generates the rest.
+- **AI-First Setup**: "The Promoter" agent builds the initial storefront based on basic inputs.
+
+**Architecture Diagrams**:
+
+*(Maya: Custom Cake Orders)*
+```mermaid
+sequenceDiagram
+    actor Maya
+    participant OHC as OHC App
+    participant AI_Mark as Marketing Agent
+    participant AI_Ops as Operations Agent
+    participant Stripe as Stripe API
+
+    Maya->>OHC: "I sell custom vegan cakes"
+    OHC->>AI_Mark: Generate Storefront
+    AI_Mark->>OHC: Storefront Live
+    Customer->>OHC: Books order & pays deposit
+    OHC->>Stripe: Process Payment
+    Stripe-->>OHC: Success
+    OHC->>AI_Ops: Trigger order flow
+    AI_Ops-->>Maya: Push Notification "New Deposit Received"
+```
+
+*(Carlos: Handyman Booking)*
+```mermaid
+sequenceDiagram
+    actor Carlos
+    participant OHC as OHC App
+    participant AI_Mark as Marketing Agent
+    participant AI_Sales as Sales Agent
+
+    Carlos->>OHC: "Plumbing services"
+    OHC->>AI_Mark: Generate Service Listings
+    AI_Mark->>OHC: Booking Page Live
+    Customer->>OHC: Requests Quote
+    OHC->>AI_Sales: Drafts Quote
+    AI_Sales->>Carlos: Approval Required
+    Carlos->>AI_Sales: 1-Tap Approve
+    AI_Sales-->>Customer: Sends Quote
+```
+
+### Implementation Prompt
+Implement the progressive onboarding flow. Create the mobile-first (375px) UI wizard that collects minimal business data, passes it to the AI Marketing agent, and instantly generates a functional Storefront/Booking page. Ensure optimistic UI updates for all inputs.
+
+### Priority: P0 | Scope: Large
+
+---
+
+## 2. Data Model Architecture
+
+### Title
+Multi-Tenant Data Model and Isolation Guarantees
+
+### Problem Statement
+The data model must support diverse business types while guaranteeing strict row-level isolation between tenants to protect sensitive customer and business data.
+
+### Research Report
+- **Multi-Tenancy**: Must rely on PostgreSQL RLS with a `tenant_id` column on all tenant-specific tables.
+- **Entities**: Business (Tenant), Product, Order, Customer, Agent, Page, Booking, Memory (pgvector).
+
+### Design Doc
+
+**Entity-Relationship Diagram**:
+```mermaid
+erDiagram
+    TENANT ||--o{ PRODUCT : has
+    TENANT ||--o{ ORDER : processes
+    TENANT ||--o{ CUSTOMER : serves
+    TENANT ||--o{ BOOKING : schedules
+    TENANT ||--o{ MEMORY : stores
+    CUSTOMER ||--o{ ORDER : places
+    CUSTOMER ||--o{ BOOKING : makes
+    PRODUCT ||--o{ ORDER_ITEM : included_in
+    ORDER ||--|{ ORDER_ITEM : contains
+```
+
+**Key Invariants**:
+- All tenant queries MUST include the `tenant_id` context.
+- AI agents MUST be scoped to the `tenant_id` they operate under.
+
+### Implementation Prompt
+Update the Go backend schema and repository layer to enforce `tenant_id` presence on all core entities. Configure PostgreSQL Row Level Security (RLS) policies for these tables. Add E2E tests proving cross-tenant data access is blocked.
+
+### Priority: P0 | Scope: Medium
+
+---
+
+## 3. AI Agent Department Architecture
+
+### Title
+Autonomous AI Departments and Coordination Workflow
+
+### Problem Statement
+AI agents must be organized into understandable functional "departments" that can operate autonomously in the background while maintaining user trust through appropriate approval workflows.
+
+### Research Report
+- **Departments**: Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory.
+- **Workflow**: Agents need shared memory (`pgvector`) and a mechanism to coordinate tasks (Teammate Mesh).
+
+### Design Doc
+
+**Coordination Workflow**:
+```mermaid
+sequenceDiagram
+    participant Hub as Teammate Mesh
+    participant Op as Operations Agent
+    participant CS as Customer Success Agent
+    participant DB as OHC DB (Memory)
+
+    Hub->>Op: Trigger: New Order
+    Op->>DB: Update Inventory
+    Op->>Hub: Event: Order Processed
+    Hub->>CS: Trigger: Send Welcome Email
+    CS->>DB: Fetch Customer Context
+    CS->>Hub: Draft Email (Awaiting Approval)
+```
+
+**Approval Levels**:
+- **Auto-Execute**: Low risk (internal tags, analytics).
+- **Draft-for-Review**: High risk (external communication, refunds). Requires 1-tap mobile approval.
+
+### Implementation Prompt
+Implement the "Draft-for-Review" workflow in the KAIROS Orchestrator. Create a pending actions queue in the database and a mobile UI feed for the business owner to review and approve/reject drafted agent actions with a single tap.
+
+### Priority: P1 | Scope: Large
+
+---
+
+## 4. Website & Storefront Builder Architecture
+
+### Title
+Instant AI-Driven Storefront Builder
+
+### Problem Statement
+Traditional drag-and-drop builders are too complex for non-technical users. OHC needs a system where the AI generates the initial site based on conversational input, which the user can then easily tweak.
+
+### Research Report
+- **Goal**: Sub-60-second generation time for a functional storefront.
+- **Methodology**: Replace complex wizards with a "Tell us about your business" prompt.
+
+### Design Doc
+
+**Generation Flow**:
+```mermaid
+graph TD
+    A[User enters short bio] --> B{Marketing Agent}
+    B --> C[Extract Details]
+    B --> D[Generate Copy]
+    B --> E[Select Layout]
+    C & D & E --> F[Live Storefront Generated]
+```
+
+**Key Features**:
+- **Content Blocks**: Hero, Product Grid, Testimonials, Contact Form.
+- **Publishing**: Instant draft creation, 1-tap publish.
+- **SEO**: Auto-generated meta tags and structured data.
+
+### Implementation Prompt
+Implement the "Instant Build" mode. Accept a single text prompt, utilize the Marketing Agent to structure the data (layout, copy, initial products), and render a live preview. Ensure the output utilizes OHC design tokens (Glassmorphism, correct typography).
+
+### Priority: P1 | Scope: Medium
+
+---
+
+## 5. Mobile-First Architecture Review
+
+### Title
+Mobile-First Constraints and Performance Targets
+
+### Problem Statement
+OHC promises full business management from a mobile device. We must formalize the architectural constraints required to deliver a native-feeling, resilient mobile experience.
+
+### Research Report
+- **Baseline**: 375px viewport width.
+- **Resilience**: Must handle flaky networks (offline/optimistic UI).
+
+### Design Doc
+
+**Key Constraints**:
+- **Touch Targets**: Minimum 44x44px.
+- **Keyboards**: Strict enforcement of native input types (numeric, email).
+- **Offline Capabilities**: Critical reads (dashboard summary) must be cached locally; critical writes (approving agent actions) must use a local retry queue.
+
+### Implementation Prompt
+Audit and update the core Flutter/Slint UI components. Ensure all touch targets meet the 44px minimum. Implement a local caching layer (e.g., SQLite or shared preferences) for the main dashboard view and a retry mechanism for critical mutations when offline.
+
+### Priority: P0 | Scope: Medium
+
+---
+
+## 6. Multi-Tenant SaaS Tier Architecture
+
+### Title
+SaaS Tier Enforcement and Upgrade Paths
+
+### Problem Statement
+A clear, transparent pricing tier system is required to monetize the platform while providing a genuinely useful free tier. The system must gracefully handle limit enforcement.
+
+### Research Report
+- **Tiers**: Free ($0), Starter ($9), Pro ($29), Business ($79).
+- **Limits**: Product counts, AI actions per month, Storage limits, Custom Domain access.
+
+### Design Doc
+
+**Enforcement Strategy**:
+- `TierService` middleware intercepts API requests.
+- When a limit is hit, the API returns a structured "Limit Reached" response, not a 500 error.
+- The UI intercepts this response and displays a contextual, plain-language upgrade prompt (e.g., "You've reached your 10 product limit. Upgrade to Starter to add unlimited products!").
+
+### Implementation Prompt
+Implement the `TierService` middleware in the Go backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
+
+### Priority: P1 | Scope: Medium
