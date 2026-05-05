@@ -1,31 +1,34 @@
-use crate::*
 use slint::ComponentHandle;
 
 #[test]
 fn test_api_docs_title_plain_language() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::ApiDocs::new().unwrap();
-    assert_eq!(ui.get_title(), slint::SharedString::from("Connect Custom Software"));
+    crate::ui_tests::init();
+    let ui = crate::app::ApiDocs::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Connect Custom Software"));
 }
 
 #[test]
 fn test_integrations_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Integrations::new().unwrap();
-    assert_eq!(ui.get_title(), slint::SharedString::from("Integrations & Tools"));
+    crate::ui_tests::init();
+    let ui = crate::app::Integrations::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Integrations & Tools"));
 }
 
 #[test]
 fn test_login_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
-    assert_eq!(ui.get_title(), slint::SharedString::from("One Human Corp - Login"));
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("One Human Corp - Login"));
 }
 
 #[test]
 fn test_login_subtitle_plain_language() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
     ui.set_is_sign_up(false);
     // Subtitle logic is internal, we just verify component doesn't crash on standard properties
     assert_eq!(ui.get_is_sign_up(), false);
@@ -34,10 +37,11 @@ fn test_login_subtitle_plain_language() {
 #[test]
 fn test_login_sign_in_button() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
     let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let clicked_clone = clicked.clone();
-    ui.on_login(move |u, p| {
+    ui.on_login(move |_u, _p| {
         *clicked_clone.borrow_mut() = true;
     });
     ui.invoke_login("u".into(), "p".into());
@@ -47,7 +51,8 @@ fn test_login_sign_in_button() {
 #[test]
 fn test_login_username_placeholder() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
     ui.set_username("jane".into());
     assert_eq!(ui.get_username(), slint::SharedString::from("jane"));
 }
@@ -55,7 +60,8 @@ fn test_login_username_placeholder() {
 #[test]
 fn test_login_password_placeholder() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
     ui.set_password("pass123".into());
     assert_eq!(ui.get_password(), slint::SharedString::from("pass123"));
 }
@@ -63,7 +69,8 @@ fn test_login_password_placeholder() {
 #[test]
 fn test_login_error_message() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::Login::new().unwrap();
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
     ui.set_error_message("Invalid login".into());
     assert_eq!(ui.get_error_message(), slint::SharedString::from("Invalid login"));
 }
@@ -71,13 +78,15 @@ fn test_login_error_message() {
 #[test]
 fn test_help_center_ui_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::HelpCenter::new().unwrap();
-    assert_eq!(ui.get_title(), slint::SharedString::from("Help Center"));
+    crate::ui_tests::init();
+    let ui = crate::app::HelpCenter::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Help Center"));
 }
 
 #[test]
 fn test_ai_help_chat_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::AiHelpChat::new().unwrap();
-    assert_eq!(ui.get_title(), slint::SharedString::from("AI Help Assistant"));
+    crate::ui_tests::init();
+    let ui = crate::app::AiHelpChat::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
 }
