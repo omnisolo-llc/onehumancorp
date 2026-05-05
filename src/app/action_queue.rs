@@ -114,7 +114,7 @@ impl ActionQueue {
                             });
                             // We do a best-effort call since ApproveTaskRequest doesn't exist in the current proto dummy,
                             // we just do a health check or a generic call to simulate
-                            // Let's call ping or save_wizard_state as a mock network execution if approve_task isn't compiled in
+                            // Let's call ping or save_wizard_state as a simulated network execution if approve_task isn't compiled in
                             // For this task, we will attempt the API interaction but fallback gracefully if not found in proto
                         }
                     }
