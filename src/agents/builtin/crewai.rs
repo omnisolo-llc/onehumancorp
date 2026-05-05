@@ -133,6 +133,7 @@ mod tests {
                 message: Message::assistant(content),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
             })
         }
     }
