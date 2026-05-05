@@ -5,6 +5,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
     name = "server_lib",
+    crate_name = "ohc_mono",
     srcs = glob(["**/*.rs"], exclude = ["main.rs"]) + [
         "//src/agents/builtin:autodream.rs",
         "//src/agents/builtin:autodream/store.rs",
