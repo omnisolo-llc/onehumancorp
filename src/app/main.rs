@@ -999,6 +999,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let _ = ui.hide();
             }
+            if let Ok(dashboard) = app::Dashboard::new() {
+                let _ = dashboard.show();
+                Box::leak(Box::new(dashboard));
+            }
+        }
+    });
 
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();
@@ -1416,8 +1422,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::leak(Box::new(cost_dashboard_ui));
                 Box::leak(Box::new(pricing_ui));
             }
-        }
-    });
 
     let agents_ui = app::Agents::new()?;
     let agent_hire_ui = app::AgentHire::new()?;
@@ -1524,19 +1528,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(referrals) = app::Referrals::new() {
                 referrals.show().unwrap();
                 Box::leak(Box::new(referrals));
-            }
-        }
-    });
-
-    welcome_checklist_ui.on_go_to_dashboard({
-        let handle = welcome_checklist_handle.clone();
-        move || {
-            if let Some(ui) = handle.upgrade() {
-                ui.hide().unwrap();
-            }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
             }
         }
     });
