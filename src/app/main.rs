@@ -477,14 +477,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         dashboard.show().unwrap();
-                                        Box::leak(Box::new(dashboard));
-                                        Box::leak(Box::new(my_plan_ui));
-                                        Box::leak(Box::new(cost_dashboard_ui));
-                                        Box::leak(Box::new(ai_help_chat_ui));
-                                        Box::leak(Box::new(interactive_walkthrough_ui));
-                                        Box::leak(Box::new(video_tutorials_ui));
-                                        Box::leak(Box::new(api_docs_ui));
-                                        Box::leak(Box::new(release_notes_ui));
                                     }
                                 }
                             }
@@ -578,14 +570,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                         dashboard.show().unwrap();
-                        Box::leak(Box::new(dashboard));
-                        Box::leak(Box::new(my_plan_ui));
-                        Box::leak(Box::new(cost_dashboard_ui));
-                        Box::leak(Box::new(ai_help_chat_ui));
-                        Box::leak(Box::new(interactive_walkthrough_ui));
-                        Box::leak(Box::new(video_tutorials_ui));
-                        Box::leak(Box::new(api_docs_ui));
-                        Box::leak(Box::new(release_notes_ui));
                     }
                 }
             }
@@ -1154,11 +1138,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agent_config_ui));
-    Box::leak(Box::new(prompt_tuning_ui));
-    Box::leak(Box::new(website_builder_ui));
-    Box::leak(Box::new(grow_business_ui));
-    Box::leak(Box::new(email_marketing_ui));
 
     let referrals_ui = app::Referrals::new()?;
     GLOBAL_REFERRALS.with(|g| *g.borrow_mut() = Some(referrals_ui.as_weak()));
@@ -1347,7 +1326,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
             }
         }
     });
@@ -1361,7 +1339,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.show().unwrap();
-                Box::leak(Box::new(dashboard));
             }
         }
     });
@@ -1374,7 +1351,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(referrals) = app::Referrals::new() {
                 referrals.show().unwrap();
-                Box::leak(Box::new(referrals));
             }
         }
     });
@@ -1831,8 +1807,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                // Keep strong reference alive indefinitely on the main thread via Box::leak
-                Box::leak(Box::new(business_share_ui));
 
                 let dashboard_milestone_handle = dashboard_handle.clone();
                 dashboard.on_dismiss_milestone(move || {
@@ -1907,7 +1881,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let help_center_handle = help_center_ui.as_weak();
-                Box::leak(Box::new(help_center_ui));
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
@@ -1915,25 +1888,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
-                Box::leak(Box::new(kairos_orchestration_walkthrough_ui));
 
 
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
-                Box::leak(Box::new(interactive_walkthrough_ui));
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
-                Box::leak(Box::new(video_tutorials_ui));
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let api_docs_handle = api_docs_ui.as_weak();
-                Box::leak(Box::new(api_docs_ui));
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
-                Box::leak(Box::new(release_notes_ui));
 
                 ai_chat_ui.on_send_message({
                     let chat_handle = ai_chat_handle.clone();
@@ -1946,7 +1914,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 });
-                Box::leak(Box::new(ai_chat_ui));
 
                 dashboard.on_open_help_center(move || {
                     if let Some(ui) = help_center_handle.upgrade() {
@@ -2127,9 +2094,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    Box::leak(Box::new(agents_ui));
-    Box::leak(Box::new(agent_hire_ui));
-    Box::leak(Box::new(fix_agent_ui));
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
     let _ = welcome_checklist_ui.hide();
