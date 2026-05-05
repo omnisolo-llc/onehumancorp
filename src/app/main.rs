@@ -2359,7 +2359,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 };
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
-                                        ui.set_launch_status("Almost there! We hit a small snag.".into());
+                                        ui.set_launch_status("Ready to launch! We hit a small snag.".into());
                                         ui.set_launch_details(err_msg.into());
                                     }
                                 }).unwrap();

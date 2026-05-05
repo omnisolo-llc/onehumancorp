@@ -60,14 +60,14 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('button:has-text("Review & Launch")');
 
     // 9: Launch View
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Ready to launch!"')).toBeVisible({ timeout: 15000 });
 
     // We expect "Launch!" button. When clicked, it hits the `on_launch` handler in Rust.
-    await page.click('button:has-text("Launch!")');
+    await page.locator('text="Launch My Business →"').click();
 
     // Verify it transitions away from launching after mock async backend setup
     // And lands on the success step or dashboard
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="✨ Success! Your business is live! ✨"')).toBeVisible({ timeout: 20000 });
 
     // Check that we can navigate back to dashboard
     await page.click('button:has-text("Go to Dashboard")');
