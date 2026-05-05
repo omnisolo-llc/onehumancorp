@@ -44,6 +44,26 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
+pub async fn record_llm_token_usage(pool: &PgPool, tokens: f32, model: &str, tenant_id: &str, agent_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_llm_token_usage_total", "counter", tokens, serde_json::json!({ "model": model, "tenant_id": tenant_id, "agent_id": agent_id })).await
+}
+
+pub async fn record_storage_read_bytes(pool: &PgPool, bytes: f32, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_storage_read_bytes_total", "counter", bytes, serde_json::json!({ "tenant_id": tenant_id })).await
+}
+
+pub async fn record_storage_write_bytes(pool: &PgPool, bytes: f32, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_storage_write_bytes_total", "counter", bytes, serde_json::json!({ "tenant_id": tenant_id })).await
+}
+
+pub async fn record_email_send(pool: &PgPool, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_email_sends_total", "counter", 1.0, serde_json::json!({ "tenant_id": tenant_id })).await
+}
+
+pub async fn record_outbound_api_call(pool: &PgPool, api_name: &str, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_outbound_api_calls_total", "counter", 1.0, serde_json::json!({ "api_name": api_name, "tenant_id": tenant_id })).await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

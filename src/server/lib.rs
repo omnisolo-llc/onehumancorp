@@ -37,6 +37,7 @@ pub mod services {
     pub mod wizard;
     pub mod billing {
         pub mod auditor;
+        pub mod grpc;
     }
     pub mod growth;
     pub mod onboarding;
@@ -129,6 +130,9 @@ pub mod ohc {
     }
     pub mod common {
         pub use common_proto::ohc::common::*;
+    }
+    pub mod billing {
+        pub use billing_proto::ohc::billing::*;
     }
 }
 
@@ -1084,6 +1088,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Scheduler Background Task
+    let cost_auditor = std::sync::Arc::new(crate::services::billing::auditor::CostAuditor::new(
+        crate::pricing::calculator::CostConfig::default()
+    ));
+    let billing_service = crate::services::billing::grpc::BillingServiceServerImpl::new(
+        cost_auditor,
+        Some(db.pool.clone())
+    );
+
     let hub_for_sched = hub.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
@@ -1129,6 +1141,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(crate::ohc::billing::billing_service_server::BillingServiceServer::new(
+            billing_service
+        ))
         .serve(addr)
         .await?;
 

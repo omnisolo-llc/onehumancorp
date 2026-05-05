@@ -158,3 +158,27 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use serde_json::json;
+    use crate::telemetry::{
+        record_llm_token_usage, record_storage_read_bytes, record_storage_write_bytes,
+        record_email_send, record_outbound_api_call,
+    };
+
+    #[tokio::test]
+    async fn test_telemetry_cost_wrappers() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
+
+        assert!(record_llm_token_usage(&pool, 150.0, "gpt-4", "tenant-123", "agent-1").await.is_ok());
+        assert!(record_storage_read_bytes(&pool, 1024.0, "tenant-123").await.is_ok());
+        assert!(record_storage_write_bytes(&pool, 2048.0, "tenant-123").await.is_ok());
+        assert!(record_email_send(&pool, "tenant-123").await.is_ok());
+        assert!(record_outbound_api_call(&pool, "stripe", "tenant-123").await.is_ok());
+    }
+}
