@@ -1,5 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+import { GlassCard } from "glass_card.slint";
+
 export component Diagnostics inherits Window {
     width: 500px;
     height: 600px;
@@ -25,8 +27,8 @@ export component Diagnostics inherits Window {
         VerticalBox {
             spacing: 10px;
             
-            Rectangle {
-                background: white;
+            GlassCard {
+                background: transparent;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -34,12 +36,12 @@ export component Diagnostics inherits Window {
                 HorizontalBox {
                     padding: 12px;
                     Text { text: "🗄️ Business Records"; color: #1e293b; }
-                    Rectangle {}
+                    GlassCard {}
                     Text { text: "Connected"; color: #10b981; }
                 }
             }
-            Rectangle {
-                background: white;
+            GlassCard {
+                background: transparent;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -47,12 +49,12 @@ export component Diagnostics inherits Window {
                 HorizontalBox {
                     padding: 12px;
                     Text { text: "🧠 Memory"; color: #1e293b; }
-                    Rectangle {}
+                    GlassCard {}
                     Text { text: "Connected"; color: #10b981; }
                 }
             }
-            Rectangle {
-                background: white;
+            GlassCard {
+                background: transparent;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
@@ -60,7 +62,7 @@ export component Diagnostics inherits Window {
                 HorizontalBox {
                     padding: 12px;
                     Text { text: "🧠 AI Connections"; color: #1e293b; }
-                    Rectangle {}
+                    GlassCard {}
                     Text { text: "Connected"; color: #10b981; }
                 }
             }
@@ -73,22 +75,22 @@ export component Diagnostics inherits Window {
             
             HorizontalBox {
                 Text { text: "Execution Mode"; color: #64748b; }
-                Rectangle {}
+                GlassCard {}
                 Text { text: "STANDALONE"; color: #a855f7; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Cloud Connectivity"; color: #64748b; }
-                Rectangle {}
+                GlassCard {}
                 Text { text: "CONNECTED"; color: #10b981; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Mesh Status"; color: #64748b; }
-                Rectangle {}
+                GlassCard {}
                 Text { text: "ACTIVE"; color: #10b981; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Stuck Missions"; color: #64748b; }
-                Rectangle {}
+                GlassCard {}
                 Text { text: "0"; color: #1e293b; font-weight: 700; }
             }
         }

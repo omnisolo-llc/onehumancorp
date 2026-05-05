@@ -1,5 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
+import { GlassCard } from "glass_card.slint";
+
 export struct UiPricingTier {
     name: string,
     price: string,
@@ -86,8 +88,8 @@ export component Pricing inherits Window {
 
             VerticalBox {
                 spacing: 16px;
-                for tier in tiers : Rectangle {
-                    background: white;
+                for tier in tiers : GlassCard {
+                    background: transparent;
                     border-color: tier.is_recommended ? #a855f7 : #e2e8f0;
                     border-width: tier.is_recommended ? 2px : 1px;
                     border-radius: 8px;
@@ -96,7 +98,7 @@ export component Pricing inherits Window {
                         padding: 16px;
                         spacing: 12px;
 
-                        if tier.is_recommended : Rectangle {
+                        if tier.is_recommended : GlassCard {
                             background: #a855f7;
                             border-radius: 4px;
                             VerticalBox {
@@ -156,7 +158,7 @@ export component Pricing inherits Window {
                 Text { text: "FAQ / Frequently Asked Questions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
 
                 Rectangle {
-                    background: white;
+                    background: transparent;
                     border-color: #e2e8f0;
                     border-width: 1px;
                     border-radius: 8px;
