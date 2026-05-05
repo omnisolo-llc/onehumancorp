@@ -2,13 +2,29 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mcp",
-    srcs = ["client.go"],
+    srcs = [
+        "client.go",
+        "proxy.go",
+    ],
     importpath = "onehumancorp/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/lib/storage",
+        "@com_github_aws_aws_sdk_go_v2_config//:config",
+        "@com_github_aws_aws_sdk_go_v2_service_s3//:s3",
+    ],
 )
 
 go_test(
     name = "mcp_test",
-    srcs = ["client_test.go"],
+    srcs = [
+        "client_test.go",
+        "proxy_test.go",
+    ],
     embed = [":mcp"],
+    deps = [
+        "//srcs/server/lib/storage",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
 )
