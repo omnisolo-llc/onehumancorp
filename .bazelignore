@@ -10,4 +10,4 @@ bazel-bin
 bazel-out
 bazel-testlogs
 .bazel-output-jetski
-srcs
+.bazelignore
