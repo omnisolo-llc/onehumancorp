@@ -47,6 +47,11 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 	}
 	defer tx.Rollback()
 
+	_, err = tx.ExecContext(ctx, "SET LOCAL app.current_tenant = $1", organizationID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
@@ -100,6 +105,16 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 }
 
 func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	if err != nil {
+		return err
+	}
+
 	query := `
 		INSERT INTO shared_tasks (organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -116,25 +131,38 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 		depsBytes = []byte("[]")
 	}
 
-	err := s.db.QueryRowContext(ctx, query,
+	err = tx.QueryRowContext(ctx, query,
 		task.OrganizationID, task.Title, task.Description, task.Status,
 		task.AgentID, task.Priority, payloadBytes, task.ParentPlanID, depsBytes,
 	).Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
 
-	return err
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	if err != nil {
+		return nil, err
+	}
+
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
         WHERE id = $1
     `
-    row := s.db.QueryRowContext(ctx, query, id)
+    row := tx.QueryRowContext(ctx, query, id)
 
     task := &SharedTask{}
     var payloadBytes, depsBytes []byte
-    err := row.Scan(
+    err = row.Scan(
         &task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
         &task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
         &task.CreatedAt, &task.UpdatedAt,
@@ -154,13 +182,29 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
         task.Dependencies = json.RawMessage(depsBytes)
     }
 
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
     return task, nil
 }
 
 func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	if err != nil {
+		return err
+	}
+
 	query := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	_, err := s.db.ExecContext(ctx, query, status, id)
-	return err
+	_, err = tx.ExecContext(ctx, query, status, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // SqliteTaskStore implementation
