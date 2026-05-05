@@ -39,6 +39,8 @@ pub struct AgentConfig {
 }
 
 /// Implements the AgentService gRPC service.
+use ohc_builtin_agent_tools::runner::CommandInterceptor;
+
 pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
@@ -46,6 +48,7 @@ pub struct AgentServiceImpl {
     memory: Option<Arc<VectorRepository>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
+    interceptor: Option<Arc<dyn CommandInterceptor>>,
 }
 
 
@@ -127,7 +130,13 @@ impl AgentServiceImpl {
             auth,
             memory: None,
             llm_override: None,
+            interceptor: None,
         }
+    }
+
+    pub fn with_interceptor(mut self, interceptor: Arc<dyn CommandInterceptor>) -> Self {
+        self.interceptor = Some(interceptor);
+        self
     }
 
     pub async fn init_memory(&mut self) {
@@ -347,7 +356,7 @@ impl AgentServiceImpl {
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, self.interceptor.clone());
         let agent = Arc::new(Agent::new(llm, tools));
         
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
@@ -392,7 +401,7 @@ impl AgentService for AgentServiceImpl {
             None
         } else { None };
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor);
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, self.interceptor.clone());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -568,7 +577,7 @@ impl AgentService for AgentServiceImpl {
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None);
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, self.interceptor.clone());
             let agent = Agent::new(llm, tools);
 
             let mut no_op = |_: AgentEvent| {};

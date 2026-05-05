@@ -1102,7 +1102,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
         };
         let auth = ohc_builtin_agent::auth::auth_mode_from_env();
-        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id.clone(), cfg, auth);
+
+        let bridge_url = std::env::var("OHC_BRIDGE_URL").unwrap_or_else(|_| "ws://127.0.0.1:8080/bridge".to_string());
+        let transport = std::sync::Arc::new(crate::harness::bridge::transport::WsBridgeTransport::new(bridge_url));
+        let interceptor = std::sync::Arc::new(crate::harness::bridge::transport::PermissionInterceptor::new(transport, agent_id));
+
+        svc_impl = svc_impl.with_interceptor(interceptor);
         svc_impl.init_memory().await;
         let svc = std::sync::Arc::new(svc_impl);
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;

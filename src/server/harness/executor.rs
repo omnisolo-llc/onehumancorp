@@ -1,15 +1,24 @@
+use super::bridge::transport::PermissionInterceptor;
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
+use std::sync::Arc;
 
 pub struct LocalShellTask {
     manager: SandboxManager,
+    interceptor: Option<Arc<PermissionInterceptor>>,
 }
 
 impl LocalShellTask {
     pub fn new(pool: Option<PgPool>) -> Self {
         LocalShellTask {
             manager: SandboxManager::new(pool),
+            interceptor: None,
         }
+    }
+
+    pub fn with_interceptor(mut self, interceptor: Arc<PermissionInterceptor>) -> Self {
+        self.interceptor = Some(interceptor);
+        self
     }
 
     pub async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
@@ -17,6 +26,11 @@ impl LocalShellTask {
     }
 
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
+        if let Some(interceptor) = &self.interceptor {
+            use ohc_builtin_agent::tools::runner::CommandInterceptor;
+            interceptor.check_permission("shell", cmd).await?;
+        }
+
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
@@ -89,5 +103,47 @@ mod tests {
         let msg = result.unwrap();
         assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
         assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+    }
+
+    use super::super::bridge::permission::{BridgeTransport, PermissionRequest, AuthorizationResponse};
+    use async_trait::async_trait;
+
+    struct MockBridgeTransport {
+        authorize: bool,
+    }
+
+    #[async_trait]
+    impl BridgeTransport for MockBridgeTransport {
+        async fn request_permission(&self, _req: PermissionRequest) -> Result<AuthorizationResponse, String> {
+            Ok(AuthorizationResponse {
+                authorized: self.authorize,
+                reason: if self.authorize { None } else { Some("User denied permission".to_string()) },
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_executor_with_interceptor_authorized() {
+        let transport = Arc::new(MockBridgeTransport { authorize: true });
+        let interceptor = Arc::new(PermissionInterceptor::new(transport, "session_1".to_string()));
+
+        let task = LocalShellTask::new(None).with_interceptor(interceptor);
+
+        let result = task.execute("echo 'allowed'").await;
+        assert!(result.is_ok());
+        let msg = result.unwrap();
+        assert!(msg.contains("Executing: bash -c \"set -e; echo 'allowed'\""));
+    }
+
+    #[tokio::test]
+    async fn test_executor_with_interceptor_denied() {
+        let transport = Arc::new(MockBridgeTransport { authorize: false });
+        let interceptor = Arc::new(PermissionInterceptor::new(transport, "session_1".to_string()));
+
+        let task = LocalShellTask::new(None).with_interceptor(interceptor);
+
+        let result = task.execute("echo 'denied'").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "User denied permission");
     }
 }

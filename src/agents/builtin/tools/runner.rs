@@ -5,6 +5,11 @@ use async_trait::async_trait;
 use tokio::process::Command;
 
 #[async_trait]
+pub trait CommandInterceptor: Send + Sync {
+    async fn check_permission(&self, tool_name: &str, command: &str) -> Result<(), String>;
+}
+
+#[async_trait]
 pub trait CommandRunner: Send + Sync {
     async fn run(
         &self,
@@ -15,7 +20,15 @@ pub trait CommandRunner: Send + Sync {
     ) -> io::Result<Output>;
 }
 
-pub struct RealCommandRunner;
+pub struct RealCommandRunner {
+    interceptor: Option<std::sync::Arc<dyn CommandInterceptor>>,
+}
+
+impl RealCommandRunner {
+    pub fn new(interceptor: Option<std::sync::Arc<dyn CommandInterceptor>>) -> Self {
+        RealCommandRunner { interceptor }
+    }
+}
 
 #[async_trait]
 impl CommandRunner for RealCommandRunner {
@@ -26,6 +39,13 @@ impl CommandRunner for RealCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
+        if let Some(interceptor) = &self.interceptor {
+            let full_command = std::iter::once(program).chain(args.iter().copied()).collect::<Vec<_>>().join(" ");
+            if let Err(e) = interceptor.check_permission("shell", &full_command).await {
+                return Err(io::Error::new(io::ErrorKind::PermissionDenied, e));
+            }
+        }
+
         let mut cmd = Command::new(program);
         cmd.args(args);
         if let Some(dir) = current_dir {

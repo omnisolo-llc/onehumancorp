@@ -82,8 +82,9 @@ pub fn all_tools(
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
+    interceptor: Option<Arc<dyn runner::CommandInterceptor>>,
 ) -> Vec<Tool> {
-    let runner = Arc::new(runner::RealCommandRunner);
+    let runner = Arc::new(runner::RealCommandRunner::new(interceptor));
     let mut tools = vec![
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
