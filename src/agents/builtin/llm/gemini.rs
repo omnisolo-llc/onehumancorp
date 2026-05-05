@@ -9,6 +9,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 struct CircuitBreaker {
     failures: Mutex<usize>,
     last_failure: Mutex<Option<Instant>>,
@@ -16,6 +17,7 @@ struct CircuitBreaker {
     reset_timeout: Duration,
 }
 
+#[allow(dead_code)]
 impl CircuitBreaker {
     fn new(max_failures: usize, reset_timeout: Duration) -> Self {
         CircuitBreaker {
@@ -53,8 +55,10 @@ impl CircuitBreaker {
     }
 }
 
+#[allow(dead_code)]
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 
+#[allow(dead_code)]
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
