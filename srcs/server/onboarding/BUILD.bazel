@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "onboarding",
+    srcs = [
+        "api.go",
+        "service.go",
+        "store.go",
+    ],
+    importpath = "onehumancorp/srcs/server/onboarding",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration",
+    ],
+)
+
+go_test(
+    name = "onboarding_test",
+    srcs = [
+        "api_test.go",
+        "service_test.go",
+    ],
+    embed = [":onboarding"],
+    deps = [
+        "//srcs/server/orchestration",
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_stretchr_testify//assert",
+    ],
+)

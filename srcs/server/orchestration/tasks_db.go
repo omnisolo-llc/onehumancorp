@@ -29,6 +29,7 @@ type TaskStore interface {
 	CreateTask(ctx context.Context, task *SharedTask) error
 	GetTask(ctx context.Context, id string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
+	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 }
 
 // PostgresTaskStore implementation
@@ -207,6 +208,57 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 	return tx.Commit()
 }
 
+
+func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	if err != nil {
+		return nil, err
+	}
+
+    query := `
+        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        FROM shared_tasks
+        WHERE organization_id = $1
+    `
+    rows, err := tx.QueryContext(ctx, query, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		task := &SharedTask{}
+		var payloadBytes, depsBytes []byte
+		err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&task.CreatedAt, &task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadBytes) > 0 {
+			raw := json.RawMessage(payloadBytes)
+			task.Payload = &raw
+		}
+		if len(depsBytes) > 0 {
+			task.Dependencies = json.RawMessage(depsBytes)
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
 // SqliteTaskStore implementation
 type SqliteTaskStore struct {
 	db    *sql.DB
@@ -381,4 +433,49 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 	query := `UPDATE shared_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := s.db.ExecContext(ctx, query, status, id)
 	return err
+}
+
+
+func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+    query := `
+        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        FROM shared_tasks
+        WHERE organization_id = ?
+    `
+    rows, err := s.db.QueryContext(ctx, query, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		task := &SharedTask{}
+		var payloadBytes, depsBytes []byte
+		var createdAtStr, updatedAtStr string
+		err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&createdAtStr, &updatedAtStr,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
+			task.CreatedAt = t
+		}
+		if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
+			task.UpdatedAt = t
+		}
+		if len(payloadBytes) > 0 {
+			raw := json.RawMessage(payloadBytes)
+			task.Payload = &raw
+		}
+		if len(depsBytes) > 0 {
+			task.Dependencies = json.RawMessage(depsBytes)
+		}
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }

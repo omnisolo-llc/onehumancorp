@@ -6,7 +6,11 @@ import (
 	"log"
 	"time"
 
+	"net/http"
+
 	"onehumancorp/srcs/server/memory"
+	"onehumancorp/srcs/server/onboarding"
+	"onehumancorp/srcs/server/orchestration"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -65,5 +69,23 @@ func main() {
 	log.Println("OHC Server is running. AutoDream daemon started.")
 
 	// Block forever (or implement graceful shutdown)
+
+	// Initialize Onboarding
+	tenantStore := onboarding.NewSqliteTenantStore(db)
+	taskStore := orchestration.NewSqliteTaskStore(db)
+	onboardingService := onboarding.NewService(tenantStore, taskStore)
+	onboardingAPI := onboarding.NewAPIHandler(onboardingService)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
+	mux.HandleFunc("/api/onboarding/status", onboardingAPI.HandleGetStatus)
+
+	go func() {
+		log.Println("Listening on :8080...")
+		if err := http.ListenAndServe(":8080", mux); err != nil {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
 	select {}
 }
