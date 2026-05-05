@@ -1073,8 +1073,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ).await.expect("Failed to create MeshTransport");
 
     // Initialize Handoff Manager
+    let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
-        mesh_transport.clone(),
+        handoff_mesh,
         db.clone(),
         is_cloud
     );
@@ -1105,9 +1106,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
         };
         let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+        let agent_id_clone = agent_id.clone();
         let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
         svc_impl.init_memory().await;
         let svc = std::sync::Arc::new(svc_impl);
+
+        let heartbeat_transport = builtin_transport.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = heartbeat_transport.register_presence(&agent_id_clone, "active", 30).await {
+                    tracing::error!("Failed to register presence: {}", e);
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+            }
+        });
+
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
