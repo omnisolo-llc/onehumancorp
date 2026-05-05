@@ -28,7 +28,7 @@ test.describe('Chat Page', () => {
     if (await input.isVisible()) {
       await input.fill('Hello');
       await page.locator('button:has-text("Send")').click();
-      await expect(page.locator('text=Hello')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=Hello')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -47,7 +47,7 @@ test.describe('Chat Page', () => {
   test('should show unread message indicator', async ({ page }) => {
     await page.goto('/chat');
     const unread = page.locator('[class*="unread"], [class*="badge"]').first();
-    await expect(unread).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(unread).toBeVisible({ timeout: 3000 });
   });
 
   test('should search chat messages', async ({ page }) => {
@@ -98,7 +98,7 @@ test.describe('Chat Page', () => {
     await page.goto('/chat');
     const message = page.locator('[class*="message"]').first();
     await message.click();
-    await expect(message.locator('[class*="read"]')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(message.locator('[class*="read"]')).toBeVisible({ timeout: 3000 });
   });
 
   test('should delete message', async ({ page }) => {
@@ -108,7 +108,7 @@ test.describe('Chat Page', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -147,7 +147,7 @@ test.describe('Chat Page', () => {
 
   test('should show typing indicator', async ({ page }) => {
     await page.goto('/chat');
-    await expect(page.locator('text=/typing|is typing/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(page.locator('text=/typing|is typing/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should mute chat notifications', async ({ page }) => {
@@ -155,7 +155,7 @@ test.describe('Chat Page', () => {
     const muteBtn = page.locator('button:has-text("Mute"), button:has-text("Silence")').first();
     if (await muteBtn.isVisible()) {
       await muteBtn.click();
-      await expect(page.locator('text=/muted|silenced/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/muted|silenced/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -166,7 +166,7 @@ test.describe('Chat Page', () => {
     const pinBtn = page.locator('button:has-text("Pin"), [class*="pin"]').first();
     if (await pinBtn.isVisible()) {
       await pinBtn.click();
-      await expect(page.locator('text=/pinned/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/pinned/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });

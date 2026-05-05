@@ -48,7 +48,7 @@ test.describe('Security Settings', () => {
     const revokeBtn = page.locator('button:has-text("Revoke"), button:has-text("Remove")').first();
     if (await revokeBtn.isVisible()) {
       await revokeBtn.click();
-      await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -71,7 +71,7 @@ test.describe('Security Settings', () => {
     const addBtn = page.locator('button:has-text("Add"), button:has-text("Trust")').first();
     if (await addBtn.isVisible()) {
       await addBtn.click();
-      await expect(page.locator('text=/device.*added|trusted/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/device.*added|trusted/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -82,7 +82,7 @@ test.describe('Security Settings', () => {
     const removeBtn = page.locator('button:has-text("Remove"), button:has-text("Delete")').first();
     if (await removeBtn.isVisible()) {
       await removeBtn.click();
-      await expect(page.locator('text=/removed|deleted/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/removed|deleted/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -107,7 +107,7 @@ test.describe('Security Settings', () => {
     const revokeBtn = page.locator('button:has-text("Revoke"), button:has-text("Delete")').first();
     if (await revokeBtn.isVisible()) {
       await revokeBtn.click();
-      await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -122,7 +122,7 @@ test.describe('Security Settings', () => {
     const alertToggle = page.locator('input[type="checkbox"]').first();
     if (await alertToggle.isVisible()) {
       await alertToggle.check();
-      await expect(page.locator('text=/enabled|saved/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/enabled|saved/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -143,7 +143,7 @@ test.describe('Security Settings', () => {
       const regenerateBtn = page.locator('button:has-text("Regenerate"), button:has-text("New Codes")').first();
       if (await regenerateBtn.isVisible()) {
         await regenerateBtn.click();
-        await expect(page.locator('text=/regenerated|new.*codes/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+        await expect(page.locator('text=/regenerated|new.*codes/i')).toBeVisible({ timeout: 3000 });
       }
     }
   });
@@ -210,6 +210,6 @@ test.describe('Password Change', () => {
     await page.fill('input[placeholder*="new" i]', 'NewPass123!');
     await page.fill('input[placeholder*="confirm" i]', 'NewPass123!');
     await page.locator('button:has-text("Change"), button:has-text("Update")').click();
-    await expect(page.locator('text=/success|changed|updated/i')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('text=/success|changed|updated/i')).toBeVisible({ timeout: 5000 });
   });
 });

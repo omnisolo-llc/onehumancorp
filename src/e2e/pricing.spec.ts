@@ -35,7 +35,7 @@ test.describe('Pricing Page', () => {
   test('should highlight recommended plan', async ({ page }) => {
     await page.goto('/pricing');
     const recommended = page.locator('text=/recommended|popular|best/i').first();
-    await expect(recommended).toBeVisible({ timeout: 3000 }).catch(() => {});
+    await expect(recommended).toBeVisible({ timeout: 3000 });
   });
 
   test('should show feature list', async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe('Pricing Page', () => {
     const annualToggle = page.locator('text=/annual|monthly/i').first();
     if (await annualToggle.isVisible()) {
       await annualToggle.click();
-      await expect(page.locator('text=/\\d+%.*off|discount|savings/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/\\d+%.*off|discount|savings/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -209,7 +209,7 @@ test.describe('My Plan Page', () => {
     const downloadBtn = page.locator('button:has-text("Download"), [class*="download"]').first();
     if (await downloadBtn.isVisible()) {
       await downloadBtn.click();
-      await expect(page.locator('text=/pdf|invoice/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/pdf|invoice/i')).toBeVisible({ timeout: 3000 });
     }
   });
 

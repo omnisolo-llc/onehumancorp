@@ -70,7 +70,7 @@ test.describe('Task List Page', () => {
         const completeBtn = page.locator('button:has-text("Complete"), button:has-text("Done")').first();
     if (await completeBtn.isVisible()) {
       await completeBtn.click();
-      await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -80,7 +80,7 @@ test.describe('Task List Page', () => {
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click();
-      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
   });
 
@@ -148,7 +148,7 @@ test.describe('Task List Page', () => {
         const nextBtn = page.locator('button:has-text("Next"), button:has-text(">")').first();
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
-      await expect(page.locator('text=/page \\d+/i')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('text=/page \\d+/i')).toBeVisible({ timeout: 3000 });
     }
   });
 });
@@ -191,7 +191,7 @@ test.describe('Task List Mobile', () => {
         const taskItem = page.locator('[class*="task"]').first();
     if (await taskItem.isVisible()) {
       await taskItem.swipe('left');
-      await expect(page.locator('button:has-text("Complete")')).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(page.locator('button:has-text("Complete")')).toBeVisible({ timeout: 3000 });
     }
   });
 });
