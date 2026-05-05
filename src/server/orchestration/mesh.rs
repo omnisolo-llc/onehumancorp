@@ -75,10 +75,10 @@ impl TeammateMesh for CentrifugeNode {
         })).await?;
 
         let mut retries = 0;
-        let mut backoff = 100;
+        let mut backoff = 200;
 
         loop {
-            if retries > 3 {
+            if retries > 5 {
                 cancel();
                 return Err("Failed to receive ack after retries".to_string());
             }
