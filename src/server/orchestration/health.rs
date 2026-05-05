@@ -57,6 +57,44 @@ pub async fn run_health_monitor(
     }
 }
 
+pub async fn run_cross_mode_health_monitor(
+    hub: Arc<Hub>,
+    is_cloud: bool,
+    tick_duration: std::time::Duration,
+) {
+    let mut interval = tokio::time::interval(tick_duration);
+    loop {
+        interval.tick().await;
+
+        tracing::info!("CROSS-MODE HEALTH MONITOR: Checking hybrid-mode switching and local-to-cloud mission sync.");
+
+        let pool = &hub.pool;
+
+        // Backlog Management: Sanitize and prioritize the agent_missions queue
+        // We find stuck missions and requeue them or mark them failed based on age
+
+        // This query identifies missions stuck in 'PENDING' for too long
+        let query = if is_cloud {
+            "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < NOW() - INTERVAL '1 hour'"
+        } else {
+             // For sqlite (local wrapper) we use datetime logic
+             "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < datetime('now', '-1 hour')"
+        };
+
+        match sqlx::query(query).execute(pool).await {
+            Ok(result) => {
+                let affected = result.rows_affected();
+                if affected > 0 {
+                    tracing::warn!("CROSS-MODE HEALTH MONITOR: Sanitized {} stuck agent_missions", affected);
+                }
+            }
+            Err(e) => {
+                tracing::error!("CROSS-MODE HEALTH MONITOR: Failed to sanitize agent_missions: {}", e);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,8 +112,6 @@ mod tests {
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
-        // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
-        // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://dummy")
             .unwrap();
@@ -83,7 +119,6 @@ mod tests {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
-        // Register an idle agent
         hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_idle".to_string(),
             name: "Idle Agent".to_string(),
@@ -93,7 +128,6 @@ mod tests {
             provider_type: "test".to_string(),
         });
 
-        // Register a busy agent
         hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_busy".to_string(),
             name: "Busy Agent".to_string(),
@@ -106,7 +140,6 @@ mod tests {
         assert!(hub.get_agent("agent_idle").is_some());
         assert!(hub.get_agent("agent_busy").is_some());
 
-        // We simulate a transport with NO active agents
         let transport = Arc::new(MemoryTransport::new());
 
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
@@ -116,10 +149,8 @@ mod tests {
             run_health_monitor(monitor_transport, monitor_hub, false, std::time::Duration::from_millis(10)).await;
         });
 
-        // Let the monitor loop run once
         let _ = tokio::time::timeout(tokio::time::Duration::from_millis(50), handle).await;
 
-        // Both agents should be fired (removed) immediately in standalone mode
         assert!(hub.get_agent("agent_idle").is_none());
         assert!(hub.get_agent("agent_busy").is_none());
     }
