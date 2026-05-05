@@ -1,6 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool};
-use std::str::FromStr;
+
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone)]
@@ -17,7 +17,7 @@ impl ActionQueue {
             std::fs::create_dir_all(&tmp_dir).map_err(|e| e.to_string())?;
         }
         let db_path = format!("sqlite:{}?mode=rwc", tmp_dir.join("action_queue.db").display());
-        let options = SqliteConnectOptions::from_str(&db_path)
+        let options = db_path.parse::<SqliteConnectOptions>()
             .map_err(|e| e.to_string())?
             .create_if_missing(true);
 

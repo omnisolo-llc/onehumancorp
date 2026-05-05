@@ -24,7 +24,8 @@ pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
 
-fn open_url(url: &str) {
+fn open_url(_url: &str) {
+    let url = _url;
     #[cfg(target_arch = "wasm32")]
     {
         // Removed web_sys since it breaks the build, avoiding E0433
