@@ -201,6 +201,31 @@ export component Dashboard inherits Window {
             }
         }
 
+        // Business Advisory Nudges
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Business Advisory"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
+            }
+            GlassCard {
+                border-color: rgba(168, 85, 247, 0.5);
+                border-width: 1px;
+                background: rgba(168, 85, 247, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Tuesday was your busiest day. Want to run a promo?"; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
+                    }
+                }
+            }
+        }
+
         // Quick Actions Navigation
         VerticalBox {
             spacing: 12px;
