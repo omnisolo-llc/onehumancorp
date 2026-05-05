@@ -2034,6 +2034,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
+            // Assign from closure parameters instead of ui.get_*() calls
             let req_website_template = website_template.to_string();
             let req_first_product_name = product_name.to_string();
             let req_first_product_price = product_price.to_string();
