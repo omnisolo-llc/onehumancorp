@@ -116,6 +116,42 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
     Ok(req)
 }
 
+pub async fn spiffe_interceptor_axum(
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Result<axum::response::Response, axum::http::StatusCode> {
+    let spiffe_id_header = req.headers().get("x-spiffe-id")
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+
+    let spiffe_id_str = spiffe_id_header.to_str()
+        .map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+
+    match crate::auth::parse_spiffe_id(spiffe_id_str) {
+        Ok((org_id, agent_id)) => {
+            println!("Authenticated SPIFFE ID successfully via Axum.");
+            let auth_info = crate::auth::orchestration::AuthInfo {
+                org_id,
+                agent_id: agent_id.clone(),
+                spiffe_id: agent_id,
+            };
+            req.extensions_mut().insert(auth_info);
+        }
+        Err(_) => return Err(axum::http::StatusCode::FORBIDDEN),
+    }
+
+    Ok(next.run(req).await)
+}
+
+
+
+
+
+
+
+
+
+
+
 pub mod ohc {
     pub mod mcp_proxy {
         pub use mcp_proxy_proto::ohc::mcp_proxy::*;
@@ -152,15 +188,16 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    mesh: Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, mesh: Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
         let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, mesh }
     }
 }
 
@@ -216,6 +253,17 @@ impl HubService for MyHubService {
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
+            // Forward to real-time Teammate Mesh if available
+            if let Some(mesh) = &self.mesh {
+                use prost::Message as ProstMessage;
+                let topic = format!("mesh:coordination:{}", msg.to_agent);
+                let payload = msg.encode_to_vec();
+                let mesh_clone = mesh.clone();
+                tokio::spawn(async move {
+                    let _ = mesh_clone.publish(&topic, payload).await;
+                });
+            }
+
             match self.hub.clone().publish(msg) {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
@@ -1149,7 +1197,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
-        .route("/mesh/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
+        .route("/mesh/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).route_layer(axum::middleware::from_fn(spiffe_interceptor_axum)))
+
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -1176,7 +1225,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
+    let centrifuge_node: Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>> = crate::orchestration::mesh::get_mesh_transport(&db.store).await.ok().map(|m| m as Arc<dyn crate::orchestration::mesh::TeammateMesh>);
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), centrifuge_node);
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
