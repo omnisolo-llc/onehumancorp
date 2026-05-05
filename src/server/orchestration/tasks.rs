@@ -187,7 +187,7 @@ impl TaskDecompositionService {
                 use prost::Message;
                 let mut payload_bytes = Vec::new();
                 let _ = proto_task.encode(&mut payload_bytes);
-                let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))
             }
@@ -285,7 +285,7 @@ impl TaskDecompositionService {
                 use prost::Message;
                 let mut payload_bytes = Vec::new();
                 let _ = proto_task.encode(&mut payload_bytes);
-                let _ = self.mesh.publish("task.assigned", payload_bytes).await;
+                let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))
             }
