@@ -48,6 +48,51 @@ pub async fn record_token_usage_forecast(pool: &PgPool, org_id: &str, forecast: 
     buffer_metric(pool, "ohc_token_usage_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
 }
 
+pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &str, role: &str, model: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_agent_cost",
+        "counter",
+        cost as f32,
+        serde_json::json!({
+            "agent_id": agent_id,
+            "organization_id": organization_id,
+            "role": role,
+            "model": model,
+            "entity": entity,
+        }),
+    )
+    .await
+}
+
+pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_api_call_cost",
+        "counter",
+        cost as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "entity": entity,
+        }),
+    )
+    .await
+}
+
+pub async fn record_swarm_job_latency_by_entity(pool: &PgPool, mode: &str, entity: &str, latency: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_swarm_job_latency_by_entity_seconds",
+        "histogram",
+        latency as f32,
+        serde_json::json!({
+            "mode": mode,
+            "entity": entity,
+        }),
+    )
+    .await
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
