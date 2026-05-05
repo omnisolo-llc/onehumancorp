@@ -7,7 +7,10 @@ Small business owners in Latin America often struggle to accept digital payments
 Mercado Pago is the leading payment gateway in Latin America.
 - **Ease of Use for Non-Technical Users**: The user enters their Mercado Pago credentials or goes through an OAuth flow. Afterwards, local payment options appear automatically on their checkout page.
 - **Pricing**: Standard gateway fees applied per transaction. No monthly fixed costs.
-- **Reliability & Reputation**: Dominant player in LATAM, highly reliable for local payment methods that other gateways fail to cover.
+## Risks
+- **Risks**: Handling complex local refund policies and potential fraud in emerging markets.
+
+## Reliability & Reputation**: Dominant player in LATAM, highly reliable for local payment methods that other gateways fail to cover.
 - **Environment Support**: Works in both Cloud and Standalone modes via API and webhooks.
 
 ## Design Doc

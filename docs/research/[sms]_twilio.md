@@ -7,7 +7,10 @@ Fatima, the food cart operator, relies on immediate notifications when a pre-ord
 Twilio is the industry standard for programmable SMS and voice.
 - **Ease of Use for Non-Technical Users**: Fatima doesn't know what Twilio is. She just turns on "SMS Notifications" in the OHC app. The platform provisions a local number for her business automatically.
 - **Pricing**: Pay-as-you-go per message (fractions of a cent). Very affordable.
-- **Reliability & Reputation**: The most reliable telecom API globally. Strong compliance tools for opt-outs (STOP messages).
+## Risks
+- **Risks**: A2P 10DLC compliance strictness, risk of numbers being blocked if opt-outs are not handled perfectly.
+
+## Reliability & Reputation**: The most reliable telecom API globally. Strong compliance tools for opt-outs (STOP messages).
 - **Environment Support**: Works perfectly via API in all modes.
 
 ## Design Doc

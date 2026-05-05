@@ -7,7 +7,10 @@ Priya, the boutique owner, wants to let her best customers know when a new cloth
 Resend is a modern developer-first email API built for speed and deliverability.
 - **Ease of Use for Non-Technical Users**: Priya never sees Resend. She simply tells the Marketing agent, "Send an email about the new summer dresses." The agent uses React Email templates via Resend to dispatch beautiful, responsive emails.
 - **Pricing**: Very generous free tier (e.g., 3,000 emails/month) and extremely cheap pay-as-you-go pricing beyond that, making it ideal for OHC's small business users.
-- **Reliability & Reputation**: Exceptional developer reputation, modern SDKs, high deliverability rates, and great support for modern email frameworks.
+## Risks
+- **Risks**: Deliverability drops if the user sends spammy content, requiring active domain reputation management.
+
+## Reliability & Reputation**: Exceptional developer reputation, modern SDKs, high deliverability rates, and great support for modern email frameworks.
 - **Environment Support**: Pure API, works perfectly in both Cloud and Standalone modes.
 
 ## Design Doc

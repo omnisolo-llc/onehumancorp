@@ -7,7 +7,10 @@ Leo, the music tutor, teaches online. Currently, he has to manually create a Zoo
 Daily.co provides developer-friendly APIs for embedding WebRTC video calls directly into applications.
 - **Ease of Use for Non-Technical Users**: Neither Leo nor his students need to download an app or create an account. They just click a "Join Lesson" link that opens a high-quality video call right in their browser.
 - **Pricing**: Generous free tier (up to 10,000 minutes/month), making it effectively free for a single tutor like Leo.
-- **Reliability & Reputation**: Excellent WebRTC performance, low latency, and highly customizable UI.
+## Risks
+- **Risks**: Dependency on the user('s) internet connection quality for WebRTC to function well.
+
+## Reliability & Reputation**: Excellent WebRTC performance, low latency, and highly customizable UI.
 - **Environment Support**: Works in browsers via web components, perfect for Cloud and Standalone desktop web views.
 
 ## Design Doc

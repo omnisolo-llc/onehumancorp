@@ -7,7 +7,10 @@ Leo, the music tutor, needs a way for students to book lessons without endless b
 Cal.com is an open-source, developer-friendly scheduling infrastructure tool.
 - **Ease of Use for Non-Technical Users**: For Leo, he only needs to connect his Google Calendar and set his working hours (e.g., 9 AM - 5 PM). Cal.com handles the complexity of timezone math and conflict resolution invisibly.
 - **Pricing**: Cal.com has an API/infrastructure offering with predictable pricing, and its open-source nature means it can potentially be self-hosted within OHC's infrastructure.
-- **Reliability & Reputation**: Highly regarded in the developer community for its flexibility, modern API, and strong timezone handling.
+## Risks
+- **Risks**: Calendar synchronization drift or API rate limits on the Google/Outlook side.
+
+## Reliability & Reputation**: Highly regarded in the developer community for its flexibility, modern API, and strong timezone handling.
 - **Environment Support**: Works well in Cloud. Can be integrated effectively in Standalone mode as it provides robust API access.
 
 ## Design Doc

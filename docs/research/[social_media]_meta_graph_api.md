@@ -7,7 +7,10 @@ Maya, the home baker, receives numerous custom cake inquiries via Instagram DMs 
 The Meta Graph API provides comprehensive access to Instagram Direct Messages, Facebook Page comments/messages, and WhatsApp Business interactions.
 - **Ease of Use for Non-Technical Users**: The user experience would be a simple "Connect Facebook/Instagram" OAuth button in the OHC UI. The complexity of webhooks and API limits is entirely hidden.
 - **Pricing**: Basic messaging via Facebook and Instagram is free. WhatsApp Business uses conversation-based pricing (typically a few cents per 24-hour window), which is affordable for SMBs.
-- **Reliability & Reputation**: Meta's APIs are the industry standard for these platforms, though they require strict compliance with the 24-hour standard messaging window and app review processes.
+## Risks
+- **Risks**: API changes, webhook delivery failures, and compliance with strict platform policies like the 24-hour messaging window.
+
+## Reliability & Reputation**: Meta's APIs are the industry standard for these platforms, though they require strict compliance with the 24-hour standard messaging window and app review processes.
 - **Environment Support**: Works seamlessly in Cloud via webhooks. For Standalone mode, a cloud relay or polling mechanism would be required to receive real-time webhook events.
 
 ## Design Doc

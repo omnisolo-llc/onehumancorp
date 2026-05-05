@@ -7,7 +7,10 @@ Maya, the baker, and Priya, the boutique owner, need a way to ship physical prod
 Shippo provides a unified API for multiple shipping carriers (USPS, UPS, FedEx, DHL, etc.).
 - **Ease of Use for Non-Technical Users**: Users simply input package dimensions and weight. Shippo handles the complex carrier routing and rate calculation behind the scenes. Printing a label is a one-click action.
 - **Pricing**: Pay-as-you-go per label (usually $0.05 per label) plus postage costs. Very accessible for SMBs.
-- **Reliability & Reputation**: Highly reliable API, excellent documentation, and strong partnerships with major carriers globally.
+## Risks
+- **Risks**: Carrier API downtimes and unexpected adjustments to package dimensions leading to extra charges.
+
+## Reliability & Reputation**: Highly reliable API, excellent documentation, and strong partnerships with major carriers globally.
 - **Environment Support**: Pure API, perfectly suited for Cloud and Standalone modes.
 
 ## Design Doc
