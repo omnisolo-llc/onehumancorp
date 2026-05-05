@@ -30,6 +30,7 @@ pub trait Bus: Send + Sync {
 #[allow(dead_code)]
 pub struct MemoryBus {
     subs: Mutex<std::collections::HashMap<String, broadcast::Sender<Message>>>,
+    locks: Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>,
 }
 
 #[allow(dead_code)]
@@ -37,6 +38,7 @@ impl MemoryBus {
     pub fn new() -> Self {
         MemoryBus {
             subs: Mutex::new(std::collections::HashMap::new()),
+            locks: Mutex::new(std::collections::HashMap::new()),
         }
     }
 }
@@ -77,6 +79,39 @@ impl Bus for MemoryBus {
 impl Default for MemoryBus {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[async_trait]
+impl DistributedLock for MemoryBus {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let mut locks = self.locks.lock().await;
+        let now = std::time::Instant::now();
+
+        // Remove expired locks
+        locks.retain(|_, (_, expires_at)| *expires_at > now);
+
+        let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
+        if let Some((current_owner, _)) = locks.get(resource) {
+            if current_owner == owner {
+                locks.insert(resource.to_string(), (owner.to_string(), expires_at));
+                return Ok(true);
+            }
+            return Ok(false);
+        }
+
+        locks.insert(resource.to_string(), (owner.to_string(), expires_at));
+        Ok(true)
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        let mut locks = self.locks.lock().await;
+        if let Some((current_owner, _)) = locks.get(resource) {
+            if current_owner == owner {
+                locks.remove(resource);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -318,15 +353,26 @@ impl Bus for IpcBus {
 #[allow(dead_code)]
 pub struct NatsBus {
     client: async_nats::Client,
+    kv: async_nats::jetstream::kv::Store,
 }
 
 #[allow(dead_code)]
 impl NatsBus {
     pub async fn new(nats_url: &str) -> Result<Self, String> {
         let client = async_nats::connect(nats_url).await.map_err(|e| e.to_string())?;
+        let js = async_nats::jetstream::new(client.clone());
+        let kv = match js.get_key_value("bus_locks").await {
+            Ok(store) => store,
+            Err(_) => js.create_key_value(async_nats::jetstream::kv::Config {
+                bucket: "bus_locks".to_string(),
+                history: 1,
+                ..Default::default()
+            }).await.map_err(|e| e.to_string())?
+        };
 
         Ok(NatsBus {
             client,
+            kv,
         })
     }
 }
@@ -360,6 +406,55 @@ impl Bus for NatsBus {
         });
 
         Ok(cancel)
+    }
+}
+
+#[async_trait]
+impl DistributedLock for NatsBus {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
+        let payload = format!("{}:{}", owner, expires_at);
+
+        if let Ok(Some(entry)) = self.kv.entry(resource).await {
+            let entry_str = String::from_utf8_lossy(&entry.value);
+            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
+                if let Ok(exp) = stored_exp.parse::<i64>() {
+                    if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
+                        match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
+                            Ok(_) => return Ok(true),
+                            Err(_) => return Ok(false),
+                        }
+                    } else {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+
+        match self.kv.create(resource, payload.into_bytes().into()).await {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.to_string().contains("wrong last sequence") {
+                    Ok(false)
+                } else {
+                    Err(e.to_string())
+                }
+            }
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        if let Ok(Some(entry)) = self.kv.entry(resource).await {
+            let entry_str = String::from_utf8_lossy(&entry.value);
+            if let Some((stored_owner, _)) = entry_str.split_once(':') {
+                if stored_owner == owner {
+                    // Update with immediately expired lock to allow atomic replacement
+                    let payload = format!("{}:0", owner);
+                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -477,15 +477,25 @@ impl MeshTransport for RedisTransport {
 
 pub struct NatsTransport {
     client: async_nats::Client,
-    memory_fallback: Arc<MemoryTransport>,
+    kv: async_nats::jetstream::kv::Store,
 }
 
 impl NatsTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
         let client = async_nats::connect(url).await.map_err(|e| e.to_string())?;
+        let js = async_nats::jetstream::new(client.clone());
+        let kv = match js.get_key_value("mesh_locks").await {
+            Ok(store) => store,
+            Err(_) => js.create_key_value(async_nats::jetstream::kv::Config {
+                bucket: "mesh_locks".to_string(),
+                history: 1,
+                ..Default::default()
+            }).await.map_err(|e| e.to_string())?
+        };
+
         Ok(Self {
             client,
-            memory_fallback: Arc::new(MemoryTransport::new()),
+            kv,
         })
     }
 }
@@ -520,19 +530,81 @@ impl MeshTransport for NatsTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        self.memory_fallback.acquire_lock(resource, owner, ttl_seconds).await
+        let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
+        let payload = format!("{}:{}", owner, expires_at);
+
+        if let Ok(Some(entry)) = self.kv.entry(resource).await {
+            let entry_str = String::from_utf8_lossy(&entry.value);
+            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
+                if let Ok(exp) = stored_exp.parse::<i64>() {
+                    if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
+                        match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
+                            Ok(_) => return Ok(true),
+                            Err(_) => return Ok(false),
+                        }
+                    } else {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+
+        match self.kv.create(resource, payload.into_bytes().into()).await {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.to_string().contains("wrong last sequence") {
+                    Ok(false)
+                } else {
+                    Err(e.to_string())
+                }
+            }
+        }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        self.memory_fallback.release_lock(resource, owner).await
+        if let Ok(Some(entry)) = self.kv.entry(resource).await {
+            let entry_str = String::from_utf8_lossy(&entry.value);
+            if let Some((stored_owner, _)) = entry_str.split_once(':') {
+                if stored_owner == owner {
+                    let payload = format!("{}:0", owner);
+                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.memory_fallback.register_presence(agent_id, status, ttl_seconds).await
+        let key = format!("presence_{}", agent_id);
+        let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
+        let payload = format!("{}:{}", status, expires_at);
+        self.kv.put(&key, payload.into_bytes().into()).await.map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        self.memory_fallback.get_active_agents().await
+        let mut keys = self.kv.keys().await.map_err(|e| e.to_string())?;
+        let mut agents = Vec::new();
+        use futures::StreamExt;
+        let now = chrono::Utc::now().timestamp();
+        while let Some(Ok(key)) = keys.next().await {
+            if key.starts_with("presence_") {
+                if let Ok(Some(entry)) = self.kv.entry(&key).await {
+                    let entry_str = String::from_utf8_lossy(&entry.value);
+                    if let Some((status, stored_exp)) = entry_str.split_once(':') {
+                        if let Ok(exp) = stored_exp.parse::<i64>() {
+                            if exp > now {
+                                let agent_id = key.strip_prefix("presence_").unwrap().to_string();
+                                agents.push((agent_id, status.to_string()));
+                            } else {
+                                let _ = self.kv.delete(&key).await;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(agents)
     }
 }
 
