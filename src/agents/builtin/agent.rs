@@ -289,6 +289,7 @@ impl Agent {
                         content,
                         tool_calls,
                         tool_results,
+                        response_id: None,
                     });
                 }
 
@@ -1179,6 +1180,7 @@ impl Agent {
                 content: String::new(),
                 tool_calls: vec![],
                 tool_results,
+                response_id: None,
             });
 
             // State Management Checkpointing Mechanic
@@ -1395,6 +1397,7 @@ mod tests {
                         message: Message::assistant(plan.to_string()),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     // It's the replier phase
@@ -1402,6 +1405,7 @@ mod tests {
                         message: Message::assistant("Final plan executed."),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 }
             }
@@ -1473,9 +1477,11 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
+                        response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else if *count == 2 {
                     // Turn 2: Another tool call
@@ -1489,9 +1495,11 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
+                        response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else if *count == 3 {
                     // Turn 3: Final answer. We check the received messages.
@@ -1515,12 +1523,14 @@ mod tests {
                         message: Message::assistant("Final answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     Ok(ChatResponse {
                         message: Message::assistant("Extra answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 }
             }
@@ -1583,9 +1593,11 @@ mod tests {
                                 arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
                             }],
                             tool_results: vec![],
+                        response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else if *count == 2 {
                     // Assert that HeavyTool IS in the tools list
@@ -1601,9 +1613,11 @@ mod tests {
                                 arguments: serde_json::Value::Null,
                             }],
                             tool_results: vec![],
+                        response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     // Done
@@ -1611,6 +1625,7 @@ mod tests {
                         message: Message::assistant("Final Answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                     })
                 }
             }
@@ -1662,14 +1677,17 @@ mod tests {
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -1722,9 +1740,11 @@ mod tests {
                             ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -1763,9 +1783,11 @@ mod tests {
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -1814,6 +1836,7 @@ mod tests {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 });
             }
             Ok(resps.remove(0))
@@ -1843,9 +1866,11 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -1857,9 +1882,11 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -1907,9 +1934,11 @@ mod tests {
                         content: "tool call 1".to_string(),
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -1917,9 +1946,11 @@ mod tests {
                         content: "tool call 2".to_string(),
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -1927,19 +1958,23 @@ mod tests {
                         content: "tool call 3".to_string(),
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("final answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 10 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2000,9 +2035,11 @@ mod tests {
                         arguments: serde_json::Value::Null,
                     }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }]),
         });
 
@@ -2049,9 +2086,11 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -2063,9 +2102,11 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -2077,9 +2118,11 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message {
@@ -2091,9 +2134,11 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 }
             ]),
         });
@@ -2163,11 +2208,14 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string())
             }]),
         });
         let agent1 = Agent::new(client_transient, tools.clone());
@@ -2197,7 +2245,7 @@ mod tests {
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string() })
+                    Ok(ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: Some("mock-id".to_string()) })
                 }
             }
         }
@@ -2210,11 +2258,14 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }, ChatResponse {
-                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string()
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string())
             }]),
         });
         let agent2 = Agent::new(client_llm.clone(), tools.clone());
@@ -2248,9 +2299,11 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }]),
         });
         let agent3 = Agent::new(client_user, tools.clone());
@@ -2275,9 +2328,11 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }]),
         });
         let agent4 = Agent::new(client_fatal, tools.clone());
@@ -2302,9 +2357,11 @@ mod tests {
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
+                response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
             }]),
         });
         let agent5 = Agent::new(client_unexpected, tools.clone());
@@ -2336,14 +2393,17 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("This contains the secret password!"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2392,9 +2452,11 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2422,6 +2484,7 @@ mod tests {
                     message: Message::assistant("Here is the secret data."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2543,14 +2606,17 @@ mod tests {
                             arguments: serde_json::json!({}),
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2582,21 +2648,25 @@ mod tests {
                     message: Message::assistant("Draft answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("REJECT: The answer is incomplete."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Better answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("APPROVE"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2625,6 +2695,7 @@ mod tests {
                     message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 50 },
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2684,14 +2755,17 @@ mod tests {
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
                         ],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2739,6 +2813,7 @@ mod tests {
                     message: Message::assistant("Resumed answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2783,14 +2858,17 @@ mod tests {
                             arguments: serde_json::Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Task done"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 }
             ]),
         });
@@ -2853,14 +2931,17 @@ mod tests {
                             arguments: Value::Null,
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
@@ -2917,6 +2998,7 @@ mod tests {
                 message: Message::assistant("Final answer"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
             })
         }
     }
@@ -2973,6 +3055,7 @@ mod tests {
                     message: Message::assistant("I have written some code."),
                     usage: Usage { input_tokens: 50, output_tokens: 200 },
                     stop_reason: "length".to_string(), // LLM stopped due to length
+                        response_id: Some("mock-id".to_string()),
                 }
             ]),
         });
@@ -3019,6 +3102,7 @@ mod tests {
                     message: Message::assistant("Initial thought"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 }
             ]),
         });
@@ -3045,14 +3129,17 @@ mod tests {
                             arguments: serde_json::json!({}),
                         }],
                         tool_results: vec![],
+                    response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
                 }
             ]),
         });

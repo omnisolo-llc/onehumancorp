@@ -31,6 +31,8 @@ pub struct Message {
     pub tool_calls: Vec<ToolCall>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tool_results: Vec<ToolResult>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_id: Option<String>,
 }
 
 impl Message {
@@ -40,6 +42,7 @@ impl Message {
             content: content.into(),
             tool_calls: vec![],
             tool_results: vec![],
+            response_id: None,
         }
     }
 
@@ -49,6 +52,7 @@ impl Message {
             content: content.into(),
             tool_calls: vec![],
             tool_results: vec![],
+            response_id: None,
         }
     }
 }
@@ -88,6 +92,7 @@ pub struct ChatResponse {
     pub message: Message,
     pub usage: Usage,
     pub stop_reason: String,
+    pub response_id: Option<String>,
 }
 
 /// Token usage statistics.
