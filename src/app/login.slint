@@ -7,6 +7,7 @@ export component Login inherits Window {
     preferred-width: 400px;
     height: 600px;
     title: "One Human Corp - Login";
+    out property <string> test_title: root.title;
 
     // Add a property to expose the card width constraint to unit tests
     out property <length> login_card_width: min(root.width - 64px, 400px);
