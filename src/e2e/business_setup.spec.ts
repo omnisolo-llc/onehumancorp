@@ -373,7 +373,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 });
 
-  test('should use Minimalist template and verify launch successfully triggers', async ({ page }) => {
+  test('should use Minimalist template and verify launch successfully triggers - variation 1', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -401,7 +401,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should input specific product name "Custom Vegan Cookies" and advance to launch', async ({ page }) => {
+  test('should input specific product name "Custom Vegan Cookies" and advance to launch - variation 1', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -429,7 +429,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should set product price "24.99" and verify launch', async ({ page }) => {
+  test('should set product price "24.99" and verify launch - variation 1', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -457,7 +457,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should use a "custom domain" option and validate launch step proceeds', async ({ page }) => {
+  test('should use a "custom domain" option and validate launch step proceeds - variation 1', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -487,7 +487,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should select "Use OHC subdomain" and successfully launch wizard', async ({ page }) => {
+  test('should select "Use OHC subdomain" and successfully launch wizard - variation 1', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -515,7 +515,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should use Minimalist template and verify launch successfully triggers', async ({ page }) => {
+  test('should use Minimalist template and verify launch successfully triggers - variation 2', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -543,7 +543,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should input specific product name "Custom Vegan Cookies" and advance to launch', async ({ page }) => {
+  test('should input specific product name "Custom Vegan Cookies" and advance to launch - variation 2', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -571,7 +571,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should set product price "24.99" and verify launch', async ({ page }) => {
+  test('should set product price "24.99" and verify launch - variation 2', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -599,7 +599,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should use a "custom domain" option and validate launch step proceeds', async ({ page }) => {
+  test('should use a "custom domain" option and validate launch step proceeds - variation 2', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
@@ -629,7 +629,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should select "Use OHC subdomain" and successfully launch wizard', async ({ page }) => {
+  test('should select "Use OHC subdomain" and successfully launch wizard - variation 2', async ({ page }) => {
     await page.click('text=Guided Setup →');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
