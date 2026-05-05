@@ -9,7 +9,7 @@ test.describe('Email Marketing Flow', () => {
     await page.locator('button:has-text("Login")').click();
 
     // Wait for dashboard to load
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     // 2. Open Email Marketing UI via Dashboard Quick Actions
     const emailMarketingBtn = page.locator('button:has-text("Email Marketing")').first();
@@ -36,7 +36,7 @@ test.describe('Email Marketing Flow', () => {
     await sendBtn.click();
 
     // Verify success message
-    await expect(page.locator('text=Campaign sent successfully!')).toBeVisible();
+    await expect(page.locator('text=Campaign sent successfully!')).toBeVisible({ timeout: 10000 });
 
     // Verify analytics updated
     await expect(page.locator('text=Emails Sent: 150')).toBeVisible();

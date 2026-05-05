@@ -1140,6 +1140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             current_tasks.push(item);
                         }
                     }
+                    println!("Growth Feature: Social Media Auto-Posting Connect Instagram executed via OHC UI");
                     current_tasks.push(app::UiPendingApproval {
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
@@ -2775,6 +2776,65 @@ mod growth_e2e_tests {
 
 #[cfg(test)]
 mod e2e_tests {
+    #[test]
+    fn test_e2e_social_media_autopost_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let gb_ui = app::GrowBusiness::new().unwrap();
+
+        let dashboard_handle = dashboard_ui.as_weak();
+
+        gb_ui.on_execute(move |strategy, _kpi| {
+            if strategy == "Connect Instagram" {
+                if let Some(dash) = dashboard_handle.upgrade() {
+                    let mut current_tasks = Vec::new();
+                    let current = dash.get_pending_approvals();
+                    for i in 0..current.row_count() {
+                        if let Some(item) = current.row_data(i) {
+                            current_tasks.push(item);
+                        }
+                    }
+                    current_tasks.push(app::UiPendingApproval {
+                        task_id: "ig-post-1".into(),
+                        title: "Drafted Instagram Post".into(),
+                        proposed_content: "Check out our new products! 🚀 #newarrival".into(),
+                    });
+                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                }
+            }
+        });
+
+        assert_eq!(gb_ui.get_step(), 0);
+
+        gb_ui.invoke_select_strategy("Connect Instagram".into());
+        gb_ui.invoke_next_step();
+
+        assert_eq!(gb_ui.get_step(), 1);
+
+        gb_ui.invoke_execute(gb_ui.get_selected_strategy(), gb_ui.get_kpi_target());
+        gb_ui.invoke_next_step();
+
+        assert_eq!(gb_ui.get_step(), 2);
+
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
+        let task = dashboard_ui.get_pending_approvals().row_data(0).unwrap();
+        assert_eq!(task.task_id, "ig-post-1");
+    }
+
     use slint::Model;
     use super::*;
 

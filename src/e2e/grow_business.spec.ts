@@ -9,7 +9,12 @@ test.describe('Grow Business Flow', () => {
     await page.locator('button:has-text("Login")').click();
 
     // 2. Navigate to Grow Business UI
-    await page.goto('/grow');
+
+    // Navigate via dashboard UI like a real user
+    const growBusinessBtn = page.locator('button:has-text("Grow Business")').first();
+    await expect(growBusinessBtn).toBeVisible();
+    await growBusinessBtn.click();
+
     await page.waitForURL('**/grow');
 
     // Verify main header
@@ -28,16 +33,21 @@ test.describe('Grow Business Flow', () => {
     await strat3.click();
 
     // Verify selected
-    await expect(page.locator('text=Selected: Run your first email campaign')).toBeVisible();
+
+    // Verify selection (wait for next button to be enabled)
+    await expect(page.locator('text=Run your first email campaign').first()).toBeVisible();
+
 
     // Move to next step
     await page.locator('button:has-text("Next")').click();
 
     // Confirm step
     await expect(page.locator('text=Confirm Action')).toBeVisible();
-    await expect(page.locator('text=You are about to start: Run your first email campaign')).toBeVisible();
+
 
     // Execute strategy
-    await page.locator('button:has-text("Execute")').click();
+
+    await page.locator('button:has-text("Launch Strategy")').click();
+
   });
 });

@@ -6,7 +6,7 @@ test.describe('Referral Program', () => {
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Login")').click();
-
+    await page.waitForURL('**/dashboard');
     await page.goto('/referrals');
     await expect(page.locator('text=Referral Dashboard')).toBeVisible();
 
