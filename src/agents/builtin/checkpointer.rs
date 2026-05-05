@@ -82,22 +82,20 @@ impl CheckpointSaver for GitCheckpointer {
 
         Ok(Some(cp))
     }
-
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
 
         let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
         tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
 
-        let file_name = format!(".agent_progress_{}.json", checkpoint.thread_id);
-
-        Command::new("git")
+        // 1. Stage all changes in the workspace (Claude Code mechanic)
+        let _ = Command::new("git")
             .arg("add")
-            .arg(&file_name)
+            .arg(".")
             .current_dir(&self.repo_path)
-            .output()
-            .map_err(|e| e.to_string())?;
+            .output();
 
+        // 2. Commit the changes
         let commit_msg = format!("Checkpoint: {}", checkpoint.checkpoint_id);
         let output = Command::new("git")
             .arg("commit")
