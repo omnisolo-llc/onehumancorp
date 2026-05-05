@@ -39,6 +39,8 @@ pub struct AgentRunConfig {
     pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
+    pub observation_masking_threshold_bytes: usize,
+    pub observation_masking_delay_turns: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
@@ -74,6 +76,8 @@ impl Default for AgentRunConfig {
             enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_observation_masking: true,
+            observation_masking_threshold_bytes: 512,
+            observation_masking_delay_turns: 3,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
@@ -174,6 +178,7 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
+    pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
 }
@@ -182,14 +187,20 @@ impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
-    pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
+    pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>, observation_store: Arc<dashmap::DashMap<String, String>>) -> Self {
         Self {
             llm,
             tools,
             progress: Arc::new(AgentProgress::default()),
+            observation_store,
             memory_store: None,
             checkpointer: None,
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
+        Self::new(llm, tools, Arc::new(dashmap::DashMap::new()))
     }
 
     pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
@@ -334,8 +345,10 @@ impl Agent {
 
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
+        let observation_store = self.observation_store.clone();
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
+            let observation_store = observation_store.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
@@ -350,6 +363,7 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         match tool.execute.execute(args).await {
                             Ok(res) => {
+                                observation_store.insert(id.to_string(), res.clone());
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -503,7 +517,10 @@ impl Agent {
             }
 
             let result = match self.execute_tool(&dummy_tc, session_tools, &[]).await {
-                Ok(res) => res,
+                Ok(res) => {
+                    self.observation_store.insert(dummy_tc.id.clone(), res.clone());
+                    res
+                }
                 Err(e) => format!("Error executing planned step: {:?}", e),
             };
 
@@ -961,6 +978,7 @@ impl Agent {
                             result: r.clone(),
                             iteration,
                         });
+                        self.observation_store.insert(tc.id.clone(), r.clone());
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: r,
@@ -1145,6 +1163,9 @@ impl Agent {
                 }
 
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                if error.is_empty() {
+                    self.observation_store.insert(tc.id.clone(), content.clone());
+                }
                 tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
@@ -1155,16 +1176,21 @@ impl Agent {
             if cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
-                for m in &mut messages {
+                let msg_len = messages.len();
+                for (i, m) in messages.iter_mut().enumerate() {
                     if m.role == Role::Tool {
-                        for tr in &mut m.tool_results {
-                            if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked to save context.") {
-                                let bytes = tr.content.len();
-                                if bytes > 150 {
-                                    tr.content = format!(
-                                        "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible so you remember this action.]",
-                                        bytes
-                                    );
+                        // Recency-aware masking: only mask older turns
+                        if msg_len - i > cfg.observation_masking_delay_turns {
+                            for tr in &mut m.tool_results {
+                                if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
+                                    let bytes = tr.content.len();
+                                    if bytes > cfg.observation_masking_threshold_bytes {
+                                        tr.content = format!(
+                                            "[Observation Masked to save context. Output was {} bytes. The tool call id is '{}'. Use RecallObservation(tool_call_id) to retrieve full content if needed.]",
+                                            bytes,
+                                            tr.tool_call_id
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -1397,7 +1423,7 @@ mod tests {
             requests: tokio::sync::Mutex::new(vec![]),
         });
 
-        let agent = Agent::new(client.clone(), vec![mock_tool]);
+        let agent = Agent::new_for_test(client.clone(), vec![mock_tool]);
         let mut cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
@@ -1528,7 +1554,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let client = Arc::new(MockLlmClientAcon { call_count: Mutex::new(0) });
-        let agent = Agent::new(client, tools);
+        let agent = Agent::new_for_test(client, tools);
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Start the task", &mut |e| events.push(e)).await;
@@ -1617,7 +1643,7 @@ mod tests {
         let client = Arc::new(AssertingMockLlm { call_count: Mutex::new(0) });
 
         // Include HeavyTool in the agent's definitions.
-        let agent = Agent::new(client, vec![
+        let agent = Agent::new_for_test(client, vec![
             crate::tools::Tool {
                 name: "HeavyTool".to_string(),
                 description: "A heavy tool".to_string(),
@@ -1690,7 +1716,7 @@ mod tests {
             },
         ];
 
-        let agent = Agent::new(client.clone(), tools.clone());
+        let agent = Agent::new_for_test(client.clone(), tools.clone());
 
         // Test 1: Untrusted project rejects mutating tools
         let mut cfg = AgentRunConfig::default();
@@ -1723,7 +1749,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![
+        let agent = Agent::new_for_test(client, vec![
             Tool {
                 name: "unallowed_tool".to_string(),
                 description: "write".to_string(),
@@ -1766,7 +1792,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![
+        let agent = Agent::new_for_test(client, vec![
             Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
@@ -1873,7 +1899,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         }];
 
-        let agent = Agent::new(client, tools);
+        let agent = Agent::new_for_test(client, tools);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
@@ -1975,7 +2001,7 @@ mod tests {
         cfg.enable_context_compaction = true;
         cfg.compaction_threshold_tokens = 50; // Set low threshold to trigger compaction
 
-        let agent = Agent::new(client, tools);
+        let agent = Agent::new_for_test(client, tools);
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
@@ -2025,7 +2051,7 @@ mod tests {
             execute: Arc::new(HandoffToolExecutor),
         }];
 
-        let agent = Agent::new(client, tools);
+        let agent = Agent::new_for_test(client, tools);
         let cfg = AgentRunConfig::default();
 
         let mut events = vec![];
@@ -2192,7 +2218,7 @@ mod tests {
                         response_id: Some("mock-id".to_string())
             }]),
         });
-        let agent1 = Agent::new(client_transient, tools.clone());
+        let agent1 = Agent::new_for_test(client_transient, tools.clone());
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
         let _ = agent1.run(&cfg, "Run transient", &mut on_event).await;
@@ -2242,7 +2268,7 @@ mod tests {
                         response_id: Some("mock-id".to_string())
             }]),
         });
-        let agent2 = Agent::new(client_llm.clone(), tools.clone());
+        let agent2 = Agent::new_for_test(client_llm.clone(), tools.clone());
         let mut events2 = vec![];
         let mut on_event2 = |e| { events2.push(e); };
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
@@ -2280,7 +2306,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
             }]),
         });
-        let agent3 = Agent::new(client_user, tools.clone());
+        let agent3 = Agent::new_for_test(client_user, tools.clone());
         let mut events3 = vec![];
         let mut on_event3 = |e| { events3.push(e); };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
@@ -2309,7 +2335,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
             }]),
         });
-        let agent4 = Agent::new(client_fatal, tools.clone());
+        let agent4 = Agent::new_for_test(client_fatal, tools.clone());
         let mut events4 = vec![];
         let mut on_event4 = |e| { events4.push(e); };
         let res4 = agent4.run(&cfg, "Run fatal", &mut on_event4).await;
@@ -2338,7 +2364,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
             }]),
         });
-        let agent5 = Agent::new(client_unexpected, tools.clone());
+        let agent5 = Agent::new_for_test(client_unexpected, tools.clone());
         let mut events5 = vec![];
         let mut on_event5 = |e| { events5.push(e); };
         let res5 = agent5.run(&cfg, "Run unexpected", &mut on_event5).await;
@@ -2399,7 +2425,7 @@ mod tests {
             },
         ];
 
-        let agent = Agent::new(client, tools);
+        let agent = Agent::new_for_test(client, tools);
 
         let mut cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
@@ -2434,7 +2460,7 @@ mod tests {
                 },
             ]),
         });
-        let agent = Agent::new(client, vec![
+        let agent = Agent::new_for_test(client, vec![
             Tool {
                 name: "banned_tool".to_string(),
                 description: "test".to_string(),
@@ -2462,7 +2488,7 @@ mod tests {
                 },
             ]),
         });
-        let agent = Agent::new(client, vec![]);
+        let agent = Agent::new_for_test(client, vec![]);
 
         // Test Output Guardrail
         let mut events = vec![];
@@ -2603,7 +2629,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let agent = Agent::new(client, vec![tool]);
+        let agent = Agent::new_for_test(client, vec![tool]);
         let mut cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
 
@@ -2645,7 +2671,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![]);
+        let agent = Agent::new_for_test(client, vec![]);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
@@ -2674,7 +2700,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![]);
+        let agent = Agent::new_for_test(client, vec![]);
 
         let mut cfg = AgentRunConfig::default();
         // Specifically setting a model that triggers cost estimation logic
@@ -2767,7 +2793,7 @@ mod tests {
             checkpoints: tokio::sync::Mutex::new(Vec::new()),
         });
 
-        let agent1 = Agent::new(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
+        let agent1 = Agent::new_for_test(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
         let mut cfg = AgentRunConfig::default();
         cfg.model = "test-model".to_string();
         cfg.thread_id = Some("test_thread".to_string());
@@ -2792,7 +2818,7 @@ mod tests {
             ]),
         });
 
-        let agent2 = Agent::new(client2, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
+        let agent2 = Agent::new_for_test(client2, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
         let mut cfg2 = AgentRunConfig::default();
         cfg2.model = "test-model".to_string();
         cfg2.thread_id = Some("test_thread".to_string());
@@ -2855,7 +2881,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let mut agent = Agent::new(client, vec![mutating_tool]);
+        let mut agent = Agent::new_for_test(client, vec![mutating_tool]);
 
         let temp_dir = std::env::temp_dir().join(format!("ohc_test_git_ckpt_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -2930,7 +2956,7 @@ mod tests {
             execute: Arc::new(MockToolExecutor),
         };
 
-        let mut agent = Agent::new(client, vec![mutating_tool]);
+        let mut agent = Agent::new_for_test(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
         let mut cfg = AgentRunConfig::default();
@@ -2986,7 +3012,7 @@ mod tests {
         });
 
         // Create an agent and we will inject some state so messages.len() > 3
-        let agent = Agent::new(client.clone(), vec![]);
+        let agent = Agent::new_for_test(client.clone(), vec![]);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_lost_in_the_middle_prevention = true;
@@ -3036,7 +3062,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![]);
+        let agent = Agent::new_for_test(client, vec![]);
         let mut cfg = AgentRunConfig::default();
         cfg.max_task_tokens = 150; // set budget lower than output tokens so it stops
 
@@ -3120,7 +3146,7 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
+        let agent = Agent::new_for_test(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
         cfg.thread_id = Some("git-thread-123".to_string());
@@ -3148,5 +3174,95 @@ mod tests {
         assert!(output.status.success(), "Git log should succeed");
         let log_output = String::from_utf8_lossy(&output.stdout);
         assert!(log_output.contains("Checkpoint:"), "Commit message should contain Checkpoint:");
+    }
+
+    #[tokio::test]
+    async fn test_observation_masking_and_recall_integration() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call the tool.".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_large_obs".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will call it again.".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_large_obs_2".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+            ]),
+        });
+
+        let large_content = "X".repeat(100); // Threshold 50
+        let large_content_clone = large_content.clone();
+
+        struct LargeToolExecutor {
+            content: String,
+        }
+        #[async_trait::async_trait]
+        impl ToolExecutor for LargeToolExecutor {
+            async fn execute(&self, _args: Value) -> Result<String, ToolError> {
+                Ok(self.content.clone())
+            }
+        }
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            is_read_only: false,
+            parameters: Value::Null,
+            execute: Arc::new(LargeToolExecutor { content: large_content_clone }),
+        }];
+
+        let agent = Agent::new_for_test(client, tools);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_observation_masking = true;
+        cfg.observation_masking_threshold_bytes = 50;
+        cfg.observation_masking_delay_turns = 1; // Mask very quickly for testing
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await.unwrap();
+        assert_eq!(res, "Final answer");
+
+        // 1. Verify observations are in the store
+        assert!(agent.observation_store.contains_key("call_large_obs"));
+        assert_eq!(*agent.observation_store.get("call_large_obs").unwrap(), large_content);
+        assert!(agent.observation_store.contains_key("call_large_obs_2"));
+
+        // 2. Test RecallObservation tool directly
+        let recall_tool = crate::tools::recall::recall_observation_tool(agent.observation_store.clone());
+        let recall_res = recall_tool.execute.execute(serde_json::json!({"tool_call_id": "call_large_obs"})).await.unwrap();
+        assert_eq!(recall_res, large_content);
+
+        let recall_fail = recall_tool.execute.execute(serde_json::json!({"tool_call_id": "nonexistent"})).await;
+        assert!(recall_fail.is_err());
     }
 }
