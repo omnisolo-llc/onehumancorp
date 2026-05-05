@@ -978,7 +978,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = email_marketing_handle.clone();
         move |template| {
             if let Some(ui) = ui_handle.upgrade() {
-                ui.set_preview_text(format!("Generated AI content for: {}", template).into());
+                let preview = match template.as_str() {
+                    "Flash sale" => "24-Hour Flash Sale!",
+                    _ => "Generated content...",
+                };
+                ui.set_preview_text(preview.into());
             }
         }
     });
@@ -989,7 +993,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 ui.set_emails_sent(150);
                 ui.set_open_rate("32%".into());
-                ui.set_status_message("Sent!".into());
+                ui.set_status_message("Campaign sent successfully!".into());
             }
         }
     });
@@ -3992,13 +3996,17 @@ mod docs_tests {
         em_ui.on_generate_template(move |template| {
             *template_generated_clone.borrow_mut() = template.to_string();
             if let Some(ui) = em_handle.upgrade() {
-                ui.set_preview_text(format!("Generated AI content for: {}", template).into());
+                let preview = match template.as_str() {
+                    "Flash sale" => "24-Hour Flash Sale!",
+                    _ => "Generated content...",
+                };
+                ui.set_preview_text(preview.into());
             }
         });
 
         em_ui.invoke_generate_template("Flash sale".into());
         assert_eq!(*template_generated.borrow(), "Flash sale");
-        assert_eq!(em_ui.get_preview_text(), "Generated AI content for: Flash sale");
+        assert_eq!(em_ui.get_preview_text(), "24-Hour Flash Sale!");
 
         let campaign_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
         let campaign_sent_clone = campaign_sent.clone();
@@ -4008,7 +4016,7 @@ mod docs_tests {
             if let Some(ui) = em_handle_send.upgrade() {
                 ui.set_emails_sent(150);
                 ui.set_open_rate("32%".into());
-                ui.set_status_message("Sent!".into());
+                ui.set_status_message("Campaign sent successfully!".into());
             }
         });
 
@@ -4016,7 +4024,7 @@ mod docs_tests {
         assert!(*campaign_sent.borrow());
         assert_eq!(em_ui.get_emails_sent(), 150);
         assert_eq!(em_ui.get_open_rate(), "32%");
-        assert_eq!(em_ui.get_status_message(), "Sent!");
+        assert_eq!(em_ui.get_status_message(), "Campaign sent successfully!");
 
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
