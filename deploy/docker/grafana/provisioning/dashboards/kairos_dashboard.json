@@ -163,7 +163,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "sum(ohc_agent_task_queue_depth) by (mode)",
+          "expr": "sum(ohc_sub_agent_queue_length) by (mode)",
           "legendFormat": "{{mode}}"
         }
       ]
