@@ -21,44 +21,163 @@ impl DashboardService for MyDashboardService {
         request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let req = request.into_inner();
+        let org_id = req.organization_id.clone();
 
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
+        let db_clone = self.db.clone();
+        let org_id_clone = org_id.clone();
 
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
+        // Phase 2: Parallel Fetching Optimization
+        // Fetch agents, meetings, costs, and organization info concurrently.
+        let (agents_res, meetings_res, cost_res, org_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents_by_org(&org_id_clone)),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+            }),
+            async move {
+                use sqlx::Row;
+                sqlx::query("SELECT tenant_id as id, business_name as name FROM tenants WHERE tenant_id = $1")
+                    .bind(&org_id)
+                    .fetch_optional(&db_clone.pool)
+                    .await
+            }
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org_row = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
-        let filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
+        let organization = org_row.map(|row| {
+            use sqlx::Row;
+            crate::ohc::organization::Organization {
+                id: row.get("id"),
+                name: row.get("name"),
+                ..Default::default()
+            }
+        });
 
         let mut status_map = std::collections::HashMap::new();
         for a in agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
-        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count: count as u32 }).collect();
 
         let cost_summary = crate::ohc::billing::CostSummary {
             organization_id: req.organization_id.clone(),
             total_cost_usd: total_cost,
             total_tokens,
-            projected_monthly_usd: 0.0,
+            projected_monthly_usd: total_cost * 30.0,
             agents: vec![],
         };
 
+        // Filter and map meetings to the response format
+        let filtered_meetings: Vec<MeetingRoom> = meetings.iter()
+            .filter(|m| m.participants.iter().any(|p| p.starts_with(&req.organization_id)))
+            .cloned()
+            .map(|m| MeetingRoom {
+                id: m.id,
+                participants: m.participants,
+                transcript: m.transcript.into_iter().map(|msg| {
+                    use crate::ohc::agent::AgentMessage;
+                    AgentMessage {
+                        id: msg.id,
+                        from_agent_id: msg.from_agent,
+                        to_agent_id: msg.to_agent,
+                        message_type: msg.r#type,
+                        content: msg.content,
+                        meeting_id: msg.meeting_id,
+                        occurred_at_unix: msg.occurred_at_unix,
+                    }
+                }).collect(),
+            })
+            .collect();
+
         Ok(Response::new(DashboardSnapshot {
-            organization: None, // Need to query DB for org info
+            organization,
+            agents: agents.into_iter().map(|a| crate::ohc::agent::Agent {
+                id: a.id,
+                name: a.name,
+                organization_id: a.organization_id,
+                ..Default::default()
+            }).collect(),
+            meetings: filtered_meetings,
+            cost_summary: Some(cost_summary),
+            statuses,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+        }))
+    }
+
+    async fn get_lightweight_dashboard(
+        &self,
+        request: Request<GetDashboardRequest>,
+    ) -> Result<Response<LightweightDashboardSnapshot>, Status> {
+        let req = request.into_inner();
+        let org_id = req.organization_id.clone();
+
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let hub3 = self.hub.clone();
+        let db_clone = self.db.clone();
+        let org_id_clone = org_id.clone();
+
+        // Performance: Avoid fetching full agent and meeting details.
+        let (agents_res, meetings_res, cost_res, org_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents_by_org(&org_id_clone)),
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || {
+                let cost_auditor = hub3.get_cost_auditor();
+                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens())
+            }),
+            async move {
+                use sqlx::Row;
+                sqlx::query("SELECT tenant_id as id, business_name as name FROM tenants WHERE tenant_id = $1")
+                    .bind(&org_id)
+                    .fetch_optional(&db_clone.pool)
+                    .await
+            }
+        );
+
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org_row = org_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let organization = org_row.map(|row| {
+            use sqlx::Row;
+            crate::ohc::organization::Organization {
+                id: row.get("id"),
+                name: row.get("name"),
+                ..Default::default()
+            }
+        });
+
+        let mut status_map = std::collections::HashMap::new();
+        for a in agents.iter() {
+            *status_map.entry(a.status.clone()).or_insert(0) += 1;
+        }
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count: count as u32 }).collect();
+
+        let cost_summary = crate::ohc::billing::CostSummary {
+            organization_id: req.organization_id.clone(),
+            total_cost_usd: total_cost,
+            total_tokens,
+            projected_monthly_usd: total_cost * 30.0,
             agents: vec![],
-            meetings: vec![],
+        };
+
+        let meeting_count = meetings.iter()
+            .filter(|m| m.participants.iter().any(|p| p.starts_with(&req.organization_id)))
+            .count() as u32;
+
+        Ok(Response::new(LightweightDashboardSnapshot {
+            organization,
+            agent_count: agents.len() as u32,
+            meeting_count,
             cost_summary: Some(cost_summary),
             statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),

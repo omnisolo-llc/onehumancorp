@@ -28,6 +28,15 @@ message DashboardSnapshot {
   string updated_at = 6;
 }
 
+message LightweightDashboardSnapshot {
+  ohc.organization.Organization organization = 1;
+  uint32 agent_count = 2;
+  uint32 meeting_count = 3;
+  ohc.billing.CostSummary cost_summary = 4;
+  repeated StatusCount statuses = 5;
+  string updated_at = 6;
+}
+
 message GetDashboardRequest {
   string organization_id = 1;
 }
@@ -115,6 +124,7 @@ message PipelinePromoteRequest {
 
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
+  rpc GetLightweightDashboard(GetDashboardRequest) returns (LightweightDashboardSnapshot);
   rpc PostMessage(PostMessageRequest) returns (PostMessageResponse);
   rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
