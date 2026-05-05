@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "blobinspector",
+    srcs = ["blobinspector.go"],
+    importpath = "onehumancorp/srcs/server/tools/blobinspector",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "blobinspector_test",
+    srcs = ["blobinspector_test.go"],
+    embed = [":blobinspector"],
+)
