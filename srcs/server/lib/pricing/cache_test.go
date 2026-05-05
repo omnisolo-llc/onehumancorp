@@ -6,7 +6,8 @@ import (
 )
 
 func TestLocalEmbeddingCache(t *testing.T) {
-	cache := NewLocalEmbeddingCache(100 * time.Millisecond)
+	// Use a large TTL to prevent the background ticker from pruning before our explicit call
+	cache := NewLocalEmbeddingCache(1 * time.Hour)
 
 	cache.Set("prompt1", "response1")
 
@@ -18,7 +19,12 @@ func TestLocalEmbeddingCache(t *testing.T) {
 		t.Errorf("expected false, got true")
 	}
 
-	time.Sleep(150 * time.Millisecond)
+	// Manually backdate the entry to simulate expiration
+	cache.mu.Lock()
+	entry := cache.entries[cache.hashPrompt("prompt1")]
+	entry.ExpiresAt = time.Now().Add(-1 * time.Second)
+	cache.entries[cache.hashPrompt("prompt1")] = entry
+	cache.mu.Unlock()
 
 	if _, ok := cache.Get("prompt1"); ok {
 		t.Errorf("expected false after expiration, got true")
