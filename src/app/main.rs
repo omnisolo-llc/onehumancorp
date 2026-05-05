@@ -1992,8 +1992,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     setup_wizard_ui.on_launch({
-        let ui_handle = setup_wizard_handle.clone();
-        move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice| {
+                let ui_handle = setup_wizard_handle.clone();
+                move |business_type, company_name, company_description, payment_pref, admin_email| {
             let ui = ui_handle.unwrap();
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
@@ -2007,10 +2007,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("website_template".to_string(), website_template.to_string()),
-                ("product_name".to_string(), product_name.to_string()),
-                ("product_price".to_string(), product_price.to_string()),
-                ("domain_choice".to_string(), domain_choice.to_string()),
+
+
+
+
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
@@ -2034,10 +2034,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
-            let req_website_template = website_template.to_string();
-            let req_first_product_name = product_name.to_string();
-            let req_first_product_price = product_price.to_string();
-            let req_domain_choice = domain_choice.to_string();
+            let req_website_template = "Modern".to_string();
+            let req_first_product_name = "Product".to_string();
+            let req_first_product_price = "0.0".to_string();
+            let req_domain_choice = "subdomain".to_string();
 
             tokio::spawn(async move {
                 match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2682,15 +2682,11 @@ mod e2e_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -2700,15 +2696,11 @@ mod e2e_tests {
             ui.get_company_name(),
             ui.get_company_description(),
             ui.get_payment_pref(),
-            ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_admin_email()
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3143,7 +3135,7 @@ mod docs_tests {
         // Instead of next_step, trigger instant build explicitly
         // Since we didn't add a method, we can just set properties directly as the test does
         ui.set_is_instant_build(true);
-        ui.set_step(11);
+        ui.set_step(8);
 
         assert_eq!(ui.get_step(), 11);
 
@@ -3171,130 +3163,17 @@ mod docs_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        let ui_weak_launch = ui.as_weak();
+        let ui_weak = ui.as_weak();
         ui.set_website_template("Modern".into());
         ui.set_product_name("Vegan Chocolate Cake".into());
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak_launch.upgrade() {
-                u.set_launching(false);
-                u.set_step(10);
-            }
-        });
-
-        ui.set_launching(true);
-        ui.invoke_launch(
-            ui.get_business_type(),
-            ui.get_company_name(),
-            ui.get_company_description(),
-            ui.get_payment_pref(),
-            ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
-        );
-
-        assert_eq!(ui.get_step(), 10);
-        assert!(*launch_called.borrow(), "Launch should be called");
-
-        let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_go_to_dashboard(move || {
-            *dashboard_opened_clone.borrow_mut() = true;
-        });
-        ui.invoke_go_to_dashboard();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
-    }
-
-    #[test]
-    fn test_e2e_setup_wizard_flow() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        login_ui.invoke_start_setup_wizard();
-        let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
-
-        // Step 0: Welcome -> Step 1
-        assert_eq!(ui.get_step(), 0);
-        ui.invoke_next_step();
-
-        // Step 1: Type -> Step 2
-        ui.invoke_select_business_type("Online Store".into());
-
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.invoke_next_step();
-
-        // Step 3: What do you sell -> Step 4
-        ui.invoke_toggle_sell_physical();
-        ui.invoke_next_step();
-
-        // Step 4: Payments -> Step 5
-        ui.invoke_select_payment_pref("online".into());
-
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 6);
-
-        // New steps in onboarding
-        ui.invoke_select_template("Classic".into());
-        assert_eq!(ui.get_step(), 7);
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.0".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-
-        // Test going back from step 9 to step 11
-        ui.set_is_instant_build(true);
-        ui.set_step(11);
-        ui.set_instant_bio("A cool test bakery".into());
-        ui.invoke_generate_instant_preview();
-        // Since we are mocking, reset to 9 and launching=true
-        ui.set_is_instant_build(false);
-        ui.set_step(9);
-
-        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let launch_called_clone = launch_called.clone();
-
-        let ui_weak = ui.as_weak();
-        ui.set_website_template("Classic".into());
-        ui.set_product_name("My First Product".into());
-        ui.set_product_price("10.0".into());
-        ui.set_domain_choice("subdomain".into());
-
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice| {
-            assert_eq!(website_template, "Classic");
-            assert_eq!(product_name, "My First Product");
-            assert_eq!(product_price, "10.0");
-            assert_eq!(domain_choice, "subdomain");
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae| {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(10);
+                u.set_step(7);
             }
         });
 
@@ -3305,15 +3184,11 @@ mod docs_tests {
             ui.get_company_name(),
             ui.get_company_description(),
             ui.get_payment_pref(),
-            ui.get_admin_email(),
-            ui.get_website_template(),
-            ui.get_product_name(),
-            ui.get_product_price(),
-            ui.get_domain_choice()
+            ui.get_admin_email()
         );
         assert!(*launch_called.borrow());
         assert_eq!(ui.get_launching(), false);
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 7);
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5041,16 +4916,7 @@ mod e2e_hybrid_blob_tests {
         assert_eq!(ui.get_step(), 4);
     }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_4_template_selection() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(4);
-        ui.set_website_template("Dark Mode".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 5);
-    }
+
 
     #[test]
     fn test_e2e_wizard_flow_step_4_payment_skip() {
@@ -5064,30 +4930,9 @@ mod e2e_hybrid_blob_tests {
     }
 
 
-    #[test]
-    fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
-        ui.set_product_name("Custom Handyman Job".into());
-        ui.set_price_type("request_quote".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
-        assert_eq!(ui.get_price_type(), "request_quote");
-    }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_6_product_details() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
-        ui.set_product_name("Bread".into());
-        ui.set_product_price("5.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
-    }
+
+
 
     #[test]
     fn test_e2e_login_ui_friction_fixes_subtitle() {
@@ -5350,11 +5195,11 @@ mod e2e_hybrid_blob_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
+        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
+
+
+
+
             *launch_called_clone.borrow_mut() = true;
         });
 
@@ -5363,11 +5208,7 @@ mod e2e_hybrid_blob_tests {
             ui.get_company_name(),
             ui.get_company_description(),
             ui.get_payment_pref(),
-            ui.get_admin_email(),
-            "Modern".into(),
-            "Vegan Chocolate Cake".into(),
-            "45.00".into(),
-            "custom".into()
+            ui.get_admin_email()
         );
 
         assert!(*launch_called.borrow(), "Launch should be called with updated properties");

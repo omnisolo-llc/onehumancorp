@@ -212,11 +212,7 @@ fn e2e_test_onboarding_wizard_data_flow() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-        assert_eq!(website_template, "Modern Glass");
-        assert_eq!(product_name, "Vegan Chocolate Cake");
-        assert_eq!(product_price, "45.00");
-        assert_eq!(domain_choice, "custom");
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
         *launch_called_clone.borrow_mut() = true;
     });
 
@@ -225,11 +221,7 @@ fn e2e_test_onboarding_wizard_data_flow() {
         ui.get_company_name(),
         ui.get_company_description(),
         ui.get_payment_pref(),
-        ui.get_admin_email(),
-        ui.get_website_template(),
-        ui.get_product_name(),
-        ui.get_product_price(),
-        ui.get_domain_choice()
+        ui.get_admin_email()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called with updated properties");
@@ -247,11 +239,7 @@ fn e2e_test_onboarding_wizard_data_flow_modern() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-        assert_eq!(website_template, "Modern");
-        assert_eq!(product_name, "My Product");
-        assert_eq!(product_price, "10.0");
-        assert_eq!(domain_choice, "custom");
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
         *launch_called_clone.borrow_mut() = true;
     });
 
@@ -260,11 +248,7 @@ fn e2e_test_onboarding_wizard_data_flow_modern() {
         ui.get_company_name(),
         ui.get_company_description(),
         ui.get_payment_pref(),
-        ui.get_admin_email(),
-        ui.get_website_template(),
-        ui.get_product_name(),
-        ui.get_product_price(),
-        ui.get_domain_choice()
+        ui.get_admin_email()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called with updated properties");
@@ -282,11 +266,7 @@ fn e2e_test_onboarding_wizard_data_flow_classic() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-        assert_eq!(website_template, "Classic");
-        assert_eq!(product_name, "My Other Product");
-        assert_eq!(product_price, "99.99");
-        assert_eq!(domain_choice, "auto");
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
         *launch_called_clone.borrow_mut() = true;
     });
 
@@ -295,11 +275,7 @@ fn e2e_test_onboarding_wizard_data_flow_classic() {
         ui.get_company_name(),
         ui.get_company_description(),
         ui.get_payment_pref(),
-        ui.get_admin_email(),
-        ui.get_website_template(),
-        ui.get_product_name(),
-        ui.get_product_price(),
-        ui.get_domain_choice()
+        ui.get_admin_email()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called with updated properties");
@@ -317,11 +293,7 @@ fn e2e_test_onboarding_wizard_data_flow_bold() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-        assert_eq!(website_template, "Bold");
-        assert_eq!(product_name, "Another Product");
-        assert_eq!(product_price, "50.0");
-        assert_eq!(domain_choice, "auto");
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
         *launch_called_clone.borrow_mut() = true;
     });
 
@@ -330,11 +302,7 @@ fn e2e_test_onboarding_wizard_data_flow_bold() {
         ui.get_company_name(),
         ui.get_company_description(),
         ui.get_payment_pref(),
-        ui.get_admin_email(),
-        ui.get_website_template(),
-        ui.get_product_name(),
-        ui.get_product_price(),
-        ui.get_domain_choice()
+        ui.get_admin_email()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called with updated properties");
@@ -352,11 +320,7 @@ fn e2e_test_onboarding_wizard_data_flow_empty() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice| {
-        assert_eq!(website_template, "");
-        assert_eq!(product_name, "");
-        assert_eq!(product_price, "");
-        assert_eq!(domain_choice, "");
+    ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email| {
         *launch_called_clone.borrow_mut() = true;
     });
 
@@ -365,11 +329,7 @@ fn e2e_test_onboarding_wizard_data_flow_empty() {
         ui.get_company_name(),
         ui.get_company_description(),
         ui.get_payment_pref(),
-        ui.get_admin_email(),
-        ui.get_website_template(),
-        ui.get_product_name(),
-        ui.get_product_price(),
-        ui.get_domain_choice()
+        ui.get_admin_email()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called with updated properties");

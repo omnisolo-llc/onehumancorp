@@ -45,21 +45,13 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
 
-    // 6: Theme -> 7
-    await page.click('text="Modern"');
-    await page.click('button:has-text("Next")');
-
-    // 7: Domain -> 8
-    await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
-
-    // 8: Admin Info -> 9
+    // 6: Admin Info -> 7
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
 
-    // 9: Launch View
+    // 7: Launch View
     await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
 
     // We expect "Launch!" button. When clicked, it hits the `on_launch` handler in Rust.
