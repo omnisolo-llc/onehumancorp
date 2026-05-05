@@ -1,92 +1,133 @@
-# OHC Agent Memory & Context Consolidation System
+# 🔍 Scout: Tool Integration Research Q2
 
-## Overview
+## [Social Media] Manychat Integration
+**Title**: Integrate Manychat for Unified Social Media Inbox
+**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
+**Research Report**:
+- **Tool**: Manychat
+- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
+- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
+- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
+- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
+- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
+**Design Doc**:
+- User goes to the Operations dashboard and clicks "Connect Instagram".
+- User authenticates with Facebook/Instagram via OAuth.
+- OHC registers webhooks to receive new DMs.
+- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
+- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
+**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+**Priority**: P0
+**Estimated Scope**: Large
 
-The OHC long-term memory system enables AI agents to retain cross-session knowledge, share context seamlessly across different departments (e.g., Customer Success, Operations, Business Advisory), resolve semantic conflicts automatically, and prune stale context to maintain high relevance and performance.
+## [Calendar] Calendly Integration
+**Title**: Integrate Calendly for Automated Booking
+**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
+**Research Report**:
+- **Tool**: Calendly
+- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
+- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
+- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
+- **Pricing**: Free tier available. Premium starts at $10/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
+**Design Doc**:
+- User goes to Sales dashboard and connects Calendly.
+- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
+- When a customer clicks to book, they are shown the Calendly widget.
+- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
+**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-The memory core operates within both Cloud (`PostgreSQL` with `pgvector`) and Standalone (`SQLite` with a vector extension fallback) environments. It leverages tenant-scoped vector indexing to enforce strict data isolation while providing powerful semantic search capabilities.
+## [Email Marketing] Mailchimp Integration
+**Title**: Integrate Mailchimp for Customer Re-engagement
+**Problem Statement**: Priya (Boutique Owner) wants to email her past customers when new stock arrives, but she doesn't know how to export lists and manage campaigns. She needs an automated way to email customers without leaving the OHC app.
+**Research Report**:
+- **Tool**: Mailchimp
+- **Target Persona**: Priya (Boutique Owner), Leo (Music Tutor)
+- **Advantages**: Market leader, great API, supports tags and segments. High deliverability.
+- **Risks**: Strict anti-spam policies might suspend users if they import bad lists.
+- **Pricing**: Free tier available (up to 500 contacts). Essentials starts at $13/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When a customer buys something, they are automatically added to the Mailchimp audience with tags (e.g., "Bought: Cake").
+- The Marketing agent suggests campaigns ("Send an email to past customers about your new holiday cakes").
+- The user approves the AI-generated email, and OHC triggers Mailchimp to send it.
+- The user sees open rates and clicks in the OHC Marketing dashboard.
+**Implementation Prompt**: Build an integration that syncs OHC customers to a Mailchimp audience automatically after purchase. Allow the AI Marketing agent to create and send email campaigns via the Mailchimp API.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-<div style="padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.08); color: #fff;">
-  <p><strong>Note:</strong> Memory operations happen asynchronously via the <code>MemoryConsolidationWorker</code> and do not block the critical request path for AI agent execution.</p>
-</div>
+## [Payment] Mercado Pago Integration
+**Title**: Integrate Mercado Pago for LATAM Payments
+**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
+**Research Report**:
+- **Tool**: Mercado Pago
+- **Target Persona**: Global users outside the US/EU.
+- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
+- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
+- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
+- User connects their Mercado Pago account.
+- Customers see a "Pay with Mercado Pago" button at checkout.
+- Webhooks update the order status in OHC when payment succeeds.
+**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
+**Priority**: P2
+**Estimated Scope**: Large
 
-## Architecture
+## [Shipping] Shippo Integration
+**Title**: Integrate Shippo for Automated Label Generation
+**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
+**Research Report**:
+- **Tool**: Shippo
+- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
+- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
+- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
+- **Pricing**: Free tier (pay per label + postage).
+- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Design Doc**:
+- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
+- The Operations agent shows the cheapest shipping option.
+- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
+- OHC automatically emails the customer the tracking number.
+**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
+**Priority**: P1
+**Estimated Scope**: Large
 
-The system consists of the following core components:
+## [SMS] Twilio Integration
+**Title**: Integrate Twilio for SMS Order Notifications
+**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
+**Research Report**:
+- **Tool**: Twilio
+- **Target Persona**: Fatima (Food Cart Operator)
+- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
+- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
+- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
+- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+**Design Doc**:
+- User goes to Settings and toggles "Send me SMS for new orders".
+- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
+- (Future: Customers can also receive SMS receipts).
+**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
+**Priority**: P2
+**Estimated Scope**: Medium
 
-1. **VectorRepository (`src/agents/builtin/memory_store.rs`)**:
-   - Provides a unified abstraction over `PostgreSQL` and `SQLite` memory storage.
-   - Handles the lifecycle of `EmbeddingRecord` objects.
-   - Enforces `tenant_id` isolation on every query.
-   - Executes semantic similarity checks (Cosine Distance) to retrieve context and detect conflicts.
-
-2. **MemoryConsolidationWorker (`src/server/workers/memory.rs`)**:
-   - Runs continuously in the background using `tokio::spawn`.
-   - Polls the `VectorRepository` on an interval (e.g., hourly) to automatically prune stale memories and resolve conflicting facts.
-
-3. **AutoDreamWorker (`src/agents/builtin/autodream.rs`)**:
-   - Captures real-time session outputs and filesystem events, converting them into embedded memories stored in the `consolidated_memory` table.
-
-```mermaid
-sequenceDiagram
-    participant Agent as Agent (Any Dept)
-    participant Repo as VectorRepository
-    participant Worker as MemoryConsolidationWorker
-    participant DB as DB (Postgres/SQLite)
-
-    Agent->>Repo: Store/Retrieve Memory (tenant_id)
-    Repo->>DB: INSERT / SELECT (Vector Search)
-    loop Background Interval
-        Worker->>Repo: prune_stale(older_than)
-        Repo->>DB: DELETE stale memories
-        Worker->>Repo: auto_resolve_conflicts()
-        Repo->>DB: Find vec_distance_cosine < 0.05
-        Repo->>DB: Resolve (Merge/Delete)
-    end
-```
-
-## Core Features
-
-### Cross-Department Context Sharing
-
-Every memory is associated with an `EmbeddingRecord`, which includes:
-- `tenant_id`: The business owner's isolated scope.
-- `agent_id`: The system or agent that generated the memory.
-- `source_type`: The origin (e.g., `TASK_SUMMARY`, `SESSION_DATA`).
-
-Because all agent departments store and retrieve context from the centralized `VectorRepository` using the same `tenant_id`, knowledge generated by one department (e.g., Customer Success noting an unhappy customer) is inherently available to all other departments (e.g., Business Advisory building health reports).
-
-During vector retrieval (`semantic_search`), the search is scoped strictly to the `tenant_id`, ensuring secure access across the business's entire context history, regardless of which agent created the memory.
-
-### Conflict Resolution Strategy
-
-When multiple facts map to the exact same concept or very similar semantic space (detected via `vec_distance_cosine < 0.05`), the system automatically identifies them as conflicting pairs (`get_conflicting_pairs`).
-
-The conflict resolution logic (`auto_resolve_conflicts`) determines the "winner" based on the following strict priority cascade:
-
-1. **Owner Override (`owner_override`)**: A memory explicitly verified or corrected by the business owner always wins.
-2. **Reliability Score (`reliability_score`)**: If neither (or both) are owner overrides, the memory with the higher reliability score (confidence) wins.
-3. **Recency (`last_referenced_at`)**: If scores tie, the memory referenced most recently wins.
-
-When a conflict is resolved:
-- The loser is deleted from the system.
-- The winner's `reference_count` is incremented by the loser's count `+ 1`.
-- The winner's `last_referenced_at` is updated to the current time, reinforcing its importance.
-
-### Stale Context Pruning
-
-To prevent context window bloat and ensure high relevance, the `MemoryConsolidationWorker` periodically calls `prune_stale`.
-
-Pruning is conservative. A memory is only deleted if ALL the following conditions are met:
-- The memory's `last_referenced_at` is older than 180 days.
-- The memory is NOT an explicit `owner_override`.
-- The memory has a low `reference_count` (`< 5`).
-- The `source_type` is considered ephemeral (`TASK_SUMMARY`).
-
-This ensures that valuable, frequently used, or explicitly verified business history is never lost.
-
-## Implementation Details & Maintenance
-
-Recent architectural improvements delegated conflict resolution logic entirely down to the `VectorRepository` layer. This allows the `MemoryConsolidationWorker` to remain highly cohesive, simply orchestrating the domain actions without coupling to the priority algorithms or SQL execution.
-
-The storage layer gracefully falls back to exact text retrieval or in-memory vector calculations when the `sqlite-vec` extension is unavailable during local standalone testing, ensuring 100% test coverage and parity across environments.
+## [Video] Zoom Integration
+**Title**: Integrate Zoom for Auto-Generated Meeting Links
+**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
+**Research Report**:
+- **Tool**: Zoom
+- **Target Persona**: Leo (Music Tutor)
+- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
+- **Risks**: Zoom OAuth requires annual app review and compliance checks.
+- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
+- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
+**Design Doc**:
+- User connects their Zoom account via the Sales dashboard.
+- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
+- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
+**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
+**Priority**: P1
+**Estimated Scope**: Medium

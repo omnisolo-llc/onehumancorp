@@ -94,7 +94,7 @@ mod tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
         let _now = Utc::now();
         let mut a = create_dummy_record("a", true, 50, 0); // wins due to override
@@ -106,13 +106,16 @@ mod tests {
         repo.upsert(&a).await.unwrap();
         repo.upsert(&b).await.unwrap();
 
-        // If vec_distance_cosine is implemented or if it falls back to Rust logic,
-        // it will find the pair and delete 'b' because 'a' has owner_override.
-        let result = MemoryConsolidationWorker::resolve_conflicts(&repo).await;
+        // Let's actually test that resolve_conflicts correctly delegates and modifies the DB
+        MemoryConsolidationWorker::resolve_conflicts(&repo).await.unwrap();
 
-        // At this point we just want coverage that it executes the inner logic.
-        // If the database fails (because the function isn't replaced yet), that's fine for now,
-        // but once replaced in the next step, it will succeed.
-        let _ = result;
+        // Verify that 'b' was deleted because 'a' had owner_override
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Only one record should remain after resolving conflicts");
+
+        let remaining_id: String = sqlx::Row::get(&rows[0], "id");
+        assert_eq!(remaining_id, "a", "The record with owner_override should have won");
     }
 }
