@@ -4245,7 +4245,7 @@ mod docs_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've added 10 products! Upgrade to our Pro plan to list even more items and grow your store.".into());
+                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -4258,7 +4258,7 @@ mod docs_tests {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("Your first helper is working hard! Upgrade to Pro to hire more helpers and automate more of your business.".into());
+                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
