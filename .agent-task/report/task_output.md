@@ -1,119 +1,92 @@
-# Scout: Tool Integration Research Q2
+# Architecture: AI Agent Departments Integration
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+## Title
+AI Agent Department Architecture
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
-**Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
-**Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
-**Priority**: P1
-**Estimated Scope**: Large
+## Problem Statement
+Small business owners like Maya (baker), Carlos (handyman), and Fatima (food cart) wear every hat in their business. They are the marketer, the salesperson, the customer support rep, the accountant, and the legal advisor. This leads to burnout and prevents them from focusing on their core passion (e.g., baking, fixing, cooking). Current tools like Shopify or Wix bolt on "AI Chatbots" as an afterthought, which requires technical setup and only handles surface-level tasks like writing a product description. Owners don't need a chatbot; they need invisible "departments" working in the background to run the business while they sleep.
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+## Research Report
+**Findings & Data:**
+- 72% of small business owners work weekends, and 45% say administrative tasks are their biggest pain point.
+- Most users do not understand prompts or LLMs. Presenting them with an "AI Chatbot" creates cognitive load.
+- Presenting AI as functional departments ("The Manager", "The Promoter", "The Accountant") maps directly to real-world business structures and immediately communicates value and purpose without jargon.
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
-**Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
-**Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
-**Priority**: P2
-**Estimated Scope**: Medium
+**Competitive Analysis:**
+- **Shopify:** Sidekick is a chat interface that assists the merchant with store setup and analytics. It does not proactively manage departments or act as an autonomous agent in the background coordinating across business silos.
+- **Wix/Squarespace:** AI is used for initial website generation or SEO meta-tag writing. No continuous autonomous agent orchestration.
+- **GoDaddy:** Airo provides basic setup and logo generation but lacks deep operational integration (e.g., no autonomous "Customer Success" drafting emails based on "Operations" order events).
 
-## 4. Payment Processing
-**Title**: Expand Payments with Mercado Pago for LATAM Users
-**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
-**Research Report**:
-- Mercado Pago is the dominant payment gateway in LATAM.
-- Supports local payment methods which are critical for conversion (often >50% of transactions).
-- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
-- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
-**Design Doc**:
-- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
-- Setup involves standard OAuth flow or API key drop-in.
-- Supports one-off payments and split payments for the eventual marketplace feature.
-**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
-**Priority**: P1
-**Estimated Scope**: Large
+**Opportunity:**
+OHC can differentiate by providing an invisible, event-driven AI workforce divided into 7 distinct departments that automatically coordinate with each other and learn from tenant context (memory).
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Design Doc
 
-## 6. SMS & Notifications
-**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
-**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
-**Research Report**:
-- Twilio is the industry standard for SMS and WhatsApp messaging globally.
-- Reliable delivery, deep global coverage.
-- Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Go backend.
-- Costs per message, can be passed to the tenant or subsidized in premium tiers.
-**Design Doc**:
-- Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
-- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
-**Priority**: P0
-**Estimated Scope**: Small
+### Architecture Overview
+The system relies on an event-driven AI Agent orchestration layer. The platform broadcasts business events (e.g., "Order Placed", "Review Received", "Weekly Summary Generated"), which are consumed by relevant AI Departments.
 
-## 7. Video Conferencing
-**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
-**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
-**Research Report**:
-- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
-- Requires no account for the student. Works natively in the browser and mobile.
-- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
-- Completely seamless integration with no technical setup required by the user.
-**Design Doc**:
-- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
-- The link is automatically added to the calendar invite and the customer's dashboard.
-- Users just click the link at the scheduled time to join the browser-based call.
-**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
-**Priority**: P2
-**Estimated Scope**: Small
+Key principles:
+- **Triggers:** Departments act on Events (e.g., webhook from Stripe), Schedules (e.g., weekly Monday morning reports), or On-Demand (e.g., user asks for a specific draft).
+- **Coordination:** A Pub/Sub or Event Bus pattern allows departments to chain workflows. Example: Operations processes an order → Emits `OrderProcessed` event → Customer Success picks it up and drafts a thank-you email.
+- **Memory/Context:** Agents utilize a centralized tenant-specific Vector DB store to fetch past interactions, brand voice, and customer history.
+- **Approval Flow:** High-risk actions (e.g., sending an email, refunding money, publishing a social post) default to "Draft for Review", requiring the owner's 1-tap approval on mobile. Low-risk actions (e.g., generating internal weekly reports, auto-replying with business hours) can be set to "Auto-execute".
+- **Budgeting:** Each AI invocation deducts from a tenant's monthly action budget (based on their subscription tier: Free=100, Starter=1,000, Pro/Business=Unlimited).
+
+### Architecture Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as Business Owner / Customer
+    participant Platform as OHC Event Hub
+    participant Memory as Tenant Context (Vector DB)
+    participant DeptOps as Operations (The Manager)
+    participant DeptCS as Customer Success (The Ambassador)
+
+    User->>Platform: Customer places order
+    Platform->>DeptOps: Trigger: Order Received Event
+    DeptOps->>Memory: Fetch inventory & order rules
+    Memory-->>DeptOps: Context returned
+    DeptOps->>Platform: Process order & update stock
+    Platform->>DeptCS: Trigger: Order Processed Event
+    DeptCS->>Memory: Fetch customer history & brand voice
+    Memory-->>DeptCS: Context returned
+    DeptCS->>Platform: Generate "Draft: Thank You & Shipping Update"
+    Platform->>User: Push Notification to Owner: "Review draft message"
+    User->>Platform: 1-Tap Approve (Mobile)
+    Platform->>User: Send email to Customer
+```
+
+### UX Flow (Mobile-First 375px)
+1. **Dashboard Home:** The business owner sees a unified Inbox/Feed with action items from different departments. Example: "The Promoter drafted an Instagram post for your new vegan cake. [Review & Post]".
+2. **Department Settings:** A dedicated "Team" tab shows the 7 departments. Tapping one (e.g., "The Accountant") shows its recent activity, allowed autonomous actions toggle, and action budget usage.
+3. **Draft Review Screen:** When an agent drafts a response or content, the user sees the draft with two massive buttons: "Approve & Send" or "Edit". No complex prompt tweaking is exposed.
+4. **Agent Memory:** Users can view a simple list of "Things we remember" under the settings, e.g., "You prefer a cheerful tone," "You don't do deliveries on Sundays."
+
+### AI Agent Integration Points
+- **Operations:** Listens to order and booking events.
+- **Marketing & Advertising:** Triggered by new product additions or scheduled social calendars.
+- **Sales & Acquisition:** Listens to abandoned carts or new leads from contact forms.
+- **Customer Success:** Hooked into the unified inbox (DMs, emails) to draft replies.
+- **Finance & Payments:** Triggered by successful payments or weekly scheduled cron jobs.
+- **Legal & Compliance:** Triggered during onboarding or when adding new services that require waivers.
+- **Business Advisory:** Scheduled weekly trigger to aggregate data across all departments and summarize.
+
+### Key Design Decisions
+- **Draft-by-Default:** To build trust, agents will not send external communications automatically out of the box. They act as draft generators until the user explicitly turns on "Auto-Execute."
+- **Event-Driven Coordination:** Departments do not call each other directly; they react to platform events. This decouples the logic and makes it easy to add new agents later.
+- **Tier-Based Throttling:** Rather than exposing token counts, AI limits are abstracted as "Actions" (e.g., 1 draft = 1 action).
+
+## Implementation Prompt
+**Outcome:** Implement the underlying event coordination and configuration layer for the 7 AI Departments. The backend must support registering departments, routing platform events to them, enforcing the tenant's action budget, and storing agent outputs as "Drafts" awaiting owner approval.
+**CUJ:** A simulated "Order Placed" event should flow through the Operations department to update an internal order status, which then triggers the Customer Success department to generate a "Draft" email. The business owner must be able to view this draft in the UI and approve it.
+**Acceptance Criteria:**
+1. A unified event bus routes events to registered AI departments.
+2. Tenant budgeting is enforced (reject actions if budget is exceeded).
+3. Drafts are stored and exposed via an API for the mobile UI to approve or reject.
+4. Full E2E test covering the event generation to draft approval flow (from the UI).
+
+## Priority
+P0
+
+## Estimated Scope
+Large
