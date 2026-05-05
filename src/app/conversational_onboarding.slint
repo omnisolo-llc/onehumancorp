@@ -1,0 +1,104 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiConversationalMessage {
+    is_ai: bool,
+    text: string,
+}
+
+export component ConversationalOnboarding inherits Window {
+    min-width: 375px;
+    preferred-width: 400px;
+    height: 800px;
+    title: "AI Onboarding";
+
+    in-out property <[UiConversationalMessage]> messages: [
+        { is_ai: true, text: "Welcome to OneHumanCorp! Let's get your business set up. What is your business called?" }
+    ];
+
+    in-out property <string> current_input: "";
+
+    callback submit_answer(string);
+    callback launch_business(string, string, string);
+    callback go_to_dashboard();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 16px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text {
+                text: "AI Setup";
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+            }
+            Button {
+                text: "Go to Dashboard";
+                clicked => { go_to_dashboard(); }
+            }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 12px;
+                alignment: start;
+
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_ai ? start : end;
+                    if (!msg.is_ai) : Rectangle {} // Spacer
+
+                    Rectangle {
+                        background: msg.is_ai ? rgba(168, 85, 247, 0.2) : rgba(16, 185, 129, 0.2);
+                        border-radius: 12px;
+                        border-color: msg.is_ai ? rgba(168, 85, 247, 0.5) : rgba(16, 185, 129, 0.5);
+                        border-width: 1px;
+                        width: 280px;
+
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 4px;
+                            Text {
+                                text: msg.is_ai ? "AI Assistant" : "You";
+                                font-family: "Outfit";
+                                font-weight: 700;
+                                color: msg.is_ai ? #c084fc : #34d399;
+                                horizontal-alignment: msg.is_ai ? left : right;
+                            }
+                            Text {
+                                text: msg.text;
+                                font-family: "Inter";
+                                color: white;
+                                wrap: word-wrap;
+                                font-size: 16px;
+                            }
+                        }
+                    }
+
+                    if (msg.is_ai) : Rectangle {} // Spacer
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Type your answer...";
+                text <=> current_input;
+                height: 44px;
+            }
+            Button {
+                text: "Send";
+                height: 44px;
+                clicked => {
+                    submit_answer(current_input);
+                    current_input = "";
+                }
+            }
+        }
+    }
+}

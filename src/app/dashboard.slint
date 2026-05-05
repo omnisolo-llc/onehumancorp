@@ -63,6 +63,7 @@ export component Dashboard inherits Window {
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
+    callback action_start_conversational_setup();
     callback action_open_referrals();
     callback action_grow_business();
     callback action_mark_order_ready();
@@ -243,7 +244,8 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
+                TooltipElement { tooltip_id: "grow_business"; Button { text: "Conversational AI Setup"; height: 44px; clicked => { action_start_conversational_setup(); } }
+                Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
