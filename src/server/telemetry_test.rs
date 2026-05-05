@@ -116,6 +116,85 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_record_agent_cost() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 1.5);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["agent_id"], "agent-123");
+        assert_eq!(parsed["organization_id"], "org-1");
+        assert_eq!(parsed["entity"], "test-entity");
+    }
+
+    #[tokio::test]
+    async fn test_record_api_call_cost() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 0.5);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["organization_id"], "org-2");
+        assert_eq!(parsed["entity"], "test-entity-2");
+    }
+
+    #[tokio::test]
+    async fn test_record_swarm_job_latency_by_entity() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res = crate::telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+        assert!(res.is_ok());
+
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f32 = row.get("value");
+        assert_eq!(value, 125.0);
+
+        let labels_json: String = row.get("labels_json");
+        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        assert_eq!(parsed["mode"], "cloud");
+        assert_eq!(parsed["entity"], "test-entity-3");
+    }
+
+    #[tokio::test]
     async fn test_buffer_metric_respects_standalone() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
