@@ -94,12 +94,11 @@ export component Dashboard inherits Window {
                 alignment: center;
                 Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 if (is_loading) : Rectangle {
-                    height: 2px;
-                    width: 40px;
-                    background: #a855f7;
-                    border-radius: 1px;
-                    animate width { duration: 800ms; iteration-count: -1; easing: ease-in-out; }
-                    animate opacity { duration: 800ms; iteration-count: -1; easing: ease-in-out; }
+                    height: 12px;
+                    width: 100px;
+                    background: #334155; // Slate 700
+                    border-radius: 6px;
+                    animate background { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
                 }
             }
             Rectangle {} // Spacer
