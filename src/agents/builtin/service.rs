@@ -319,6 +319,8 @@ impl AgentServiceImpl {
             enable_acon_context_strategy: false,
             enable_llmcompiler_plan_and_execute: false,
             enable_observation_masking: true,
+            observation_masking_threshold: 3,
+            observation_masking_size_limit: 512,
             enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
@@ -347,9 +349,11 @@ impl AgentServiceImpl {
         let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
+        let observation_store = Arc::new(dashmap::DashMap::new());
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None);
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
         let mut unarc_agent = Agent::new(llm, tools);
+        unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
@@ -397,8 +401,9 @@ impl AgentService for AgentServiceImpl {
         let accessor = if let Some(_mem) = &memory {
             None
         } else { None };
+        let observation_store = Arc::new(dashmap::DashMap::new());
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor);
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -413,6 +418,7 @@ impl AgentService for AgentServiceImpl {
         };
 
         let mut unarc_agent = Agent::new(llm, tools);
+        unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
@@ -562,6 +568,8 @@ impl AgentService for AgentServiceImpl {
                 enable_acon_context_strategy: false,
             enable_llmcompiler_plan_and_execute: false,
                 enable_observation_masking: true,
+                observation_masking_threshold: 3,
+                observation_masking_size_limit: 512,
                 enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
@@ -583,10 +591,12 @@ impl AgentService for AgentServiceImpl {
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
             let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
+            let observation_store = Arc::new(dashmap::DashMap::new());
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None);
-            let agent = Agent::new(llm, tools);
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
+            let mut agent = Agent::new(llm, tools);
+            agent.observation_store = observation_store;
 
             let mut no_op = |_: AgentEvent| {};
             let result = agent
