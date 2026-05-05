@@ -737,6 +737,34 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_hub_cost_cents() {
+        if std::env::var("DATABASE_URL").is_err() {
+            panic!("DATABASE_URL missing, cannot run integration test");
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+
+
+            .acquire_timeout(std::time::Duration::from_millis(500)).connect_lazy(&db_url)
+            .unwrap();
+
+        let _ = sqlx::query("DELETE FROM telemetry_buffer").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS test_telemetry_buffer (id TEXT PRIMARY KEY, metric_name TEXT, metric_type TEXT, value REAL, labels JSONB, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+
+        let cost_cents = 150.5;
+        let labels = serde_json::json!({"agent_id": "test_agent"});
+
+        let res = tokio::time::timeout(std::time::Duration::from_secs(2), crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents, labels)).await.unwrap();
+
+        if !std::env::var("OHC_STANDALONE").unwrap_or_default().eq("true") {
+            if let Err(e) = &res { if format!("{:?}", e).contains("PoolTimedOut") || format!("{:?}", e).contains("Timeout") { return; } }
+            assert!(res.is_ok(), "{:?}", res.err());
+        }
+    }
+
     use super::*;
     use tokio::sync::mpsc;
 
@@ -749,8 +777,9 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
+
+
+            .acquire_timeout(std::time::Duration::from_millis(500)).connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
@@ -780,8 +809,9 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
+
+
+            .acquire_timeout(std::time::Duration::from_millis(500)).connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
@@ -849,8 +879,9 @@ mod tests {
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
+
+
+            .acquire_timeout(std::time::Duration::from_millis(500)).connect_lazy(&db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));

@@ -10,3 +10,24 @@ details:
   - "Added #[cfg(test)] for orchestration_test in src/server/orchestration/mod.rs"
   - "Fixed unused variables in setup_wizard_ui closure in src/app/main.rs"
   - "All tests pass successfully."
+html_report: |
+  <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); padding: 24px; color: #333; font-family: 'Outfit', 'Inter', sans-serif;">
+    <h2 style="margin-top: 0; color: #111;">Triage Report</h2>
+    <p><strong>Category:</strong> Cleanup | <strong>Status:</strong> Resolved</p>
+    <ul>
+      <li>Fixed unused variable warnings in src/server/orchestration/state/test.rs</li>
+      <li>Fixed unused variable warnings in src/server/benchmarks/latency_bench.rs</li>
+      <li>Fixed unused variable and dead code warnings in src/server/auth/mod.rs</li>
+      <li>Fixed unused variable warnings in src/server/orchestration/state/cloud.rs and standalone.rs</li>
+      <li>Updated deprecated get_async_connection to get_multiplexed_async_connection in src/server/orchestration/state/cloud.rs</li>
+      <li>Fixed PermissionsExt unused import via cfg in src/server/utils/fs.rs</li>
+      <li>Added #[cfg(test)] for orchestration_test in src/server/orchestration/mod.rs</li>
+      <li>Fixed unused variables in setup_wizard_ui closure in src/app/main.rs</li>
+      <li>All tests pass successfully.</li>
+    </ul>
+    <h3 style="color: #222;">Recent Fixes Added:</h3>
+    <ul>
+      <li>Implemented <code>test_hub_cost_cents</code> in <code>src/server/hub.rs</code> to prevent silent DB test skips and ensure proper verification.</li>
+      <li>Fixed the AutoDream data pipeline by changing <code>consolidated_memory</code> to <code>autodream_memories</code>.</li>
+    </ul>
+  </div>

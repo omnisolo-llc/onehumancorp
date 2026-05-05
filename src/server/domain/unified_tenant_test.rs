@@ -8,9 +8,8 @@ mod tests {
         // According to the problem description:
         // "Write backend E2E tests verifying that queries attempting to access data from a different tenant_id return zero rows."
 
-        let pool = PgPoolOptions::new()
-            .connect_lazy("postgres://postgres:postgres@localhost/postgres")
-            .unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = PgPoolOptions::new().connect_lazy(&db_url).unwrap();
 
         if env::var("CI").is_ok() {
             // We just ensure it compiles locally

@@ -60,7 +60,7 @@ impl AutoDreamPipeline {
 
             match &self.db.store {
                 DbStore::Sqlite(sqlite_pool) => {
-                    sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, NULL, $5)")
+                    sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, NULL, $5)")
                         .bind(&mem_id)
                         .bind("system")
                         .bind(&agent_id)
@@ -70,7 +70,7 @@ impl AutoDreamPipeline {
                         .await?;
                 }
                 DbStore::Postgres => {
-                    sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                    sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
                         .bind(&mem_id)
                         .bind("system")
                         .bind(&agent_id)
@@ -137,7 +137,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE consolidated_memory (id TEXT PRIMARY KEY, organization_id TEXT, agent_id TEXT, content TEXT, embedding TEXT, source_type TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP);")
+        sqlx::query("CREATE TABLE autodream_memories (id TEXT PRIMARY KEY, organization_id TEXT, agent_id TEXT, content TEXT, embedding TEXT, source_type TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP);")
             .execute(&pool)
             .await
             .unwrap();
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(count.0, 0);
 
         // Verify memory created
-        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory").fetch_one(&pool).await.unwrap();
+        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
 
         // Test fallback (error embedding)
@@ -169,7 +169,7 @@ mod tests {
         let pipeline_err = AutoDreamPipeline::new(db.clone(), Arc::new(MockEmbeddingApi { succeeds: false }));
         pipeline_err.run().await.unwrap();
 
-        let mem_count2: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory").fetch_one(&pool).await.unwrap();
+        let mem_count2: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count2.0, 2);
     }
 
@@ -197,7 +197,7 @@ mod tests {
 
         // Clean up data
         sqlx::query("DELETE FROM agent_session_data").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
 
         // Insert test data
         sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess_pg1', 'agent1', 'some context pg');")
@@ -214,7 +214,7 @@ mod tests {
         assert_eq!(count.0, 0);
 
         // Verify memory created
-        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'some context pg'").fetch_one(&pool).await.unwrap();
+        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE content = 'some context pg'").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
     }
 }

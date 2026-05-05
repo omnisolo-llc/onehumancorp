@@ -54,11 +54,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in consolidated_memory
+        // Find tasks that are COMPLETED but not yet in autodream_memories
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN consolidated_memory m ON t.id = m.task_id
+            LEFT JOIN autodream_memories m ON t.id::text = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -69,7 +69,8 @@ impl AutoDreamPipeline {
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         for row in tasks {
-            let task_id: String = row.get("id");
+            let task_id_uuid: uuid::Uuid = row.get("id");
+            let task_id = task_id_uuid.to_string();
             let tenant_id: String = row.get("organization_id");
             let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
 
@@ -85,11 +86,11 @@ impl AutoDreamPipeline {
                 match self.llm_client.generate_embedding(&chunk).await {
                     Ok(embedding) => {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                        let mem_id = uuid::Uuid::new_v4().to_string();
+                        let mem_id = uuid::Uuid::new_v4();
 
                         let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
-                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
+                            INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, task_id)
+                            VALUES ($1::uuid, $2::uuid, $3, $4, $5::vector, $6, $7)
                         ";
 
                         sqlx::query(insert_query)
@@ -99,7 +100,7 @@ impl AutoDreamPipeline {
                             .bind(&chunk)
                             .bind(&emb_str)
                             .bind("TASK_SUMMARY")
-                            .bind(&task_id)
+                            .bind(task_id.to_string()).bind(serde_json::json!({"data": "some payload"})).bind(serde_json::json!({}))
                             .execute(&self.db.pool)
                             .await
                             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
@@ -146,26 +147,26 @@ mod tests {
 
         let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
         let mock_llm = Arc::new(MockLLMClient {
-            embedding: vec![0.1, 0.2, 0.3],
+            embedding: vec![0.1; 1536],
         });
 
         // Clean up
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
-        let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
-            .bind(task_id)
+        let task_id = uuid::Uuid::new_v4();
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1::uuid, '00000000-0000-0000-0000-000000000001', 'm1', 'title', 'COMPLETED', 'HIGH', $2, $3)")
+            .bind(task_id.to_string()).bind(serde_json::json!({"data": "some payload"})).bind(serde_json::json!({}))
             .execute(&pool)
             .await
             .unwrap();
 
         let pipeline = AutoDreamPipeline::new(db.clone(), mock_llm);
         let res = pipeline.process_closed_tasks().await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res.err());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
-            .bind(task_id)
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
+            .bind(task_id.to_string()).bind(serde_json::json!({"data": "some payload"})).bind(serde_json::json!({}))
             .fetch_one(&pool)
             .await
             .unwrap();
