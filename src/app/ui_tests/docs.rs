@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwrap() }
+fn create() -> app::ConnectApps { crate::ui_tests::init(); app::ConnectApps::new().unwrap() }
 
 // --- Specialized / Flow Tests ---
 

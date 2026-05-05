@@ -52,7 +52,7 @@ export component Dashboard inherits Window {
     callback open_kairos_orchestration_walkthrough();
     callback open_video_tutorials();
     callback open_release_notes();
-    callback open_api_docs();
+    callback open_connect_apps();
     callback approve_task(string);
     callback open_billing();
 
@@ -112,7 +112,7 @@ export component Dashboard inherits Window {
 
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } }
+                Button { text: "Connect Apps"; height: 44px; clicked => { open_connect_apps(); show_menu = false; } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }

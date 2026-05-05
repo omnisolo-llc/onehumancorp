@@ -16,72 +16,72 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
 #[test] fn cost_injection_tokens() {
     let ui = create();
     let inj = "1000000'); DROP TABLE tokens; --";
-    ui.set_total_tokens(inj.into());
-    assert_eq!(ui.get_total_tokens(), inj);
+    ui.set_total_ai_usage(inj.into());
+    assert_eq!(ui.get_total_ai_usage(), inj);
 }
 
 #[test] fn cost_massive_list() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = (0..500).map(|i| app::UiAgentCost {
-        name: format!("Agent {}", i).into(),
+    let v: Vec<app::UiHelperCost> = (0..500).map(|i| app::UiHelperCost {
+        name: format!("Helper {}", i).into(),
         cost: format!("${}", i).into(),
         roi: "High".into(),
         efficiency: "Good".into(),
         pct: (i % 100) as f32 / 100.0,
     }).collect();
-    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
-    assert_eq!(ui.get_agent_costs().row_count(), 500);
+    ui.set_helper_costs(Rc::new(slint::VecModel::from(v)).into());
+    assert_eq!(ui.get_helper_costs().row_count(), 500);
 }
 
 // --- Unique Scenarios with Verification ---
 
-#[test] fn cost_zero_cost_agent() {
+#[test] fn cost_zero_cost_helper() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
-        name: "Local Ollama Agent".into(),
+    let v: Vec<app::UiHelperCost> = vec![app::UiHelperCost {
+        name: "Local Ollama Helper".into(),
         cost: "$0.00".into(),
         roi: "0.00%".into(),
-        efficiency: "0.00 tok/$".into(),
+        efficiency: "0.00 AI/$".into(),
         pct: 0.0,
     }];
-    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
-    let models = ui.get_agent_costs();
+    ui.set_helper_costs(Rc::new(slint::VecModel::from(v)).into());
+    let models = ui.get_helper_costs();
     assert_eq!(models.row_count(), 1);
-    let agent = models.row_data(0).unwrap();
-    assert_eq!(agent.name, "Local Ollama Agent");
-    assert_eq!(agent.cost, "$0.00");
-    assert_eq!(agent.roi, "0.00%");
-    assert_eq!(agent.efficiency, "0.00 tok/$");
-    assert_eq!(agent.pct, 0.0);
+    let helper = models.row_data(0).unwrap();
+    assert_eq!(helper.name, "Local Ollama Helper");
+    assert_eq!(helper.cost, "$0.00");
+    assert_eq!(helper.roi, "0.00%");
+    assert_eq!(helper.efficiency, "0.00 AI/$");
+    assert_eq!(helper.pct, 0.0);
 }
 
-#[test] fn cost_zero_cost_multiple_agents() {
+#[test] fn cost_zero_cost_multiple_helpers() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = vec![
-        app::UiAgentCost {
-            name: "Cloud GPT-4 Agent".into(),
+    let v: Vec<app::UiHelperCost> = vec![
+        app::UiHelperCost {
+            name: "Cloud GPT-4 Helper".into(),
             cost: "$15.50".into(),
             roi: "150.00%".into(),
-            efficiency: "32.50 tok/$".into(),
+            efficiency: "32.50 AI/$".into(),
             pct: 1.0,
         },
-        app::UiAgentCost {
-            name: "Local Llama 3 Agent".into(),
+        app::UiHelperCost {
+            name: "Local Llama 3 Helper".into(),
             cost: "$0.00".into(),
             roi: "0.00%".into(),
-            efficiency: "0.00 tok/$".into(),
+            efficiency: "0.00 AI/$".into(),
             pct: 0.0,
         }
     ];
-    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
-    let models = ui.get_agent_costs();
+    ui.set_helper_costs(Rc::new(slint::VecModel::from(v)).into());
+    let models = ui.get_helper_costs();
     assert_eq!(models.row_count(), 2);
-    let zero_agent = models.row_data(1).unwrap();
-    assert_eq!(zero_agent.name, "Local Llama 3 Agent");
-    assert_eq!(zero_agent.cost, "$0.00");
-    assert_eq!(zero_agent.roi, "0.00%");
-    assert_eq!(zero_agent.efficiency, "0.00 tok/$");
-    assert_eq!(zero_agent.pct, 0.0);
+    let zero_helper = models.row_data(1).unwrap();
+    assert_eq!(zero_helper.name, "Local Llama 3 Helper");
+    assert_eq!(zero_helper.cost, "$0.00");
+    assert_eq!(zero_helper.roi, "0.00%");
+    assert_eq!(zero_helper.efficiency, "0.00 AI/$");
+    assert_eq!(zero_helper.pct, 0.0);
 }
 
 #[test] fn cost_total_spend_zero() {
@@ -92,32 +92,32 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
 
 #[test] fn cost_zero_roi_no_division_by_zero_ui_check() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
-        name: "Zero ROI Agent".into(),
+    let v: Vec<app::UiHelperCost> = vec![app::UiHelperCost {
+        name: "Zero ROI Helper".into(),
         cost: "$0.00".into(),
         roi: "0.00".into(), // Ensuring raw zero strings map directly
         efficiency: "0.00".into(),
         pct: 0.0,
     }];
-    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
-    let models = ui.get_agent_costs();
-    let agent = models.row_data(0).unwrap();
-    assert_eq!(agent.roi, "0.00");
+    ui.set_helper_costs(Rc::new(slint::VecModel::from(v)).into());
+    let models = ui.get_helper_costs();
+    let helper = models.row_data(0).unwrap();
+    assert_eq!(helper.roi, "0.00");
 }
 
 #[test] fn cost_zero_efficiency_no_division_by_zero_ui_check() {
     let ui = create();
-    let v: Vec<app::UiAgentCost> = vec![app::UiAgentCost {
-        name: "Zero Efficiency Agent".into(),
+    let v: Vec<app::UiHelperCost> = vec![app::UiHelperCost {
+        name: "Zero Efficiency Helper".into(),
         cost: "$0.00".into(),
         roi: "0.00".into(),
         efficiency: "0.00".into(),
         pct: 0.0,
     }];
-    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
-    let models = ui.get_agent_costs();
-    let agent = models.row_data(0).unwrap();
-    assert_eq!(agent.efficiency, "0.00");
+    ui.set_helper_costs(Rc::new(slint::VecModel::from(v)).into());
+    let models = ui.get_helper_costs();
+    let helper = models.row_data(0).unwrap();
+    assert_eq!(helper.efficiency, "0.00");
 }
 
 // --- Consolidated Verified Tests ---

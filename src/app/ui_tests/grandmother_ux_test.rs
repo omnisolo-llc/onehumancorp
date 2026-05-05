@@ -4,7 +4,7 @@ use slint::ComponentHandle;
 #[test]
 fn test_api_docs_title_plain_language() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    let ui = app::ApiDocs::new().unwrap();
+    let ui = app::ConnectApps::new().unwrap();
     assert_eq!(ui.get_title(), slint::SharedString::from("Connect Custom Software"));
 }
 

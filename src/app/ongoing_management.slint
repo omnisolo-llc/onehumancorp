@@ -1,9 +1,9 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
-export component FixAgent inherits Window {
+export component FixHelper inherits Window {
     width: 500px;
     height: 400px;
-    title: "Agent Diagnostics";
+    title: "Helper Diagnostics";
 
     in-out property <int> step: 0;
     in-out property <bool> is_applying: false;
@@ -19,13 +19,13 @@ export component FixAgent inherits Window {
 
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "We detected a connection timeout with the business records storage. The agent was unable to read the required state."; color: #1e293b; wrap: word-wrap; }
+            Text { text: "We detected a connection timeout with the business records storage. The helper was unable to read the required state."; color: #1e293b; wrap: word-wrap; }
             Button { text: "View Suggested Fix"; clicked => { step = 1; } }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "Suggested fix: Restart the agent process and refresh memory to reconnect."; color: #1e293b; wrap: word-wrap; }
+            Text { text: "Suggested fix: Restart the helper process and refresh memory to reconnect."; color: #1e293b; wrap: word-wrap; }
             Button {
                 text: "Apply Fix";
                 clicked => {
@@ -40,7 +40,7 @@ export component FixAgent inherits Window {
         if (step == 2) : VerticalBox {
             spacing: 10px;
             Text { text: "✓"; font-size: 48px; color: #10b981; horizontal-alignment: center; }
-            Text { text: "Fix applied successfully! The agent is healthy again."; color: #1e293b; horizontal-alignment: center; }
+            Text { text: "Fix applied successfully! The helper is healthy again."; color: #1e293b; horizontal-alignment: center; }
             Button { text: "Return to Helpers"; }
         }
     }
@@ -66,7 +66,7 @@ export component Upgrade inherits Window {
 
         if (!is_upgrading && !done) : VerticalBox {
             spacing: 10px;
-            Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New performance tracking"; color: #1e293b; }
+            Text { text: "What's new:\n• Improved helper reasoning\n• 2x faster orchestration\n• New performance tracking"; color: #1e293b; }
             Button { text: "Upgrade in 1 click"; clicked => { is_upgrading = true; /* simulate */ done = true; is_upgrading = false; } }
         }
 

@@ -1,7 +1,7 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-export struct UiAgentCost {
+export struct UiHelperCost {
     name: string,
     cost: string,
     roi: string,
@@ -16,8 +16,8 @@ export component CostDashboard inherits Window {
     title: "Cost & AI Usage";
 
     in-out property <string> total_spend: "$0.00";
-    in-out property <string> total_tokens: "0";
-    in-out property <[UiAgentCost]> agent_costs;
+    in-out property <string> total_ai_usage: "0";
+    in-out property <[UiHelperCost]> helper_costs;
 
     callback refresh_data();
 
@@ -57,7 +57,7 @@ export component CostDashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Total AI Usage"; color: #94a3b8; }
-                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                    Text { text: total_ai_usage; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
@@ -87,7 +87,7 @@ export component CostDashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Total AI Usage"; color: #94a3b8; }
-                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                    Text { text: total_ai_usage; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
@@ -103,7 +103,7 @@ export component CostDashboard inherits Window {
                 padding: 16px;
                 spacing: 12px;
                 
-                for ac in agent_costs : VerticalBox {
+                for ac in helper_costs : VerticalBox {
                     spacing: 4px;
                     HorizontalBox {
                         Text { text: ac.name; color: white; }

@@ -52,7 +52,7 @@ export component KairosOrchestrationWalkthrough inherits Window {
                     text: current_step == 0 ? "The OHC Swarm Orchestration relies on a unified tri-layer architecture combining memory, messaging, and state." :
                           current_step == 1 ? "The Shared Task List operates as a robust State Machine. Cloud deployments leverage PostgreSQL with FOR UPDATE SKIP LOCKED for horizontal scalability. Standalone desktop deployments gracefully degrade to local SQLite mutexes." :
                           current_step == 2 ? "Powered by CentrifugeNode and Redis Pub/Sub, the Teammate Mesh streams events with sub-millisecond latency. This low-latency layer broadcasts capability advertisements and synchronous worker state transitions." :
-                          "AutoDream continuously harvests ephemeral session logs, compresses context utilizing local LLMs, and stores dense vectors into a durable pgvector (or Standalone alternative) store. Swarm agents semantically query this database to maintain infinite long-term context.";
+                          "AutoDream continuously harvests ephemeral session logs, compresses context utilizing local LLMs, and stores dense vectors into a durable pgvector (or Standalone alternative) store. Swarm helpers semantically query this database to maintain infinite long-term context.";
                     color: #94a3b8;
                     wrap: word-wrap;
                     font-family: "Inter";
