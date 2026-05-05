@@ -111,12 +111,14 @@ impl LlmClient for OllamaClient {
                 content: result.message.content,
                 tool_calls: vec![],
                 tool_results: vec![],
+                response_id: None,
             },
             usage: Usage {
                 input_tokens: result.prompt_eval_count,
                 output_tokens: result.eval_count,
             },
             stop_reason: result.done_reason,
+            response_id: None,
         })
     }
 }
