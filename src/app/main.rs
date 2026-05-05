@@ -57,6 +57,11 @@ thread_local! {
     static CLIPBOARD: RefCell<Option<ClipboardContext>> = RefCell::new(ClipboardContext::new().ok());
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+
+    static GLOBAL_WEBSITE_BUILDER: RefCell<Option<slint::Weak<app::WebsiteBuilder>>> = RefCell::new(None);
+    static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
+    static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
+    static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -66,6 +71,11 @@ use std::cell::RefCell;
 thread_local! {
     static IS_ADVANCED: RefCell<bool> = RefCell::new(false);
     static ADVANCED_LISTENERS: RefCell<Vec<Box<dyn Fn(bool)>>> = RefCell::new(Vec::new());
+
+    static GLOBAL_WEBSITE_BUILDER: RefCell<Option<slint::Weak<app::WebsiteBuilder>>> = RefCell::new(None);
+    static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
+    static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
+    static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
 }
 
 #[cfg(test)]
@@ -97,7 +107,11 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_b) = app::WebsiteBuilder::new() { _b.show().unwrap(); Box::leak(Box::new(_b)); }
+            GLOBAL_WEBSITE_BUILDER.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 
@@ -105,7 +119,11 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_i) = app::Integrations::new() { _i.show().unwrap(); Box::leak(Box::new(_i)); }
+            GLOBAL_INTEGRATIONS.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 
@@ -113,7 +131,11 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_r) = app::Referrals::new() { _r.show().unwrap(); Box::leak(Box::new(_r)); }
+            GLOBAL_REFERRALS.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 
@@ -121,7 +143,11 @@ pub fn setup_welcome_checklist_routing(
         let h = handle.clone();
         move || {
             if let Some(u) = h.upgrade() { u.hide().unwrap(); }
-            if let Ok(_d) = app::Dashboard::new() { _d.show().unwrap(); Box::leak(Box::new(_d)); }
+            GLOBAL_DASHBOARD.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
         }
     });
 }
@@ -280,6 +306,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 } else {
                                     ui.hide().unwrap();
                                     if let Ok(dashboard) = app::Dashboard::new() {
+                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let my_plan_handle_clone = my_plan_ui.as_weak();
@@ -388,6 +415,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("OAuth Login via {}...", provider);
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
+                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let my_plan_handle_clone = my_plan_ui.as_weak();
@@ -732,7 +760,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let integrations_ui = app::Integrations::new()?;
+    GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
+    Box::leak(Box::new(integrations_ui));
+
     let website_builder_ui = app::WebsiteBuilder::new()?;
+    GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let website_builder_handle = website_builder_ui.as_weak();
     let wb_ui_weak = website_builder_handle.clone();
@@ -989,6 +1022,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(email_marketing_ui));
 
     let referrals_ui = app::Referrals::new()?;
+    GLOBAL_REFERRALS.with(|g| *g.borrow_mut() = Some(referrals_ui.as_weak()));
     let referrals_handle = referrals_ui.as_weak();
 
     referrals_ui.on_send_invite_message({
@@ -1172,6 +1206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1185,6 +1220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
+                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.show().unwrap();
                 Box::leak(Box::new(dashboard));
             }
@@ -1311,6 +1347,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
             if let Ok(dashboard) = app::Dashboard::new() {
+                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
