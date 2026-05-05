@@ -79,11 +79,11 @@ impl DB {
                     let key = key.split('&').next().unwrap_or("").to_string();
                     conn_opts = conn_opts.pragma("key", key.clone());
                 } else {
-                    let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "default_test_key".to_string());
+                    let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                     conn_opts = conn_opts.pragma("key", fallback_key);
                 }
             } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
-                let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "default_test_key".to_string());
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                 conn_opts = conn_opts.pragma("key", fallback_key);
             }
 
