@@ -753,12 +753,14 @@ pub trait LongTermMemory: Send + Sync {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
 /// Anthropic 3-Tier Memory Store implementation
 /// 1) Lightweight index (~150 chars/entry, always loaded in context)
 /// 2) Detailed topic files (pulled on demand)
 /// 3) Raw transcripts (accessed via search only)
+#[derive(Clone)]
 pub struct Anthropic3TierMemoryStore {
     #[allow(dead_code)]
     base_dir: std::path::PathBuf,
@@ -909,6 +911,9 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             }
         }
         Ok(results)
+    }
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        Some(std::sync::Arc::new(self.clone()))
     }
 }
 
