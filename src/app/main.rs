@@ -2322,6 +2322,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let msg = r.message.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
+                                        ui.set_launching(false);
+                                        ui.set_step(100);
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
@@ -3569,7 +3571,7 @@ mod docs_tests {
             ui.get_admin_password()
         );
 
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 100);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3694,7 +3696,7 @@ mod docs_tests {
         assert!(*launch_called.borrow());
         assert!(*link_copied.borrow(), "Shareable link should be automatically copied on launch completion");
         assert_eq!(ui.get_launching(), false);
-        assert_eq!(ui.get_step(), 10);
+        assert_eq!(ui.get_step(), 100);
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
