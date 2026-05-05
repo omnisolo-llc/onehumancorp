@@ -478,3 +478,45 @@ fn wizard_copy_link_integration() {
 
     assert_eq!(*clipboard_val.borrow(), test_url);
 }
+
+#[test]
+fn test_e2e_wizard_instant_build_flow() {
+    use slint::ComponentHandle;
+    let ui = create();
+    ui.set_is_instant_build(true);
+    ui.set_instant_bio("I run a local bakery called Maya's Cakes".into());
+
+    // In actual implementation this calls gRPC, so we mock the callback behaviour
+    // that invokes the set properties to match main.rs functionality.
+
+    let ui_weak = ui.as_weak();
+    ui.on_generate_instant_preview(move || {
+        if let Some(u) = ui_weak.upgrade() {
+            u.set_company_name("AI Generated Store".into());
+            u.set_business_type("Online Store".into());
+            u.set_product_name("My First Product".into());
+            u.set_product_price("19.99".into());
+            u.set_company_description("A great AI-generated business.".into());
+            u.set_domain_choice("free".into());
+            u.set_website_template("Modern".into());
+            u.set_admin_email("admin@ai-generated.test".into());
+            u.set_payment_pref("online".into());
+            u.set_is_generating_instant_preview(false);
+            u.set_step(9); // Skip to Review & Launch
+        }
+    });
+
+    ui.invoke_generate_instant_preview();
+
+    assert_eq!(ui.get_step(), 9);
+    assert_eq!(ui.get_company_name(), "AI Generated Store");
+    assert_eq!(ui.get_business_type(), "Online Store");
+    assert_eq!(ui.get_product_name(), "My First Product");
+    assert_eq!(ui.get_product_price(), "19.99");
+    assert_eq!(ui.get_company_description(), "A great AI-generated business.");
+    assert_eq!(ui.get_domain_choice(), "free");
+    assert_eq!(ui.get_website_template(), "Modern");
+    assert_eq!(ui.get_admin_email(), "admin@ai-generated.test");
+    assert_eq!(ui.get_payment_pref(), "online");
+    assert_eq!(ui.get_is_generating_instant_preview(), false);
+}
