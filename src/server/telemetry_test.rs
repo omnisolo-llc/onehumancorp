@@ -74,7 +74,6 @@ mod tests {
         assert_eq!(redacted["secret"], "[REDACTED]");
     }
 
-
     #[tokio::test]
     async fn test_sqlite_metrics() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -200,6 +199,50 @@ mod tests {
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
             violations
+        );
+    }
+
+    #[test]
+    fn test_init_telemetry_standalone_opt_out() {
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE", Some("true")),
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("false")),
+                ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ],
+            || {
+                let config = crate::config::load().unwrap();
+                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+
+                // Assert that the config logic matches the policy:
+                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
+                // In lib.rs, the gate is `is_standalone && config.telemetry_enabled`.
+                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+
+                assert_eq!(should_start_telemetry, false);
+            },
+        );
+    }
+
+    #[test]
+    fn test_init_telemetry_standalone_opt_in() {
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE", Some("true")),
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("true")),
+                ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ],
+            || {
+                let config = crate::config::load().unwrap();
+                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+
+                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
+                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+
+                assert_eq!(should_start_telemetry, true);
+            },
         );
     }
 }
