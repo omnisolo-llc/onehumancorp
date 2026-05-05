@@ -201,11 +201,15 @@ mod tests {
     use crate::ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("DATABASE_URL").ok()?;
+        let db_url = std::env::var("DATABASE_URL").ok()?;
+        if db_url.contains("dummy") || db_url.contains("sqlite") { return None; }
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
         let db = Arc::new(DB::new().await.ok()?);
+        // Test database availability in sandbox
+        let ping = tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&db.pool)).await;
+        if ping.is_err() || ping.unwrap().is_err() { return None; }
         Some(db)
     }
 

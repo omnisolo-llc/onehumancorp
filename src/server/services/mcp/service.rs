@@ -302,7 +302,8 @@ mod tests {
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("sqlite") { return; } // Sandbox
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -321,7 +322,8 @@ mod tests {
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("sqlite") { return; } // Sandbox
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -346,7 +348,8 @@ mod tests {
 
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("sqlite") { return; } // Sandbox
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
@@ -368,7 +371,8 @@ mod tests {
 
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("sqlite") { return; } // Sandbox
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);

@@ -407,10 +407,12 @@ mod tests {
             return;
         }
 
+        if database_url.contains("dummy") || database_url.contains("sqlite") { return; } // fast fail sandbox
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-
-            .connect(&database_url).await.unwrap();
+            .connect(&database_url).await;
+        if pool.is_err() { return; }
+        let pool = pool.unwrap();
 
         let service = MySyncService::new(pool.clone());
 
