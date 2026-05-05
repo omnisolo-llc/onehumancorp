@@ -145,7 +145,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(
+        let rows_future = sqlx::query(
             r#"
             SELECT t.*
             FROM swarm_tasks t
@@ -161,9 +161,16 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             "#
         )
         .bind(limit)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        .fetch_all(&mut *tx);
+
+        let rows = match tokio::time::timeout(std::time::Duration::from_secs(2), rows_future).await {
+            Ok(Ok(rows)) => rows,
+            Ok(Err(e)) => return Err(e.to_string()),
+            Err(_) => {
+                println!("WARNING: Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                return Ok(vec![]);
+            }
+        };
 
         let mut tasks = Vec::new();
         let mut task_ids = Vec::new();
