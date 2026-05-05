@@ -1,84 +1,119 @@
-# Issue Brief: Website & Storefront Builder Architecture
+# Scout: Tool Integration Research Q2
 
-## Title
-Drag-and-Drop Website & Storefront Builder Architecture for OHC
+This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
 
-## Problem Statement
-Building a website is often the biggest hurdle for a non-technical small business owner. Current solutions require too much decision-making (e.g., choosing themes, configuring layouts, manually adding SEO tags). Maya, the baker, needs a beautiful storefront out of the box, optimized for mobile (375px), without needing to understand what a "Hero section" or "Meta tag" is. The platform must provide an effortless, AI-assisted drag-and-drop builder that generates premium (Glassmorphism, beautiful typography) websites instantly while allowing easy customization from a phone.
+## 1. Social Media Integration
+**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
+**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
+**Research Report**:
+- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
+- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
+- Pricing: Free tier available, then scales per user.
+- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
+- Non-technical users benefit by never leaving the OHC interface.
+- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
+**Design Doc**:
+- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
+- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
+- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
+**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
+**Priority**: P1
+**Estimated Scope**: Large
 
-## Research Report
-*   **Shopify:** Offers powerful themes but customization on mobile is extremely difficult. Users often resort to buying third-party themes or hiring developers.
-*   **Wix:** Very flexible drag-and-drop, but overwhelming for mobile users. Often results in broken mobile layouts if not carefully adjusted by the user.
-*   **Squarespace:** Beautiful templates, restrictive layout engine (Fluid Engine), which is good for design consistency but still complex to edit from a phone.
-*   **GoDaddy:** Simple, rigid blocks. Easy to use but results often look generic and cheap.
-*   **OHC Objective:** Combine the simplicity of rigid blocks (GoDaddy) with the aesthetic excellence of Squarespace and the AI power of Wix, but built *mobile-first* so a user can build and manage their entire site from their iPhone while lying in bed.
+## 2. Calendar & Scheduling
+**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
+**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
+**Research Report**:
+- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
+- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
+- Free tier available for individuals; great for our free tier users.
+- Alternative is building from scratch, which is error-prone.
+**Design Doc**:
+- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
+- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
+- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
+**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
+**Priority**: P0
+**Estimated Scope**: Medium
 
-## Design Doc
+## 3. Email Marketing
+**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
+**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
+**Research Report**:
+- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
+- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
+- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
+- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
+**Design Doc**:
+- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
+- Users type a plain-text prompt: "Draft an email about our new summer dresses."
+- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
+**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
+**Priority**: P2
+**Estimated Scope**: Medium
 
-### Architecture Diagram
+## 4. Payment Processing
+**Title**: Expand Payments with Mercado Pago for LATAM Users
+**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
+**Research Report**:
+- Mercado Pago is the dominant payment gateway in LATAM.
+- Supports local payment methods which are critical for conversion (often >50% of transactions).
+- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
+- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
+**Design Doc**:
+- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
+- Setup involves standard OAuth flow or API key drop-in.
+- Supports one-off payments and split payments for the eventual marketplace feature.
+**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
+**Priority**: P1
+**Estimated Scope**: Large
 
-```mermaid
-graph TD
-    A[User via Mobile App] --> B(Storefront Builder UI)
-    B -->|Selects Content Block| C{Block Library}
-    C --> D[Hero Block]
-    C --> E[Product Grid Block]
-    C --> F[Testimonials Block]
-    C --> G[Booking Calendar Block]
-    C --> H[Contact Form Block]
-    B --> I(The Promoter - AI Marketing Agent)
-    I -->|Auto-generates Copy| B
-    I -->|Auto-optimizes SEO| J[SEO Engine]
-    B --> K[Site Configuration]
-    K --> L[Draft State]
-    L -->|Publish Action| M[Live Site]
-    M --> N[Custom Domain & SSL Provisioning]
-```
+## 5. Shipping & Logistics
+**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
+**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
+**Research Report**:
+- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
+- Competitive pricing (free tier for low volume, pennies per label after).
+- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
+- Great fit for OHC physical product merchants.
+**Design Doc**:
+- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
+- In the Order details view, the business owner clicks "Print Label."
+- EasyPost generates a PDF (auto-compressed and stored in GCS).
+- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
+**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
+**Priority**: P1
+**Estimated Scope**: Medium
 
-### Content Blocks & Functionality
-*   **Hero Block:** The main banner with an AI-generated headline, subheadline, and a prominent CTA (e.g., "Order Now" or "Book a Call"). Uses high-quality WebP compressed background images.
-*   **Product Grid:** Auto-syncs with the Operations department's inventory. Displays product cards with Glassmorphism effects. Handles variant selection.
-*   **Text/Image Blocks:** For "About Us" or story sections. The Promoter AI can draft the business story based on the user's initial onboarding profile.
-*   **Testimonials:** Auto-pulls from the Customer Success department's review requests.
-*   **Booking Calendar:** Syncs directly with the Operations schedule for services (e.g., Carlos the Handyman).
-*   **Contact Form:** Submissions are routed to the Customer Success department (The Ambassador) for auto-drafted replies.
+## 6. SMS & Notifications
+**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
+**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
+**Research Report**:
+- Twilio is the industry standard for SMS and WhatsApp messaging globally.
+- Reliable delivery, deep global coverage.
+- Supports WhatsApp, which is critical for markets outside the US.
+- Simple API, integrates well with Go backend.
+- Costs per message, can be passed to the tenant or subsidized in premium tiers.
+**Design Doc**:
+- Users can enable "SMS Notifications" in the "Operations" settings.
+- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
+- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
+**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
+**Priority**: P0
+**Estimated Scope**: Small
 
-### Templates & Customization
-*   Templates are not rigid HTML files but rather "Design Themes" (color palettes, font pairings from Outfit/Inter, and motion presets).
-*   Users select a Vibe (e.g., "Elegant Bakery", "Professional Service") and the AI applies the Design Theme globally.
-*   Customization is constraint-based to prevent users from making the site ugly (e.g., color pickers only offer complementary colors).
-
-### Publishing & SEO
-*   **Draft → Live:** Changes are saved instantly to a Draft state. A single "Publish" button pushes the configuration to the Live state. No loading bars, optimistic UI.
-*   **SEO:** Handled entirely by "The Promoter". The AI automatically generates meta titles, descriptions, and alt-text for images based on the content blocks. It also generates a sitemap invisibly.
-
-### Custom Domains & SSL
-*   Users get an OHC subdomain by default.
-*   Premium users can search for and buy a custom domain directly in the app.
-*   SSL is provisioned automatically behind the scenes when a custom domain is linked. The user sees a simple "Securing your site..." checklist item that turns green.
-
-### Mobile UX Flow
-1.  **Entry:** User taps "Edit Website" on the mobile dashboard.
-2.  **Preview:** Sees a live preview of the site exactly as it looks to customers (375px width).
-3.  **Edit Mode:** Tapping any section opens a bottom sheet to edit that specific block (e.g., tap the Hero, the sheet lets you change the image or ask AI to rewrite the text).
-4.  **Add Block:** A floating action button (+) opens a visual list of available blocks. Tapping one inserts it below the currently focused section.
-5.  **Publish:** A sticky "Publish" button at the top right of the screen.
-
-### AI Agent Integration Points
-*   **The Promoter:** Generates initial layout, writes copy for all blocks, handles all SEO metadata.
-*   **Operations:** Feeds real-time data to Product Grids and Booking Calendars.
-*   **Customer Success:** Feeds verified reviews into the Testimonial block.
-
-### Key Design Decisions
-*   **Mobile-First Editing:** The editor must be fully functional on a 375px screen. Desktop is an additive experience.
-*   **Constraint-Based Design:** Users cannot break the layout. They assemble blocks, they don't draw boxes.
-*   **AI-First Content:** No more "Lorem Ipsum". The moment a user adds a text block, the AI drafts relevant content based on their business profile.
-
-## Implementation Prompt
-Implement the data model and API endpoints for the new constraint-based Storefront Builder. The system needs to support a draft and live state for a tenant's website. It should define the schema for various content blocks (Hero, ProductGrid, Testimonial, etc.) and global design themes (fonts, colors). Integrate with "The Promoter" agent to automatically generate SEO metadata when the site is published. Ensure the API supports partial updates from a mobile client.
-
-## Priority
-P0
-
-## Estimated Scope
-Large
+## 7. Video Conferencing
+**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
+**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
+**Research Report**:
+- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
+- Requires no account for the student. Works natively in the browser and mobile.
+- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
+- Completely seamless integration with no technical setup required by the user.
+**Design Doc**:
+- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
+- The link is automatically added to the calendar invite and the customer's dashboard.
+- Users just click the link at the scheduled time to join the browser-based call.
+**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
+**Priority**: P2
+**Estimated Scope**: Small
