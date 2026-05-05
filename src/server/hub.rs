@@ -569,15 +569,6 @@ impl Hub {
             
             for (org_id, forecast) in forecasts_to_record {
                 let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
-
-                let deployment_mode = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
-                    "standalone"
-                } else {
-                    "cloud"
-                };
-
-                let burn_rate = forecast / 24.0;
-                let _ = crate::telemetry::record_token_burn_rate_predicted_24h(&self.pool, &org_id, deployment_mode, burn_rate).await;
             }
         }
     }
