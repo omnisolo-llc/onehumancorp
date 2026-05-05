@@ -30,6 +30,7 @@ pub mod anthropic_memory;
 pub mod lazy_load;
 pub mod screenshot;
 pub mod generative_visibility;
+pub mod handoff;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -114,6 +115,7 @@ pub fn all_tools(
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
+        handoff_tool(),
     ];
 
     if let Some(accessor) = memory_accessor {
@@ -122,4 +124,28 @@ pub fn all_tools(
     }
 
     tools
+}
+
+
+pub fn handoff_tool() -> Tool {
+    Tool {
+        name: "handoff".to_string(),
+        description: "AutoGen Mechanic: Transfers the conversation and control to another specialized department. Use this when the user request requires skills outside your current department. You must provide a highly detailed context summary so the next agent knows exactly what to do.".to_string(),
+        is_read_only: false,
+        parameters: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "department": {
+                    "type": "string",
+                    "description": "The target department (e.g., 'Operations', 'Marketing & Advertising', 'Sales & Acquisition', 'Customer Success', 'Finance & Payments', 'Legal & Compliance', 'Business Advisory')."
+                },
+                "context_summary": {
+                    "type": "string",
+                    "description": "A dense summary of the conversation so far, the work already completed, and the exact next steps the receiving department needs to take."
+                }
+            },
+            "required": ["department", "context_summary"]
+        }),
+        execute: Arc::new(handoff::HandoffExecutor),
+    }
 }

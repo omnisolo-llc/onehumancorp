@@ -797,6 +797,18 @@ impl Agent {
                 }
             }
 
+// Check for AutoGen Handoff pattern
+            for tr in &tool_results {
+                if tr.content.starts_with("[HANDOFF_TRIGGERED:") {
+                    tracing::info!("Handoff triggered: {}", tr.content);
+                    // Emit a specific event so the caller can handle the handoff
+                    on_event(AgentEvent::TaskComplete {
+                        content: format!("HANDOFF_TRIGGERED|{}", tr.content),
+                    });
+                    return Ok(tr.content.clone());
+                }
+            }
+
             // Append tool results as a user turn.
             messages.push(Message {
                 role: Role::Tool,
@@ -1366,7 +1378,7 @@ mod tests {
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
 
-    struct MockLlmClient {
+    pub struct MockLlmClient {
         responses: tokio::sync::Mutex<Vec<ChatResponse>>,
     }
 
@@ -2470,4 +2482,56 @@ mod tests {
         }
         assert!(found_task_error);
     }
+
+    #[tokio::test]
+    async fn test_handoff_halts_loop() {
+        let client = std::sync::Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ohc_builtin_agent_core::types::ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message {
+                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "handoff".to_string(),
+                            arguments: serde_json::json!({
+                                "department": "Sales",
+                                "context_summary": "Need help closing deal"
+                            }),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ohc_builtin_agent_core::types::ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant("stop"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let handoff_tool = crate::tools::handoff_tool();
+
+        let agent = Agent::new(client, vec![handoff_tool]);
+        let mut events = vec![];
+        let mut on_event = |e| events.push(e);
+
+        let result = agent.run(&AgentRunConfig::default(), "I want to close a deal", &mut on_event).await;
+
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+        assert!(res_str.contains("HANDOFF_TRIGGERED: Sales"));
+
+        let has_complete = events.iter().any(|e| {
+            if let AgentEvent::TaskComplete { content } = e {
+                content.contains("HANDOFF_TRIGGERED: Sales")
+            } else {
+                false
+            }
+        });
+        assert!(has_complete);
+    }
+
 }
