@@ -134,13 +134,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_closed_tasks() {
-        if std::env::var("DATABASE_URL").is_err() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if database_url == "dummy" {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(database_url)
+            .connect(&database_url)
             .await
             .unwrap();
 
