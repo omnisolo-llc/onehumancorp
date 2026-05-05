@@ -43,7 +43,7 @@ test.describe('Dashboard Core', () => {
 
   test('should show quick actions section', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Quick Actions')).toBeVisible();
+    await expect(page.locator('text=Business Advisory')).toBeVisible();
   });
 
   test('should display add product quick action', async ({ page }) => {
@@ -147,6 +147,6 @@ test.describe('Dashboard Mobile', () => {
 
   test('should display quick actions on mobile', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Quick Actions')).toBeVisible();
+    await expect(page.locator('text=Business Advisory')).toBeVisible();
   });
 });
