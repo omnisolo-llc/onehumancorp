@@ -111,7 +111,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         provider_type: "Standard".into(),
                     }),
                 });
-                match client.register_helper(request).await {
+                let response: Result<tonic::Response<ohc::orchestration::RegisterAgentResponse>, tonic::Status> = client.register_helper(request).await;
+                match response {
                     Ok(response) => println!("RESPONSE={:?}", response),
                     Err(e) => println!("ERR={:?}", e),
                 }
@@ -148,7 +149,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                        if let Ok(resp) = client.get_wizard_state(req).await {
+                        let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(req).await;
+                        if let Ok(resp) = response {
                             let state = resp.into_inner().state;
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = weak_wizard.upgrade() {
@@ -203,7 +205,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                            if let Ok(resp) = client.get_wizard_state(req).await {
+                            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(req).await;
+                            if let Ok(resp) = response {
                                 let state = resp.into_inner().state;
                                 // In the SetupWizard, step 10 is the final welcome checklist.
                                 // If they haven't reached step 10, they need to complete the wizard.
@@ -317,7 +320,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_ui_handle.upgrade() {
@@ -368,7 +372,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -386,7 +390,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_helper_config_handle = helper_config_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_helper_config_handle.upgrade() {
@@ -407,7 +412,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -442,7 +447,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         // Pass x-spiffe-id as system
                         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                        if let Err(e) = client.handle_config_wizard(req).await {
+                        let response: Result<tonic::Response<ohc::orchestration::AgentConfigResponse>, tonic::Status> = client.handle_config_wizard(req).await;
+                        if let Err(e) = response {
                             eprintln!("Failed to handle config wizard: {}", e);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_err.upgrade() {
@@ -476,7 +482,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
@@ -497,7 +504,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -523,7 +530,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match HubServiceClient::connect(url).await {
                     Ok(mut client) => {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                        if let Err(e) = client.save_wizard_state(request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
+                        if let Err(e) = response {
                             eprintln!("Failed to save wizard state: {}", e);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_err.upgrade() {
@@ -544,7 +552,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_focus,
                         });
                         prompt_request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                        if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::PromptTuningResponse>, tonic::Status> = client.handle_prompt_tuning(prompt_request).await;
+                        if let Err(e) = response {
                             eprintln!("Failed to handle prompt tuning: {}", e);
                             let ui_err_clone = ui_handle_err.clone();
                             slint::invoke_from_event_loop(move || {
@@ -579,7 +588,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_website_builder_handle = website_builder_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_website_builder_handle.upgrade() {
@@ -600,7 +610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -628,7 +638,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             prompt,
                             from_helper_id: "website_builder".into(),
                         });
-                        if let Ok(resp) = client.reason(request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                        if let Ok(resp) = response {
                             let desc = resp.into_inner().content;
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle.upgrade() {
@@ -687,7 +698,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_settings_handle = settings_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_settings_handle.upgrade() {
@@ -708,7 +720,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -745,7 +757,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_grow_business_handle = grow_business_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+            let response: Result<tonic::Response<ohc::orchestration::GetWizardStateResponse>, tonic::Status> = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await;
+            if let Ok(resp) = response {
                 let state = resp.into_inner().state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_grow_business_handle.upgrade() {
@@ -766,7 +779,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -815,7 +828,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
-                        let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let response: Result<tonic::Response<ohc::orchestration::GetReferralsResponse>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
                             let referrals = resp.into_inner().referrals;
                             let handle_clone = handle.clone();
@@ -835,7 +848,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let stats_response = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let stats_response: Result<tonic::Response<ohc::orchestration::GetReferralStatsResponse>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(stats_resp) = stats_response {
                             let stats = stats_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -853,7 +866,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let vc_response = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let vc_response: Result<tonic::Response<ohc::orchestration::GetViralCoefficientResponse>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(vc_resp) = vc_response {
                             let vc = vc_resp.into_inner();
                             let handle_clone = handle.clone();
@@ -937,7 +950,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             user_id: "current_user".to_string(), // In production, use actual user_id
                             referral_code: "".to_string(),
                         };
-                        let response = client.create_referral(tonic::Request::new(req)).await;
+                        let response: Result<tonic::Response<ohc::orchestration::Referral>, tonic::Status> = client.create_referral(tonic::Request::new(req)).await;
                         if let Ok(resp) = response {
                             let referral = resp.into_inner();
                             let link = format!("ohc://join?ref={}&utm_source=standalone_desktop&utm_medium=team_share&inviter=current_user", referral.referral_code);
@@ -1012,7 +1025,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = ohc::orchestration::helper_manager_service_client::HelperManagerServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
-            if let Ok(resp) = client.get_dashboard_snapshot(req).await {
+            let response: Result<tonic::Response<ohc::orchestration::DashboardSnapshot>, tonic::Status> = client.get_dashboard_snapshot(req).await;
+            if let Ok(resp) = response {
                 let snapshot = resp.into_inner();
                 if let Some(costs) = snapshot.costs {
                     slint::invoke_from_event_loop(move || {
@@ -1104,7 +1118,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(not(target_arch = "wasm32"))]
                     tokio::spawn(async move {
                         if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            if let Ok(resp) = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await {
+                            let response: Result<tonic::Response<ohc::orchestration::GetQuotaResponse>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
+                            if let Ok(resp) = response {
                                 let quota = resp.into_inner();
                                 let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
@@ -1433,7 +1448,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                if let Ok(resp) = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await {
+                let response: Result<tonic::Response<ohc::orchestration::GetAnalyticsResponse>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                if let Ok(resp) = response {
                     let analytics = resp.into_inner();
                     let total_helpers = analytics.total_helpers;
                     slint::invoke_from_event_loop(move || {
@@ -1748,7 +1764,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_choice: req_domain_choice,
                         });
 
-                        match client.start_onboarding(onboarding_request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::StartOnboardingResponse>, tonic::Status> = client.start_onboarding(onboarding_request).await;
+                        match response {
                             Ok(resp) => {
                                 let r = resp.into_inner();
                                 let msg = r.message.clone();
@@ -1785,7 +1802,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
                             state,
                         });
-                        if let Err(e) = client.save_wizard_state(request).await {
+                        let response: Result<tonic::Response<ohc::orchestration::SaveWizardStateResponse>, tonic::Status> = client.save_wizard_state(request).await;
+                        if let Err(e) = response {
                             println!("Failed to save wizard state: {:?}", e);
                         }
                     }
