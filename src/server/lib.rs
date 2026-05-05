@@ -1163,6 +1163,34 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .with_state(mesh_transport);
 
+    // Start Centralized Queue Worker
+    let queue_manager = std::sync::Arc::new(crate::queue::QueueManager::new(db.pool.clone()));
+    let (_shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel(1);
+    let worker_pool = db.pool.clone();
+
+    tokio::spawn(async move {
+        queue_manager.start_polling(
+            "main-worker",
+            std::time::Duration::from_secs(2),
+            move |job| {
+                let pool = worker_pool.clone();
+                async move {
+                    let action = job.payload.get("action").and_then(|a| a.as_str()).unwrap_or_default();
+                    if action == "publish_site" {
+                        let site_id_str = job.payload.get("site_id").and_then(|s| s.as_str()).ok_or_else(|| "Missing site_id".to_string())?;
+                        let tenant_id = uuid::Uuid::parse_str(&job.organization_id).map_err(|e| e.to_string())?;
+                        let site_id = uuid::Uuid::parse_str(site_id_str).map_err(|e| e.to_string())?;
+                        return crate::builder::jobs::execute_publish_site_job(&pool, tenant_id, site_id)
+                            .await
+                            .map_err(|e| e.to_string());
+                    }
+                    Err("Unknown action".to_string())
+                }
+            },
+            shutdown_rx
+        ).await;
+    });
+
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {

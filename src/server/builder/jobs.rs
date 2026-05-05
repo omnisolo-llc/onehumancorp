@@ -7,27 +7,27 @@ pub async fn enqueue_publish_site_job(
     tenant_id: Uuid,
     site_id: Uuid,
 ) -> Result<(), sqlx::Error> {
-    // Instead of simple spawn, we should use a job queue, but using spawn since queue impl takes custom payload
-    // In a real implementation this would enqueue to a PostgreSQL table for processing via SKIP LOCKED pattern.
-    // For now we persist a record and simulate processing.
-    sqlx::query("INSERT INTO tasks (tenant_id, mission_type, payload, status) VALUES ($1, 'publish_site', $2, 'pending') ON CONFLICT DO NOTHING")
-        .bind(tenant_id)
-        .bind(serde_json::json!({ "site_id": site_id }))
-        .execute(pool)
-        .await
-        .ok();
+    let job_id = Uuid::new_v4().to_string();
+    let payload = serde_json::json!({ "site_id": site_id, "action": "publish_site" });
 
-    let pool_clone = pool.clone();
-    tokio::spawn(async move {
-        match execute_publish_site_job(&pool_clone, tenant_id, site_id).await {
-            Ok(_) => info!("Successfully published site {}", site_id),
-            Err(e) => tracing::error!("Failed to publish site {}: {:?}", site_id, e),
-        }
-    });
+    let job = crate::queue::SubAgentJob {
+        id: job_id.clone(),
+        organization_id: tenant_id.to_string(),
+        parent_task_id: "".to_string(),
+        payload,
+        status: "QUEUED".to_string(),
+        worker_id: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+
+    let qm = crate::queue::QueueManager::new(pool.clone());
+    qm.enqueue(job).await?;
+    info!("Enqueued publish_site job {} for site {}", job_id, site_id);
     Ok(())
 }
 
-async fn execute_publish_site_job(
+pub async fn execute_publish_site_job(
     pool: &PgPool,
     tenant_id: Uuid,
     site_id: Uuid,
@@ -45,7 +45,6 @@ async fn execute_publish_site_job(
 
     // 4. Update published_at timestamp
     sqlx::query(
-
         "UPDATE builder_sites SET published_at = NOW(), updated_at = NOW() WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
@@ -54,8 +53,8 @@ async fn execute_publish_site_job(
     .await?;
 
     // 5. Mock SSL Provisioning (if custom domain)
-    // We would use query_as, but for simplicity we can just query the site.
-    let site = super::db::list_sites(pool, tenant_id).await?.into_iter().find(|s| s.id == site_id);
+    let sites = super::db::list_sites(pool, tenant_id).await?;
+    let site = sites.into_iter().find(|s| s.id == site_id);
 
     if let Some(s) = site {
         if let Some(domain) = s.domain {

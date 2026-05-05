@@ -1,5 +1,8 @@
 import { GlassCard } from "glass_card.slint";
-import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox, ScrollView } from "std-widgets.slint";
+
+
+export struct UiPage { id: string, title: string }
 
 export component WebsiteBuilder inherits Window {
     width: 600px;
@@ -25,7 +28,20 @@ export component WebsiteBuilder inherits Window {
     in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
     in-out property <bool> is_advanced: false;
+    in-out property <string> current_site_id: "00000000-0000-0000-0000-000000000000";
+    in-out property <string> current_page_id: "00000000-0000-0000-0000-000000000000";
+
     in-out property <bool> is_publishing: false;
+    in-out property <[UiPage]> pages: [
+        { id: "1", title: "Home" },
+        { id: "2", title: "About" },
+        { id: "3", title: "Services" }
+    ];
+    callback add_page();
+    callback delete_page(string);
+    callback move_page_up(int);
+    callback move_page_down(int);
+
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -163,6 +179,36 @@ export component WebsiteBuilder inherits Window {
                     Text { text: "Background will be removed"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                 }
                 TouchArea { clicked => { upload_logo(); } }
+            }
+        }
+
+
+        // Step 1.5: Manage Pages (Drag and Drop UI Placeholder)
+        if (step == 1) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Manage Pages"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+            Text { text: "Reorder pages for your site"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+            HorizontalBox {
+                Button { text: "New Page"; clicked => { add_page(); } }
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 8px;
+                    for page[idx] in pages : GlassCard {
+                        height: 50px;
+
+                        HorizontalBox {
+                            padding: 8px; spacing: 8px;
+                            Text { text: page.title; color: white; vertical-alignment: center; }
+                            Rectangle {}
+                            Button { text: "↑"; clicked => { move_page_up(idx); } }
+                            Button { text: "↓"; clicked => { move_page_down(idx); } }
+                            Button { text: "Delete"; clicked => { delete_page(page.id); } }
+                        }
+                    }
+                }
             }
         }
 

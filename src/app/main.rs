@@ -767,6 +767,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let website_builder_handle = website_builder_ui.as_weak();
+/*    let shared_http_client = reqwest::Client::builder().default_headers({
+        let mut headers = reqwest::header::HeaderMap::new();
+        let token = std::env::var("OHC_AUTH_TOKEN").unwrap_or_else(|_| "test-token".to_string());
+        if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+            headers.insert(reqwest::header::AUTHORIZATION, val);
+        }
+        headers
+    }).build().unwrap_or_default(); */
     let wb_ui_weak = website_builder_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = wb_ui_weak.upgrade() {
@@ -778,9 +786,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let state = resp.into_inner().state;
+
+                // Fetch dynamic site/page ID for real API calls
+                let mut dynamic_site_id = "00000000-0000-0000-0000-000000000000".to_string();
+                let mut dynamic_page_id = "00000000-0000-0000-0000-000000000000".to_string();
+
+                let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+
+                // Add Authorization header
+                let token = std::env::var("OHC_AUTH_TOKEN").unwrap_or_else(|_| "test-token".to_string());
+                let mut headers = reqwest::header::HeaderMap::new();
+                if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                    headers.insert(reqwest::header::AUTHORIZATION, val);
+                }
+
+                if let Ok(http_client) = reqwest::Client::builder().default_headers(headers).build() {
+                    if let Ok(res) = http_client.get(&format!("{}/api/v1/builder/sites", api_url)).send().await {
+                        if let Ok(json) = res.json::<serde_json::Value>().await {
+                            if let Some(sites) = json.as_array() {
+                                if let Some(first_site) = sites.first() {
+                                    if let Some(id) = first_site.get("id").and_then(|i| i.as_str()) {
+                                        dynamic_site_id = id.to_string();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if dynamic_site_id != "00000000-0000-0000-0000-000000000000" {
+                        if let Ok(res) = http_client.get(&format!("{}/api/v1/builder/sites/{}/pages", api_url, dynamic_site_id)).send().await {
+                            if let Ok(json) = res.json::<serde_json::Value>().await {
+                                if let Some(pages) = json.as_array() {
+                                    if let Some(first_page) = pages.first() {
+                                        if let Some(id) = first_page.get("id").and_then(|i| i.as_str()) {
+                                            dynamic_page_id = id.to_string();
+                                        }
+                                    }
+                                    let mut loaded_pages = Vec::new();
+                                    for p in pages {
+                                        if let (Some(id), Some(title)) = (p.get("id").and_then(|i| i.as_str()), p.get("title").and_then(|t| t.as_str())) {
+                                            loaded_pages.push((id.to_string(), title.to_string()));
+                                        }
+                                    }
+
+                                    let ui_handle = init_website_builder_handle.clone();
+                                    slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = ui_handle.upgrade() {
+                                            let mut ui_pages = Vec::new();
+                                            for (id, title) in loaded_pages {
+                                                ui_pages.push(app::UiPage { id: id.into(), title: title.into() });
+                                            }
+                                            if !ui_pages.is_empty() {
+                                                ui.set_pages(std::rc::Rc::new(slint::VecModel::from(ui_pages)).into());
+                                            }
+                                        }
+                                    }).unwrap();
+                                }
+                            }
+                        }
+                    }
+                }
+
                 slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_website_builder_handle.upgrade() {
+                    if let Some(ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        ui.set_current_site_id(dynamic_site_id.into());
+                        ui.set_current_page_id(dynamic_page_id.into());
                     }
                 }).unwrap();
             }
@@ -807,6 +878,115 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     website_builder_ui.on_upload_logo(|| {
         // Mocking upload for test environment since file dialogs are hard to test
     });
+
+    let shared_http_client = reqwest::Client::builder().default_headers({
+        let mut headers = reqwest::header::HeaderMap::new();
+        let token = std::env::var("OHC_AUTH_TOKEN").unwrap_or_else(|_| "test-token".to_string());
+        if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+            headers.insert(reqwest::header::AUTHORIZATION, val);
+        }
+        headers
+    }).build().unwrap_or_default();
+
+    let website_builder_handle_p = website_builder_ui.as_weak();
+    let client_add = shared_http_client.clone();
+    let website_builder_handle_p_async = website_builder_handle_p.clone();
+    website_builder_ui.on_add_page(move || {
+        let ui_async = website_builder_handle_p_async.clone();
+        if let Some(ui) = website_builder_handle_p.upgrade() {
+            let site_id = ui.get_current_site_id().to_string();
+            let client = client_add.clone();
+
+            // Show optimistic loading state in real app, here we just spawn and fetch
+            tokio::spawn(async move {
+                let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                if let Ok(res) = client.post(&format!("{}/api/v1/builder/sites/{}/pages", api_url, site_id))
+                    .json(&serde_json::json!({
+                        "title": "New Page",
+                        "path": "/new-page"
+                    }))
+                    .send().await {
+
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                        if let Some(new_id) = json.get("id").and_then(|i| i.as_str()) {
+                            let new_id = new_id.to_string();
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_async.upgrade() {
+                                    let mut current = ui.get_pages().iter().collect::<Vec<_>>();
+                                    current.push(app::UiPage { id: new_id.into(), title: "New Page".into() });
+                                    ui.set_pages(std::rc::Rc::new(slint::VecModel::from(current)).into());
+                                }
+                            }).unwrap();
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    let website_builder_handle_d = website_builder_ui.as_weak();
+    let client_del = shared_http_client.clone();
+    website_builder_ui.on_delete_page(move |id| {
+        if let Some(ui) = website_builder_handle_d.upgrade() {
+            let current = ui.get_pages().iter().filter(|p| p.id != id).collect::<Vec<_>>();
+            ui.set_pages(std::rc::Rc::new(slint::VecModel::from(current)).into());
+
+            let id_str = id.to_string();
+            let client = client_del.clone();
+            tokio::spawn(async move {
+                let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                let _ = client.delete(&format!("{}/api/v1/builder/pages/{}", api_url, id_str))
+                    .send().await;
+            });
+        }
+    });
+
+    let website_builder_handle_u = website_builder_ui.as_weak();
+    let client_up = shared_http_client.clone();
+    website_builder_ui.on_move_page_up(move |idx| {
+        if let Some(ui) = website_builder_handle_u.upgrade() {
+            let idx = idx as usize;
+            if idx > 0 {
+                let mut current = ui.get_pages().iter().collect::<Vec<_>>();
+                current.swap(idx, idx - 1);
+                let page_ids: Vec<String> = current.iter().map(|p| p.id.to_string()).collect();
+                ui.set_pages(std::rc::Rc::new(slint::VecModel::from(current)).into());
+
+                let site_id = ui.get_current_site_id().to_string();
+                let client = client_up.clone();
+                tokio::spawn(async move {
+                    let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                    let _ = client.post(&format!("{}/api/v1/builder/sites/{}/pages/reorder", api_url, site_id))
+                        .json(&serde_json::json!({ "page_ids": page_ids }))
+                        .send().await;
+                });
+            }
+        }
+    });
+
+    let website_builder_handle_do = website_builder_ui.as_weak();
+    let client_down = shared_http_client.clone();
+    website_builder_ui.on_move_page_down(move |idx| {
+        if let Some(ui) = website_builder_handle_do.upgrade() {
+            let idx = idx as usize;
+            let mut current = ui.get_pages().iter().collect::<Vec<_>>();
+            if idx + 1 < current.len() {
+                current.swap(idx, idx + 1);
+                let page_ids: Vec<String> = current.iter().map(|p| p.id.to_string()).collect();
+                ui.set_pages(std::rc::Rc::new(slint::VecModel::from(current)).into());
+
+                let site_id = ui.get_current_site_id().to_string();
+                let client = client_down.clone();
+                tokio::spawn(async move {
+                    let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                    let _ = client.post(&format!("{}/api/v1/builder/sites/{}/pages/reorder", api_url, site_id))
+                        .json(&serde_json::json!({ "page_ids": page_ids }))
+                        .send().await;
+                });
+            }
+        }
+    });
+
 
     website_builder_ui.on_generate_logo(|| {
         // AI generation mocked
@@ -843,12 +1023,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Mocking upload for test environment
     });
 
+    let client_pub = shared_http_client.clone();
     website_builder_ui.on_publish_site({
         let ui_handle = website_builder_handle.clone();
         move |_template, _color, _product, _price, _description, _domain| {
             if let Some(ui) = ui_handle.upgrade() {
                 ui.set_is_publishing(false);
                 ui.set_step(4); // Ensure it stays on review/publish screen
+
+                let site_id = ui.get_current_site_id().to_string();
+                let client = client_pub.clone();
+                tokio::spawn(async move {
+                    let api_url = std::env::var("OHC_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+                    let _ = client.post(&format!("{}/api/v1/builder/sites/{}/publish", api_url, site_id))
+                        .send().await;
+                });
             }
         }
     });
