@@ -117,18 +117,3 @@ This report details the evaluation of 7 integration tools across requested categ
 **Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
 **Priority**: P2
 **Estimated Scope**: Small
-## 8. Slint UI Implementation: AutoDream Visualization
-**Title**: Implement AutoDream Walkthrough and Visualizer in Slint
-**Problem Statement**: Users need to understand the internal workings of the AutoDream memory pipeline without technical jargon. Existing components were placeholders.
-**Research Report**:
-- The UI needs to strictly follow the OHC Premium Token library design system (Glassmorphism, Outfit/Inter typography).
-- Constraints: The app requires mobile-first design, meaning layouts must be responsive and start gracefully at 375px.
-- Previous attempts used `Window` which was an anti-pattern when embedded, so components were refactored to inherit `Rectangle` instead.
-- Responsiveness was achieved by removing fixed widths (e.g. `600px` -> `max-width: 600px; width: parent.width;`) and allowing layout boxes to flow vertically on narrow viewports.
-**Design Doc**:
-- Developed `VectorMemoryVisualizer` using CSS gradients, floating mock data points, and mock distance lines to illustrate semantic memory clustering.
-- Developed `AutodreamWalkthrough` that cycles through four informative steps regarding session logging, pruning, batching, and embeddings.
-- Both components are embedded into the central `SwarmMemory` panel.
-**Implementation Prompt**: The AutoDream pipeline UI is fully implemented and responsive. E2E tests have been added to simulate a logged-in user navigating to the memory view and triggering the dialogs.
-**Priority**: P1
-**Estimated Scope**: Small
