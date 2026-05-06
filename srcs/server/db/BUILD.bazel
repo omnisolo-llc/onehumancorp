@@ -1,5 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
 filegroup(
     name = "migrations",
     srcs = glob(["migrations/*.sql"]),
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "db",
+    srcs = ["entities.go"],
+    importpath = "onehumancorp/srcs/server/db",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+    ],
 )
