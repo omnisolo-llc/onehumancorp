@@ -9,18 +9,15 @@ use chrono::Utc;
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 use opentelemetry::global;
-use opentelemetry::metrics::Counter;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
-    _embedded_counter: Counter<u64>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
-        let meter = global::meter("ohc.autodream");
-        let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
-        AutoDreamWorker { db, _embedded_counter: embedded_counter }
+        let _meter = global::meter("ohc.autodream");
+        AutoDreamWorker { db }
     }
 
 

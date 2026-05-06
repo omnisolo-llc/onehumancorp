@@ -1,7 +1,0 @@
-issue_category: cleanup
-status: resolved
-details:
-  - Fixed unused variable warnings in src/app/main.rs (_help_center_handle, _interactive_walkthrough_handle).
-  - Fixed unnecessary mutability warning in src/agents/builtin/llm/openai.rs.
-  - Fixed dead code / unused field warning in src/agents/builtin/autodream.rs (_embedded_counter).
-  - All warnings are clear and bazelisk test //... passed successfully.

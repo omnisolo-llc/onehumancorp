@@ -131,6 +131,7 @@ impl LlmClient for OpenAIClient {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
         let mut messages = Vec::new();
 
+        let _ = &mut messages;
         if !req.system.is_empty() {
             messages.push(OpenAIMessage {
                 role: "system".to_string(),
