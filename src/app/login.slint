@@ -133,6 +133,12 @@ export component Login inherits Window {
                     text: root.settings_button_text;
                     clicked => { open_settings(); }
                 }
+
+                Button {
+                    height: 44px;
+                    text: "Guided Setup";
+                    clicked => { start_setup_wizard(); }
+                }
             }
     }
 }
