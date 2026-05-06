@@ -45,11 +45,11 @@ fn create() -> app::Logs { crate::ui_tests::init(); app::Logs::new().unwrap() }
 
 #[test] fn logs_flow_refresh_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_refresh(move || { *c.lock().unwrap() = true; });
+    ui.on_refresh(move || { *c.borrow_mut() = true; });
     ui.invoke_refresh();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 // --- Unique Scenarios with Verification ---
