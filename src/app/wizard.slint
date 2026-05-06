@@ -41,7 +41,7 @@ export component Wizard inherits Window {
                     Text { text: "2"; color: white; horizontal-alignment: center; } 
                 }
             }
-            Text { text: "AI Assistant"; color: step == 1 ? #1e293b : #64748b; }
+            Text { text: "AI Helper"; color: step == 1 ? #1e293b : #64748b; }
             
             Rectangle { 
                 background: step >= 2 ? #a855f7 : #e2e8f0; 
@@ -65,9 +65,9 @@ export component Wizard inherits Window {
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "AI Assistant"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Secret Key"; }
-            LineEdit { placeholder-text: "Assistant Name";   }
+            Text { text: "AI Helper"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Store Connection Key"; }
+            LineEdit { placeholder-text: "Helper Name";   }
         }
 
         if (step == 2) : VerticalBox {

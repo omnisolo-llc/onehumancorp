@@ -140,5 +140,5 @@ fn test_e2e_ai_help_chat_navigation_flow() {
 
     // Verify the destination component renders correctly
     let ui = crate::app::AiHelpChat::new().unwrap();
-    assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Instant help"));
 }

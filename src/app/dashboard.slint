@@ -169,7 +169,7 @@ export component Dashboard inherits Window {
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Helpers Active"; value: active_helpers_count; value_color: #10b981; }
                     StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
                 HorizontalBox {
@@ -185,7 +185,7 @@ export component Dashboard inherits Window {
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Helpers Active"; value: active_helpers_count; value_color: #10b981; }
                 }
                 HorizontalBox {
                     spacing: 16px;
@@ -195,10 +195,10 @@ export component Dashboard inherits Window {
             }
         }
 
-        // AI Assistant Health (Telemetry Visualization)
+        // Helper Performance (Telemetry Visualization)
         if (show_telemetry_visualization) : VerticalBox {
             spacing: 12px;
-            Text { text: "System Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Helper Performance"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
             HorizontalBox {
                 spacing: 16px;
@@ -210,7 +210,7 @@ export component Dashboard inherits Window {
                 border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
                 height: 200px;
-                HorizontalBox { alignment: center; Text { text: "[ Assistant Performance Chart ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
+                HorizontalBox { alignment: center; Text { text: "[ Helper Performance Chart ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
             }
         }
 

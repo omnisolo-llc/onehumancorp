@@ -542,6 +542,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         status TEXT NOT NULL,
                         payload TEXT NOT NULL,
+                        mission_log TEXT,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         organization_id TEXT NOT NULL DEFAULT 'system',

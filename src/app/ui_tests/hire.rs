@@ -1,14 +1,14 @@
 use crate::app;
 
-fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().unwrap() }
+fn create() -> app::HelperHire { crate::ui_tests::init(); app::HelperHire::new().unwrap() }
 
 // --- Hacking / Corner Cases ---
 
 #[test] fn hire_xss_name() {
     let ui = create();
     let xss = "<body onload=alert('hire')>";
-    ui.set_agent_name(xss.into());
-    assert_eq!(ui.get_agent_name(), xss);
+    ui.set_helper_name(xss.into());
+    assert_eq!(ui.get_helper_name(), xss);
 }
 
 #[test] fn hire_injection_role() {
@@ -30,9 +30,9 @@ fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().u
     let ui = create();
     let called_name = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_name.clone();
-    ui.on_deploy_agent(move |name, _, _| { *c.borrow_mut() = name.to_string(); });
+    ui.on_deploy_helper(move |name, _, _| { *c.borrow_mut() = name.to_string(); });
     
-    ui.invoke_deploy_agent("Robot".into(), "Cleaner".into(), "Local".into());
+    ui.invoke_deploy_helper("Robot".into(), "Cleaner".into(), "Local".into());
     assert_eq!(*called_name.borrow(), "Robot");
 }
 
@@ -54,12 +54,12 @@ fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().u
 #[test]
 fn create_verify_agent_name() {
     let ui = create();
-    ui.set_agent_name("Alpha Bot".into());
-    assert_eq!(ui.get_agent_name(), "Alpha Bot");
-    ui.set_agent_name("n11".into());
-    assert_eq!(ui.get_agent_name(), "n11");
-    ui.set_agent_name("n12".into());
-    assert_eq!(ui.get_agent_name(), "n12");
+    ui.set_helper_name("Alpha Bot".into());
+    assert_eq!(ui.get_helper_name(), "Alpha Bot");
+    ui.set_helper_name("n11".into());
+    assert_eq!(ui.get_helper_name(), "n11");
+    ui.set_helper_name("n12".into());
+    assert_eq!(ui.get_helper_name(), "n12");
 }
 
 #[test]

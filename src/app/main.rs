@@ -201,8 +201,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
+                        id: "helper_1".into(),
+                        name: "Rust Helper".into(),
                         role: "Worker".into(),
                         organization_id: "org_1".into(),
                         status: "Running".into(),
@@ -710,31 +710,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agent_config_ui = app::AgentConfig::new()?;
-    agent_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let agent_config_handle = agent_config_ui.as_weak();
-    let ac_ui_weak = agent_config_handle.clone();
+    let helper_config_ui = app::HelperConfig::new()?;
+    helper_config_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let helper_config_handle = helper_config_ui.as_weak();
+    let ac_ui_weak = helper_config_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = ac_ui_weak.upgrade() {
             ui.set_is_advanced(val);
         }
     }));
-    let init_agent_config_handle = agent_config_handle.clone();
+    let init_helper_config_handle = helper_config_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
                 let state = inner.state;
                 slint::invoke_from_event_loop(move || {
-                    if let Some(_ui) = init_agent_config_handle.upgrade() {
+                    if let Some(_ui) = init_helper_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
                 }).unwrap();
             }
         }
     });
-    agent_config_ui.on_save_state({
-        let ui_handle = agent_config_handle.clone();
+    helper_config_ui.on_save_state({
+        let ui_handle = helper_config_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
@@ -750,9 +750,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
-    agent_config_ui.on_activate_agent({
-        let ui_handle = agent_config_handle.clone();
-        move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+    helper_config_ui.on_activate_helper({
+        let ui_handle = helper_config_handle.clone();
+        move |helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
@@ -773,7 +773,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         };
 
                         let req = tonic::Request::new(ohc::orchestration::AgentConfig {
-                            role: agent.to_string(),
+                            role: helper.to_string(),
                             provider: "default".to_string(),
                             capabilities,
                             work_hours,
@@ -1462,8 +1462,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
                         ui.set_total_tokens(format!("{}", summary.total_tokens).into());
 
-                        let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
-                            app::UiAgentCost {
+                        let ui_helper_costs: Vec<app::UiHelperCost> = summary.agents.into_iter().map(|ac| {
+                            app::UiHelperCost {
                                 name: ac.agent_id.into(),
                                 cost: format!("${:.2}", ac.cost_usd).into(),
                                 roi: format!("{:.1}%", ac.roi).into(),
@@ -1472,7 +1472,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }).collect();
 
-                        ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
+                        ui.set_helper_costs(slint::ModelRc::new(slint::VecModel::from(ui_helper_costs)));
                     }
 
                     if let Some(ui) = my_plan_handle_fetch.upgrade() {
@@ -1504,8 +1504,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
                             ui.set_total_tokens(format!("{}", summary.total_tokens).into());
 
-                            let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
-                                app::UiAgentCost {
+                            let ui_helper_costs: Vec<app::UiHelperCost> = summary.agents.into_iter().map(|ac| {
+                                app::UiHelperCost {
                                     name: ac.agent_id.into(),
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
@@ -1514,7 +1514,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }).collect();
 
-                            ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
+                            ui.set_helper_costs(slint::ModelRc::new(slint::VecModel::from(ui_helper_costs)));
                         }
                     }).unwrap();
                 }
@@ -2189,18 +2189,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
-    let fix_agent_ui = app::FixAgent::new()?;
+    let helpers_ui = app::Helpers::new()?;
+    let helper_hire_ui = app::HelperHire::new()?;
+    let fix_helper_ui = app::FixHelper::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
 
-    fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    fix_helper_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    let fix_agent_handle = fix_agent_ui.as_weak();
-    let fa_ui_weak = fix_agent_handle.clone();
+    let fix_helper_handle = fix_helper_ui.as_weak();
+    let fa_ui_weak = fix_helper_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = fa_ui_weak.upgrade() {
             ui.set_is_advanced(val);
@@ -2223,8 +2223,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
 
-    fix_agent_ui.on_save_state({
-        let ui_handle = fix_agent_handle.clone();
+    fix_helper_ui.on_save_state({
+        let ui_handle = fix_helper_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 set_global_is_advanced(ui.get_is_advanced());
@@ -2281,12 +2281,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
-    let agents_ui_handle = agents_ui.as_weak();
-    let agent_hire_handle = agent_hire_ui.as_weak();
+    let helpers_ui_handle = helpers_ui.as_weak();
+    let helper_hire_handle = helper_hire_ui.as_weak();
 
-    agents_ui.on_hire_agent(move || {
-        let agents_ui_handle_inner = agents_ui_handle.clone();
-        let agent_hire_handle_inner = agent_hire_handle.clone();
+    helpers_ui.on_hire_helper(move || {
+        let helpers_ui_handle_inner = helpers_ui_handle.clone();
+        let helper_hire_handle_inner = helper_hire_handle.clone();
 
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
@@ -2296,12 +2296,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
                     let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = agents_ui_handle_inner.upgrade() {
+                        if let Some(ui) = helpers_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 helper. Upgrade to unlock more power!".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
-                                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                                if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                                     let _ = hire_ui.show();
                                 }
                             }
@@ -2313,7 +2313,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Fallback if network fails
             slint::invoke_from_event_loop(move || {
-                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                     let _ = hire_ui.show();
                 }
             }).unwrap();
@@ -2322,8 +2322,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_arch = "wasm32")]
         wasm_bindgen_futures::spawn_local(async move {
             slint::invoke_from_event_loop(move || {
-                if let Some(_ui) = agents_ui_handle_inner.upgrade() {
-                    if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
+                if let Some(_ui) = helpers_ui_handle_inner.upgrade() {
+                    if let Some(hire_ui) = helper_hire_handle_inner.upgrade() {
                         let _ = hire_ui.show();
                     }
                 }
@@ -2331,9 +2331,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
-    let fix_agent_handle = fix_agent_ui.as_weak();
-    agents_ui.on_fix_agent(move |_id| {
-        if let Some(ui) = fix_agent_handle.upgrade() {
+    let fix_helper_handle = fix_helper_ui.as_weak();
+    helpers_ui.on_fix_helper(move |_id| {
+        if let Some(ui) = fix_helper_handle.upgrade() {
             let _ = ui.show();
         }
     });
@@ -3266,7 +3266,7 @@ mod e2e_tests {
     }
 
     #[test]
-    fn test_e2e_agent_activity_feed_approvals_flow() {
+    fn test_e2e_helper_activity_feed_approvals_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -3598,22 +3598,22 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_hire_next_button_disabled_by_default() {
+    fn test_helper_hire_next_button_disabled_by_default() {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_role(), "");
         assert_eq!(ui.get_next_enabled(), false);
     }
 
     #[test]
-    fn test_agent_hire_next_button_enabled_after_role_selection() {
+    fn test_helper_hire_next_button_enabled_after_role_selection() {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
@@ -3629,9 +3629,9 @@ mod tests {
     }
 
     #[test]
-    fn test_agents_creation() {
+    fn test_helpers_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Agents::new().unwrap();
+        app::Helpers::new().unwrap();
     }
     #[test]
     fn test_chat_creation() {
@@ -3889,9 +3889,9 @@ mod tests {
         app::TaskList::new().unwrap();
     }
     #[test]
-    fn test_fix_agent_creation() {
+    fn test_fix_helper_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::FixAgent::new().unwrap();
+        app::FixHelper::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
@@ -4550,7 +4550,7 @@ mod docs_tests {
         app::ApiDocs::new().unwrap();
     }
     #[test]
-    fn test_e2e_agent_config_flow() {
+    fn test_e2e_helper_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -4566,15 +4566,15 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let ui = app::AgentConfig::new().unwrap();
+        let ui = app::HelperConfig::new().unwrap();
 
         ui.on_save_state(|| {});
 
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
-            assert_eq!(agent, "CustomerSuccess");
+        ui.on_activate_helper(move |helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
+            assert_eq!(helper, "CustomerSuccess");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
             assert_eq!(can_write_descriptions, true);
@@ -4583,14 +4583,14 @@ mod docs_tests {
             *publish_success_clone.borrow_mut() = true;
         });
 
-        // Step 0: Choose Agent -> Step 1
+        // Step 0: Choose Helper -> Step 1
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_is_advanced(), false);
         ui.set_is_advanced(true);
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("CustomerSuccess".into());
+        ui.set_selected_helper("CustomerSuccess".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -4603,8 +4603,8 @@ mod docs_tests {
         ui.invoke_next_step();
 
         // Step 3: Review
-        ui.invoke_activate_agent(
-            ui.get_selected_agent(),
+        ui.invoke_activate_helper(
+            ui.get_selected_helper(),
             ui.get_can_reply(),
             ui.get_can_social(),
             ui.get_can_write_descriptions(),
@@ -4613,7 +4613,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "CustomerSuccess");
+        assert_eq!(ui.get_selected_helper(), "CustomerSuccess");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);
@@ -5020,7 +5020,7 @@ mod docs_tests {
 
 
     #[test]
-    fn test_e2e_agent_hire_flow() {
+    fn test_e2e_helper_hire_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -5036,19 +5036,19 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
-        let agent_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let agent_hire_opened_clone = agent_hire_opened.clone();
+        // Here we simulate the dashboard launching the Helpers view
+        let helpers_ui = app::Helpers::new().unwrap();
+        let helper_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let helper_hire_opened_clone = helper_hire_opened.clone();
 
-        agents_ui.on_hire_agent(move || {
-            *agent_hire_opened_clone.borrow_mut() = true;
+        helpers_ui.on_hire_helper(move || {
+            *helper_hire_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(*agent_hire_opened.borrow(), "Agent Hire should be opened from Agents screen");
+        helpers_ui.invoke_hire_helper();
+        assert!(*helper_hire_opened.borrow(), "Helper Hire should be opened from Helpers screen");
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::HelperHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
@@ -5077,7 +5077,7 @@ mod docs_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited helpers.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -5086,21 +5086,21 @@ mod docs_tests {
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
         // Test agents limit soft paywall
-        let agents_ui = app::Agents::new().unwrap();
-        let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
-            if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
+        let helpers_ui = app::Helpers::new().unwrap();
+        let helpers_ui_handle = helpers_ui.as_weak();
+        helpers_ui.on_hire_helper(move || {
+            if let Some(ui) = helpers_ui_handle.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited helpers.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        helpers_ui.invoke_hire_helper();
+        assert!(helpers_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring helper beyond free tier limit");
     }
 
     #[test]
-    fn test_e2e_fix_agent_flow() {
+    fn test_e2e_fix_helper_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
@@ -5116,18 +5116,18 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        // Here we simulate the dashboard launching the Agents view
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
+        // Here we simulate the dashboard launching the Helpers view
+        let helpers_ui = app::Helpers::new().unwrap();
+        let fix_helper_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_helper_opened_clone = fix_helper_opened.clone();
 
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
+        helpers_ui.on_fix_helper(move |id| {
+            assert_eq!(id, "helper_1");
+            *fix_helper_opened_clone.borrow_mut() = true;
         });
 
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+        helpers_ui.invoke_fix_helper("helper_1".into());
+        assert!(*fix_helper_opened.borrow(), "Fix Helper should be opened from Helpers screen");
     }
 
     #[test]
@@ -5390,18 +5390,18 @@ mod remaining_e2e_tests {
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
         assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to add more!");
 
-        let agents_ui = app::Agents::new().unwrap();
-        let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
-            if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+        let helpers_ui = app::Helpers::new().unwrap();
+        let helpers_ui_handle = helpers_ui.as_weak();
+        helpers_ui.on_hire_helper(move || {
+            if let Some(ui) = helpers_ui_handle.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 helper. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 agent. Upgrade to unlock more power!");
+        helpers_ui.invoke_hire_helper();
+        assert!(helpers_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring helper beyond free tier limit");
+        assert_eq!(helpers_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 helper. Upgrade to unlock more power!");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
@@ -5695,7 +5695,7 @@ mod remaining_e2e_tests {
             }
         });
 
-        let agent_config = app::AgentConfig::new().unwrap();
+        let agent_config = app::HelperConfig::new().unwrap();
         agent_config.set_is_advanced(false);
         let ac_weak = agent_config.as_weak();
         add_advanced_listener(Box::new(move |val| {
@@ -5850,29 +5850,29 @@ mod remaining_e2e_tests {
         cost_ui.set_total_spend("$45.50".into());
         cost_ui.set_total_tokens("1,500,000".into());
 
-        let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiAgentCost {
-                name: "Customer Support Agent".into(),
+        let helper_costs = slint::ModelRc::new(slint::VecModel::from(vec![
+            app::UiHelperCost {
+                name: "Customer Support Helper".into(),
                 cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
                 pct: 0.55,
             },
-            app::UiAgentCost {
-                name: "Marketing Agent".into(),
+            app::UiHelperCost {
+                name: "Marketing Helper".into(),
                 cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
                 pct: 0.45,
             }
         ]));
 
-        cost_ui.set_agent_costs(agent_costs.clone());
+        cost_ui.set_helper_costs(helper_costs.clone());
 
         assert_eq!(cost_ui.get_total_spend(), "$45.50");
         assert_eq!(cost_ui.get_total_tokens(), "1,500,000");
 
-        let retrieved_costs = cost_ui.get_agent_costs();
+        let retrieved_costs = cost_ui.get_helper_costs();
         assert_eq!(retrieved_costs.row_count(), 2);
-        let first_agent = retrieved_costs.row_data(0).unwrap();
-        assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        let first_helper = retrieved_costs.row_data(0).unwrap();
+        assert_eq!(first_helper.name, "Customer Support Helper");
+        assert_eq!(first_helper.cost, "$25.00"); assert_eq!(first_helper.roi, "150%"); assert_eq!(first_helper.efficiency, "100 tok/$");
     }
 
     #[test]
@@ -7058,7 +7058,7 @@ mod e2e_login_to_dashboard_tests {
 
         // Assert jargon was removed
         dashboard_ui.set_show_telemetry_visualization(true);
-        assert!(dashboard_ui.get_show_telemetry_visualization(), "Assistant Performance Chart should be visible");
+        assert!(dashboard_ui.get_show_telemetry_visualization(), "Helper Performance Chart should be visible");
 
         let pending_tasks = vec![
             app::UiPendingApproval {

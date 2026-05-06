@@ -39,8 +39,8 @@ fn create_verify_user_input() {
     assert_eq!(ui.get_user_input(), "How do I add a product?");
     ui.set_user_input("Can I use Apple Pay?".into());
     assert_eq!(ui.get_user_input(), "Can I use Apple Pay?");
-    ui.set_user_input("What is an AI agent?".into());
-    assert_eq!(ui.get_user_input(), "What is an AI agent?");
+    ui.set_user_input("How do I use a helper?".into());
+    assert_eq!(ui.get_user_input(), "How do I use a helper?");
 }
 
 #[test]
@@ -183,5 +183,5 @@ fn test_e2e_ai_help_chat_initial_message_content() {
 
     let msg = ui.get_messages().row_data(0).unwrap();
     assert_eq!(msg.sender, "AI");
-    assert!(msg.text.contains("Hi! I'm your OHC Help Assistant"));
+    assert!(msg.text.contains("Hi! I'm your OHC Instant Help"));
 }

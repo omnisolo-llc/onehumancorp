@@ -241,7 +241,7 @@ impl McpService for MyMcpService {
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
-            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
+            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content, &None)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }

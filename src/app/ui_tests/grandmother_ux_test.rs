@@ -88,7 +88,7 @@ fn test_ai_help_chat_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::AiHelpChat::new().unwrap();
-    assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Instant help"));
 }
 
 #[test]
@@ -100,10 +100,10 @@ fn test_kairos_orchestration_walkthrough_title() {
 }
 
 #[test]
-fn test_ongoing_management_fix_agent_title() {
+fn test_ongoing_management_fix_helper_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-    let ui = crate::app::FixAgent::new().unwrap();
+    let ui = crate::app::FixHelper::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("Help Me Fix This"));
 }
 
@@ -116,11 +116,11 @@ fn test_ongoing_management_upgrade_title() {
 }
 
 #[test]
-fn test_secure_agent_config_title() {
+fn test_secure_helper_config_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-    let ui = crate::app::SecureAgentConfig::new().unwrap();
-    assert_eq!(ui.get_test_title(), slint::SharedString::from("Secure Agent Config"));
+    let ui = crate::app::SecureHelperConfig::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Secure Helper Config"));
 }
 
 #[test]

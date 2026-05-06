@@ -9,10 +9,10 @@ export { HelpCenter } from "./help_center.slint";
 import { Button, VerticalBox } from "std-widgets.slint";
 
 
-import { AgentStatusIndicator } from "./agent_status_indicator.slint";
-export { FixAgent, Upgrade, Billing } from "./ongoing_management.slint";
+import { HelperStatusIndicator } from "./helper_status_indicator.slint";
+export { FixHelper, Upgrade, Billing } from "./ongoing_management.slint";
 export { Settings } from "./settings.slint";
-export { Agents } from "./agents.slint";
+export { Helpers } from "./helpers.slint";
 export { MyPlan } from "./my_plan.slint";
 export { Channels } from "./channels.slint";
 export { Chat } from "./chat.slint";
@@ -21,7 +21,7 @@ export { Dashboard } from "./dashboard.slint";
 export { WelcomeChecklist } from "./welcome_checklist.slint";
 export { Login } from "./login.slint";
 export { BusinessManager } from "./business_manager.slint";
-export { CostDashboard, UiAgentCost } from "./cost_dashboard.slint";
+export { CostDashboard, UiHelperCost } from "./cost_dashboard.slint";
 export { Security, UiSecurityIssue } from "./security.slint";
 export { Integrations, UiMcpTool } from "./integrations.slint";
 export { Logs, UiLogLine } from "./logs.slint";
@@ -36,9 +36,9 @@ export { Referrals, UiReferral } from "./referrals.slint";
 export { Scaling } from "./scaling.slint";
 export { SwarmMemory } from "./swarm_memory.slint";
 export { WebsiteBuilder } from "./website_builder.slint";
-export { SecureAgentConfig } from "./secure_agent_config.slint";
-export { AgentConfig } from "./agent_config.slint";
-export { AgentHire } from "./agent_hire.slint";
+export { SecureHelperConfig } from "./secure_helper_config.slint";
+export { HelperConfig } from "./helper_config.slint";
+export { HelperHire } from "./helper_hire.slint";
 export { Landing } from "./landing.slint";
 export { SetupWizard } from "./setup_wizard.slint";
 export { TaskList, UiTask } from "./task_list.slint";
@@ -56,16 +56,16 @@ export component StatCardWindow inherits Window {
     sc := StatCard {}
 }
 
-export component AgentStatusIndicatorWindow inherits Window {
+export component HelperStatusIndicatorWindow inherits Window {
     width: 100px;
     height: 100px;
-    title: "Agent Status Indicator Test";
+    title: "Helper Status Indicator Test";
     
     in-out property <bool> is_active <=> asi.is_active;
     in-out property <string> status_text <=> asi.status_text;
     in-out property <string> status_color <=> asi.status_color;
 
-    asi := AgentStatusIndicator {}
+    asi := HelperStatusIndicator {}
 }
 export { GrowBusiness } from "./grow_business.slint";
 export { Meetings, UiMeeting } from "./meetings.slint";

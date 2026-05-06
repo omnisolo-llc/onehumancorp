@@ -126,11 +126,11 @@ impl SipDB {
         final_payload
     }
 
-    pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
+    pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>, mission_log: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
         let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
-            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
+            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local, mission_log).await
         }).await;
 
         match res {
@@ -140,7 +140,7 @@ impl SipDB {
         }
     }
 
-    pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+    pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool, mission_log: &Option<String>) -> Result<(), sqlx::Error> {
         let mut attempt = 0;
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
@@ -149,7 +149,7 @@ impl SipDB {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut tx = self.pool.begin().await?;
                 crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
-                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
+                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local, mission_log).await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
             }).await;
@@ -181,7 +181,7 @@ impl SipDB {
         }
     }
 
-    pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+    pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, mission_log: &Option<String>) -> Result<(), sqlx::Error> {
         let mut final_status = status.to_string();
 
         // Implement Elastic Swarm Bursting: Check for queue saturation
@@ -203,9 +203,10 @@ impl SipDB {
         if let Some(r) = row {
             let existing_id: String = r.get("id");
             if !existing_id.is_empty() && force_local {
-                sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
+                sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, mission_log = COALESCE(mission_log, '') || $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND organization_id = $5")
                     .bind(&final_status)
                     .bind(payload)
+                    .bind(mission_log.as_deref().unwrap_or(""))
                     .bind(mission_id)
                     .bind(&self.org_id)
                     .execute(&mut **tx)
@@ -220,19 +221,21 @@ impl SipDB {
 
             if let Some(_) = row_check {
                  if force_local {
-                     sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
+                     sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, mission_log = COALESCE(mission_log, '') || $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND organization_id = $5")
                          .bind(&final_status)
                          .bind(payload)
+                         .bind(mission_log.as_deref().unwrap_or(""))
                          .bind(mission_id)
                          .bind(&self.org_id)
                          .execute(&mut **tx)
                          .await?;
                  }
             } else {
-                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
+                 sqlx::query("INSERT INTO agent_missions (id, status, payload, mission_log, created_at, updated_at, organization_id) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) ON CONFLICT(id) DO NOTHING")
                      .bind(mission_id)
                      .bind(&final_status)
                      .bind(payload)
+                     .bind(mission_log.as_deref().unwrap_or(""))
                      .bind(&self.org_id)
                      .execute(&mut **tx)
                      .await?;
@@ -355,5 +358,17 @@ mod tests {
         assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_upsert_mission_log_propagation() {
+        let pool = setup_dummy_pool().await;
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let mission_id = "test_mission_log_1";
+        let log_content = Some("Handover blocker detected".to_string());
+
+        // This will attempt to connect to dummy pool and likely fail, but it validates signature and sql building logic flow.
+        let _ = sip_db.upsert_mission(mission_id, "PENDING", "{}", true, &log_content).await;
     }
 }

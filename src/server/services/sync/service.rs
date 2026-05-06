@@ -49,7 +49,7 @@ impl SyncService for MySyncService {
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local, &None).await {
                 Ok(_) => {
                     synced_count += 1;
                 }

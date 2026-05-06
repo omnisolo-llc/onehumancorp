@@ -70,21 +70,22 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload, mission_log FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
 
 	type mission struct {
-		id      string
-		status  string
-		payload []byte
+		id         string
+		status     string
+		payload    []byte
+		missionLog sql.NullString
 	}
 	var missions []mission
 
 	for rows.Next() {
 		var m mission
-		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
+		if err := rows.Scan(&m.id, &m.status, &m.payload, &m.missionLog); err != nil {
 			log.Printf("sync_daemon: failed to scan row: %v", err)
 			continue
 		}
@@ -108,7 +109,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		}
 
 		// Simulate syncing to remote cloud
-		err = d.syncToCloud(ctx, m.id, m.payload)
+		err = d.syncToCloud(ctx, m.id, m.payload, m.missionLog.String)
 
 		if err != nil {
 			// Release semaphore on error
@@ -135,7 +136,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 }
 
 // syncToCloud simulates the actual RPC/HTTP call to the cloud endpoint
-func (d *HybridMCPRAGDaemon) syncToCloud(ctx context.Context, id string, payload []byte) error {
+func (d *HybridMCPRAGDaemon) syncToCloud(ctx context.Context, id string, payload []byte, missionLog string) error {
 	// In a real implementation, this would use d.remoteURL and make an HTTP/gRPC request.
 	// For this test daemon, we just return nil assuming success.
 	return nil

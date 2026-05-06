@@ -279,6 +279,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
+		mission_log TEXT,
 		synced_to_cloud BOOLEAN DEFAULT FALSE
 	);
 	`

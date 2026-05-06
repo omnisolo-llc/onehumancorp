@@ -2,7 +2,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
-export struct UiAgent {
+export struct UiHelper {
     id: string,
     name: string,
     role: string,
@@ -12,20 +12,20 @@ export struct UiAgent {
     is_new: bool,
 }
 
-export component Agents inherits Window {
+export component Helpers inherits Window {
     width: 500px;
     height: 600px;
     title: "Helpers";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    in property <[UiAgent]> agents;
+    in property <[UiHelper]> helpers;
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
 
-    callback hire_agent();
-    callback fix_agent(string);
+    callback hire_helper();
+    callback fix_helper(string);
 
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
@@ -39,15 +39,15 @@ export component Agents inherits Window {
         HorizontalBox {
             Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Hire Helper"; clicked => { hire_agent(); } }
+            Button { text: "Hire Helper"; clicked => { hire_helper(); } }
         }
 
         VerticalBox {
             spacing: 10px;
             
-            for agent in agents : GlassCard {
+            for helper in helpers : GlassCard {
                 
-                if (agent.is_new) : Rectangle {
+                if (helper.is_new) : Rectangle {
                     background: transparent;
                     border-radius: 12px;
                     border-width: 2px;
@@ -65,18 +65,18 @@ export component Agents inherits Window {
                     padding: 16px;
                     Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
                     VerticalBox {
-                        Text { text: agent.name; font-family: "Inter"; font-weight: 700; color: white; }
-                        Text { text: agent.role; font-family: "Inter"; color: #94a3b8; }
+                        Text { text: helper.name; font-family: "Inter"; font-weight: 700; color: white; }
+                        Text { text: helper.role; font-family: "Inter"; color: #94a3b8; }
                     }
                     Rectangle {} 
                     VerticalBox {
                         Text { 
-                            text: agent.status; 
+                            text: helper.status;
                             font-family: "Inter";
-                            color: agent.is_running ? #10b981 : #ef4444; 
+                            color: helper.is_running ? #10b981 : #ef4444;
                             horizontal-alignment: center; 
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                        if (!helper.is_running) : Button { text: "Help me fix this"; clicked => { fix_helper(helper.id); } }
                     }
                 }
             }

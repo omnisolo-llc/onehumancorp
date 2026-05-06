@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create() -> app::SecureAgentConfig { crate::ui_tests::init(); app::SecureAgentConfig::new().unwrap() }
+fn create() -> app::SecureHelperConfig { crate::ui_tests::init(); app::SecureHelperConfig::new().unwrap() }
 
 // --- Hacking / Corner Cases ---
 
