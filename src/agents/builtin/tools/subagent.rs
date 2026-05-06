@@ -12,14 +12,17 @@ pub struct SubagentExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for SubagentExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
+        let raw_task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
         let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
         
-        if task.is_empty() {
+        if raw_task.is_empty() {
             return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
         }
 
-        tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, task);
+        // Apply Subagent Orchestration Mechanic: Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
+        let task = format!("{}\n\nCRITICAL INSTRUCTION: You are a subagent. When you finish your work, you MUST return a 1k-2k token condensed summary of your findings and actions. NEVER return your full context loop or raw unsummarized output.", raw_task);
+
+        tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
 
         if mode == "worktree" {
             let task_id = uuid::Uuid::new_v4().to_string();
@@ -118,7 +121,8 @@ impl ToolExecutor for SubagentExecutor {
             let inbox_path = format!("{}/inbox.txt", mailbox_dir);
             let outbox_path = format!("{}/outbox.txt", mailbox_dir);
 
-            if let Err(e) = tokio::fs::write(&inbox_path, task).await {
+            // We use the augmented `task` which already includes the 1k-2k token condensed summary rule
+            if let Err(e) = tokio::fs::write(&inbox_path, &task).await {
                 return Err(ToolError::LlmRecoverable(format!("Failed to write to inbox: {}", e)));
             }
 
