@@ -20,11 +20,11 @@ test.describe('Dashboard UX', () => {
     await expect(page.locator('text=My Business').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
-    await expect(page.locator('text=Active Helpers')).toBeVisible();
-    await expect(page.locator('text=Active Help')).toBeVisible();
+    await expect(page.locator('text=Team Members')).toBeVisible();
+    await expect(page.locator('text=Ongoing Tasks')).toBeVisible();
 
     // Verify softer wording for drafts
-    await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
+    await expect(page.locator('text=Needs Your Approval')).toBeVisible();
   });
 });
 
