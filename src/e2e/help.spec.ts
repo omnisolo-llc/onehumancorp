@@ -458,3 +458,50 @@ test.describe('Video Tutorials', () => {
     await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 });
   });
 });
+
+test.describe('Release Notes & Changelog', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display release notes page', async ({ page }) => {
+    await page.locator('button:has-text("Menu")').first().click();
+    await page.locator('button:has-text("What\'s New")').first().click();
+    await expect(page.locator('text=/What\'s New/i').first()).toBeVisible();
+  });
+
+  test('should show release version items', async ({ page }) => {
+    await page.locator('button:has-text("Menu")').first().click();
+    await page.locator('button:has-text("What\'s New")').first().click();
+    const versionItem = page.locator('text=/Version/i').first();
+    await expect(versionItem).toBeVisible();
+  });
+});
+
+test.describe('API Documentation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display api docs page', async ({ page }) => {
+    await page.locator('button:has-text("Menu")').first().click();
+    await page.locator('button:has-text("Connect Apps")').first().click();
+    await expect(page.locator('text=/Custom Integration/i').first()).toBeVisible();
+  });
+
+  test('should toggle advanced developer documentation', async ({ page }) => {
+    await page.locator('button:has-text("Menu")').first().click();
+    await page.locator('button:has-text("Connect Apps")').first().click();
+    const advancedCheckbox = page.locator('text=/Show Advanced/i').first();
+    await advancedCheckbox.click();
+    await expect(page.locator('text=/Read Product List/i').first()).toBeVisible();
+  });
+});
