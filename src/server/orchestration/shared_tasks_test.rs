@@ -1,4 +1,4 @@
-use super::shared_tasks::{SharedTaskOrchestrator, SharedTaskV4};
+use super::shared_tasks::{SharedTaskOrchestrator, SharedTask};
 use crate::db::DB;
 use std::sync::Arc;
 use chrono::Utc;
@@ -25,7 +25,7 @@ async fn test_shared_task_orchestrator() {
     let db = Arc::new(db);
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
-    let task = SharedTaskV4 {
+    let task = SharedTask {
         id: "".to_string(),
         organization_id: "org_123".to_string(),
         title: "Test Task".to_string(),
@@ -33,9 +33,7 @@ async fn test_shared_task_orchestrator() {
         status: "PENDING".to_string(),
         agent_id: Some("agent_1".to_string()),
         priority: "P1".to_string(),
-        payload: Some("{}".to_string()),
-        parent_plan_id: None,
-        dependencies: "[]".to_string(),
+        payload: Some(serde_json::json!({})),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -71,7 +69,7 @@ async fn test_shared_task_orchestrator_sqlite() {
 
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+        CREATE TABLE IF NOT EXISTS shared_tasks (
             id VARCHAR PRIMARY KEY,
             organization_id VARCHAR NOT NULL,
             title VARCHAR NOT NULL,
@@ -80,8 +78,6 @@ async fn test_shared_task_orchestrator_sqlite() {
             agent_id VARCHAR,
             priority VARCHAR NOT NULL DEFAULT 'P2',
             payload TEXT,
-            parent_plan_id TEXT,
-            dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
@@ -99,7 +95,7 @@ async fn test_shared_task_orchestrator_sqlite() {
     let db = Arc::new(db);
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
-    let task = SharedTaskV4 {
+    let task = SharedTask {
         id: "task_1".to_string(),
         organization_id: "org_123".to_string(),
         title: "Test Task".to_string(),
@@ -107,9 +103,7 @@ async fn test_shared_task_orchestrator_sqlite() {
         status: "PENDING".to_string(),
         agent_id: None,
         priority: "P1".to_string(),
-        payload: Some("{}".to_string()),
-        parent_plan_id: None,
-        dependencies: "[]".to_string(),
+        payload: Some(serde_json::json!({})),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
