@@ -456,7 +456,7 @@ impl AutoDreamWorker {
 mod tests {
     use super::*;
     use std::sync::Arc;
-use tracing::{info, debug, error};
+use tracing::{info, debug};
     use tokio::test;
     use crate::db::DB;
 

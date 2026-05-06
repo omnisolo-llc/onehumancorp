@@ -1,6 +1,6 @@
 use sqlx::{Executor, Postgres, query};
 
-pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sqlx::Error>
+pub async fn set_org_context<'a, E>(mut executor: E, org_id: &str) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
 {

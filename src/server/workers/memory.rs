@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 
+
 use ohc_builtin_agent::memory_store::EmbeddingRecord;
 
 pub struct MemoryConsolidationWorker {
