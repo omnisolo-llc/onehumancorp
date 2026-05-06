@@ -1989,7 +1989,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2001,7 +2001,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2013,19 +2013,19 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                     },
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("compacted summary"), // Responds to the compaction request
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("final answer"),
-                    usage: Usage { input_tokens: 100, output_tokens: 10 },
+                    usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2746,7 +2746,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("Draft answer"),
-                    usage: Usage { input_tokens: 100, output_tokens: 50 },
+                    usage: Usage { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -3108,7 +3108,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("I have written some code."),
-                    usage: Usage { input_tokens: 50, output_tokens: 200 },
+                    usage: Usage { input_tokens: 50, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "length".to_string(), // LLM stopped due to length
                         response_id: Some("mock-id".to_string()),
                 }
@@ -3148,13 +3148,13 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("This takes 100 tokens"),
-                    usage: Usage { input_tokens: 50, output_tokens: 50 },
+                    usage: Usage { input_tokens: 50, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-1".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("This takes 200 tokens"),
-                    usage: Usage { input_tokens: 100, output_tokens: 100 },
+                    usage: Usage { input_tokens: 100, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-2".to_string()),
                 }
