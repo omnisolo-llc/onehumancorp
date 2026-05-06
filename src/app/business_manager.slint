@@ -9,6 +9,7 @@ export component BusinessManager inherits Window {
 
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
+    in-out property <bool> show_hint: false;
 
     // Form fields
     in-out property <string> product_name: "";
@@ -38,8 +39,11 @@ export component BusinessManager inherits Window {
         HorizontalBox {
             Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } }
             Button { text: "Close"; clicked => { close(); } }
         }
+
+        if (show_hint) : Text { text: "Choose 'My Time / Service' if you require bookings, or select 'Digital/Physical' to sell products directly."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
         // Step 0: Select Type
         if (step == 0) : VerticalBox {

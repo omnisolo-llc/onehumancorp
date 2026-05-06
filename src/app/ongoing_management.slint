@@ -62,7 +62,7 @@ export component FixAgent inherits Window {
                             border-radius: 4px;
                             HorizontalLayout {
                                 padding: 8px;
-                                Text { text: "{\"error\": \"timeout\", \"service\": \"postgres\", \"latency_ms\": 5000}"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "Connection timed out while trying to reach your database. This is usually temporary."; color: #a855f7; font-family: "Inter"; font-size: 12px; wrap: word-wrap; }
                             }
                         }
                     }
