@@ -1570,7 +1570,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_action_limit(plan.ai_actions_limit.to_string().into());
                     ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
                     ui.set_limit_storage(format!("{:.1} GB", plan.storage_limit_bytes as f64 / 1_073_741_824.0).into());
-                    ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
+                    ui.set_estimated_bill(format!("${:.2}", plan.next_bill_estimated).into());
                 }
             }
         }

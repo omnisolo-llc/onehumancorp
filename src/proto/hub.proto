@@ -1604,7 +1604,7 @@ message MyPlanResponse {
   int32 ai_actions_limit = 3;
   int64 storage_used_bytes = 4;
   int64 storage_limit_bytes = 5;
-  int64 next_bill_estimated = 6;
+  double next_bill_estimated = 6;
 }
 
 message CostDashboardResponse {
