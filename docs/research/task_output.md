@@ -8,6 +8,14 @@ Small business owners—bakers, handymen, tutors—are overwhelmed by the comple
 
 ## Research Report
 
+
+**Persona-Specific Pain Point Summaries:**
+*   **Maya (Baker):** Overwhelmed by complex visual editors, lacks time to write product descriptions manually.
+*   **Carlos (Handyman):** Missing out on leads while on jobs; needs an auto-responder and booking integration that doesn't require a laptop.
+*   **Priya (Boutique):** Inventory sync is a nightmare; no easy way to trigger abandoned cart emails.
+*   **Leo (Tutor):** Needs recurring subscription billing tied to a calendar, not standard e-commerce.
+*   **Fatima (Food Cart):** Needs a mobile-first, multi-lingual system for pre-orders that acts like a simple chat rather than a complex backend.
+
 **Market Sizing & Strategic Direction:**
 *   **TAM:** Millions of non-employer small businesses globally lack a coherent online presence. According to US Census data, over 80% of micro-businesses struggle with digital tools.
 *   **Beachhead:** Maya (baker) and Carlos (handyman) represent immediate opportunities—high pain, high transaction volume, underserved by enterprise-lite tools like Shopify.
@@ -46,6 +54,25 @@ Small business owners—bakers, handymen, tutors—are overwhelmed by the comple
 3.  **Content Agent (The Promoter):** Drafts product descriptions instantly from a single photo or brief note.
 4.  **Retention Agent (The Salesperson):** Automatically triggers and sends abandoned cart and post-purchase follow-up emails.
 5.  **Insights Agent (The Manager):** Delivers a simple, weekly SMS/Push notification with 3 actionable insights (e.g., "You sold out of X, restock?").
+
+
+**User Journey Comparison:**
+
+```mermaid
+graph LR
+    subgraph Shopify
+        A[Sign up] --> B[Pick Template]
+        B --> C[Configure Payments]
+        C --> D[Add Products Manually]
+        D --> E[Launch]
+    end
+
+    subgraph OHC
+        F[Sign up] --> G[Chat with Agent]
+        G --> H[Agent Auto-generates Store & Products]
+        H --> I[Review & Launch]
+    end
+```
 
 **Feature Gap Matrix:**
 
