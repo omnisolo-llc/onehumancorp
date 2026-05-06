@@ -4577,7 +4577,7 @@ mod docs_tests {
         let publish_success_clone = publish_success.clone();
 
         ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, _, _, _| {
-            assert_eq!(agent, "CustomerSuccess");
+            assert_eq!(agent, "Customer Support");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
             assert_eq!(can_write_descriptions, true);
@@ -4593,7 +4593,7 @@ mod docs_tests {
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("CustomerSuccess".into());
+        ui.set_selected_agent("Customer Support".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -4619,7 +4619,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "CustomerSuccess");
+        assert_eq!(ui.get_selected_agent(), "Customer Support");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);
