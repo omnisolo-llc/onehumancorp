@@ -756,7 +756,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 // Log the advanced properties to satisfy the transmission/usage requirement
-                println!("Advanced mode parameters: api_scope='{}', cron='{}', payload='{}'", api_scope_override, cron_override, raw_activation_payload);
+                let _ = raw_activation_payload;
+                println!("Advanced mode parameters: api_scope='{}', cron='{}', payload='[REDACTED]'", api_scope_override, cron_override);
 
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
