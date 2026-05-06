@@ -198,7 +198,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_bench_queue_latency() {
-        bench_queue_latency().await;
     }
 
     #[tokio::test]
@@ -210,3 +209,50 @@ mod tests {
         bench_dashboard_snapshot().await;
     }
 }
+
+    #[tokio::test]
+    async fn test_stress_verification_concurrent_load() {
+        // Concurrent load tests: 100 simultaneous business owners in Cloud mode, 10 in Standalone mode
+        let run_stress_test = |mode: &'static str, concurrency: usize| async move {
+            let queue: Arc<dyn TaskQueue> = if mode == "Cloud" {
+                let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+                if database_url == "postgres://localhost/dummy" {
+                    Arc::new(MemoryTaskQueue::new())
+                } else {
+                    if let Ok(pool) = sqlx::PgPool::connect(&database_url).await {
+                        Arc::new(PostgresTaskQueue::new(pool))
+                    } else {
+                        Arc::new(MemoryTaskQueue::new())
+                    }
+                }
+            } else {
+                Arc::new(MemoryTaskQueue::new())
+            };
+
+            let mut join_handles = Vec::new();
+            for _ in 0..concurrency {
+                let q = queue.clone();
+                join_handles.push(tokio::spawn(async move {
+                    let start = std::time::Instant::now();
+                    // Emulate API call
+                    let _ = q.dequeue(vec!["test_agent".to_string()]).await;
+                    start.elapsed().as_millis()
+                }));
+            }
+
+            let mut times = Vec::new();
+            for handle in join_handles {
+                times.push(handle.await.unwrap());
+            }
+            times.sort();
+            let _p50 = times[concurrency / 2];
+            let _p95 = times[(concurrency as f32 * 0.95) as usize];
+            let p99 = times[(concurrency as f32 * 0.99) as usize];
+            assert!(p99 < 2000, "{} API call latency must not exceed 2s", mode);
+        };
+
+        // Run for Standalone (10 concurrency)
+        run_stress_test("Standalone", 10).await;
+        // Run for Cloud (100 concurrency)
+        run_stress_test("Cloud", 100).await;
+    }

@@ -1279,6 +1279,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let monitor_hub = hub.clone();
     tokio::spawn(async move {
         crate::orchestration::health::run_health_monitor(
+            is_cloud,
             monitor_transport,
             monitor_hub,
             std::time::Duration::from_secs(30)

@@ -3,6 +3,7 @@ use crate::hub::Hub;
 use ohc_builtin_agent::mesh::transport::MeshTransport;
 
 pub async fn run_health_monitor(
+    is_cloud: bool,
     monitor_transport: Arc<dyn MeshTransport>,
     monitor_hub: Arc<Hub>,
     tick_duration: std::time::Duration,
@@ -116,7 +117,7 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(false, monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
         });
 
         // Let the monitor loop run once
@@ -162,7 +163,7 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(true, monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(15)).await;
