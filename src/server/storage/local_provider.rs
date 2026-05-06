@@ -112,10 +112,10 @@ impl Provider for LocalProvider {
         let mut final_data = data.to_vec();
 
         // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
         if is_image && data.len() > 100 {
-            // Mock compression: reduce size by 50%
-            final_data.truncate(data.len() / 2);
+            // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
+            final_data.truncate(data.len() / 5);
         }
 
         // Quota Enforcement

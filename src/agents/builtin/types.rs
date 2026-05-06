@@ -100,6 +100,8 @@ pub struct ChatResponse {
 pub struct Usage {
     pub input_tokens: i32,
     pub output_tokens: i32,
+    pub cache_creation_input_tokens: i32,
+    pub cache_read_input_tokens: i32,
 }
 
 /// Tool definition for the LLM.
