@@ -129,11 +129,11 @@ impl DB {
 
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
+            let conn_opts = sqlx::postgres::PgConnectOptions::from_str(&database_url)?.statement_cache_capacity(0);
             let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
-
-                .connect(&database_url)
+                .connect_with(conn_opts)
                 .await?;
 
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
