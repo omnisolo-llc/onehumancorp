@@ -1,0 +1,15 @@
+{{- if .Values.chatwoot.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-chatwoot-quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.chatwoot.resourceQuota.requests.cpu | default "2" }}
+    requests.memory: {{ .Values.chatwoot.resourceQuota.requests.memory | default "4Gi" }}
+    requests.ephemeral-storage: {{ .Values.chatwoot.resourceQuota.requests.ephemeralStorage | default "5Gi" }}
+    limits.cpu: {{ .Values.chatwoot.resourceQuota.limits.cpu | default "4" }}
+    limits.memory: {{ .Values.chatwoot.resourceQuota.limits.memory | default "8Gi" }}
+    limits.ephemeral-storage: {{ .Values.chatwoot.resourceQuota.limits.ephemeralStorage | default "10Gi" }}
+    pods: {{ .Values.chatwoot.resourceQuota.limits.pods | default "20" | quote }}
+{{- end }}

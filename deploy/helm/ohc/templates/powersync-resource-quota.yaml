@@ -1,0 +1,15 @@
+{{- if .Values.powersync.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-powersync-quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.powersync.resourceQuota.requests.cpu | default "1" }}
+    requests.memory: {{ .Values.powersync.resourceQuota.requests.memory | default "2Gi" }}
+    requests.ephemeral-storage: {{ .Values.powersync.resourceQuota.requests.ephemeralStorage | default "5Gi" }}
+    limits.cpu: {{ .Values.powersync.resourceQuota.limits.cpu | default "2" }}
+    limits.memory: {{ .Values.powersync.resourceQuota.limits.memory | default "4Gi" }}
+    limits.ephemeral-storage: {{ .Values.powersync.resourceQuota.limits.ephemeralStorage | default "10Gi" }}
+    pods: {{ .Values.powersync.resourceQuota.limits.pods | default "10" | quote }}
+{{- end }}

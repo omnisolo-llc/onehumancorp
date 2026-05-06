@@ -55,7 +55,7 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 # Launch the Prometheus agent
 docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
 docker run -d --name ohc-prometheus-agent \
-  --memory="512m" --cpus="0.5" \
+  --memory="64m" --cpus="0.1" \
   --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
   --network host \
   -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \

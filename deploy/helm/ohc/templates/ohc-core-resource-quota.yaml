@@ -1,0 +1,15 @@
+{{- if .Values.ohcCore.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-ohc-core-quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.ohcCore.resourceQuota.requests.cpu | default "2" }}
+    requests.memory: {{ .Values.ohcCore.resourceQuota.requests.memory | default "4Gi" }}
+    requests.ephemeral-storage: {{ .Values.ohcCore.resourceQuota.requests.ephemeralStorage | default "5Gi" }}
+    limits.cpu: {{ .Values.ohcCore.resourceQuota.limits.cpu | default "4" }}
+    limits.memory: {{ .Values.ohcCore.resourceQuota.limits.memory | default "8Gi" }}
+    limits.ephemeral-storage: {{ .Values.ohcCore.resourceQuota.limits.ephemeralStorage | default "10Gi" }}
+    pods: {{ .Values.ohcCore.resourceQuota.limits.pods | default "20" | quote }}
+{{- end }}
