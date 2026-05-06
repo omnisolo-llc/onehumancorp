@@ -36,6 +36,30 @@ mod tests {
         assert_eq!(redact_interface_pii(input), expected);
     }
 
+
+    #[test]
+    fn test_redact_pii_new_fields() {
+        let input = json!({
+            "ip_address": "192.168.1.1",
+            "mac_address": "00:00:00:00:00:00",
+            "location": "New York",
+            "credit_card": "1234-5678-9012-3456",
+            "dob": "1990-01-01",
+            "birth_date": "1990-01-01",
+            "social_security": "123-45-6789"
+        });
+        let expected = json!({
+            "ip_address": "[REDACTED]",
+            "mac_address": "[REDACTED]",
+            "location": "[REDACTED]",
+            "credit_card": "[REDACTED]",
+            "dob": "[REDACTED]",
+            "birth_date": "[REDACTED]",
+            "social_security": "[REDACTED]"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
     #[test]
     fn test_redact_pii_array() {
         let input = json!([
@@ -270,7 +294,14 @@ mod tests {
                                lower_line.contains("password") ||
                                lower_line.contains("pii") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key") ||
+                               lower_line.contains("ip_address") ||
+                               lower_line.contains("mac_address") ||
+                               lower_line.contains("location") ||
+                               lower_line.contains("credit_card") ||
+                               lower_line.contains("dob") ||
+                               lower_line.contains("birth_date") ||
+                               lower_line.contains("social_security") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }

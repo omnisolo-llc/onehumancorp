@@ -217,7 +217,14 @@ fn is_sensitive_key(key: &str) -> bool {
     k.contains("tenant_id") ||
     k.contains("organization_id") ||
     k.contains("session_id") ||
-    k.contains("payload")
+    k.contains("payload") ||
+    k.contains("ip_address") ||
+    k.contains("mac_address") ||
+    k.contains("location") ||
+    k.contains("credit_card") ||
+    k.contains("dob") ||
+    k.contains("birth_date") ||
+    k.contains("social_security")
 }
 
 fn is_email(s: &str) -> bool {
