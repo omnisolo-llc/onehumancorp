@@ -405,7 +405,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
-                                            if msg.contains("Tier limit reached") {
+                                            if msg.contains("You reached the limit") {
                                                 if let Some(ui) = my_plan_handle_clone2.upgrade() {
                                                     ui.set_upgrade_prompt_message(msg.into());
                                                     let _ = ui.show();
@@ -1649,9 +1649,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                                            ui.set_upgrade_prompt_message("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
+                                            ui.invoke_action_failed("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
@@ -2151,7 +2151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                                ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
@@ -5293,27 +5293,27 @@ mod remaining_e2e_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                ui.set_upgrade_prompt_message("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to add more!");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You reached the limit of 10 products for your current plan. Please upgrade to add more.");
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 agent. Upgrade to unlock more power!");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
