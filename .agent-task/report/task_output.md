@@ -12,18 +12,25 @@ Small business owners—from bakers to handymen—find existing platforms like S
 *   **GoDaddy / Airo (https://godaddy.com):** Simple but very shallow feature set. Airo provides basic AI branding but limited post-launch utility. Known for aggressive upselling.
 *   **Emerging AI Builders (Durable, 10Web, Hocoos):** Can generate a website quickly, but severely lack depth in business management tools (inventory, bookings, CRM).
 
-### SMB Pain Points
+### Persona-Specific Pain Point Summaries
+*   **Maya (baker, 28):** Currently sells via Instagram DMs. Overwhelmed by Shopify's complex setup, lacking built-in AI help for managing orders from her phone.
+*   **Carlos (handyman, 42):** Word-of-mouth only. Needs a simple booking system; quoting is manual and misses leads when busy.
+*   **Priya (boutique owner, 35):** In-store + wants online presence. Needs inventory sync, easy email marketing, and POS integration.
+*   **Leo (music tutor, 22):** Online + in-person lessons. Suffers from manual booking chaos, no subscription billing, and lacks an AI follow-up system.
+*   **Fatima (food cart, 50, limited English):** Pre-orders for pickup. Needs an accessible, language-friendly tool with mobile notifications on orders and order printing capability.
+
+### SMB Pain Points & OHC Mapping
 Based on community reviews (Reddit r/smallbusiness, App Store, Trustpilot):
-1.  **Complexity of initial setup (22% of 1-star App Store reviews):** Struggle with domain configuration, payments (Source: App Store Shopify reviews).
-2.  **Managing cross-channel communication (18% of Reddit r/ecommerce posts):** Losing track of Instagram DMs and mixing them with emails.
-3.  **Manual booking logistics (15% of complaints):** Double-booking or no-shows for service-based businesses (Source: Trustpilot Squarespace Scheduling reviews).
-4.  **Content creation fatigue (12% frequency):** Spending hours writing product descriptions or social media posts (Source: Reddit r/Etsy).
-5.  **Inventory management across in-store and online (10% frequency):** Manual reconciliation errors.
-6.  **Lack of mobile-first administration (8% frequency):** "I can't do this easily on my phone" (Source: Shopify iOS app reviews).
-7.  **Poor follow-up (6% frequency):** Losing leads because of slow response times to inquiries.
-8.  **Confusing pricing structures (5% frequency):** Hidden fees and expensive third-party add-ons to get basic features (Source: Wix Trustpilot).
-9.  **No built-in marketing automation (3% frequency):** Relying on fragmented Mailchimp integrations.
-10. **Difficult POS integration (1% frequency):** Finding a system that seamlessly links real-world and online sales for pop-ups.
+1.  **Complexity of initial setup (22% of 1-star App Store reviews):** Struggle with domain configuration, payments (Source: App Store Shopify reviews). **[OHC Feature Mapping: 3-question chat-based onboarding]**
+2.  **Managing cross-channel communication (18% of Reddit r/ecommerce posts):** Losing track of Instagram DMs and mixing them with emails. **[OHC Feature Mapping: AI Unified Inbox]**
+3.  **Manual booking logistics (15% of complaints):** Double-booking or no-shows for service-based businesses (Source: Trustpilot Squarespace Scheduling reviews). **[OHC Feature Mapping: AI Ops Agent / Proactive Booking]**
+4.  **Content creation fatigue (12% frequency):** Spending hours writing product descriptions or social media posts (Source: Reddit r/Etsy). **[OHC Feature Mapping: AI Content Agent]**
+5.  **Inventory management across in-store and online (10% frequency):** Manual reconciliation errors. **[OHC Feature Mapping: Unified OHC DB / Mobile Admin]**
+6.  **Lack of mobile-first administration (8% frequency):** "I can't do this easily on my phone" (Source: Shopify iOS app reviews). **[OHC Feature Mapping: 375px-first zero friction mobile dashboard]**
+7.  **Poor follow-up (6% frequency):** Losing leads because of slow response times to inquiries. **[OHC Feature Mapping: AI Support Agent auto-reply]**
+8.  **Confusing pricing structures (5% frequency):** Hidden fees and expensive third-party add-ons to get basic features (Source: Wix Trustpilot). **[OHC Feature Mapping: Inclusive Free Tier / Core Features]**
+9.  **No built-in marketing automation (3% frequency):** Relying on fragmented Mailchimp integrations. **[OHC Feature Mapping: AI Abandoned Cart Recovery]**
+10. **Difficult POS integration (1% frequency):** Finding a system that seamlessly links real-world and online sales for pop-ups. **[OHC Feature Mapping: OHC Vertical Expansion Strategy]**
 
 ### AI Differentiation Manifesto
 To leapfrog competitors, OHC will implement these 5 invisible AI automations:
