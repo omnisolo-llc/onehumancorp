@@ -124,6 +124,12 @@ impl AgentProgress {
     }
 }
 
+// Prompt Construction: OpenAI Codex Mechanic
+// 1. Server-controlled System Message (Highest Priority)
+// 2. Tool Definitions
+// 3. Developer Instructions
+// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
+// 5. Conversation History (happens at run loop)
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
@@ -136,11 +142,14 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
     let user_instr = &cfg.user_instructions[..end_idx];
 
     let mut combined_system = String::new();
+
+    // 1. Server-controlled System Message (Highest Priority)
     if !cfg.server_system_message.is_empty() {
+        combined_system.push_str("[Server System Message]\n");
         combined_system.push_str(&cfg.server_system_message);
     }
 
-    // Format tools into [Tool Definitions]
+    // 2. Tool Definitions
     if !tools.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -155,6 +164,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.pop();
     }
 
+    // 3. Developer Instructions
     if !cfg.developer_instructions.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -163,6 +173,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str(&cfg.developer_instructions);
     }
 
+    // 4. User Instructions
     if !user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -170,6 +181,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str("[User Instructions]\n");
         combined_system.push_str(user_instr);
     }
+
     combined_system
 }
 
@@ -2569,7 +2581,7 @@ mod tests {
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
 
-        let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
         assert_eq!(prompt, expected);
     }
@@ -2584,7 +2596,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
         );
     }
 
@@ -2598,7 +2610,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "Server System Message\n\n[User Instructions]\nUser Instructions"
+            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
         );
 
         let mut cfg2 = AgentRunConfig::default();
