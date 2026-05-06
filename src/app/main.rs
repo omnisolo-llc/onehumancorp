@@ -85,6 +85,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -99,6 +100,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(test)]
@@ -2044,6 +2046,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     let _ = action_queue_clone.enqueue("mark_order_ready", "{}").await;
                                 });
                             }
+
+                            GLOBAL_ORDERS_COMPLETED.with(|g| {
+                                let mut count = g.borrow_mut();
+                                *count += 1;
+
+                                // Milestone thresholds
+                                if *count == 1 {
+                                    ui.set_milestone_title("First Sale!".into());
+                                    ui.set_milestone_message("You just completed your first order!".into());
+                                    ui.set_show_milestone(true);
+                                } else if *count == 3 {
+                                    ui.set_milestone_title("🎉 3rd Order!".into());
+                                    ui.set_milestone_message("You completed 3 orders!".into());
+                                    ui.set_show_milestone(true);
+                                } else if *count == 10 {
+                                    ui.set_milestone_title("🎉 10th Order!".into());
+                                    ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                                    ui.set_show_milestone(true);
+                                }
+                            });
                         }
                     });
 
