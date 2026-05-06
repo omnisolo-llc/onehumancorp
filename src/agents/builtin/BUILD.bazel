@@ -10,6 +10,7 @@ rust_library(
         "budget.rs",
         "caveman.rs",
         "core.rs",
+        "env.rs",
         "memory.rs",
         "pubsub.rs",
         "output_parser.rs",

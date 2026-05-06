@@ -151,7 +151,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_manager_execution() {
-        let dir = "/tmp/test_manager";
+        let dir_path = std::env::temp_dir().join("test_manager");
+        let dir = dir_path.to_str().unwrap();
         let _ = fs::remove_dir_all(dir).await;
         fs::create_dir_all(dir).await.unwrap();
 
@@ -173,7 +174,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_manager_error() {
-        let dir = "/tmp/test_manager_err";
+        let dir_path = std::env::temp_dir().join("test_manager_err");
+        let dir = dir_path.to_str().unwrap();
         let _ = fs::remove_dir_all(dir).await;
         fs::create_dir_all(dir).await.unwrap();
 

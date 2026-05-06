@@ -173,7 +173,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_session() {
-        let dir = "/tmp/test_session";
+        let dir_path = std::env::temp_dir().join("test_session");
+        let dir = dir_path.to_str().unwrap();
         let _ = tokio::fs::remove_dir_all(dir).await;
         let session = ShellSession::new("sess1", dir).await.unwrap();
 
@@ -193,7 +194,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_session_validation() {
-        let dir = "/tmp/test_session_val";
+        let dir_path = std::env::temp_dir().join("test_session_val");
+        let dir = dir_path.to_str().unwrap();
         let session = ShellSession::new("sess2", dir).await.unwrap();
 
         let res = session.run_stateful_command("sudo apt-get update").await;

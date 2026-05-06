@@ -685,7 +685,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_based_memory() {
-        let dir = "/tmp/test_memory";
+        let dir_path = std::env::temp_dir().join("test_memory");
+        let dir = dir_path.to_str().unwrap();
         let mem = FileBasedMemory::new(dir);
         let namespace = "test_ns";
         let key = "test_key";
@@ -701,7 +702,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_anthropic_3_tier_memory_store() {
-        let base_dir = "/tmp/test_anthropic_3_tier";
+        let base_dir_path = std::env::temp_dir().join("test_anthropic_3_tier");
+        let base_dir = base_dir_path.to_str().unwrap();
         let _ = tokio::fs::remove_dir_all(base_dir).await;
 
         let store = Anthropic3TierMemoryStore::new(base_dir).unwrap();

@@ -144,7 +144,7 @@ mod tests {
             .take(10)
             .map(char::from)
             .collect();
-        let dir = format!("/tmp/test_storage_{}", random_suffix);
+        let dir = format!("{}/test_storage_{}", std::env::temp_dir().to_string_lossy(), random_suffix);
         fs::create_dir_all(&dir).unwrap();
         let abs_dir = fs::canonicalize(&dir).unwrap();
         let p = LocalProvider::new(&abs_dir).unwrap();

@@ -152,6 +152,7 @@ rust_test(
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
         "@crates//:aes-gcm",
+        ":server_lib",
         "@crates//:base64",
         "@crates//:hmac",
         "@crates//:sha2",

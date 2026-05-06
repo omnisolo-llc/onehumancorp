@@ -710,7 +710,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("{}/ohc_test_{}", std::env::temp_dir().to_string_lossy(), uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
@@ -731,7 +731,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md_truncation() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("{}/ohc_test_{}", std::env::temp_dir().to_string_lossy(), uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();

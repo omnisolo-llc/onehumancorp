@@ -295,7 +295,7 @@ mod tests {
             ],
             || {
                 let config = crate::config::load().unwrap();
-                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+                let is_standalone = crate::utils::env::is_standalone_mode();
 
                 // Assert that the config logic matches the policy:
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
@@ -318,7 +318,7 @@ mod tests {
             ],
             || {
                 let config = crate::config::load().unwrap();
-                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+                let is_standalone = crate::utils::env::is_standalone_mode();
 
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = is_standalone && config.telemetry_enabled;

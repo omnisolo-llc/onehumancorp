@@ -65,7 +65,7 @@ mod tests {
             .await
             .unwrap();
 
-        let dir = format!("/tmp/test_session_{}", db_id);
+        let dir = format!("{}/test_session_{}", std::env::temp_dir().to_string_lossy(), db_id);
         let _ = tokio::fs::remove_dir_all(&dir).await;
         let session = ShellSession::new("sess-proxy-1", &dir).await.unwrap();
 
@@ -91,7 +91,7 @@ mod tests {
             .await
             .unwrap();
 
-        let dir = format!("/tmp/test_session_{}", db_id);
+        let dir = format!("{}/test_session_{}", std::env::temp_dir().to_string_lossy(), db_id);
         let _ = tokio::fs::remove_dir_all(&dir).await;
         let session = ShellSession::new("sess-proxy-2", &dir).await.unwrap();
 

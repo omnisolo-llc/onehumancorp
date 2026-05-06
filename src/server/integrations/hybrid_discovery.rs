@@ -25,7 +25,7 @@ impl DiscoveryProxy {
     }
 
     pub async fn search_tools(&self, intent: &str) -> Result<Vec<ToolSpec>, String> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = crate::utils::env::is_standalone_mode();
 
         if !is_standalone {
             // Postgres mode: route requests to the remote Switchboard
@@ -97,7 +97,7 @@ impl DiscoveryProxy {
     }
 
     pub async fn register_tool(&self, spec: ToolSpec) -> Result<(), String> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = crate::utils::env::is_standalone_mode();
 
         if !is_standalone {
             // In cloud mode, registration goes to switchboard
@@ -118,7 +118,7 @@ impl DiscoveryProxy {
     }
 
     pub async fn request_tool_svid(&self, tool_name: &str) -> Result<SVID, String> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = crate::utils::env::is_standalone_mode();
 
         if is_standalone {
             // Bypass SPIRE and generate a local pseudo-SVID
