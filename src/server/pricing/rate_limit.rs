@@ -1,4 +1,5 @@
 use redis::{AsyncCommands, Client};
+use tokio::sync::OnceCell;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
@@ -60,15 +61,23 @@ pub struct RateLimitStatus {
 
 pub struct RedisRateLimiter {
     client: Client,
+    connection: OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client }
+        Self { client, connection: OnceCell::new() }
+    }
+
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+        let conn = self.connection.get_or_try_init(|| async {
+            self.client.get_multiplexed_async_connection().await
+        }).await.map_err(|e| e.to_string())?;
+        Ok(conn.clone())
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
 
         match tier.as_deref() {
@@ -80,7 +89,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_actions_used(&self, tenant_id: &str) -> Result<u32, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
@@ -89,14 +98,14 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
         let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
             PlanTier::Starter => "Starter",
@@ -107,7 +116,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let now = chrono::Utc::now();
@@ -168,7 +177,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let product_key = format!("tenant:{}:products", tenant_id);
@@ -201,14 +210,14 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
         let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let agent_key = format!("tenant:{}:agents", tenant_id);
@@ -241,14 +250,14 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
         let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
-        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);

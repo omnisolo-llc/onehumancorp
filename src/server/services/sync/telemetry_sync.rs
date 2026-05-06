@@ -257,8 +257,8 @@ mod tests {
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_daemon.sync_metrics()).await;
         let par_duration = start_par.elapsed();
 
-        println!("Sequential Sync Duration: {:?}", seq_duration);
-        println!("Parallel Sync Duration: {:?}", par_duration);
+        tracing::info!("Sequential Sync Duration: {:?}", seq_duration);
+        tracing::info!("Parallel Sync Duration: {:?}", par_duration);
 
         // Assert that sync_metrics returned Ok and both durations are measured
         assert!(seq_duration > std::time::Duration::from_nanos(0));

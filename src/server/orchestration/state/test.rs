@@ -119,7 +119,7 @@ async fn test_single_agent_flow() {
     }
 
     let result = state_manager.transition_state(&task_id, "system", "PENDING", "EXECUTING", Some("agent_1"), None).await;
-    println!("Result: {:?}", result);
+    tracing::info!("Result: {:?}", result);
     assert!(result.is_ok());
 
     if let DbStore::Sqlite(pool) = &db.store {
