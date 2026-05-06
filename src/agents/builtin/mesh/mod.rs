@@ -66,13 +66,7 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("mesh:state:handoff", Message {
-            agent_id: "agent".to_string(),
-            action: "mesh:state:handoff".to_string(),
-            status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+        self.publish_with_ack("mesh:state:handoff", payload).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -286,14 +280,29 @@ mod tests {
     #[tokio::test]
     async fn test_mesh_state_handoff() {
         let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
-        let mesh = TeammateMeshClient::new(transport);
+        let mesh = TeammateMeshClient::new(transport.clone());
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
+        let transport_clone = transport.clone();
         let _cancel = mesh.subscribe_state_handoff(Box::new(move |msg| {
             if msg.payload == b"state_data" {
                 received_clone.store(true, Ordering::SeqCst);
+
+                // Manually ack the message in the test to avoid the timeout since we switched to publish_with_ack
+                let msg_id = msg.msg_id.clone();
+                let ack_topic = format!("mesh:ack:{}", msg_id);
+                let t_clone = transport_clone.clone();
+                tokio::spawn(async move {
+                    let _ = t_clone.publish(&ack_topic, crate::mesh::transport::Message {
+                        agent_id: "test".to_string(),
+                        action: ack_topic.clone(),
+                        status: "ok".to_string(),
+                        payload: b"ack".to_vec(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                    }).await;
+                });
             }
         })).await.unwrap();
 

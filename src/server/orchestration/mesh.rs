@@ -148,7 +148,7 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.publish("mesh:state:handoff", payload).await
+        self.publish_with_ack("mesh:state:handoff", payload).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {

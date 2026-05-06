@@ -132,7 +132,7 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        self.mesh.publish_with_ack("mesh:coordination:handoff", buf).await
+        self.mesh.publish_state_handoff(buf).await
     }
 }
 
@@ -272,6 +272,29 @@ mod tests {
 
         let cancel = manager.start_listener().await.unwrap();
 
+        // Background mock ack handler
+        let transport_clone = transport.clone();
+        tokio::spawn(async move {
+            use ohc_builtin_agent::mesh::transport::MeshTransport;
+            let _ = transport_clone.subscribe("mesh:state:handoff", Box::new({
+                let t = transport_clone.clone();
+                move |msg: ohc_builtin_agent::mesh::transport::Message| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let t_clone = t.clone();
+                    tokio::spawn(async move {
+                        let _ = t_clone.publish(&ack_topic, ohc_builtin_agent::mesh::transport::Message {
+                            agent_id: "test".to_string(),
+                            action: ack_topic.clone(),
+                            status: "ok".to_string(),
+                            payload: b"ack".to_vec(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        }).await;
+                    });
+                }
+            })).await;
+        });
+
         let handoff = SyncStateHandoff {
             tenant_id: "test_tenant".to_string(),
             state_id: "test_state".to_string(),
@@ -284,7 +307,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf).await.unwrap();
+        mesh.publish_state_handoff(buf).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -308,7 +331,7 @@ mod tests {
         };
         let mut buf_older = Vec::new();
         older_handoff.encode(&mut buf_older).unwrap();
-        mesh.publish("mesh:coordination:handoff", buf_older).await.unwrap();
+        mesh.publish_state_handoff(buf_older).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -330,7 +353,7 @@ mod tests {
         };
         let mut buf_newer = Vec::new();
         newer_handoff.encode(&mut buf_newer).unwrap();
-        mesh.publish("mesh:coordination:handoff", buf_newer).await.unwrap();
+        mesh.publish_state_handoff(buf_newer).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -354,7 +377,7 @@ mod tests {
         let mut buf2 = Vec::new();
         handoff2.encode(&mut buf2).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf2).await.unwrap();
+        mesh.publish_state_handoff(buf2).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -399,6 +422,29 @@ mod tests {
 
         let cancel = manager.start_listener().await.unwrap();
 
+        // Background mock ack handler
+        let transport_clone = transport.clone();
+        tokio::spawn(async move {
+            use ohc_builtin_agent::mesh::transport::MeshTransport;
+            let _ = transport_clone.subscribe("mesh:state:handoff", Box::new({
+                let t = transport_clone.clone();
+                move |msg: ohc_builtin_agent::mesh::transport::Message| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let t_clone = t.clone();
+                    tokio::spawn(async move {
+                        let _ = t_clone.publish(&ack_topic, ohc_builtin_agent::mesh::transport::Message {
+                            agent_id: "test".to_string(),
+                            action: ack_topic.clone(),
+                            status: "ok".to_string(),
+                            payload: b"ack".to_vec(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        }).await;
+                    });
+                }
+            })).await;
+        });
+
         let shared_task = crate::ohc::orchestration::SharedTask {
             id: "task_123".to_string(),
             organization_id: "org_1".to_string(),
@@ -433,7 +479,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf).await.unwrap();
+        mesh.publish_state_handoff(buf).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
