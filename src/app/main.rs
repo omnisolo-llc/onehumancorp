@@ -412,6 +412,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.hide().unwrap();
                                     if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                        let dash_weak = dashboard.as_weak();
+                        add_advanced_listener(Box::new(move |val| {
+                            if let Some(ui) = dash_weak.upgrade() {
+                                ui.set_is_advanced(val);
+                            }
+                        }));
+
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let my_plan_handle_clone = my_plan_ui.as_weak();
@@ -597,6 +606,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                        let dash_weak = dashboard.as_weak();
+                        add_advanced_listener(Box::new(move |val| {
+                            if let Some(ui) = dash_weak.upgrade() {
+                                ui.set_is_advanced(val);
+                            }
+                        }));
+
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let my_plan_handle_clone = my_plan_ui.as_weak();
@@ -1477,6 +1495,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                let dash_weak = dashboard.as_weak();
+                add_advanced_listener(Box::new(move |val| {
+                    if let Some(ui) = dash_weak.upgrade() {
+                        ui.set_is_advanced(val);
+                    }
+                }));
                 dashboard.show().unwrap();
             }
         }
@@ -1490,6 +1515,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                let dash_weak = dashboard.as_weak();
+                add_advanced_listener(Box::new(move |val| {
+                    if let Some(ui) = dash_weak.upgrade() {
+                        ui.set_is_advanced(val);
+                    }
+                }));
                 dashboard.show().unwrap();
             }
         }
@@ -1728,6 +1760,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                let dash_weak = dashboard.as_weak();
+                add_advanced_listener(Box::new(move |val| {
+                    if let Some(ui) = dash_weak.upgrade() {
+                        ui.set_is_advanced(val);
+                    }
+                }));
+
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
@@ -7368,6 +7408,74 @@ mod e2e_login_to_dashboard_tests {
         assert_eq!(manager_ui.get_step(), 1);
         manager_ui.invoke_prev_step();
         assert_eq!(manager_ui.get_step(), 0);
+    }
+
+    #[test]
+    fn test_ux_dashboard_advanced_mode_toggles_telemetry() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_is_advanced(false);
+        assert_eq!(dashboard_ui.get_is_advanced(), false);
+
+        dashboard_ui.set_is_advanced(true);
+        assert_eq!(dashboard_ui.get_is_advanced(), true);
+    }
+
+    #[test]
+    fn test_ux_dashboard_quick_actions_automations() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let automations_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = automations_clicked.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*automations_clicked.borrow());
+    }
+
+    #[test]
+    fn test_ux_dashboard_quick_actions_automations_tour() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let automations_tour_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = automations_tour_clicked.clone();
+        dashboard_ui.on_open_kairos_orchestration_walkthrough(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
+        assert!(*automations_tour_clicked.borrow());
+    }
+
+    #[test]
+    fn test_ux_dashboard_bottom_nav_add_product() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = add_product_clicked.clone();
+        dashboard_ui.on_action_add_product(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_add_product();
+        assert!(*add_product_clicked.borrow());
+    }
+
+    #[test]
+    fn test_ux_dashboard_bottom_nav_share_store() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let share_store_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = share_store_clicked.clone();
+        dashboard_ui.on_action_share_store(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_store_clicked.borrow());
     }
 
     #[test]
