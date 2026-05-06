@@ -33,9 +33,10 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
-      "transparent": true
+      "transparent": true,
+      "id": 1
     },
     {
       "gridPos": {
@@ -64,8 +65,7 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -254,8 +254,7 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -589,8 +588,7 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -1298,8 +1296,7 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1646,8 +1643,7 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 24,
@@ -2088,8 +2084,7 @@
         "y": 104
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -2552,8 +2547,7 @@
         "y": 129
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 27,
@@ -2874,8 +2868,7 @@
         "y": 146
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 34,
@@ -3426,8 +3419,7 @@
         "y": 171
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {

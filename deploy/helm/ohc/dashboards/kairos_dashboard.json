@@ -65,21 +65,6 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
@@ -181,8 +166,7 @@
           "expr": "sum(ohc_sub_agent_queue_length) by (mode)",
           "legendFormat": "{{mode}}"
         }
-      ],
-      "transparent": true
+      ]
     },
     {
       "type": "timeseries",
@@ -271,8 +255,7 @@
           "expr": "sum(rate(ohc_kairos_transitions_total[1m])) by (mode, status)",
           "legendFormat": "{{mode}} - {{status}}"
         }
-      ],
-      "transparent": true
+      ]
     },
     {
       "type": "timeseries",
@@ -361,8 +344,7 @@
           "expr": "histogram_quantile(0.95, sum(rate(ohc_kairos_transition_duration_seconds_bucket[1m])) by (le, mode))",
           "legendFormat": "{{mode}}"
         }
-      ],
-      "transparent": true
+      ]
     }
   ]
 }
