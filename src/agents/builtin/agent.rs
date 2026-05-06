@@ -355,6 +355,8 @@ impl Agent {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
+                let mut tool_error_counts = state.get("tool_error_counts").cloned().unwrap_or_else(|| serde_json::json!({}));
+
                 let mut tool_results_json = vec![];
 
                 for tc_val in tool_calls {
@@ -365,7 +367,7 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
+                        let final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -393,6 +395,9 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
+                                if let Some(map) = tool_error_counts.as_object_mut() {
+                                    map.remove(name);
+                                }
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -400,6 +405,16 @@ impl Agent {
                                 }));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let mut count = 0;
+                                if let Some(map) = tool_error_counts.as_object_mut() {
+                                    count = map.get(name).and_then(|v| v.as_u64()).unwrap_or(0);
+                                    count += 1;
+                                    map.insert(name.to_string(), serde_json::json!(count));
+                                }
+                                if count > 2 {
+                                    let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg);
+                                    return Err(fatal_msg);
+                                }
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
@@ -434,6 +449,7 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
+                    "tool_error_counts": tool_error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -482,7 +498,8 @@ impl Agent {
         let initial_state = serde_json::json!({
             "messages": msgs_json,
             "has_tool_calls": false,
-            "total_tokens": 0
+            "total_tokens": 0,
+            "tool_error_counts": {}
         });
 
         match graph.run(initial_state).await {
@@ -3450,6 +3467,81 @@ mod tests {
             parameters: serde_json::json!({}),
             execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
+
+        // Test Recoverable escalation to Fatal (3 consecutive failures)
+        let client_recoverable_escalation = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_a".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_b".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_c".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let tool_recoverable_escalation = Tool {
+            name: "llm_recoverable_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+        };
+
+        let agent5 = Agent::new(client_recoverable_escalation, vec![tool_recoverable_escalation]);
+        let mut events5 = vec![];
+        let res5 = agent5.run(&cfg, "Start", &mut |e| events5.push(e)).await;
+        assert!(res5.is_err());
+        assert!(res5.unwrap_err().to_string().contains("failed 3 times consecutively with recoverable errors"));
+
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];
