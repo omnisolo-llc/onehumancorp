@@ -86,7 +86,10 @@ impl DB {
                             let mut perms = metadata.permissions();
                             if perms.mode() & 0o777 != 0o600 {
                                 perms.set_mode(0o600);
-                                let _ = file.set_permissions(perms);
+                                if let Err(e) = file.set_permissions(perms) {
+                                    tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
                     }
