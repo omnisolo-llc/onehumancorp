@@ -287,31 +287,31 @@ export component SetupWizard inherits Window {
                 Text { text: "What do you sell?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "Select all that apply"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                GlassCard {
+                if (business_type != "Service Business" && business_type != "Restaurant / Food") : GlassCard {
                     height: 50px;
                     background: sell_physical ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "📦 Physical products"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_physical(); } }
                 }
-                GlassCard {
+                if (business_type != "Restaurant / Food") : GlassCard {
                     height: 50px;
                     background: sell_digital ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "💾 Digital downloads"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_digital(); } }
                 }
-                GlassCard {
+                if (business_type == "Service Business" || business_type == "Other" || business_type == "Creative / Portfolio" || business_type == "Local Business") : GlassCard {
                     height: 50px;
                     background: sell_services ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "📅 Services / appointments"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_services(); } }
                 }
-                GlassCard {
+                if (business_type == "Restaurant / Food" || business_type == "Local Business" || business_type == "Other") : GlassCard {
                     height: 50px;
                     background: sell_food ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🍕 Food & beverages"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_food(); } }
                 }
-                GlassCard {
+                if (business_type != "Restaurant / Food") : GlassCard {
                     height: 50px;
                     background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
