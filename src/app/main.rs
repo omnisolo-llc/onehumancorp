@@ -29,6 +29,7 @@ async fn connect_with_interceptor(url: String) -> Result<ohc::orchestration::hub
     Ok(ohc::orchestration::hub_service_client::HubServiceClient::with_interceptor(channel, client_spiffe_interceptor))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ohc {
     pub mod orchestration {
         pub use hub_proto::ohc::orchestration::*;
