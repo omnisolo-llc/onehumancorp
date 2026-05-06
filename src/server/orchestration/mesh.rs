@@ -305,19 +305,18 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
-            let connect_options = pool.connect_options();
-            let db_path = connect_options.get_filename();
-            let db_url = format!("sqlite://{}", db_path.to_string_lossy());
-
-            if !db_path.to_string_lossy().is_empty() && db_path.to_string_lossy() != ":memory:" {
-                match ohc_builtin_agent::mesh::transport::IpcTransport::new(&db_url).await {
-                    Ok(transport) => {
-                        let t_clone = transport.clone();
-                        tokio::spawn(async move { t_clone.start_worker().await; });
-                        return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
-                    }
-                    Err(e) => {
-                        return Err(format!("Failed to initialize IpcTransport for Sqlite: {}", e));
+            if let Ok(pg_url) = std::env::var("DATABASE_URL") {
+                if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
+                    match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
+                        Ok(transport) => {
+                            let t_clone = transport.clone();
+                            tokio::spawn(async move { t_clone.start_worker().await; });
+                            return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to initialize PgTransport fallback: {}", e);
+                            // Fallback to memory
+                        }
                     }
                 }
             }
