@@ -1,5 +1,4 @@
 pub mod catalog;
-pub mod hybrid_discovery;
 pub mod registry;
 pub mod chat;
 pub mod chatwoot;
