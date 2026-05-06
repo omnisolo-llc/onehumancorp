@@ -35,10 +35,42 @@ impl HybridBlobManager {
             None
         };
 
-        Self {
+        let manager = Self {
             is_cloud,
-            local_dir,
+            local_dir: local_dir.clone(),
             cloud_mock_store: dashmap::DashMap::new(),
+        };
+
+        if let Some(dir) = local_dir {
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+                loop {
+                    interval.tick().await;
+                    Self::cleanup_old_blobs(&dir, std::time::Duration::from_secs(86400)).await;
+                }
+            });
+        }
+
+        manager
+    }
+
+    pub async fn cleanup_old_blobs(dir: &std::path::Path, max_age: std::time::Duration) {
+        if let Ok(mut entries) = tokio::fs::read_dir(dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(metadata) = entry.metadata().await {
+                    if metadata.is_file() {
+                        if let Ok(modified) = metadata.modified() {
+                            if let Ok(elapsed) = modified.elapsed() {
+                                if elapsed > max_age {
+                                    let _ = tokio::fs::remove_file(entry.path()).await;
+                                }
+                            }
+                        }
+                    } else if metadata.is_dir() {
+                        Box::pin(Self::cleanup_old_blobs(&entry.path(), max_age)).await;
+                    }
+                }
+            }
         }
     }
 
@@ -251,6 +283,22 @@ mod tests {
         let res = manager.write_blob(key, data).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("path traversal not allowed"));
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_old_blobs() {
+        let dir = tempdir().unwrap();
+        let path1 = dir.path().join("new.txt");
+        let path2 = dir.path().join("old.txt");
+
+        tokio::fs::write(&path1, "new").await.unwrap();
+        tokio::fs::write(&path2, "old").await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        HybridBlobManager::cleanup_old_blobs(dir.path(), std::time::Duration::from_millis(0)).await;
+
+        assert!(!path1.exists());
+        assert!(!path2.exists());
     }
 
     #[tokio::test]
