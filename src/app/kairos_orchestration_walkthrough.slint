@@ -3,7 +3,8 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component KairosOrchestrationWalkthrough inherits Window {
     width: 600px;
     height: 600px;
-    title: "KAIROS Orchestration Walkthrough";
+    title: "How Your Helpers Work Together";
+    out property <string> test_title: root.title;
 
     in-out property <int> current_step: 0;
 
@@ -23,7 +24,7 @@ export component KairosOrchestrationWalkthrough inherits Window {
         padding: 24px;
         alignment: center;
 
-        Text { text: "KAIROS Orchestration: Visual Walkthrough"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+        Text { text: "How Your Helpers Work Together"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
 
         Rectangle {
             // Glassmorphism card
@@ -38,10 +39,10 @@ export component KairosOrchestrationWalkthrough inherits Window {
                 spacing: 16px;
 
                 Text {
-                    text: current_step == 0 ? "The KAIROS Triad" :
-                          current_step == 1 ? "1. Shared Task List (The Brain)" :
-                          current_step == 2 ? "2. Teammate Mesh (The Nerves)" :
-                          "3. AutoDream (The Memory)";
+                    text: current_step == 0 ? "The Helper System" :
+                          current_step == 1 ? "1. Shared To-Do List" :
+                          current_step == 2 ? "2. Instant Messaging" :
+                          "3. Long-Term Memory";
                     font-size: 20px;
                     font-weight: 700;
                     color: white;
@@ -49,10 +50,10 @@ export component KairosOrchestrationWalkthrough inherits Window {
                 }
 
                 Text {
-                    text: current_step == 0 ? "The OHC Swarm Orchestration relies on a unified tri-layer architecture combining memory, messaging, and state." :
-                          current_step == 1 ? "The Shared Task List operates as a robust State Machine. Cloud deployments leverage PostgreSQL with FOR UPDATE SKIP LOCKED for horizontal scalability. Standalone desktop deployments gracefully degrade to local SQLite mutexes." :
-                          current_step == 2 ? "Powered by CentrifugeNode and Redis Pub/Sub, the Teammate Mesh streams events with sub-millisecond latency. This low-latency layer broadcasts capability advertisements and synchronous worker state transitions." :
-                          "AutoDream continuously harvests ephemeral session logs, compresses context utilizing local LLMs, and stores dense vectors into a durable pgvector (or Standalone alternative) store. Swarm agents semantically query this database to maintain infinite long-term context.";
+                    text: current_step == 0 ? "Your helpers work together using a simple three-part system: memory, messaging, and a shared to-do list." :
+                          current_step == 1 ? "The Shared To-Do List ensures that helpers don't step on each other's toes. Whether you're running a busy cloud store or managing everything on your local computer, tasks are organized and handled one at a time." :
+                          current_step == 2 ? "The Teammate Mesh is how your helpers talk to each other instantly. When a new order arrives or a customer asks a question, the right helper is notified immediately so they can jump into action." :
+                          "AutoDream is your business's long-term memory. It securely remembers past conversations, customer preferences, and completed tasks so your helpers get smarter over time without you having to repeat yourself.";
                     color: #94a3b8;
                     wrap: word-wrap;
                     font-family: "Inter";
