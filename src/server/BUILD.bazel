@@ -95,6 +95,7 @@ rust_test(
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
         "@crates//:tempfile",
+        "@crates//:mockito",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:app_tonic",

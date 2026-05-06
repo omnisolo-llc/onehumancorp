@@ -5,6 +5,7 @@ use sqlx::Row;
 pub struct SyncEscalator {
     pool: sqlx::PgPool,
     client: reqwest::Client,
+    pub api_url: String,
 }
 
 impl SyncEscalator {
@@ -12,6 +13,7 @@ impl SyncEscalator {
         SyncEscalator {
             pool,
             client: reqwest::Client::new(),
+            api_url: "https://cloud.onehumancorp.com/api/v1/orchestration/escalate".to_string(),
         }
     }
 
@@ -47,7 +49,7 @@ impl SyncEscalator {
 
             let payload_str = format!(r#"{{"id": "{}", "tenant_id": "{}", "data": "{}"}}"#, id, tenant_id, payload);
             
-            let mut req = self.client.post("https://cloud.onehumancorp.com/api/v1/orchestration/escalate")
+            let mut req = self.client.post(&self.api_url)
                 .header("Content-Type", "application/json")
                 .body(payload_str);
 
@@ -85,6 +87,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_escalator() {
-        return;
+        if tokio::time::timeout(std::time::Duration::from_millis(50), tokio::net::TcpStream::connect("127.0.0.1:5432")).await.is_err() { return; }
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();
+            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { pool.close().await; return; }
+
+            let mut server = mockito::Server::new_async().await;
+            let _mock = server.mock("POST", "/api/v1/orchestration/escalate")
+                .with_status(200)
+                .create_async()
+                .await;
+
+            let mut esc = SyncEscalator::new(pool.clone());
+            esc.api_url = format!("{}/api/v1/orchestration/escalate", server.url());
+            let escalator = Arc::new(esc);
+
+            let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+
+            escalator.start(shutdown_rx, Duration::from_millis(10));
+
+            tokio::time::sleep(Duration::from_millis(50)).await;
+
+            shutdown_tx.send(()).unwrap();
+            pool.close().await;
+        }
     }
 }

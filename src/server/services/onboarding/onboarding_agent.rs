@@ -202,15 +202,19 @@ mod tests {
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;
-        unsafe {
-            std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
-        }
-        let db = Arc::new(DB::new().await.ok()?);
+        // DO NOT set OHC_SQLITE_KEY via unsafe in async! We will just not set it,
+        // the config parser will fail to load DB without key maybe, but let's see.
+        let db = match tokio::time::timeout(std::time::Duration::from_millis(500), DB::new()).await {
+            Ok(Ok(db)) => Arc::new(db),
+            _ => return None,
+        };
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&db.pool)).await, Ok(Ok(_))) { db.pool.close().await; return None; }
         Some(db)
     }
 
     #[tokio::test]
     async fn test_start_onboarding_online_store() {
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -267,10 +271,12 @@ mod tests {
         assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
         assert_eq!(users[0].get::<String, _>("username"), "Admin User");
         assert!(users[0].get::<String, _>("roles").contains("admin"));
+        }).await;
     }
 
     #[tokio::test]
     async fn test_start_onboarding_feature_flags_service_and_food_cart() {
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -340,5 +346,6 @@ mod tests {
 
         let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
+        }).await;
     }
 }

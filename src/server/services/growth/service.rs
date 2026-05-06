@@ -537,7 +537,7 @@ mod tests {
     async fn test_referral_flow() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match PgPool::connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let service = MyGrowthService::new(pool);
 
         let mut req = Request::new(CreateReferralRequest {
