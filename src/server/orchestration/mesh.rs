@@ -321,8 +321,18 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
             }
 
-            let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
-            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+                Ok(transport) => {
+                    let t_clone = transport.clone();
+                    tokio::spawn(async move { t_clone.start_worker().await; });
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+                Err(e) => {
+                    eprintln!("Failed to initialize SqliteTransport: {}. Falling back to MemoryTransport.", e);
+                    let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+            }
         }
     }
 }
