@@ -20,8 +20,8 @@ async fn provision_handler(
     State(service): State<Arc<AgentDepartmentService>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<Vec<AgentDepartment>>, String> {
-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
-    let depts = service.provision_default_departments(&tenant_id).await?;
+    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+    let depts = service.provision_default_departments(tenant_id).await?;
     Ok(Json(depts))
 }
 
@@ -29,8 +29,8 @@ async fn list_approvals_handler(
     State(service): State<Arc<AgentDepartmentService>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<Vec<TaskApproval>>, String> {
-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
-    let approvals = service.get_pending_approvals(&tenant_id).await?;
+    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+    let approvals = service.get_pending_approvals(tenant_id).await?;
     Ok(Json(approvals))
 }
 
@@ -45,7 +45,7 @@ async fn review_approval_handler(
     Path(id): Path<String>,
     Json(payload): Json<ReviewRequest>,
 ) -> Result<Json<()>, String> {
-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
-    service.review_approval(&tenant_id, &id, &payload.action).await?;
+    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+    service.review_approval(tenant_id, &id, &payload.action).await?;
     Ok(Json(()))
 }

@@ -1,0 +1,34 @@
+--- src/server/api/agent_department.rs
++++ src/server/api/agent_department.rs
+@@ -19,8 +19,8 @@
+     State(service): State<Arc<AgentDepartmentService>>,
+     headers: axum::http::HeaderMap,
+ ) -> Result<Json<Vec<AgentDepartment>>, String> {
+-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+-    let depts = service.provision_default_departments(tenant_id).await?;
++    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
++    let depts = service.provision_default_departments(&tenant_id).await?;
+     Ok(Json(depts))
+ }
+
+@@ -28,8 +28,8 @@
+     State(service): State<Arc<AgentDepartmentService>>,
+     headers: axum::http::HeaderMap,
+ ) -> Result<Json<Vec<TaskApproval>>, String> {
+-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+-    let approvals = service.get_pending_approvals(tenant_id).await?;
++    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
++    let approvals = service.get_pending_approvals(&tenant_id).await?;
+     Ok(Json(approvals))
+ }
+
+@@ -43,7 +43,7 @@
+     Path(id): Path<String>,
+     Json(payload): Json<ReviewRequest>,
+ ) -> Result<Json<()>, String> {
+-    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000");
+-    service.review_approval(tenant_id, &id, &payload.action).await?;
++    let tenant_id = headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("00000000-0000-0000-0000-000000000000").to_string();
++    service.review_approval(&tenant_id, &id, &payload.action).await?;
+     Ok(Json(()))
+ }
