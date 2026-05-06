@@ -86,6 +86,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_HELP_CENTER: RefCell<Option<slint::Weak<app::HelpCenter>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
 }
 
@@ -101,6 +102,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_HELP_CENTER: RefCell<Option<slint::Weak<app::HelpCenter>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
 }
 
@@ -913,6 +915,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     integrations_ui.on_invoke_tool(|id| {
         let id_clone = id.to_string(); tokio::spawn(async move { println!("Invoke tool requested for: {}", id_clone); });
     });
+    integrations_ui.on_open_help(move || {
+        GLOBAL_HELP_CENTER.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+            }
+        });
+    });
     Box::leak(Box::new(integrations_ui));
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
@@ -957,6 +966,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    website_builder_ui.on_open_help(move || {
+        GLOBAL_HELP_CENTER.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+            }
+        });
+    });
 
     website_builder_ui.on_upload_logo(|| {
         // Simulate upload for test environment since file dialogs are hard to test
@@ -1020,6 +1037,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grow_business_ui = app::GrowBusiness::new()?;
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let grow_business_handle = grow_business_ui.as_weak();
+    grow_business_ui.on_open_help(move || {
+        GLOBAL_HELP_CENTER.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+            }
+        });
+    });
     let gb_ui_weak = grow_business_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = gb_ui_weak.upgrade() {
@@ -1081,6 +1105,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = ui.hide();
             }
         }
+    });
+
+    settings_ui.on_open_help(move || {
+        GLOBAL_HELP_CENTER.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+            }
+        });
     });
 
     settings_ui.on_sign_out({
@@ -1716,6 +1748,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
 
                 let unified_inbox_handle = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_open_help(move || {
+                    GLOBAL_HELP_CENTER.with(|g| {
+                        if let Some(weak) = g.borrow().as_ref() {
+                            if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+                        }
+                    });
+                });
 
                 dashboard.on_action_check_messages(move || {
                     *check_messages_called_clone.borrow_mut() = true;
@@ -2296,9 +2335,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let fix_agent_handle = fix_agent_ui.as_weak();
-    agents_ui.on_fix_agent(move |_id| {
-        if let Some(ui) = fix_agent_handle.upgrade() {
-            let _ = ui.show();
+    agents_ui.on_fix_agent(move |id| {
+        if id == "help_center" {
+            GLOBAL_HELP_CENTER.with(|g| {
+                if let Some(weak) = g.borrow().as_ref() {
+                    if let Some(hc) = weak.upgrade() { hc.show().unwrap(); }
+                }
+            });
+        } else {
+            if let Some(ui) = fix_agent_handle.upgrade() {
+                let _ = ui.show();
+            }
         }
     });
 

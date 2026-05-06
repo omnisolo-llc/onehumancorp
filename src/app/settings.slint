@@ -23,9 +23,17 @@ export component Settings inherits Window {
 
     background: #f8fafc;
 
+    callback open_help();
+
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Settings"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Button { text: "?"; width: 44px; height: 44px; clicked => { open_help(); } }
+        }
 
         // User Info
         Rectangle {

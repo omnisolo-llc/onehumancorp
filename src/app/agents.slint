@@ -40,6 +40,7 @@ export component Agents inherits Window {
         HorizontalBox {
             Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            Button { text: "?"; width: 44px; height: 44px; clicked => { fix_agent("help_center"); } }
             TooltipElement { tooltip_id: "hire_helper"; Button { text: "Hire Helper"; clicked => { hire_agent(); } } }
         }
 

@@ -11,6 +11,8 @@ export component WebsiteBuilder inherits Window {
     callback open_ohc_signup();
     callback copy_to_clipboard(string);
 
+    callback open_help();
+
     // Placeholder actions
     callback upload_logo();
     callback generate_logo();
@@ -37,6 +39,7 @@ export component WebsiteBuilder inherits Window {
         HorizontalBox {
             Text { text: "Website Builder"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            Button { text: "?"; width: 44px; height: 44px; clicked => { open_help(); } }
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;

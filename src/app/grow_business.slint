@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -20,6 +21,7 @@ export component GrowBusiness inherits Window {
     callback select_strategy(string);
     callback toggle_advanced();
     callback return_to_dashboard();
+    callback open_help();
 
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }
@@ -41,10 +43,11 @@ export component GrowBusiness inherits Window {
         HorizontalBox {
             Text { text: "Growth Strategies"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            Button { text: "?"; width: 44px; height: 44px; clicked => { open_help(); } }
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
-                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                TooltipElement { tooltip_id: "expert_mode"; Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; } }
                 TouchArea {
                     width: 20px;
                     height: 20px;
@@ -65,7 +68,7 @@ export component GrowBusiness inherits Window {
         // Step 0: Select Strategy
         if (step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Select a next step to grow your business"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            TooltipElement { tooltip_id: "growth_strategy"; Text { text: "Select a next step to grow your business"; color: #94a3b8; font-family: "Inter"; font-size: 14px; } }
             
             ScrollView {
                 VerticalBox {

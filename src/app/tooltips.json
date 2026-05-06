@@ -27,5 +27,9 @@
   "mark_order_ready": "Tell the customer their order is ready for pickup or shipping.",
   "hire_helper": "Add a new AI teammate to your business.",
   "fix_helper": "Get help fixing a problem with this AI teammate.",
-  "add_offering": "Add a new product or service to your business."
+  "add_offering": "Add a new product or service to your business.",
+  "expert_mode": "Unlock more precise controls for your business growth.",
+  "growth_strategy": "Choose how you want to expand your business next.",
+  "channel_connect": "Connect OHC to your favorite apps and social media.",
+  "advanced_tool": "Directly run specific technical actions for your business."
 }

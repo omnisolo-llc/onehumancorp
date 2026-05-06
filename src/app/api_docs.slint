@@ -43,6 +43,17 @@ export component ApiDocs inherits Window {
                 wrap: word-wrap;
             }
 
+            Text {
+                text: "How to use these APIs:";
+                font-weight: 700;
+                color: white;
+            }
+            Text {
+                text: "1. Get your secret key below.\n2. Use the 'Connect My Store' endpoint to authenticate.\n3. Send requests to the base URL: https://api.ohc.io";
+                color: #cbd5e1;
+                wrap: word-wrap;
+            }
+
             CheckBox {
                 text: "Show Advanced Developer Documentation";
                 checked <=> is_advanced;

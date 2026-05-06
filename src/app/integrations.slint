@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export struct UiMcpTool {
@@ -17,13 +18,18 @@ export component Integrations inherits Window {
     in property <[UiMcpTool]> tools;
     callback configure_integration(string);
     callback invoke_tool(string);
+    callback open_help();
 
     ScrollView {
         VerticalBox {
             spacing: 20px;
             padding: 24px;
 
-        Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            alignment: space-between;
+            TooltipElement { tooltip_id: "channel_connect"; Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; } }
+            Button { text: "?"; width: 44px; height: 44px; clicked => { open_help(); } }
+        }
 
         HorizontalBox {
             spacing: 16px;
@@ -240,7 +246,7 @@ export component Integrations inherits Window {
             }
         }
 
-        Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        TooltipElement { tooltip_id: "advanced_tool"; Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; } }
         Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
 
         Rectangle {

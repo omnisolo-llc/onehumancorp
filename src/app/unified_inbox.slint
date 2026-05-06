@@ -42,6 +42,7 @@ export component UnifiedInbox inherits Window {
     callback send_message(string);
     callback use_quick_reply(string);
     callback back_to_list();
+    callback open_help();
 
     HorizontalBox {
         // Conversation List (Left side on desktop, full screen conditionally on mobile)
@@ -55,7 +56,11 @@ export component UnifiedInbox inherits Window {
                 padding: 16px;
                 spacing: 16px;
 
-                Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                HorizontalBox {
+                    alignment: space-between;
+                    Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                    Button { text: "?"; width: 44px; height: 44px; clicked => { open_help(); } }
+                }
 
                 ScrollView {
                     VerticalBox {
