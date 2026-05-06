@@ -741,22 +741,55 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+
+        #[derive(sqlx::FromRow)]
+        struct MissionRecord {
+            id: String,
+            payload: String,
+        }
+
+        let records: Vec<MissionRecord> = match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query_as("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .fetch_all(sqlite_pool)
+                    .await?
+            },
+            DbStore::Postgres => {
+                sqlx::query_as("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
+                    .bind(threshold)
+                    .fetch_all(&self.pool)
+                    .await?
+            }
+        };
+
+        if !records.is_empty() {
+            std::fs::create_dir_all(".agent-task/archive/")?;
+            for record in records {
+                let filename = format!(".agent-task/archive/{}.json", record.id);
+                if let Err(e) = std::fs::write(&filename, record.payload) {
+                    tracing::error!("Failed to archive mission {} to {}: {}", record.id, filename, e);
+                }
+            }
+        }
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&self.pool)
                     .await?.rows_affected()
             }
         };
+
         if affected > 0 {
-            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+            tracing::info!("Cleaned up and archived {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }
@@ -989,5 +1022,60 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions() {
+        use chrono::Utc;
+        use crate::db::{DB, DbStore};
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/test")
+            .await;
+
+        let pool = match pool {
+            Ok(p) => p,
+            Err(_) => return, // Skip test if Postgres is not running locally
+        };
+
+        let db = DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        };
+
+        // Ensure table exists for test
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, organization_id TEXT NOT NULL DEFAULT 'system', cloud_mission_id TEXT, sync_error TEXT, last_synced_at TIMESTAMP, synced_to_cloud BOOLEAN DEFAULT false, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Clear existing
+        sqlx::query("DELETE FROM agent_missions WHERE id = 'test-mission-1'").execute(&pool).await.unwrap();
+
+        let old_time = (Utc::now() - chrono::Duration::seconds(7200)).naive_utc();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at) VALUES ($1, $2, $3, $4)")
+            .bind("test-mission-1")
+            .bind("IN_PROGRESS")
+            .bind("{\"task\": \"stuck task\"}")
+            .bind(old_time)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+        assert_eq!(affected, 1);
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'test-mission-1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+
+        let content = std::fs::read_to_string(".agent-task/archive/test-mission-1.json").unwrap();
+        assert_eq!(content, "{\"task\": \"stuck task\"}");
+
+        // Clean up file
+        let _ = std::fs::remove_file(".agent-task/archive/test-mission-1.json");
     }
 }
