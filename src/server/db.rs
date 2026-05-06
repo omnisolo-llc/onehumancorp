@@ -104,26 +104,21 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") {
-                if let Some(key) = database_url.split("key=").nth(1) {
-                    let key = key.split('&').next().unwrap_or("").to_string();
-                    conn_opts = conn_opts.pragma("key", key.clone());
+            // Enforce SQLCipher for Standalone mode
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
+                let key = if let Some(k) = database_url.split("key=").nth(1) {
+                    k.split('&').next().unwrap_or("").to_string()
                 } else {
-                    let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-                    conn_opts = conn_opts.pragma("key", fallback_key);
-                }
-            } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
-                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-                conn_opts = conn_opts.pragma("key", fallback_key);
-            }
+                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                };
 
-            // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") {
-                if let Some(key) = database_url.split("key=").nth(1) {
-                    let key = key.split('&').next().unwrap_or("").to_string();
-                    conn_opts = conn_opts.pragma("key", key.clone());
+                if key.is_empty() {
+                    panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
                 }
+
+                conn_opts = conn_opts.pragma("key", key);
+                // Force full encryption of the database
+                conn_opts = conn_opts.pragma("cipher", "sqlcipher");
             }
 
             let sqlite_pool = SqlitePoolOptions::new()
