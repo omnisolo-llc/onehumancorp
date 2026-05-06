@@ -48,9 +48,14 @@ impl CircuitBreaker {
 }
 
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
+static PROMPT_CACHE: OnceLock<crate::pricing::cache::LocalEmbeddingCache> = OnceLock::new();
 
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(120)))
+}
+
+fn get_prompt_cache() -> &'static crate::pricing::cache::LocalEmbeddingCache {
+    PROMPT_CACHE.get_or_init(|| crate::pricing::cache::LocalEmbeddingCache::new(Duration::from_secs(3600 * 24))) // 24 hours
 }
 
 pub struct MinimaxClient {
@@ -94,6 +99,10 @@ impl MinimaxClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        if let Some(cached) = get_prompt_cache().get(prompt) {
+            return Ok(cached);
+        }
+
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
@@ -125,7 +134,9 @@ impl MinimaxClient {
                         let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
-                            return Ok(choice.message.content.clone());
+                            let content = choice.message.content.clone();
+                            get_prompt_cache().set(prompt, &content);
+                            return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
                             cb.record_failure();

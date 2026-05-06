@@ -215,13 +215,17 @@ impl HubService for MyHubService {
         let _tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
-        // Simulated cost calculation from actual metrics DB
-        let _pool = &self.hub.pool;
+
+        let cost_auditor = self.hub.get_cost_auditor();
+        let llm_cost = cost_auditor.get_total_cost() as i64;
+        let storage_cost = cost_auditor.get_total_storage_savings() as i64; // Using savings as mock for now, or just calculate storage cost
+        let total_costs = llm_cost + storage_cost + 150; // Add payment fees mock
+
         Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
             total_revenue: 5000,
-            total_costs: 1500,
-            llm_cost: 200,
-            storage_cost: 50,
+            total_costs: total_costs,
+            llm_cost: llm_cost,
+            storage_cost: storage_cost,
             payment_fees: 150,
             period_start: "2024-05-01".to_string(),
             period_end: "2024-05-31".to_string(),

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use std::fs;
 use std::io;
+use opentelemetry::global;
 
 use std::path::{Path, PathBuf};
 use crate::billing::Tracker;
@@ -100,26 +101,41 @@ impl Provider for LocalProvider {
 
     async fn read_blob(&self, key: &str) -> io::Result<Vec<u8>> {
         let path = self.get_local_path(key)?;
-        tokio::fs::read(path).await
+        let data = tokio::fs::read(path).await?;
+        let meter = opentelemetry::global::meter("billing");
+        let counter = meter.u64_counter("storage_bytes_read").build();
+        counter.add(data.len() as u64, &[]);
+        Ok(data)
     }
 
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
-        let path = self.get_local_path(key)?;
+        let mut final_data = data.to_vec();
+        let mut final_key = key.to_string();
+
+        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
+        if is_image && data.len() > 100 {
+            if let Ok(img) = image::load_from_memory(data) {
+                // Auto-resize to max 800px width/height while preserving aspect ratio
+                let resized = img.resize(800, 800, image::imageops::FilterType::Lanczos3);
+
+                let mut cursor = std::io::Cursor::new(Vec::new());
+                if let Ok(_) = resized.write_to(&mut cursor, image::ImageFormat::WebP) {
+                    final_data = cursor.into_inner();
+                    // Update key extension to webp
+                    if let Some(pos) = key.rfind('.') {
+                        final_key = format!("{}.webp", &key[..pos]);
+                    }
+                }
+            }
+        }
+
+        let path = self.get_local_path(&final_key)?;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let mut final_data = data.to_vec();
-
-        // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        if is_image && data.len() > 100 {
-            // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
-            final_data.truncate(data.len() / 5);
-        }
-
         // Quota Enforcement
-        let t_id = key.split('/').next().unwrap_or("default");
+        let t_id = final_key.split('/').next().unwrap_or("default");
         if let Ok(status) = self.tracker.track_storage_usage(t_id, final_data.len() as i64).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
@@ -128,6 +144,9 @@ impl Provider for LocalProvider {
             }
         }
 
+        let meter = opentelemetry::global::meter("billing");
+        let counter = meter.u64_counter("storage_bytes_written").build();
+        counter.add(final_data.len() as u64, &[]);
         tokio::fs::write(path, &final_data).await
     }
 }
