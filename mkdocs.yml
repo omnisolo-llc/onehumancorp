@@ -81,6 +81,13 @@ nav:
       - Issue Migration Seed: operations/github-issues-migration.md
       - Docs Audit: reports/docs-site-audit.md
       - Market Research Report: reports/ohc_market_research_report.md
+      - Strategic Market Research (2025): research/strategic_market_research_report.md
+      - Feature Missions:
+          - 1-Tap DM Drafting: research/[customer_success]_1_tap_dm_drafting.md
+          - 30-Second Business Launch: research/[onboarding]_30_second_conversational_build.md
+          - Autonomous GEO Optimization: research/[marketing]_autonomous_geo_optimization.md
+          - Proactive Stock Alerts: research/[operations]_vigilant_manager_proactive_alerts.md
+          - Plain-Language Health Briefing: research/[finance]_plain_language_health_briefing.md
   - Releases:
       - public/index.md
       - Changelog: public/CHANGELOG.md
