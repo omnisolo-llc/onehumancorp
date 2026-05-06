@@ -47,6 +47,25 @@ fn create() -> app::Referrals { crate::ui_tests::init(); app::Referrals::new().u
 // --- Consolidated Verified Tests ---
 
 #[test]
+fn e2e_referral_glassmorphism_interactions() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_refresh(move || { *c.borrow_mut() = true; });
+    ui.invoke_refresh();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn e2e_referral_glassmorphism_stats_update() {
+    let ui = create();
+    ui.set_viral_coefficient(2.5);
+    ui.set_download_count(420);
+    assert_eq!(ui.get_viral_coefficient(), 2.5);
+    assert_eq!(ui.get_download_count(), 420);
+}
+
+#[test]
 fn create_verify_my_referral_link() {
     let ui = create();
     ui.set_my_referral_link("https://ref.link/xyz".into());

@@ -14,7 +14,7 @@ export component Referrals inherits Window {
     height: 600px;
     title: "Referral Dashboard";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <[UiReferral]> referrals;
     in property <string> my_referral_link: "ohc://join?ref=DEFAULT";
@@ -42,7 +42,7 @@ export component Referrals inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Referral Dashboard"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Referral Dashboard"; font-size: 20px; font-weight: 700; color: white; }
             Rectangle {}
             Button { 
                 text: "Refresh"; 
@@ -54,8 +54,8 @@ export component Referrals inherits Window {
             VerticalBox {
                 padding: 16px;
                 spacing: 10px;
-                Text { text: "Your Referral Link"; font-weight: 700; color: #1e293b; }
-                Text { text: my_referral_link; color: #64748b; font-size: 14px; }
+                Text { text: "Your Referral Link"; font-weight: 700; color: white; }
+                Text { text: my_referral_link; color: #94a3b8; font-size: 14px; }
                 HorizontalBox {
                     Button {
                         text: "Copy";
@@ -94,20 +94,20 @@ export component Referrals inherits Window {
             VerticalBox {
                 padding: 16px;
                 spacing: 10px;
-                Text { text: "Referral Statistics"; font-weight: 700; color: #1e293b; }
+                Text { text: "Referral Statistics"; font-weight: 700; color: white; }
                 HorizontalBox {
-                    Text { text: "Total Referrals: " + total_referrals; color: #64748b; font-size: 14px; }
-                    Text { text: "Click Count: " + click_count; color: #64748b; font-size: 14px; }
-                    Text { text: "Conversion Rate: " + conversion_rate + "%"; color: #64748b; font-size: 14px; }
+                    Text { text: "Total Referrals: " + total_referrals; color: #94a3b8; font-size: 14px; }
+                    Text { text: "Click Count: " + click_count; color: #94a3b8; font-size: 14px; }
+                    Text { text: "Conversion Rate: " + conversion_rate + "%"; color: #94a3b8; font-size: 14px; }
                 }
                 HorizontalBox {
-                    Text { text: "Reward Balance: " + reward_balance; color: #64748b; font-size: 14px; }
-                    Text { text: "Bonus Credit: " + bonus_credit; color: #64748b; font-size: 14px; }
+                    Text { text: "Reward Balance: " + reward_balance; color: #94a3b8; font-size: 14px; }
+                    Text { text: "Bonus Credit: " + bonus_credit; color: #94a3b8; font-size: 14px; }
                 }
                 HorizontalBox {
-                    Text { text: "Viral Coefficient: " + viral_coefficient; color: #64748b; font-size: 14px; }
-                    Text { text: "Download Count: " + download_count; color: #64748b; font-size: 14px; }
-                    Text { text: "Waitlist Position: " + waitlist_position; color: #64748b; font-size: 14px; }
+                    Text { text: "Viral Coefficient: " + viral_coefficient; color: #94a3b8; font-size: 14px; }
+                    Text { text: "Download Count: " + download_count; color: #94a3b8; font-size: 14px; }
+                    Text { text: "Waitlist Position: " + waitlist_position; color: #94a3b8; font-size: 14px; }
                 }
                 HorizontalBox {
                     Button {
@@ -119,7 +119,7 @@ export component Referrals inherits Window {
                         clicked => { export_data(); }
                     }
                 }
-                Text { text: "Recent Activity"; font-weight: 700; color: #1e293b; }
+                Text { text: "Recent Activity"; font-weight: 700; color: white; }
             }
         }
 
@@ -127,59 +127,54 @@ export component Referrals inherits Window {
             VerticalBox {
                 padding: 16px;
                 spacing: 10px;
-                Text { text: "Referral Program Admin"; font-weight: 700; color: #1e293b; }
-                Text { text: "Settings Configure"; font-weight: 700; color: #1e293b; }
+                Text { text: "Referral Program Admin"; font-weight: 700; color: white; }
+                Text { text: "Settings Configure"; font-weight: 700; color: white; }
                 HorizontalBox {
-                    Text { text: "Reward Amount:"; vertical-alignment: center; }
+                    Text { text: "Reward Amount:"; vertical-alignment: center; color: #94a3b8; }
                     TextInput { text: "25"; width: 100px; height: 32px; }
                 }
                 HorizontalBox {
-                    Text { text: "Program Enabled"; vertical-alignment: center; }
+                    Text { text: "Program Enabled"; vertical-alignment: center; color: #94a3b8; }
                     Rectangle {
                         width: 40px; height: 20px; border-radius: 10px; background: #a855f7;
                         Rectangle { width: 16px; height: 16px; border-radius: 8px; background: white; x: 22px; y: 2px; }
                     }
                 }
-                Text { text: "Leaderboard Rank: #1"; color: #64748b; font-size: 14px; }
-                Text { text: "Top Award: Platinum Level"; color: #64748b; font-size: 14px; }
+                Text { text: "Leaderboard Rank: #1"; color: #94a3b8; font-size: 14px; }
+                Text { text: "Top Award: Platinum Level"; color: #94a3b8; font-size: 14px; }
             }
         }
 
         VerticalBox {
             spacing: 16px;
-            for r in referrals : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
+            for r in referrals : GlassCard {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     
                     HorizontalBox {
-                        Text { text: "Ref: " + r.referral_code; font-weight: 700; color: #1e293b; }
+                        Text { text: "Ref: " + r.referral_code; font-weight: 700; color: white; }
                         Rectangle {}
                         Text { text: "👥"; font-size: 20px; }
                     }
                     
-                    Text { text: "User: " + r.user_id; color: #64748b; }
+                    Text { text: "User: " + r.user_id; color: #94a3b8; }
                     
                     HorizontalBox {
                         alignment: space-around;
                         VerticalBox {
                             alignment: center;
                             Text { text: r.clicks; font-size: 24px; font-weight: 700; color: #a855f7; }
-                            Text { text: "Clicks"; color: #64748b; font-size: 12px; }
+                            Text { text: "Clicks"; color: #94a3b8; font-size: 12px; }
                         }
                         VerticalBox {
                             alignment: center;
                             Text { text: r.conversions; font-size: 24px; font-weight: 700; color: #a855f7; }
-                            Text { text: "Conversions"; color: #64748b; font-size: 12px; }
+                            Text { text: "Conversions"; color: #94a3b8; font-size: 12px; }
                         }
                     }
                     
-                    Text { text: "Created: " + r.created_at; color: #64748b; font-size: 12px; }
+                    Text { text: "Created: " + r.created_at; color: #94a3b8; font-size: 12px; }
                 }
             }
         }

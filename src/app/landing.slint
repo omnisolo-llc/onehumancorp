@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component Landing inherits Window {
     width: 800px;
@@ -12,7 +13,7 @@ export component Landing inherits Window {
     callback continue_to_dashboard();
     callback download(string);
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
@@ -20,7 +21,7 @@ export component Landing inherits Window {
         alignment: center;
 
         // Header
-        Text { text: "OneHumanCorp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+        Text { text: "OneHumanCorp"; font-size: 32px; font-weight: 700; color: white; horizontal-alignment: center; }
         
         Text { 
             text: is_variant_b ? "The Cloud Helper System" : "The Flexible Helper System";
@@ -43,37 +44,37 @@ export component Landing inherits Window {
             spacing: 20px;
             alignment: center;
             
-            if (is_variant_b) : Rectangle {
-                background: white; border-radius: 8px; width: 220px; height: 150px;
+            if (is_variant_b) : GlassCard {
+                width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Always Online"; font-weight: 700; }
-                    Text { text: "Your helpers are always awake, replying to customers and taking orders while you sleep."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Always Online"; font-weight: 700; color: white; }
+                    Text { text: "Your helpers are always awake, replying to customers and taking orders while you sleep."; color: #94a3b8; wrap: word-wrap; }
                 }
             }
-            if (is_variant_b) : Rectangle {
-                background: white; border-radius: 8px; width: 220px; height: 150px;
+            if (is_variant_b) : GlassCard {
+                width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Instant Collaboration"; font-weight: 700; }
-                    Text { text: "Invite team members instantly. Shared intelligence across your entire organization."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Instant Collaboration"; font-weight: 700; color: white; }
+                    Text { text: "Invite team members instantly. Shared intelligence across your entire organization."; color: #94a3b8; wrap: word-wrap; }
                 }
             }
             
-            if (!is_variant_b) : Rectangle {
-                background: white; border-radius: 8px; width: 220px; height: 150px;
+            if (!is_variant_b) : GlassCard {
+                width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Complete Privacy"; font-weight: 700; }
-                    Text { text: "All helpers run entirely on your computer. Your business data never leaves your device."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Complete Privacy"; font-weight: 700; color: white; }
+                    Text { text: "All helpers run entirely on your computer. Your business data never leaves your device."; color: #94a3b8; wrap: word-wrap; }
                 }
             }
-            if (!is_variant_b) : Rectangle {
-                background: white; border-radius: 8px; width: 220px; height: 150px;
+            if (!is_variant_b) : GlassCard {
+                width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Works Offline"; font-weight: 700; }
-                    Text { text: "No internet? No problem. Continue managing your business without a connection."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Works Offline"; font-weight: 700; color: white; }
+                    Text { text: "No internet? No problem. Continue managing your business without a connection."; color: #94a3b8; wrap: word-wrap; }
                 }
             }
         }
@@ -94,7 +95,7 @@ export component Landing inherits Window {
         // Debug toggle
         HorizontalBox {
             alignment: center;
-            Text { text: "Debug: Switch Variant"; }
+            Text { text: "Debug: Switch Variant"; color: white; }
             Button { text: "Toggle"; clicked => { is_variant_b = !is_variant_b; } }
         }
     }

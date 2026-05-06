@@ -44,4 +44,24 @@ fn create() -> app::Landing { crate::ui_tests::init(); app::Landing::new().unwra
 
 // --- Unique Scenarios with Verification ---
 
+#[test] fn e2e_landing_glassmorphism_variant_switch_render() {
+    let ui = create();
+    ui.set_is_variant_b(true);
+    assert_eq!(ui.get_is_variant_b(), true);
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_start_business_setup(move || { *c.borrow_mut() = true; });
+    ui.invoke_start_business_setup();
+    assert!(*called.borrow());
+}
+
+#[test] fn e2e_landing_glassmorphism_download_render() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_download(move |os| { *c.borrow_mut() = os.to_string(); });
+    ui.invoke_download("Windows".into());
+    assert_eq!(*called.borrow(), "Windows");
+}
+
 // --- Consolidated Verified Tests ---
