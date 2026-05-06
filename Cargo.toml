@@ -82,5 +82,6 @@ prost-types = "0.13"
 futures = "0.3"
 
 [dev-dependencies]
+wiremock = "0.6"
 temp-env = "0.3.6"
 futures-util = "0.3.32"
