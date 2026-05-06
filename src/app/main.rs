@@ -481,7 +481,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let models = vec![
+                                            app::ApiEndpoint {
+                                                method: "GET".into(),
+                                                path: "/v1/products".into(),
+                                                description: "Returns a list of all products in your store.".into(),
+                                            },
+                                            app::ApiEndpoint {
+                                                method: "POST".into(),
+                                                path: "/v1/orders".into(),
+                                                description: "Creates a new order in your store.".into(),
+                                            },
+                                        ];
+                                        api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
                                         let api_docs_handle = api_docs_ui.as_weak();
+
+                                        api_docs_ui.on_test_endpoint({
+                                            let docs_handle = api_docs_ui.as_weak();
+                                            move |path| {
+                                                if let Some(ui) = docs_handle.upgrade() {
+                                                    let resp = if path == "/v1/products" {
+                                                        "{\n  \"data\": [\n    { \"id\": \"prod_1\", \"name\": \"Premium Theme\" }\n  ]\n}"
+                                                    } else {
+                                                        "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
+                                                    };
+                                                    ui.set_api_response(resp.into());
+                                                }
+                                            }
+                                        });
+
                                         dashboard.on_open_api_docs(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
                                                 let _ = ui.show();
@@ -1936,7 +1964,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
+                let models = vec![
+                    app::ApiEndpoint {
+                        method: "GET".into(),
+                        path: "/v1/products".into(),
+                        description: "Returns a list of all products in your store.".into(),
+                    },
+                    app::ApiEndpoint {
+                        method: "POST".into(),
+                        path: "/v1/orders".into(),
+                        description: "Creates a new order in your store.".into(),
+                    },
+                ];
+                api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
                 let api_docs_handle = api_docs_ui.as_weak();
+
+                api_docs_ui.on_test_endpoint({
+                    let docs_handle = api_docs_ui.as_weak();
+                    move |path| {
+                        if let Some(ui) = docs_handle.upgrade() {
+                            let resp = if path == "/v1/products" {
+                                "{\n  \"data\": [\n    { \"id\": \"prod_1\", \"name\": \"Premium Theme\" }\n  ]\n}"
+                            } else {
+                                "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
+                            };
+                            ui.set_api_response(resp.into());
+                        }
+                    }
+                });
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
