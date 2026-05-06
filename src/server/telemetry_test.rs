@@ -267,7 +267,9 @@ mod tests {
                                lower_line.contains("payload") ||
                                lower_line.contains("email") ||
                                lower_line.contains("password") ||
-                               lower_line.contains("pii") {
+                               lower_line.contains("pii") ||
+                               lower_line.contains("api_key") ||
+                               lower_line.contains("secret_key") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
