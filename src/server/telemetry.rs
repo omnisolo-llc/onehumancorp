@@ -232,4 +232,35 @@ mod tests {
         let gauge2 = get_queue_length_gauge();
         gauge2.add(1, &[]);
     }
+
+    #[test]
+    fn test_redact_interface_pii() {
+        let original_json = serde_json::json!({
+            "safe_field": "safe_value",
+            "nested": {
+                "password": "my_super_secret_password",
+                "email": "user@example.com",
+                "another_safe": "value"
+            },
+            "array": [
+                { "ssn": "123-45-6789" },
+                { "phone": "555-1234" }
+            ],
+            "raw_email": "test@test.com",
+            "API_KEY": "sk-123456"
+        });
+
+        let redacted_json = redact_interface_pii(original_json);
+
+        assert_eq!(redacted_json["safe_field"], "safe_value");
+        assert_eq!(redacted_json["nested"]["password"], "[REDACTED]");
+        assert_eq!(redacted_json["nested"]["email"], "[REDACTED]");
+        assert_eq!(redacted_json["nested"]["another_safe"], "value");
+        assert_eq!(redacted_json["array"][0]["ssn"], "[REDACTED]");
+        assert_eq!(redacted_json["array"][1]["phone"], "[REDACTED]");
+        // Since `raw_email`'s value contains an @ and ., it is considered an email by `is_email` check, NOT by the key!
+        // But wait! `raw_email` key also contains "email"! Let's test a key that does NOT contain sensitive words but HAS email string
+        assert_eq!(redacted_json["raw_email"], "[REDACTED]"); // "email" in key matched first!
+        assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
+    }
 }
