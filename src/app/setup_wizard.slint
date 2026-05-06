@@ -655,6 +655,45 @@ export component SetupWizard inherits Window {
                 }
             }
 
+            // Step 10: Checklist
+            if (false) : VerticalBox {
+                spacing: 16px;
+
+                Text { text: "You're set up! Here's what to do next:"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
+
+                GlassCard {
+                    height: 60px;
+                    background: rgba(16, 185, 129, 0.2); // Greenish tint
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "✅ Business live"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    }
+                }
+                GlassCard {
+                    height: 60px;
+                    background: rgba(168, 85, 247, 0.4);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "⬜ Add 3 more products"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    }
+                    TouchArea { clicked => { go_to_add_products(); } }
+                }
+                GlassCard {
+                    height: 60px;
+                    background: rgba(168, 85, 247, 0.4);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "⬜ Connect Instagram"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    }
+                    TouchArea { clicked => { go_to_connect_instagram(); } }
+                }
+                GlassCard {
+                    height: 60px;
+                    background: rgba(168, 85, 247, 0.4);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "⬜ Share your link with a friend"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    }
+                    TouchArea { clicked => { go_to_share_link(); } }
+                }
+            }
+
             // Step 100: Generated Storefront
             if (step == 100) : VerticalBox {
                 spacing: 16px;
