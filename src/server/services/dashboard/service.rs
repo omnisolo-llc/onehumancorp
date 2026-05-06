@@ -79,7 +79,7 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             },
             async {
-                let org_id = req.organization_id.clone();
+                let _org_id = req.organization_id.clone();
                 // Let's assume order schema exists or fallback to empty for the benchmark
                 Ok::<_, String>(vec![])
             }

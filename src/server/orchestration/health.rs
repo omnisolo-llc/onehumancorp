@@ -30,6 +30,7 @@ pub async fn run_health_monitor(
                         to_fire.push(agent.id.clone());
                     }
                 }
+                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
                 for agent_id in to_fire {
                     if is_cloud {
                         let count = pending_fires.entry(agent_id.clone()).or_insert(0);
@@ -132,8 +133,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
+        let prev_val = std::env::var("STANDALONE_MODE");
+        unsafe { std::env::set_var("STANDALONE_MODE", "false"); }
+
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            unsafe {
+                if let Ok(val) = prev_val { std::env::set_var("STANDALONE_MODE", val); } else { std::env::remove_var("STANDALONE_MODE"); }
+            }
             return;
         }
 
@@ -173,5 +180,9 @@ mod tests {
         // After multiple ticks (3+), it should be fired
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
+
+        unsafe {
+            if let Ok(val) = prev_val { std::env::set_var("STANDALONE_MODE", val); } else { std::env::remove_var("STANDALONE_MODE"); }
+        }
     }
 }

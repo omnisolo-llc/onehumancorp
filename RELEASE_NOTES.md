@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
+- Scaling (Cloud): 🚀 Nova: Growth Features Suite - Added success milestones logic for order thresholds (#11071)
+- Privacy/Offline (Standalone): 🚀 Nova: Growth Features Suite - Added success milestones logic for order thresholds (#11071)
+
 ## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
 - Scaling (Cloud): Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
 - Privacy/Offline (Standalone): Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137)

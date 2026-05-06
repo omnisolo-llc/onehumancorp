@@ -138,7 +138,7 @@ mod tests {
         temp_env::with_var("OHC_AGENT_AUTH_DISABLED", Some("true"), || {
             let cfg = AuthConfig::from_env();
 
-            let mut req = Request::new(());
+            let req = Request::new(());
             // Since it's SPIFFE mode, it will fail because x-spiffe-id header is missing
             let result = cfg.authenticate(&req);
             assert!(result.is_err());

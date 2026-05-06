@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
+### Cloud Scaling Improvements
+- 🚀 Nova: Growth Features Suite - Added success milestones logic for order thresholds (#11071)
+
+### Privacy/Offline Improvements
+- 🚀 Nova: Growth Features Suite - Added success milestones logic for order thresholds (#11071)
+
 ## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
 ### Cloud Scaling Improvements
 - Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
