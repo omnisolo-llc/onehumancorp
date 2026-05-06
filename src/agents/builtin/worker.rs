@@ -146,27 +146,54 @@ impl TaskWorker {
     async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str) -> Result<(), String> {
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
         
-        let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
-            .await
-            .map_err(|e| format!("connect to builtin agent at {}: {}", address, e))?;
-            
-        let req = crate::ohc::agent::service::RunTaskRequest {
-            task: payload.to_string(),
-            department: role.to_string(),
-            ..Default::default()
-        };
+        let mut attempt = 0;
+        let max_attempts = 3;
         
-        let response = client.run_task(req).await.map_err(|e| e.to_string())?;
-        let mut stream = response.into_inner();
-        
-        let mut last_content = String::new();
-        while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
-            if !event.content.is_empty() {
-                last_content = event.content;
+        loop {
+            attempt += 1;
+            let result = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+                let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
+                    .await
+                    .map_err(|e| format!("connect to builtin agent at {}: {}", address, e))?;
+
+                let req = crate::ohc::agent::service::RunTaskRequest {
+                    task: payload.to_string(),
+                    department: role.to_string(),
+                    ..Default::default()
+                };
+
+                let response = client.run_task(req).await.map_err(|e| e.to_string())?;
+                let mut stream = response.into_inner();
+
+                let mut last_content = String::new();
+                while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
+                    if !event.content.is_empty() {
+                        last_content = event.content;
+                    }
+                }
+
+                Ok::<String, String>(last_content)
+            }).await;
+
+            match result {
+                Ok(Ok(last_content)) => {
+                    debug!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
+                    return Ok(());
+                }
+                Ok(Err(e)) => {
+                    error!("builtin agent task failed on attempt {}: {}", attempt, e);
+                    if attempt >= max_attempts {
+                        return Err(e);
+                    }
+                }
+                Err(_) => {
+                    error!("builtin agent task timed out (ML-Resilience 60s) on attempt {}", attempt);
+                    if attempt >= max_attempts {
+                        return Err("Timeout executing agent job (ML-Resilience 60s boundary)".to_string());
+                    }
+                }
             }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
-        
-        debug!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
-        Ok(())
     }
 }
