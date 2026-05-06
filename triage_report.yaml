@@ -1,12 +1,6 @@
-issue_category: "cleanup"
-status: "resolved"
+issue_category: refactor
+status: resolved
 details:
-  - "Fixed unused variable warnings in src/server/orchestration/state/test.rs"
-  - "Fixed unused variable warnings in src/server/benchmarks/latency_bench.rs"
-  - "Fixed unused variable and dead code warnings in src/server/auth/mod.rs"
-  - "Fixed unused variable warnings in src/server/orchestration/state/cloud.rs and standalone.rs"
-  - "Updated deprecated get_async_connection to get_multiplexed_async_connection in src/server/orchestration/state/cloud.rs"
-  - "Fixed PermissionsExt unused import via cfg in src/server/utils/fs.rs"
-  - "Added #[cfg(test)] for orchestration_test in src/server/orchestration/mod.rs"
-  - "Fixed unused variables in setup_wizard_ui closure in src/app/main.rs"
-  - "All tests pass successfully."
+  - Fixed skip tests logic in test cases: 'test_power_sync_pull' and 'test_autodream_pipeline_sqlite'.
+  - Made them pass properly and eliminated the unreachable_code.
+  - Eliminated dead_code warnings regarding _embedded_counter in 'AutoDreamWorker'.

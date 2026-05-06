@@ -37,15 +37,29 @@ impl AutoDreamPipeline {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
-            .fetch_all(&self.db.pool)
-            .await?;
+        let mut extracted_data: Vec<(String, String, String)> = Vec::new();
+        match &self.db.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+                    .fetch_all(sqlite_pool)
+                    .await?;
+                for row in rows {
+                    use sqlx::Row;
+                    extracted_data.push((row.get("session_id"), row.get("agent_id"), row.get("context_data")));
+                }
+            }
+            DbStore::Postgres => {
+                let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+                    .fetch_all(&self.db.pool)
+                    .await?;
+                for row in rows {
+                    use sqlx::Row;
+                    extracted_data.push((row.get("session_id"), row.get("agent_id"), row.get("context_data")));
+                }
+            }
+        }
 
-        for row in rows {
-            use sqlx::Row;
-            let session_id: String = row.get("session_id");
-            let agent_id: String = row.get("agent_id");
-            let context_data: String = row.get("context_data");
+        for (session_id, agent_id, context_data) in extracted_data {
 
             let embedding = match self.embedding_api.generate_embedding(&context_data).await {
                 Ok(emb) => emb,
@@ -82,10 +96,20 @@ impl AutoDreamPipeline {
                 }
             }
 
-            sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                .bind(&session_id)
-                .execute(&self.db.pool)
-                .await?;
+            match &self.db.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                        .bind(&session_id)
+                        .execute(sqlite_pool)
+                        .await?;
+                }
+                DbStore::Postgres => {
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                        .bind(&session_id)
+                        .execute(&self.db.pool)
+                        .await?;
+                }
+            }
         }
 
         Ok(())
@@ -118,9 +142,8 @@ mod tests {
         let db_mock = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()) });
         let _pipe = AutoDreamPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
         assert!(true);
-        return; // SKIP REAL DB
 
-        #[allow(unreachable_code)]
+
         // Setup SQLite memory database
         #[allow(unused_variables)]
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
