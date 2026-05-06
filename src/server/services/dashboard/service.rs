@@ -26,13 +26,16 @@ impl DashboardService for MyDashboardService {
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
 
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res, org_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+            }),
+            async { Ok::<_, tonic::Status>(None) },
+            async { Ok::<_, tonic::Status>(vec![]) },
+            async { Ok::<_, tonic::Status>(vec![]) },
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -56,12 +59,14 @@ impl DashboardService for MyDashboardService {
         };
 
         Ok(Response::new(DashboardSnapshot {
-            organization: None, // Need to query DB for org info
+            organization: org_res.unwrap_or(None),
             agents: vec![],
             meetings: vec![],
             cost_summary: Some(cost_summary),
             statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),
+            products: products_res.unwrap_or_default(),
+            recent_orders: orders_res.unwrap_or_default(),
         }))
     }
 

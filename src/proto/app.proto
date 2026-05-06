@@ -26,6 +26,8 @@ message DashboardSnapshot {
   ohc.billing.CostSummary cost_summary = 4;
   repeated StatusCount statuses = 5;
   string updated_at = 6;
+  repeated ohc.organization.Product products = 7;
+  repeated ohc.organization.Order recent_orders = 8;
 }
 
 message GetDashboardRequest {

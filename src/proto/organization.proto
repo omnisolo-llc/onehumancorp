@@ -63,3 +63,13 @@ service OrganizationService {
   rpc CreateOrganization(Organization) returns (Organization);
   rpc GetOrganizationChart(Organization) returns (OrganizationChart);
 }
+
+
+message Order {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  double total_amount = 4;
+  string status = 5;
+  int64 created_at = 6;
+}
