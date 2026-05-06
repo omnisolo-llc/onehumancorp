@@ -91,6 +91,13 @@
 ### Privacy/Offline Improvements
 - Fix Bazel test execution time warning for `server_test` (#8941)
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+### Cloud Scaling Improvements
+- 💰 Miser: Implement core cost efficiency and metering features including prompt caching to lower AI costs, OpenTelemetry metering, and ACH transaction routing optimizations (#11360).
+
+### Privacy/Offline Improvements
+- 💰 Miser: Apply premium OHC styling to transparent pricing and "My Plan" dashboards for local environments (#11360).
+
 ## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)

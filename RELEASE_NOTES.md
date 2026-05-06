@@ -70,6 +70,10 @@
 - Scaling (Cloud): [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
 - Privacy/Offline (Standalone): [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+- Scaling (Cloud): 💰 Miser: Implement core cost efficiency and metering features including prompt caching to lower AI costs, OpenTelemetry metering, and ACH transaction routing optimizations (#11360).
+- Privacy/Offline (Standalone): 💰 Miser: Apply premium OHC styling to transparent pricing and "My Plan" dashboards for local environments (#11360).
+
 ## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
 - Scaling (Cloud): Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
 - Privacy/Offline (Standalone): Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
