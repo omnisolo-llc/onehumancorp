@@ -28,6 +28,7 @@ pub struct Job {
 #[async_trait]
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> { for job in jobs { self.enqueue(job).await?; } Ok(()) }
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
         async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;
@@ -48,6 +49,13 @@ impl MemoryTaskQueue {
 
 #[async_trait]
 impl TaskQueue for MemoryTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        for job in jobs {
+            self.jobs.insert(job.id.clone(), job);
+        }
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         self.jobs.insert(job.id.clone(), job);
         Ok(())
@@ -123,6 +131,32 @@ impl TaskQueue for PostgresTaskQueue {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) ");
+        builder.push_values(jobs.into_iter(), |mut b, job| {
+            let run_after = job.run_after;
+            let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+            payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+            payload_map["attempts"] = serde_json::json!(job.attempts);
+            payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
+            let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+            let org_id = if job.tenant_id.is_empty() {
+                payload_map["organization_id"].as_str().unwrap_or("").to_string()
+            } else {
+                job.tenant_id.clone()
+            };
+            b.push_bind(job.id)
+             .push_bind(org_id)
+             .push_bind(job.parent_task_id)
+             .push_bind(new_payload)
+             .push_bind("PENDING")
+             .push_bind(run_after);
+        });
+        builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -724,6 +758,24 @@ impl SqliteTaskQueue {
 
 #[async_trait]
 impl TaskQueue for SqliteTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        for job in jobs {
+            sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
+                .bind(job.id.clone())
+                .bind(job.tenant_id.clone())
+                .bind(job.parent_task_id.clone())
+                .bind(job.agent_role.clone())
+                .bind(job.payload.as_bytes())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         // Here job.payload is a String but in the SQLite table it's BLOB, 
         // we can store it as text since SQLite handles it loosely or cast it.
@@ -849,6 +901,18 @@ impl RedisTaskQueue {
 
 #[async_trait]
 impl TaskQueue for RedisTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut pipe = redis::pipe();
+        for job in jobs {
+            let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+            pipe.cmd("RPUSH").arg(&self.queue_name).arg(payload_json);
+        }
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
