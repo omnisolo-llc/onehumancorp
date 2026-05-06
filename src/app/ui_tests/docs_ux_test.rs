@@ -43,6 +43,16 @@ fn test_e2e_api_docs_navigation_flow() {
     // Verify the destination component renders correctly
     let ui = crate::app::ApiDocs::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("Connect Custom Software"));
+
+    let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let endpoint_tested_clone = endpoint_tested.clone();
+    ui.on_test_endpoint(move |path| {
+        assert_eq!(path, "/v1/products");
+        *endpoint_tested_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_test_endpoint("/v1/products".into());
+    assert!(*endpoint_tested.borrow(), "Endpoint execution callback must be triggered");
 }
 
 #[test]

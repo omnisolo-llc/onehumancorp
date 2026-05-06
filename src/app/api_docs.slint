@@ -1,6 +1,12 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, CheckBox } from "std-widgets.slint";
 
+export struct ApiEndpoint {
+    method: string,
+    path: string,
+    description: string,
+}
+
 export component ApiDocs inherits Window {
     preferred-width: 800px;
     preferred-height: 600px;
@@ -11,6 +17,10 @@ export component ApiDocs inherits Window {
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
     in-out property <bool> is_advanced: false;
+    in property <[ApiEndpoint]> endpoints: [];
+    in-out property <string> api_response: "";
+    in-out property <string> active_endpoint: "";
+    callback test_endpoint(string);
 
     HorizontalBox {
         alignment: center;
@@ -42,14 +52,36 @@ export component ApiDocs inherits Window {
                 VerticalBox {
                     spacing: 24px;
 
-                    VerticalBox {
+                    for ep in endpoints: VerticalBox {
                         spacing: 8px;
-                        Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: white; }
                         GlassCard { // dark theme for code
                             VerticalBox {
                                 padding: 16px; spacing: 8px;
-                                Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
-                                Text { text: "Returns a list of all products in your store."; color: white; wrap: word-wrap; }
+                                HorizontalBox {
+                                    spacing: 12px;
+                                    Text {
+                                        text: ep.method;
+                                        font-weight: 700;
+                                        color: ep.method == "GET" ? #10b981 : (ep.method == "POST" ? #3b82f6 : #f59e0b);
+                                    }
+                                    Text { text: ep.path; font-weight: 700; color: white; }
+                                }
+                                Text { text: ep.description; color: #cbd5e1; wrap: word-wrap; }
+                                Button {
+                                    text: "Execute Test";
+                                    clicked => { root.test_endpoint(ep.path); root.active_endpoint = ep.path; }
+                                }
+                                if (root.active_endpoint == ep.path && root.api_response != "") : Rectangle {
+                                    background: #1e293b;
+                                    border-radius: 4px;
+                                    padding: 8px;
+                                    Text {
+                                        text: root.api_response;
+                                        color: #a7f3d0;
+                                        wrap: word-wrap;
+                                        font-family: "monospace";
+                                    }
+                                }
                             }
                         }
                     }
