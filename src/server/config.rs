@@ -113,6 +113,7 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     };
     cfg.database_url = Some(sqlite_url);
 
+
     // Set proper file permissions for local storage wrapper in standalone mode atomically
     #[cfg(unix)]
     {
@@ -120,8 +121,16 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         use std::os::unix::fs::OpenOptionsExt;
         use std::os::unix::fs::PermissionsExt;
 
-        let db_path = "ohc-standalone.db";
+        let db_path = if let Some(p) = sqlite_url.strip_prefix("sqlite://") {
+            p.split('?').next().unwrap_or(p)
+        } else if let Some(p) = sqlite_url.strip_prefix("sqlite:") {
+            p.split('?').next().unwrap_or(p)
+        } else {
+            "ohc-standalone.db"
+        };
+
         match OpenOptions::new()
+
             .read(true)
             .write(true)
             .create(true)

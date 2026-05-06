@@ -184,7 +184,7 @@ mod tests {
         // Fast DB connection test with very short timeout
         let pool_res = tokio::time::timeout(
             std::time::Duration::from_millis(100),
-            sqlx::PgPool::connect(&db_url)
+            sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect(&db_url)
         ).await;
 
         let pool = match pool_res {

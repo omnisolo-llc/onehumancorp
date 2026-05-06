@@ -175,7 +175,7 @@ mod tests {
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 

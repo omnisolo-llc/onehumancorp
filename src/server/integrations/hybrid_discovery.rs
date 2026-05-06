@@ -143,7 +143,7 @@ mod tests {
     #[tokio::test]
     async fn test_discovery_proxy_sqlite() {
         unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap(); // pool doesn't matter for mock
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://localhost/mydb").unwrap(); // pool doesn't matter for mock
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
 
         let svid = proxy.request_tool_svid("test").await.unwrap();
@@ -154,7 +154,7 @@ mod tests {
     #[tokio::test]
     async fn test_discovery_proxy_postgres() {
         unsafe { std::env::set_var("STANDALONE_MODE", "false"); }
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://localhost/mydb").unwrap();
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
 
         let tools = proxy.search_tools("remote-test").await.unwrap();

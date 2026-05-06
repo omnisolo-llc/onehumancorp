@@ -86,7 +86,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_escalator() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy(&db_url).unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
             let escalator = Arc::new(SyncEscalator::new(pool));
 

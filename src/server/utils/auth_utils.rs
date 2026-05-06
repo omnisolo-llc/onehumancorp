@@ -12,9 +12,7 @@ where
         // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
         // But DO blocks can't be used with extended query protocol either? Actually they can!
         // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
-        query("SET LOCAL ROLE ohc_bypassrls")
-            .execute(executor)
-            .await?;
+        executor.execute("SET LOCAL ROLE ohc_bypassrls; SELECT set_config('app.current_tenant', '', true);").await?;
     } else {
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
         query("SELECT set_config('app.current_tenant', $1, true)")

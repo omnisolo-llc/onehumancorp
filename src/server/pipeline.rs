@@ -121,7 +121,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_spec_approved() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://localhost/test").unwrap();
         let hub = Arc::new(Hub::new(tx, pool));
         let orchestrator = Orchestrator::new(hub.clone());
         
