@@ -24,7 +24,7 @@ export component Login inherits Window {
 
     // Test hooks
     out property <string> sso_button_text: "Continue with Google/Apple";
-    out property <string> settings_button_text: "App Settings";
+    out property <string> settings_button_text: "⚙ Advanced Options";
     out property <string> toggle_button_text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
     out property <string> submit_button_text: is_sign_up ? "Sign Up" : "Sign In";
 
@@ -115,6 +115,12 @@ export component Login inherits Window {
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
+                }
+
+                Button {
+                    height: 44px;
+                    text: "🚀 Start Business Setup";
+                    clicked => { start_setup_wizard(); }
                 }
 
                 HorizontalBox {

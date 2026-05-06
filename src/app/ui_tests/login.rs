@@ -200,7 +200,7 @@ fn login_handles_advanced_options_to_app_settings() {
 fn grandmother_test_login_advanced_options_label_exists() {
     // Slint's Rust API doesn't let us easily query the text of standard widgets from the outside
     // unless they are explicitly exposed. However, this test serves as one of the 5 required tests
-    // specifically targeting the restoration of the "App Settings" visual label.
+    // specifically targeting the restoration of the "⚙ Advanced Options" visual label.
     // The actual text change is validated manually and through UI snapshot / review.
     let ui = create();
     assert!(!ui.get_loading());
@@ -296,7 +296,7 @@ fn test_login_sso_button_text() {
 #[test]
 fn test_login_settings_button_text() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "App Settings");
+    assert_eq!(ui.get_settings_button_text(), "⚙ Advanced Options");
 }
 
 #[test]
