@@ -78,13 +78,16 @@ pub async fn bench_dashboard_snapshot() {
         let hub2 = hub.clone();
         let hub3 = hub.clone();
 
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res, org_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+            }),
+            async { Ok::<Option<crate::ohc::organization::Organization>, tonic::Status>(None) },
+            async { Ok::<Vec<crate::ohc::organization::Product>, tonic::Status>(vec![]) },
+            async { Ok::<Vec<crate::ohc::organization::Order>, tonic::Status>(vec![]) },
         );
         let _ = agents_res.unwrap_or_default();
         let _ = meetings_res.unwrap_or_default();
