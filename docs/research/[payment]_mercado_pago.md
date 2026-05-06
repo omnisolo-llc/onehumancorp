@@ -1,20 +1,26 @@
-## [Payment Processing] Issue Brief: Localized Payments for LATAM
+### Title
+Native Integration of Local Payment Methods (Mercado Pago)
 
-**Title**: Scout 🔍: Integrate Mercado Pago for LATAM Market Expansion
-**Problem Statement**:
-While Stripe is fantastic for the US/EU, it is not the dominant or most accessible payment method in Latin America. Business owners in LATAM need to accept local payment methods like PIX (Brazil), Boleto, and local credit cards to effectively run their businesses.
-**Research Report**:
-- **Tool**: Mercado Pago API.
-- **Evaluation**: Mercado Pago is the standard in LATAM. Integrating it allows OHC to serve a massive demographic of small businesses in South and Central America.
-- **Ease of Use**: Similar to Stripe, the user connects their Mercado Pago account via an OAuth flow or by pasting their secure keys.
-- **Pricing**: Standard payment gateway fees per transaction (~3-4%), no monthly cost to OHC.
-- **Cloud vs. Standalone**: Works natively in both Cloud and Standalone modes.
-**Design Doc**:
-- "Settings" -> "Payments".
-- Add a "Connect Mercado Pago" button alongside Stripe.
-- On the storefront checkout page, dynamically display Mercado Pago if configured.
-- Handle Mercado Pago webhooks for asynchronous payment confirmations (e.g., when a user pays a Boleto offline).
-**Implementation Prompt**:
-Implement an alternative payment gateway using Mercado Pago. Allow users to connect their account. Update the checkout flow to support Mercado Pago's hosted checkout or API-based payment intents. Ensure the order status accurately reflects asynchronous payment settlements via webhooks.
-**Priority**: P1
-**Estimated Scope**: Medium
+### Problem Statement
+Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil natively within the OHC platform, avoiding complex third-party payment routing.
+
+### Research Report
+- **Strategy**: Direct API integration with Mercado Pago for seamless LATAM coverage.
+- **Target Persona**: Global users outside the US/EU.
+- **Advantages**: Native integration within the OHC platform ensures a seamless onboarding experience without requiring the merchant to navigate complex third-party tools.
+- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
+- **Pricing**: Standard transaction fees apply; merchants expect these.
+- **Compatibility**: Cloud (Centralized SendGrid/SES account). Standalone (Centralized routing).
+
+### Design Doc
+- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
+- User connects their Mercado Pago account.
+- Customers see a "Pay with Mercado Pago" button at checkout natively.
+- Webhooks update the order status in OHC when payment succeeds.
+- **AI Integration**: Finance & Payments Agent seamlessly aggregates revenue across providers into a unified native dashboard.
+
+### Implementation Prompt
+Integrate Mercado Pago as an alternative native payment provider. The checkout flow must dynamically switch to the appropriate provider based on the merchant's settings. Webhooks must normalize into standard OHC order fulfillment events.
+- **Acceptance Criteria**: Merchant in a supported region can connect Mercado Pago natively. Customers can checkout using local methods. Orders are marked paid upon successful webhook receipt.
+- **Priority**: P1
+- **Estimated Scope**: Large

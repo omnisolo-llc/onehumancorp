@@ -1,20 +1,24 @@
-## [SMS & Notifications] Issue Brief: High-Reliability SMS Alerts
+### Title
+Native SMS Order Notifications (Twilio)
 
-**Title**: Scout 🔍: Integrate Twilio for Critical Order SMS Alerts
-**Problem Statement**:
-Users like Fatima (Food Cart Operator) work in fast-paced, noisy environments where they might not hear a standard push notification, or they may be in areas with poor internet connectivity. They need highly reliable SMS notifications when a new order arrives.
-**Research Report**:
-- **Tool**: Twilio Programmable SMS.
-- **Evaluation**: Twilio is the industry standard for SMS. It guarantees delivery and provides global carrier coverage.
-- **Ease of Use**: The user simply toggles "Send me SMS alerts for new orders" and verifies their phone number.
-- **Pricing**: ~$0.01 per message. Because of this cost, it should be restricted to Premium users or metered.
-- **Cloud vs. Standalone**: Cloud uses OHC's Twilio account. Standalone would require the user to configure their own Twilio SID and Auth Token.
-**Design Doc**:
-- "Notifications" setting panel.
-- User enters their phone number and verifies it via a one-time code.
-- When the backend processes a new paid order, an event is emitted.
-- The Notification worker picks up the event and dispatches an SMS via Twilio.
-**Implementation Prompt**:
-Integrate Twilio to send SMS notifications to the business owner when critical events occur (e.g., new pre-order received). Add a settings UI for the user to verify their phone number and opt-in. Ensure the backend handles Twilio rate limits and securely stores the business owner's verified phone number.
-**Priority**: P2
-**Estimated Scope**: Small
+### Problem Statement
+Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable native SMS alerts when a new pre-order arrives so she can start cooking, directly integrated into OHC's Operations department without a third-party notification service.
+
+### Research Report
+- **Strategy**: Direct integration with the Twilio SDK for native outbound SMS.
+- **Target Persona**: Fatima (Food Cart Operator)
+- **Advantages**: Invisible to the user. They just toggle "Send SMS reminders" in their settings.
+- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
+- **Pricing**: Pay-per-message. OHC will need to manage quotas or require merchants to buy "SMS Credits".
+- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+
+### Design Doc
+- User goes to Settings and toggles "Send me SMS for new orders".
+- When an order is paid, OHC dispatches async jobs to send SMS messages via Twilio API.
+- The Operations Agent decides the optimal time to send the reminder.
+
+### Implementation Prompt
+Integrate Twilio SMS to allow the platform to send order confirmations, pickup notifications, and appointment reminders via text message. Include a settings panel for merchants to toggle these notifications on or off. Ensure phone number formatting is handled correctly globally (E.164).
+- **Acceptance Criteria**: Customer receives an SMS when their order is marked "Ready for Pickup". Customer receives a reminder SMS before a booked appointment.
+- **Priority**: P2
+- **Estimated Scope**: Medium
