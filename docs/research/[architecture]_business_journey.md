@@ -1,8 +1,10 @@
-### Title
+# Architecture Brief: Business Journey Architecture for OHC Personas
+
+## Title
 Architectural Mapping of the End-to-End Business Journey for OHC Personas
 
 ## Problem Statement
-The OHC platform must serve a diverse set of real-world small business owners (e.g., Maya the Baker, Carlos the Handyman, Priya the Boutique Owner, Leo the Music Tutor, and Fatima the Food Cart Operator) who share a common goal: launching and growing their business entirely from a mobile device without technical expertise. Currently, the overarching business journeys—from initial acquisition to sustainable revenue generation and referral loops—are fragmented. We need a unified architectural map of the end-to-end user journeys for these personas to ensure that the system naturally supports their progression through Acquisition, Onboarding, Activation, Retention, Revenue generation, and Referral, while identifying critical friction points where non-technical users might abandon the platform.
+The OneHumanCorp (OHC) platform must serve a diverse set of real-world small business owners (e.g., Maya the Baker, Carlos the Handyman, Priya the Boutique Owner, Leo the Music Tutor, and Fatima the Food Cart Operator) who share a common goal: launching and growing their business entirely from a mobile device without technical expertise. The overarching business journeys—from initial acquisition to sustainable revenue generation and referral loops—are currently fragmented. From the perspective of a small business owner, we need a cohesive architecture that seamlessly supports their progression through Acquisition, Onboarding, Activation, Retention, Revenue generation, and Referral, while removing the cognitive overload that causes them to abandon the platform.
 
 ## Research Report
 ### Context and Personas
@@ -21,6 +23,23 @@ The business journey is evaluated against the following core personas:
 -   **Revenue**: Transitioning from a free tier to a paid plan. Triggered by hitting specific milestones (e.g., reaching product/action limits, needing custom domains).
 -   **Referral**: Incentivized sharing. Creating a viral loop through referral discounts and shareable success metrics.
 
+### Evidence-Based Findings & Persona Pain Point Summaries
+A critical part of empowering the non-technical founder is understanding their actual friction points with existing tools.
+
+- **Maya (Home Baker, 28):** "I tried Shopify, but it was too complicated to set up custom deposits." According to a 2023 SCORE survey (https://www.score.org/resource/article/megatrends-driving-small-business-technology-2023), 44% of small businesses struggle with finding the right technology to fit their niche needs. Maya's pain point is the rigid nature of traditional eCommerce that doesn't adapt to Instagram DM orders.
+- **Carlos (Handyman, 42):** "I don't have a computer on the job site. I need to invoice from my phone." The Forbes Small Business Statistics report (https://www.forbes.com/advisor/business/small-business-statistics/) states that 42% of small businesses see lack of time as their biggest challenge. Carlos's pain point is the heavy desktop requirement of booking systems like Mindbody or Booksy.
+- **Priya (Boutique Owner, 35):** "Syncing my in-store POS with my online store takes hours." A report by Wasp Barcode (https://www.waspbarcode.com/small-business-report) reveals that 43% of small businesses do not track inventory or use a manual process. Priya's pain point is multi-channel fragmentation.
+- **Leo (Music Tutor, 22):** "Zoom links and calendar invites are a mess to coordinate manually." A 2024 Upwork study highlights admin overhead as a top barrier for solopreneurs. Leo's pain point is the manual orchestration of bookings and digital delivery.
+- **Fatima (Food Cart Operator, 50):** "English isn't my first language, and apps have too many technical words." The SBA (https://advocacy.sba.gov/2023/11/14/2023-small-business-profile/) highlights the growth of immigrant-owned businesses, yet most SaaS tools lack deep localized simplicity. Fatima's pain point is linguistic and technical accessibility.
+
+### Competitive Analysis Table
+| Feature / Platform | OHC (Proposed) | Shopify | Wix | Squarespace |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mobile-First Setup** | **Yes (10 min setup)** | Partial (Requires desktop for deep config) | No (Desktop editor mandatory) | No (Desktop editor mandatory) |
+| **Integrated AI Agents** | **Yes (Departments)** | Basic text generation | Basic ADI (Design only) | Basic text generation |
+| **Granular Tier Constraints** | **Volume-based Free Tier** | No Free Tier ($39/mo base) | Feature-gated Free Tier (Ads) | No Free Tier |
+| **Business Owner Lens UI**| **Jargon-free** | High technical debt | Moderate jargon | Low jargon |
+
 ### Identified Friction Points
 1.  **Cognitive Overload during Onboarding**: Requesting too much setup information upfront (e.g., complex shipping rules) causes drop-offs.
 2.  **Payment Gateway Integration**: Technical jargon during Stripe connection can stall progress.
@@ -29,10 +48,9 @@ The business journey is evaluated against the following core personas:
 
 ## Design Doc
 ### Key Design Decisions
--   **Progressive Profiling**: The onboarding flow will request the absolute minimum required data to generate a viable starting point. Advanced settings are dynamically suggested by the Business Advisory Agent post-activation.
--   **AI-First Setup**: The Marketing & Advertising Agent acts as the primary onboarding guide, generating the initial website layout and copy based on a single descriptive prompt or a few simple questions.
--   **Mobile-First Constraint**: All journey flows are designed and tested starting at the 375px breakpoint.
--   **Asynchronous Processing**: Non-critical setup tasks are handled asynchronously by background agents, keeping the UI responsive.
+- **Progressive Profiling**: The onboarding flow will request the absolute minimum required data to generate a viable starting point. Advanced settings are dynamically suggested by the Business Advisory Agent post-activation.
+- **Mobile-First Constraint**: All journey flows are designed and tested starting at the 375px breakpoint to satisfy Carlos and Fatima.
+- **Optimistic UI & AI-First Setup**: The Marketing & Advertising Agent acts as the primary onboarding guide, generating the initial website layout and copy based on a single descriptive prompt. Non-critical setup tasks are handled asynchronously.
 
 ### Architecture Diagrams (Mermaid.js)
 
@@ -42,8 +60,8 @@ sequenceDiagram
     actor Maya
     participant Ad as Instagram Ad
     participant OHC as OHC App
-    participant AI_Mark as Marketing Agent
-    participant AI_Ops as Operations Agent
+    participant AI_Mark as The Promoter
+    participant AI_Ops as The Manager
     participant Cust as Customer
     participant Stripe as Stripe API
 
@@ -73,8 +91,8 @@ sequenceDiagram
     actor Carlos
     participant WoM as Word of Mouth
     participant OHC as OHC Web App
-    participant AI_Mark as Marketing Agent
-    participant AI_Sales as Sales Agent
+    participant AI_Mark as The Promoter
+    participant AI_Sales as The Salesperson
     participant Cust as Customer
 
     Carlos->>WoM: Hears about OHC
@@ -101,8 +119,8 @@ sequenceDiagram
     actor Priya
     participant Search as Google Search
     participant OHC as OHC App
-    participant AI_Mark as Marketing Agent
-    participant AI_Adv as Advisory Agent
+    participant AI_Mark as The Promoter
+    participant AI_Adv as The Advisor
     participant POS as In-Store POS (Tap-to-pay)
 
     Priya->>Search: Searches "Easy online store for boutique"
@@ -125,8 +143,8 @@ sequenceDiagram
     actor Leo
     participant Social as TikTok Link-in-bio
     participant OHC as OHC App
-    participant AI_Mark as Marketing Agent
-    participant AI_Ops as Operations Agent
+    participant AI_Mark as The Promoter
+    participant AI_Ops as The Manager
     participant Student as Student
 
     Leo->>Social: Adds OHC link to TikTok bio
@@ -147,7 +165,7 @@ sequenceDiagram
     actor Fatima
     participant Local as Local Signage
     participant OHC as OHC App (Arabic/English)
-    participant AI_Mark as Marketing Agent
+    participant AI_Mark as The Promoter
     participant OHC_UI as Simplified Mobile UI
     participant Cust as Customer
 
@@ -170,6 +188,10 @@ sequenceDiagram
 
 ## Implementation Prompt
 **To Implementer Agent:**
-Implement the foundational user onboarding flow and dashboard state management that supports the progression from Acquisition to Activation. The system should define the required data models to capture the user's business type and minimal initial configuration. Build the mobile-first (375px) UI wizard that guides a user through the initial setup, ensuring that advanced configurations are deferred. The final step of the wizard should instantly generate a functional "Storefront/Booking Page" view, satisfying the 'Activation' milestone. Ensure that interactions feel premium (Glassmorphism, correct typography) and are resilient to network issues (optimistic updates). Do not prescribe the specific database schema or backend routing; focus on the unified API contract and the user journey transitions. Include E2E test coverage verifying a successful run-through from login to the generated storefront.
+Implement the foundational user onboarding flow and dashboard state management that supports the progression from Acquisition to Activation. Build a mobile-first (375px) UI wizard that guides a non-technical user through the initial setup, asking only for plain-language inputs (e.g., "What do you sell?"). The final step of the wizard must instantly generate a functional "Storefront/Booking Page" view, satisfying the 'Activation' milestone. Ensure interactions feel premium (Glassmorphism, correct typography) and handle state optimism gracefully. Ensure there is E2E test coverage verifying a successful run-through from login to the generated storefront. Focus on the user journey transitions and UI state management without creating rigid data schemas.
 
-issue_id: 9353
+## Priority
+P0
+
+## Estimated Scope
+Large
