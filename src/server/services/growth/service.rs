@@ -537,7 +537,7 @@ mod tests {
     #[tokio::test]
     async fn test_referral_flow() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }

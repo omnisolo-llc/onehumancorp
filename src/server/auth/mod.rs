@@ -5,6 +5,8 @@ use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use rand::RngCore;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 
 use tonic::{Request, Response, Status};
 
@@ -105,7 +107,11 @@ impl Store {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
                 tracing::warn!("falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
-                random_bytes(32)
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "default_standalone_key".to_string());
+                tracing::info!("Deriving JWT_SECRET deterministically from OHC_SQLITE_KEY for standalone mode session persistence.");
+                let mut mac = Hmac::<Sha256>::new_from_slice(fallback_key.as_bytes()).expect("HMAC can take key of any size");
+                mac.update(b"ohc_auth_secret_derivation");
+                mac.finalize().into_bytes().to_vec()
             });
 
         let mut roles = HashMap::new();
