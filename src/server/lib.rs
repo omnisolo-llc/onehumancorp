@@ -455,6 +455,9 @@ impl HubService for MyHubService {
 
         let tenant_id = org_id.clone();
 
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4, $5) \
@@ -468,9 +471,11 @@ impl HubService for MyHubService {
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
-        .execute(&self.hub.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(SaveWizardStateResponse {
             status: "saved".to_string(),
@@ -490,14 +495,19 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let row = sqlx::query(
             "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
         .bind(&org_id)
-        .fetch_optional(&self.hub.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let mut state = std::collections::HashMap::new();
         if let Some(record) = row {
@@ -532,14 +542,19 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
+        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         sqlx::query(
             "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
         .bind(&org_id)
-        .execute(&self.hub.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(ResetWizardStateResponse {
             status: "reset".to_string(),
