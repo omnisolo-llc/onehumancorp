@@ -223,4 +223,74 @@ impl DashboardService for MyDashboardService {
 
         Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
     }
+    async fn get_help_articles(
+        &self,
+        request: tonic::Request<GetHelpArticlesRequest>,
+    ) -> Result<tonic::Response<GetHelpArticlesResponse>, tonic::Status> {
+        let query = request.into_inner().query.to_lowercase();
+
+        let all_articles = vec![
+            HelpArticle {
+                title: "Set up your store in 5 minutes".to_string(),
+                description: "Follow our simple guide to add your first product and go live.".to_string(),
+                category: "Getting Started".to_string(),
+                content: "".to_string(),
+            },
+            HelpArticle {
+                title: "How to add products".to_string(),
+                description: "Learn how to list new items, add photos, and set prices.".to_string(),
+                category: "My Store".to_string(),
+                content: "".to_string(),
+            },
+            HelpArticle {
+                title: "How to accept Apple Pay".to_string(),
+                description: "Enable Apple Pay with one click in your payment settings.".to_string(),
+                category: "Payments & Billing".to_string(),
+                content: "".to_string(),
+            },
+            HelpArticle {
+                title: "What can the Customer Success Helper do?".to_string(),
+                description: "Your helper can reply to customer emails and Instagram DMs automatically.".to_string(),
+                category: "AI Helpers".to_string(),
+                content: "".to_string(),
+            },
+            HelpArticle {
+                title: "How to run a promotion".to_string(),
+                description: "Learn how to create discount codes and share them on social media.".to_string(),
+                category: "Marketing".to_string(),
+                content: "".to_string(),
+            },
+            HelpArticle {
+                title: "How to change your subscription".to_string(),
+                description: "Find out how to upgrade or downgrade your plan and view past invoices.".to_string(),
+                category: "Account & Billing".to_string(),
+                content: "".to_string(),
+            },
+        ];
+
+        let articles = if query.is_empty() {
+            all_articles
+        } else {
+            all_articles.into_iter().filter(|a| {
+                a.title.to_lowercase().contains(&query) ||
+                a.description.to_lowercase().contains(&query) ||
+                a.category.to_lowercase().contains(&query)
+            }).collect()
+        };
+
+        Ok(tonic::Response::new(GetHelpArticlesResponse {
+            articles,
+        }))
+    }
+
+    async fn ask_help_agent(
+        &self,
+        request: tonic::Request<AskHelpAgentRequest>,
+    ) -> Result<tonic::Response<AskHelpAgentResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let _query = req.query;
+        Ok(tonic::Response::new(AskHelpAgentResponse {
+            response: "I'm your AI helper. I'm currently in training, but soon I'll be able to help you with everything in OHC! For now, please check the Help Center.".to_string(),
+        }))
+    }
 }

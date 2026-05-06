@@ -1,6 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
+use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::org_service_client::OrgServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::growth_service_client::GrowthServiceClient;
@@ -1887,14 +1889,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
+                // Setup Dashboard Service Client for Docs UI
+                let mut docs_client = DashboardServiceClient::with_interceptor(
+                    tonic::transport::Endpoint::new(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).unwrap().connect_lazy(),
+                    client_spiffe_interceptor
+                );
+
                 let hc_weak_for_init = help_center_ui.as_weak();
-                let client_clone = client.clone();
+                let mut client_clone = docs_client.clone();
                 slint::spawn_local(async move {
                     if let Some(ui) = hc_weak_for_init.upgrade() {
-                        let mut req = crate::ohc::GetHelpArticlesRequest::default();
+                        let mut req = crate::ohc::api::v1::GetHelpArticlesRequest::default();
                         req.query = ui.get_search_query().to_string();
                         if let Ok(resp) = client_clone.get_help_articles(req).await {
-                            let articles: Vec<app::HelpArticle> = resp.articles.into_iter().map(|a| app::HelpArticle {
+                            let articles: Vec<app::HelpArticle> = resp.into_inner().articles.into_iter().map(|a| app::HelpArticle {
                                 category: a.category.into(),
                                 title: a.title.into(),
                                 description: a.description.into(),
@@ -1905,17 +1913,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }).unwrap();
 
                 let hc_weak_for_search = help_center_ui.as_weak();
-                let client_clone = client.clone();
+                let mut client_clone = docs_client.clone();
                 help_center_ui.on_execute_search(move || {
                     if let Some(ui) = hc_weak_for_search.upgrade() {
                         let hc_weak_inner = hc_weak_for_search.clone();
-                        let client_inner = client_clone.clone();
+                        let mut client_inner = client_clone.clone();
                         slint::spawn_local(async move {
                             if let Some(ui_inner) = hc_weak_inner.upgrade() {
-                                let mut req = crate::ohc::GetHelpArticlesRequest::default();
+                                let mut req = crate::ohc::api::v1::GetHelpArticlesRequest::default();
                                 req.query = ui_inner.get_search_query().to_string();
                                 if let Ok(resp) = client_inner.get_help_articles(req).await {
-                                    let articles: Vec<app::HelpArticle> = resp.articles.into_iter().map(|a| app::HelpArticle {
+                                    let articles: Vec<app::HelpArticle> = resp.into_inner().articles.into_iter().map(|a| app::HelpArticle {
                                         category: a.category.into(),
                                         title: a.title.into(),
                                         description: a.description.into(),
