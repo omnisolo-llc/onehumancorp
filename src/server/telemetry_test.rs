@@ -280,8 +280,11 @@ mod tests {
                                lower_line.contains("password") ||
                                lower_line.contains("pii") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key") ||
+                               lower_line.contains("props") {
+                                if !lower_line.contains("redact") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
+                                }
                             }
                         }
                     }

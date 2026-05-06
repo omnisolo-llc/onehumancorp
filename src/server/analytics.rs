@@ -8,7 +8,8 @@ impl Tracker {
     }
 
     pub fn track_event(&self, name: &str, props: HashMap<String, String>) {
-        tracing::info!("Event tracked: {}, props: {:?}", name, props);
+        let redacted_props = crate::telemetry::redact_interface_pii(serde_json::to_value(props).unwrap_or(serde_json::Value::Null));
+        tracing::info!("Event tracked: {}, props: {}", name, redacted_props);
     }
 }
 
