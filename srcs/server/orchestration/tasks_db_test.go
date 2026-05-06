@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"fmt"
+	"sync"
 	"github.com/DATA-DOG/go-sqlmock"
 	"time"
 	"context"
@@ -430,4 +432,76 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
     savedTask, err := store.GetTask(ctx, task.ID)
     require.NoError(t, err)
     assert.Equal(t, task.Payload, savedTask.Payload)
+}
+
+func TestSqliteTaskStore_ClaimTask_Contention(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec(`
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL,
+			agent_id TEXT,
+			priority TEXT NOT NULL,
+			payload BLOB,
+			parent_plan_id TEXT,
+			dependencies BLOB,
+			created_at TIMESTAMP,
+			updated_at TIMESTAMP
+		)
+	`)
+	require.NoError(t, err)
+
+	store := NewSqliteTaskStore(db)
+
+	ctx := context.Background()
+	task := &SharedTask{
+		OrganizationID: "org-contention",
+		Title:          "Contention Task",
+		Status:         "PENDING",
+	}
+	err = store.CreateTask(ctx, task)
+	require.NoError(t, err)
+
+	// We simulate contention by launching multiple ClaimTask concurrently
+	var wg sync.WaitGroup
+	claims := make(chan *SharedTask, 10)
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(agentID string) {
+			defer wg.Done()
+			claimed, err := store.ClaimTask(ctx, "org-contention", agentID)
+			if err != nil {
+				errors <- err
+			}
+			if claimed != nil {
+				claims <- claimed
+			}
+		}(fmt.Sprintf("agent-%d", i))
+	}
+
+	wg.Wait()
+	close(claims)
+	close(errors)
+
+	// Only 1 goroutine should have claimed the task
+	claimCount := 0
+	for range claims {
+		claimCount++
+	}
+
+	require.Equal(t, 1, claimCount, "Exactly one agent should claim the task under contention")
+
+	errCount := 0
+	for range errors {
+		errCount++
+	}
+	require.Equal(t, 0, errCount, "There should be no errors during contention")
 }

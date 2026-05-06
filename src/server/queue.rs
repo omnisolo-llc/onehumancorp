@@ -700,11 +700,12 @@ impl TaskQueueService {
 
 pub struct SqliteTaskQueue {
     pool: sqlx::SqlitePool,
+    fallback_lock: tokio::sync::Mutex<()>,
 }
 
 impl SqliteTaskQueue {
     pub fn new(pool: sqlx::SqlitePool) -> Self {
-        SqliteTaskQueue { pool }
+        SqliteTaskQueue { pool, fallback_lock: tokio::sync::Mutex::new(()) }
     }
 
     pub async fn init(&self) -> Result<(), sqlx::Error> {
@@ -741,6 +742,15 @@ impl TaskQueue for SqliteTaskQueue {
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
         if roles.is_empty() { return Ok(None); }
+
+        // Application-level fallback lock for SQLite
+        let _guard = match self.fallback_lock.try_lock() {
+            Ok(g) => g,
+            Err(_) => {
+                let _ = crate::telemetry::record_sqlite_lock_contention_no_pool("dequeue").await;
+                self.fallback_lock.lock().await
+            }
+        };
 
         // SQLite doesn't support SELECT ... FOR UPDATE SKIP LOCKED.
         // We will do a simple select and update approach in a transaction.

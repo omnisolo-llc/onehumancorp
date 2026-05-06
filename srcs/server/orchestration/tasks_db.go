@@ -7,6 +7,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"onehumancorp/srcs/server/telemetry"
 )
 
 type SharedTask struct {
@@ -270,7 +272,10 @@ func NewSqliteTaskStore(db *sql.DB) *SqliteTaskStore {
 }
 
 func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
-	s.mutex.Lock()
+	if !s.mutex.TryLock() {
+		telemetry.RecordSQLiteLockContention(ctx, "ClaimTask")
+		s.mutex.Lock()
+	}
 	defer s.mutex.Unlock()
 
 	tx, err := s.db.BeginTx(ctx, nil)

@@ -216,3 +216,19 @@ mod tests {
         gauge2.add(1, &[]);
     }
 }
+
+static SQLITE_LOCK_CONTENTION_COUNTER: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+
+pub fn get_sqlite_lock_contention_counter() -> &'static UpDownCounter<i64> {
+    SQLITE_LOCK_CONTENTION_COUNTER.get_or_init(|| {
+        let meter = global::meter("ohc.sqlite");
+        meter.i64_up_down_counter("ohc_sqlite_lock_contention_total")
+            .with_description("Total SQLite lock contentions")
+            .build()
+    })
+}
+
+pub async fn record_sqlite_lock_contention_no_pool(operation: &str) -> Result<(), Box<dyn std::error::Error>> {
+    get_sqlite_lock_contention_counter().add(1, &[]);
+    Ok(())
+}

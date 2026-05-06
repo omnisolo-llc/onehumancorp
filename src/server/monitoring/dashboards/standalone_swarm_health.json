@@ -1,0 +1,81 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "SQLite Lock Contention",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(ohc_sqlite_lock_contention_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Task Queue Length",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "ohc_task_queue_length",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Task Failure Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(ohc_task_failed_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Retry Exhausted",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(sqliteRetryExhaustedCounter[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Throttled Requests",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(sqliteThrottledRequestCounter[5m])",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "standalone",
+    "swarm",
+    "health"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Standalone Swarm Health",
+  "uid": "standalone-swarm-health",
+  "version": 1
+}
