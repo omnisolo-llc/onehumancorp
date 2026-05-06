@@ -86,11 +86,13 @@ fn test_optimistic_ui_approve_task() {
     let ui = create();
     let pending_tasks = vec![
         app::UiPendingApproval {
+            helper_name: "The Helper".into(),
             task_id: "task-1".into(),
             title: "Task 1".into(),
             proposed_content: "Content 1".into(),
         },
         app::UiPendingApproval {
+            helper_name: "The Helper".into(),
             task_id: "task-2".into(),
             title: "Task 2".into(),
             proposed_content: "Content 2".into(),
@@ -213,6 +215,7 @@ fn dashboard_simplification_jargon_test() {
 
     let pending_tasks = vec![
         app::UiPendingApproval {
+            helper_name: "The Helper".into(),
             task_id: "t1".into(),
             title: "Task".into(),
             proposed_content: "Content".into(),

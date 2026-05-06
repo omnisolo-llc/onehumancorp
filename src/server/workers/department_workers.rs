@@ -50,7 +50,7 @@ impl OperationsWorker {
                     SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                     WHERE id = (
                         SELECT id FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND event_type = 'OrderReceived'
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -73,7 +73,7 @@ impl OperationsWorker {
                 let row = sqlx::query(
                     r#"
                     SELECT id, tenant_id, payload FROM department_tasks
-                    WHERE status = 'PENDING' AND department = 'operations' AND event_type = 'OrderReceived'
+                    WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
                     LIMIT 1
@@ -107,6 +107,72 @@ impl OperationsWorker {
 
         let processed = task.is_some();
         if let Some((id, tenant_id, payload)) = task {
+            // Check inventory levels
+            let items = payload.get("items").and_then(|v| v.as_array());
+            if let Some(items) = items {
+                for item in items {
+                    if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
+                        let inventory_count: i32 = match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND organization_id = $2")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_optional(&db.pool)
+                                    .await
+                                    .unwrap_or(None)
+                                    .unwrap_or(10) // default if not found
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = ? AND organization_id = ?")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_optional(pool)
+                                    .await
+                                    .unwrap_or(None)
+                                    .unwrap_or(10)
+                            }
+                        };
+
+                        if inventory_count < 5 {
+                            let task_id = Uuid::new_v4().to_string();
+                            let title = format!("Restock Item: {}", product_id);
+                            let description = format!("Inventory for {} is low ({} remaining).", product_id, inventory_count);
+
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status)
+                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING')
+                                        "#
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind(&title)
+                                    .bind(&description)
+                                    .execute(&db.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status)
+                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING')
+                                        "#
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind(&title)
+                                    .bind(&description)
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Emit OrderProcessed event for Customer Success
             let new_task_id = Uuid::new_v4().to_string();
             let new_payload = json!({
@@ -161,6 +227,120 @@ impl OperationsWorker {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::DbStore;
+
+    async fn setup_test_db() -> Arc<DB> {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+
+        let schema = r#"
+            CREATE TABLE IF NOT EXISTS department_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                department TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                payload TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                locked_until TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS products (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                name TEXT,
+                inventory_count INT
+            );
+            CREATE TABLE IF NOT EXISTS shared_tasks (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                priority TEXT,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        "#;
+        sqlx::query(schema).execute(&sqlite_pool).await.unwrap();
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        Arc::new(DB { pool: dummy_pg_pool, store: DbStore::Sqlite(sqlite_pool) })
+    }
+
+    #[tokio::test]
+    async fn test_operations_worker_inventory_check() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            // Insert a product with low inventory
+            sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'Low Stock Item', 2)")
+                .execute(pool).await.unwrap();
+
+            // Insert a task
+            let task_payload = json!({
+                "items": [{"product_id": "prod1", "quantity": 1}]
+            });
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task1', 'tenant1', 'operations', 'OrderPlaced', ?, 'PENDING')")
+                .bind(task_payload.to_string())
+                .execute(pool).await.unwrap();
+        }
+
+        let processed = OperationsWorker::poll(&db).await.unwrap();
+        assert!(processed);
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            // Check if SharedTask was created
+            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+                .fetch_one(pool).await.unwrap();
+            let title: String = row.get("title");
+            let approval_status: String = row.get("approval_status");
+            assert_eq!(title, "Restock Item: prod1");
+            assert_eq!(approval_status, "PENDING");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_customer_success_worker_draft_reply() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            // Insert a task
+            let task_payload = json!({
+                "message": "Hello, do you have vegan cakes?"
+            });
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task1', 'tenant1', 'customer_success', 'CustomerMessageReceived', ?, 'PENDING')")
+                .bind(task_payload.to_string())
+                .execute(pool).await.unwrap();
+        }
+
+        let processed = CustomerSuccessWorker::poll(&db).await.unwrap();
+        assert!(processed);
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            // Check if SharedTask was created
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+                .fetch_one(pool).await.unwrap();
+            let title: String = row.get("title");
+            let content: String = row.get("proposed_content");
+            let approval_status: String = row.get("approval_status");
+
+            assert_eq!(title, "Draft Reply");
+            assert!(content.contains("Hello, do you have vegan cakes?"));
+            assert_eq!(approval_status, "PENDING");
+        }
+    }
+}
+
 pub struct CustomerSuccessWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
@@ -205,13 +385,14 @@ impl CustomerSuccessWorker {
                     SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                     WHERE id = (
                         SELECT id FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'customer_success' AND event_type = 'OrderProcessed'
+                        WHERE status = 'PENDING' AND department = 'customer_success'
+                        AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
-                    RETURNING id, tenant_id, payload
+                    RETURNING id, tenant_id, payload, event_type
                     "#
                 )
                 .bind(Utc::now() + chrono::Duration::minutes(5))
@@ -219,7 +400,7 @@ impl CustomerSuccessWorker {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             },
@@ -227,8 +408,9 @@ impl CustomerSuccessWorker {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
-                    SELECT id, tenant_id, payload FROM department_tasks
-                    WHERE status = 'PENDING' AND department = 'customer_success' AND event_type = 'OrderProcessed'
+                    SELECT id, tenant_id, payload, event_type FROM department_tasks
+                    WHERE status = 'PENDING' AND department = 'customer_success'
+                    AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
                     LIMIT 1
@@ -242,6 +424,7 @@ impl CustomerSuccessWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
+                    let event_type: String = r.get("event_type");
                     let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                     sqlx::query(
@@ -251,7 +434,7 @@ impl CustomerSuccessWorker {
                     .bind(&id)
                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    Some((id, tenant_id, payload, event_type))
                 } else {
                     None
                 };
@@ -261,12 +444,31 @@ impl CustomerSuccessWorker {
         };
 
         let processed = task.is_some();
-        if let Some((id, _tenant_id, payload)) = task {
-            // Log drafted confirmation message to the database directly
-            let drafted_msg = format!("Drafted confirmation for order: {:?}", payload);
+        if let Some((id, tenant_id, payload, event_type)) = task {
+            // Draft confirmation message
+            let (title, drafted_msg) = if event_type == "OrderProcessed" {
+                ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
+            } else {
+                ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
+            };
+
+            let task_id = Uuid::new_v4().to_string();
 
             match &db.store {
                 crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query(
+                        r#"
+                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                        VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                        "#
+                    )
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&title)
+                    .bind(&drafted_msg)
+                    .execute(&db.pool)
+                    .await;
+
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = jsonb_set(payload, '{drafted_message}', $1), updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                         .bind(&drafted_msg)
                         .bind(&id)
@@ -275,6 +477,19 @@ impl CustomerSuccessWorker {
                         .map_err(|e| e.to_string())?;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let _ = sqlx::query(
+                        r#"
+                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                        VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                        "#
+                    )
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&title)
+                    .bind(&drafted_msg)
+                    .execute(sqlite_pool)
+                    .await;
+
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = json_patch(payload, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(json!({"drafted_message": drafted_msg}).to_string())
                         .bind(&id)
