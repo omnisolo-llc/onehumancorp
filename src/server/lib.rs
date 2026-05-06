@@ -1277,7 +1277,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
-            system_prompt: std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+            system_prompt: crate::pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
             max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
