@@ -212,7 +212,6 @@ rust_test(
 # Note: Build bindings with: bazel build //src/app:app_web_bindgen
 rust_shared_library(
     name = "app_web",
-    crate_root = "main.rs",
     srcs = ["main.rs", "action_queue.rs"],
     data = glob(["*.slint"]),
     edition = "2024",

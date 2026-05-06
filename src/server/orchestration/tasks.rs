@@ -103,7 +103,7 @@ impl TaskDecompositionService {
                     SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
                     WHERE st.status = 'PENDING'
                     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
-                    LIMIT 1
+                    LIMIT 25
                     FOR UPDATE SKIP LOCKED
                     "#
                 )

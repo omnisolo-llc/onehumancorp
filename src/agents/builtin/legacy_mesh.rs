@@ -89,7 +89,7 @@ pub async fn claim_mission(pool: &sqlx::PgPool, agent_id: &str) -> Result<Option
             SELECT mission_id
             FROM ohc_tasks.mission_queue
             WHERE status = 'QUEUED'
-            LIMIT 1
+            LIMIT 25
             FOR UPDATE SKIP LOCKED
         )
         RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
