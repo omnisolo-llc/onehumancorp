@@ -1322,6 +1322,177 @@ mod get_conflicts_tests {
         assert_eq!(results[0].content, "customer unhappy with pricing");
         assert_eq!(results[0].agent_id, "sales_agent");
     }
+
+    #[tokio::test]
+    async fn test_conflict_resolution_edge_cases() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        // 1. Conflict resolved by owner_override
+        let r1 = EmbeddingRecord {
+            id: "rec_owner_a".to_string(),
+            tenant_id: "org_owner".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "explicitly set price".to_string(),
+            embedding: vec![0.8, 0.8, 0.8],
+            source_type: "SUMMARY".to_string(),
+            created_at: now - chrono::Duration::hours(2),
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // Should win due to override
+            metadata: None,
+        };
+        let r2 = EmbeddingRecord {
+            id: "rec_owner_b".to_string(),
+            tenant_id: "org_owner".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "implicitly set price".to_string(),
+            embedding: vec![0.8, 0.8, 0.8],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 5,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r1).await.unwrap();
+        repo.upsert(&r2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        let query = "SELECT id, reference_count FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 1);
+
+        let id: String = rows[0].get("id");
+        let ref_count: i32 = rows[0].get("reference_count");
+        assert_eq!(id, "rec_owner_a");
+        // Logic: updated_winner.reference_count += loser.reference_count + 1;
+        // Winner (r1) starting count = 1
+        // Loser (r2) starting count = 5
+        // 1 + 5 + 1 = 7.
+        assert_eq!(ref_count, 7);
+    }
+
+    #[tokio::test]
+    async fn test_pruning_mechanics_stale_context() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let threshold = now - chrono::Duration::days(180);
+
+        // Record to prune: old, low ref count, not owner overridden, TASK_SUMMARY
+        let r_stale = EmbeddingRecord {
+            id: "stale_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old task result".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: now - chrono::Duration::days(200),
+            last_referenced_at: now - chrono::Duration::days(190),
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record to keep: old, but owner overridden
+        let r_keep_override = EmbeddingRecord {
+            id: "keep_override".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "important rule".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: now - chrono::Duration::days(200),
+            last_referenced_at: now - chrono::Duration::days(190),
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // Record to keep: old, but high ref count
+        let r_keep_refs = EmbeddingRecord {
+            id: "keep_refs".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "frequently used".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: now - chrono::Duration::days(200),
+            last_referenced_at: now - chrono::Duration::days(190),
+            reference_count: 10,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r_stale).await.unwrap();
+        repo.upsert(&r_keep_override).await.unwrap();
+        repo.upsert(&r_keep_refs).await.unwrap();
+
+        repo.prune_stale(threshold).await.unwrap();
+
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 2);
+
+        let ids: Vec<String> = rows.into_iter().map(|r| r.get("id")).collect();
+        assert!(!ids.contains(&"stale_rec".to_string()));
+        assert!(ids.contains(&"keep_override".to_string()));
+        assert!(ids.contains(&"keep_refs".to_string()));
+    }
 }
 
 
