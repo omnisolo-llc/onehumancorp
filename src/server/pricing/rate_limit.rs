@@ -352,6 +352,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_check_storage_quota() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-storage-quota";
+
+                // Clear any existing storage used
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+
+                // Set tier to Free (500MB limit)
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+
+                // Increment storage by a small amount (100MB)
+                let delta: i64 = 100 * 1024 * 1024;
+                let status = limiter.check_storage_quota(tenant_id, delta).await.unwrap();
+                assert!(status.is_allowed);
+                assert!(!status.soft_limit_reached);
+
+                // Increment storage by an amount crossing the 500MB limit
+                let large_delta: i64 = 450 * 1024 * 1024;
+                let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
+                assert!(status.is_allowed); // Soft limit allows it
+                assert!(status.soft_limit_reached); // But flag is set
+                assert!(status.user_message.unwrap().contains("500MB storage"));
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_record_agent_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
