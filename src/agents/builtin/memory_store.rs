@@ -1617,4 +1617,64 @@ mod anthropic_memory_tests {
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
     }
+
+    #[tokio::test]
+    async fn test_prune_stale_owner_override_coverage() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = super::VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(181);
+
+        let record1 = super::EmbeddingRecord {
+            id: "rec_override".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "override data".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // This should prevent it from being pruned
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+
+        // Prune stale test
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Verify it was NOT deleted
+        use sqlx::Row;
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "The record should remain due to owner_override = true");
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "rec_override", "The correct record should remain");
+    }
 }
