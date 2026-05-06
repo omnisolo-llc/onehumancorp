@@ -481,6 +481,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_handle_t = api_docs_ui.as_weak();
+                                        api_docs_ui.on_test_endpoint(move || {
+                                            if let Some(ui) = api_docs_handle_t.upgrade() {
+                                                ui.set_is_testing(true);
+                                                let endpoint = ui.get_endpoint_url().to_string();
+                                                let ui_handle_for_req = ui.as_weak();
+                                                tokio::task::spawn_local(async move {
+                                                    let mut headers = reqwest::header::HeaderMap::new();
+                                                    if let Ok(token) = std::env::var("OHC_AUTH_TOKEN") {
+                                                        if let Ok(header_val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                                                            headers.insert(reqwest::header::AUTHORIZATION, header_val);
+                                                        }
+                                                    }
+                                                    let client = reqwest::Client::builder().default_headers(headers).build().unwrap_or_default();
+                                                    let response_text = match client.get(format!("{}/v1/products", endpoint)).send().await {
+                                                        Ok(resp) => resp.text().await.unwrap_or_else(|_| "Error reading response".into()),
+                                                        Err(e) => format!("Request failed: {}", e),
+                                                    };
+                                                    if let Some(ui) = ui_handle_for_req.upgrade() {
+                                                        ui.set_test_response(response_text.into());
+                                                        ui.set_is_testing(false);
+                                                    }
+                                                });
+                                            }
+                                        });
                                         let api_docs_handle = api_docs_ui.as_weak();
                                         dashboard.on_open_api_docs(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
@@ -574,6 +599,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_handle_t = api_docs_ui.as_weak();
+                                        api_docs_ui.on_test_endpoint(move || {
+                                            if let Some(ui) = api_docs_handle_t.upgrade() {
+                                                ui.set_is_testing(true);
+                                                let endpoint = ui.get_endpoint_url().to_string();
+                                                let ui_handle_for_req = ui.as_weak();
+                                                tokio::task::spawn_local(async move {
+                                                    let mut headers = reqwest::header::HeaderMap::new();
+                                                    if let Ok(token) = std::env::var("OHC_AUTH_TOKEN") {
+                                                        if let Ok(header_val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                                                            headers.insert(reqwest::header::AUTHORIZATION, header_val);
+                                                        }
+                                                    }
+                                                    let client = reqwest::Client::builder().default_headers(headers).build().unwrap_or_default();
+                                                    let response_text = match client.get(format!("{}/v1/products", endpoint)).send().await {
+                                                        Ok(resp) => resp.text().await.unwrap_or_else(|_| "Error reading response".into()),
+                                                        Err(e) => format!("Request failed: {}", e),
+                                                    };
+                                                    if let Some(ui) = ui_handle_for_req.upgrade() {
+                                                        ui.set_test_response(response_text.into());
+                                                        ui.set_is_testing(false);
+                                                    }
+                                                });
+                                            }
+                                        });
                                         let api_docs_handle = api_docs_ui.as_weak();
                                         dashboard.on_open_api_docs(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
@@ -1932,6 +1982,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
+                let api_docs_handle_t = api_docs_ui.as_weak();
+                api_docs_ui.on_test_endpoint(move || {
+                    if let Some(ui) = api_docs_handle_t.upgrade() {
+                        ui.set_is_testing(true);
+                        let endpoint = ui.get_endpoint_url().to_string();
+                        let ui_handle_for_req = ui.as_weak();
+                        tokio::task::spawn_local(async move {
+                            let mut headers = reqwest::header::HeaderMap::new();
+                            if let Ok(token) = std::env::var("OHC_AUTH_TOKEN") {
+                                if let Ok(header_val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                                    headers.insert(reqwest::header::AUTHORIZATION, header_val);
+                                }
+                            }
+                            let client = reqwest::Client::builder().default_headers(headers).build().unwrap_or_default();
+                            let response_text = match client.get(format!("{}/v1/products", endpoint)).send().await {
+                                Ok(resp) => resp.text().await.unwrap_or_else(|_| "Error reading response".into()),
+                                Err(e) => format!("Request failed: {}", e),
+                            };
+                            if let Some(ui) = ui_handle_for_req.upgrade() {
+                                ui.set_test_response(response_text.into());
+                                ui.set_is_testing(false);
+                            }
+                        });
+                    }
+                });
                 let api_docs_handle = api_docs_ui.as_weak();
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
