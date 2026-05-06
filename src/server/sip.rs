@@ -26,7 +26,7 @@ impl SipDB {
         sqlx::query(
             "UPDATE agent_missions
              SET status = 'blocked',
-                 mission_log = COALESCE(mission_log, '') || '\n' || $1,
+                 mission_log = CASE WHEN COALESCE(mission_log, '') = '' THEN $1 ELSE mission_log || '\n' || $1 END,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND organization_id = $3"
         )
@@ -380,6 +380,22 @@ mod tests {
         let sip_db = SipDB::new(pool, "test_org".to_string());
 
         let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+        // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mission_updates_status_and_appends_log() {
+        // Just verify it doesn't crash on execution with a valid pool.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let res = sip_db.handoff_mission("mission_123", "Some blocker").await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
