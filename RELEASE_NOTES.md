@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+- Scaling (Cloud): Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
+- Privacy/Offline (Standalone): Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137)
+
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 - Scaling (Cloud): Fix IpcTransport races, gRPC UI Interceptor, and MaintenanceWorker fixes (#734b, #9cb3, #33a8).
 - Privacy/Offline (Standalone): Shield Sentry Chaos Resilience, Slint UI memory safety, PII leakage checks, and SQLite schema parity (#a137, #e295, #e930, #edc2).
