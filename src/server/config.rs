@@ -148,6 +148,7 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
+    cfg.telemetry_enabled = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
     cfg
 }
 
