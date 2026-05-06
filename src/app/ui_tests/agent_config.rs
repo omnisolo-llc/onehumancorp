@@ -31,11 +31,23 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
     let ui = create();
     let called_agent = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_agent.clone();
-    ui.on_activate_agent(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
+    ui.on_activate_agent(move |name, _, _, _, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
 
     ui.set_selected_agent("Robot".into());
-    ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into());
+    ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into(), "".into(), "".into(), "".into());
     assert_eq!(*called_agent.borrow(), "Robot");
+}
+
+#[test] fn agentcfg_advanced_state_bindings() {
+    let ui = create();
+    ui.set_api_scope_override("test_api".into());
+    assert_eq!(ui.get_api_scope_override(), "test_api");
+
+    ui.set_cron_override("test_cron".into());
+    assert_eq!(ui.get_cron_override(), "test_cron");
+
+    ui.set_raw_activation_payload("test_payload".into());
+    assert_eq!(ui.get_raw_activation_payload(), "test_payload");
 }
 
 #[test] fn agentcfg_flow_toast() {
@@ -49,6 +61,16 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---
+
+#[test] fn agentcfg_advanced_flow() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    for i in 1..=3 {
+        ui.set_step(i);
+        assert_eq!(ui.get_step(), i);
+        assert!(ui.get_is_advanced());
+    }
+}
 
 #[test]
 fn create_verify_selected_agent() {
