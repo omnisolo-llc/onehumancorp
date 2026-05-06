@@ -126,7 +126,10 @@ impl TaskDecompositionService {
 
                 let row = match row_opt {
                     Some(r) => r,
-                    None => return Ok(None)
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
                 };
 
                 let id: String = row.get("id");
@@ -228,7 +231,10 @@ impl TaskDecompositionService {
 
                 let row = match row_opt {
                     Some(r) => r,
-                    None => return Ok(None)
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
                 };
 
                 let id: String = row.get("id");
@@ -514,7 +520,10 @@ impl TaskDecompositionService {
 
                 let old_status = match old_status {
                     Some(s) => s,
-                    None => return Err("Task not found".to_string())
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Err("Task not found".to_string());
+                    }
                 };
 
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
@@ -562,7 +571,10 @@ impl TaskDecompositionService {
 
                 let old_status = match old_status {
                     Some(s) => s,
-                    None => return Err("Task not found".to_string())
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Err("Task not found".to_string());
+                    }
                 };
 
                 // SQLite json patching
@@ -616,7 +628,10 @@ impl TaskDecompositionService {
 
                 let old_status = match old_status {
                     Some(s) => s,
-                    None => return Err("Task not found".to_string())
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Err("Task not found".to_string());
+                    }
                 };
 
                 sqlx::query(
@@ -668,7 +683,10 @@ impl TaskDecompositionService {
 
                 let old_status = match old_status {
                     Some(s) => s,
-                    None => return Err("Task not found".to_string())
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Err("Task not found".to_string());
+                    }
                 };
 
                 sqlx::query(

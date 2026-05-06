@@ -2,6 +2,7 @@ use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use crate::orchestration::tasks::TaskDecompositionService;
 use crate::tasks::SharedTask;
+use crate::orchestration::mesh::TeammateMesh;
 use chrono::Utc;
 
 #[tokio::test]
@@ -100,7 +101,20 @@ async fn test_task_decomposition_service() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
+    let mesh_clone = svc_mesh_transport.clone();
+    tokio::spawn(async move {
+        let mesh_inner = mesh_clone.clone();
+        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
+            let msg_id = msg.msg_id.clone();
+            let ack_topic = format!("mesh:ack:{}", msg_id);
+            let mesh_inner2 = mesh_inner.clone();
+            tokio::spawn(async move {
+                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+            });
+        })).await;
+    });
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -240,7 +254,20 @@ async fn test_task_decomposition_dag_blocked() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
+    let mesh_clone = svc_mesh_transport.clone();
+    tokio::spawn(async move {
+        let mesh_inner = mesh_clone.clone();
+        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
+            let msg_id = msg.msg_id.clone();
+            let ack_topic = format!("mesh:ack:{}", msg_id);
+            let mesh_inner2 = mesh_inner.clone();
+            tokio::spawn(async move {
+                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+            });
+        })).await;
+    });
 
     let now = Utc::now();
     let dep_task = SharedTask {
@@ -388,7 +415,20 @@ async fn test_task_decomposition_service_fail_task() {
     }
 
 
-    let svc = TaskDecompositionService::new(Arc::new(db.clone()), Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new()))));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+    let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
+    let mesh_clone = svc_mesh_transport.clone();
+    tokio::spawn(async move {
+        let mesh_inner = mesh_clone.clone();
+        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
+            let msg_id = msg.msg_id.clone();
+            let ack_topic = format!("mesh:ack:{}", msg_id);
+            let mesh_inner2 = mesh_inner.clone();
+            tokio::spawn(async move {
+                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+            });
+        })).await;
+    });
 
     let now = Utc::now();
     let main_task = SharedTask {

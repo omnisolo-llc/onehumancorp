@@ -80,6 +80,7 @@ impl TaskQueue for SQLiteTaskQueue {
             return Ok(Some(job));
         }
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(None)
     }
 
