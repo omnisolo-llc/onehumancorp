@@ -1,4 +1,5 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiTask {
     title: string,
@@ -19,41 +20,99 @@ export component TaskList inherits Window {
 
     background: #f8fafc;
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
-
-        HorizontalBox {
-            Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Rectangle {}
-            Button { 
-                text: "Refresh"; 
-                clicked => { refresh(); }
-            }
-        }
+    GlassCard {
+        width: 100%;
+        height: 100%;
 
         VerticalBox {
-            spacing: 16px;
-            for t in tasks : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    
-                    HorizontalBox {
-                        Text { text: t.title; font-weight: 700; color: #1e293b; }
-                        Rectangle {}
-                        Text { text: t.status; color: #a855f7; }
+            spacing: 20px;
+            padding: 24px;
+
+            HorizontalBox {
+                Text { text: "Shared Task List"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                Rectangle {}
+                Rectangle {
+                    width: 100px;
+                    height: 36px;
+                    background: ta-refresh.has-hover ? #e2e8f0 : #f1f5f9;
+                    border-radius: 8px;
+                    Text {
+                        text: "Refresh";
+                        font-family: "Inter";
+                        font-weight: 600;
+                        color: #0f172a;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                     }
-                    
-                    if (t.agent_id != "") : Text { text: "Helper: " + t.agent_id; color: #64748b; }
-                    if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #64748b; font-size: 12px; }
-                    if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #64748b; font-size: 12px; }
-                    if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #64748b; font-size: 12px; }
+                    ta-refresh := TouchArea {
+                        clicked => { refresh(); }
+                    }
+                }
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 16px;
+                    for t in tasks : Rectangle {
+                        background: ta-task.has-hover ? #f8fafc : white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 12px;
+
+                        ta-task := TouchArea {}
+
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+
+                            HorizontalBox {
+                                Text {
+                                    text: t.title;
+                                    font-weight: 600;
+                                    font-family: "Inter";
+                                    font-size: 16px;
+                                    color: #1e293b;
+                                }
+                                Rectangle {}
+                                Rectangle {
+                                    border-radius: 12px;
+                                    padding-left: 8px;
+                                    padding-right: 8px;
+                                    padding-top: 4px;
+                                    padding-bottom: 4px;
+                                    background: t.status == "PENDING" ? #fef3c7 : (t.status == "IN_PROGRESS" ? #dbeafe : (t.status == "COMPLETED" ? #dcfce3 : #fce7f3));
+                                    Text {
+                                        text: t.status;
+                                        font-family: "Inter";
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: t.status == "PENDING" ? #b45309 : (t.status == "IN_PROGRESS" ? #1d4ed8 : (t.status == "COMPLETED" ? #15803d : #be123c));
+                                    }
+                                }
+                            }
+
+                            if (t.agent_id != "") : HorizontalBox {
+                                spacing: 8px;
+                                Text { text: "Helper:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: t.agent_id; font-family: "Inter"; color: #475569; font-size: 13px; font-weight: 500; }
+                            }
+                            if (t.dependencies != "") : HorizontalBox {
+                                spacing: 8px;
+                                Text { text: "Dependencies:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: t.dependencies; font-family: "Inter"; color: #475569; font-size: 13px; }
+                            }
+                            if (t.parent_task_id != "") : HorizontalBox {
+                                spacing: 8px;
+                                Text { text: "Parent Task:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: t.parent_task_id; font-family: "Inter"; color: #475569; font-size: 13px; }
+                            }
+                            if (t.workflow_state != "") : HorizontalBox {
+                                spacing: 8px;
+                                Text { text: "Workflow State:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: t.workflow_state; font-family: "Inter"; color: #475569; font-size: 13px; }
+                            }
+                        }
+                    }
                 }
             }
         }
