@@ -93,7 +93,9 @@ Implement the "Agent Activity Feed" UI on the mobile dashboard. Create a system 
 P0
 
 ## Estimated Scope
-Large# OHC AI Differentiation Manifesto: From Tools to Teammates
+Large
+
+# OHC AI Differentiation Manifesto: From Tools to Teammates
 
 ## Core Philosophy
 Competitors treat AI as a **Tool** (Reactive, requires a prompt, creates work).
