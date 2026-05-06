@@ -1,16 +1,21 @@
 use crate::app;
 
-fn create() -> app::ReleaseNotes { crate::ui_tests::init(); app::ReleaseNotes::new().unwrap() }
+fn create() -> app::ReleaseNotes {
+    crate::ui_tests::init();
+    app::ReleaseNotes::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn notes_flow_version_sync() {
+#[test]
+fn notes_flow_version_sync() {
     let ui = create();
     ui.set_current_version("v1.0.0".into());
     assert_eq!(ui.get_current_version(), "v1.0.0");
 }
 
-#[test] fn notes_flow_toggle_latest() {
+#[test]
+fn notes_flow_toggle_latest() {
     let ui = create();
     ui.set_show_latest_only(true);
     assert!(ui.get_show_latest_only());
@@ -18,7 +23,8 @@ fn create() -> app::ReleaseNotes { crate::ui_tests::init(); app::ReleaseNotes::n
     assert!(!ui.get_show_latest_only());
 }
 
-#[test] fn notes_xss_version() {
+#[test]
+fn notes_xss_version() {
     let ui = create();
     let xss = "<script>alert('version')</script>";
     ui.set_current_version(xss.into());

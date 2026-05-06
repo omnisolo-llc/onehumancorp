@@ -1,30 +1,37 @@
 use crate::app;
 use slint::{ComponentHandle, Model};
 
-fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().unwrap() }
+fn create() -> app::Dashboard {
+    crate::ui_tests::init();
+    app::Dashboard::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn dash_negative_orders() {
+#[test]
+fn dash_negative_orders() {
     let ui = create();
     ui.set_new_orders_count(-1);
     assert_eq!(ui.get_new_orders_count(), -1);
 }
 
-#[test] fn dash_overflow_helpers() {
+#[test]
+fn dash_overflow_helpers() {
     let ui = create();
     ui.set_active_helpers_count(2147483647);
     assert_eq!(ui.get_active_helpers_count(), 2147483647);
 }
 
-#[test] fn dash_xss_milestone_title() {
+#[test]
+fn dash_xss_milestone_title() {
     let ui = create();
     let xss = "<svg/onload=alert(1)>";
     ui.set_milestone_title(xss.into());
     assert_eq!(ui.get_milestone_title(), xss);
 }
 
-#[test] fn dash_currency_injection() {
+#[test]
+fn dash_currency_injection() {
     let ui = create();
     let val = "$9,999,999.99'; DROP TABLE sales; --";
     ui.set_todays_sales(val.into());
@@ -33,7 +40,8 @@ fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().u
 
 // --- Interaction / Logic Flows ---
 
-#[test] fn dash_milestone_visibility_flow() {
+#[test]
+fn dash_milestone_visibility_flow() {
     let ui = create();
     ui.set_show_milestone(false);
     ui.set_milestone_title("Hidden".into());
@@ -42,7 +50,8 @@ fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().u
     assert_eq!(ui.get_milestone_title(), "Hidden");
 }
 
-#[test] fn dash_mass_property_update() {
+#[test]
+fn dash_mass_property_update() {
     let ui = create();
     for i in 0..100 {
         ui.set_new_orders_count(i);
@@ -94,7 +103,7 @@ fn test_optimistic_ui_approve_task() {
             task_id: "task-2".into(),
             title: "Task 2".into(),
             proposed_content: "Content 2".into(),
-        }
+        },
     ];
     let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
     ui.set_pending_approvals(pending_model.into());
@@ -121,7 +130,10 @@ fn test_optimistic_ui_approve_task() {
     ui.invoke_approve_task("task-1".into());
 
     assert_eq!(ui.get_pending_approvals().row_count(), 1);
-    assert_eq!(ui.get_pending_approvals().row_data(0).unwrap().task_id, "task-2");
+    assert_eq!(
+        ui.get_pending_approvals().row_data(0).unwrap().task_id,
+        "task-2"
+    );
 }
 
 #[test]
@@ -211,13 +223,11 @@ fn dashboard_simplification_jargon_test() {
     ui.set_show_telemetry_visualization(true);
     assert!(ui.get_show_telemetry_visualization());
 
-    let pending_tasks = vec![
-        app::UiPendingApproval {
-            task_id: "t1".into(),
-            title: "Task".into(),
-            proposed_content: "Content".into(),
-        }
-    ];
+    let pending_tasks = vec![app::UiPendingApproval {
+        task_id: "t1".into(),
+        title: "Task".into(),
+        proposed_content: "Content".into(),
+    }];
     let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
     ui.set_pending_approvals(pending_model.into());
     assert_eq!(ui.get_pending_approvals().row_count(), 1);

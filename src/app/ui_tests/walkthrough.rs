@@ -1,10 +1,14 @@
 use crate::app;
 
-fn create() -> app::InteractiveWalkthrough { crate::ui_tests::init(); app::InteractiveWalkthrough::new().unwrap() }
+fn create() -> app::InteractiveWalkthrough {
+    crate::ui_tests::init();
+    app::InteractiveWalkthrough::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn walkthrough_flow_steps_bounds() {
+#[test]
+fn walkthrough_flow_steps_bounds() {
     let ui = create();
     ui.set_current_step(10);
     assert_eq!(ui.get_current_step(), 10);
@@ -12,7 +16,8 @@ fn create() -> app::InteractiveWalkthrough { crate::ui_tests::init(); app::Inter
     assert_eq!(ui.get_current_step(), -5);
 }
 
-#[test] fn walkthrough_flow_visibility() {
+#[test]
+fn walkthrough_flow_visibility() {
     let ui = create();
     // Assuming visible property exists or just testing state logic
     ui.set_current_step(3);

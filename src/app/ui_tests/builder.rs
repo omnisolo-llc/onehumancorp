@@ -1,16 +1,21 @@
 use crate::app;
 
-fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilder::new().unwrap() }
+fn create() -> app::WebsiteBuilder {
+    crate::ui_tests::init();
+    app::WebsiteBuilder::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn builder_invalid_color() {
+#[test]
+fn builder_invalid_color() {
     let ui = create();
     ui.set_primary_color("not-a-color".into());
     assert_eq!(ui.get_primary_color(), "not-a-color");
 }
 
-#[test] fn builder_hex_color_variants() {
+#[test]
+fn builder_hex_color_variants() {
     let ui = create();
     ui.set_primary_color("#F00".into());
     assert_eq!(ui.get_primary_color(), "#F00");
@@ -20,14 +25,16 @@ fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilde
     assert_eq!(ui.get_primary_color(), "#FF0000FF");
 }
 
-#[test] fn builder_xss_template_name() {
+#[test]
+fn builder_xss_template_name() {
     let ui = create();
     let xss = "'; alert(1); //";
     ui.set_selected_template(xss.into());
     assert_eq!(ui.get_selected_template(), xss);
 }
 
-#[test] fn builder_punycode_domain() {
+#[test]
+fn builder_punycode_domain() {
     let ui = create();
     let domain = "xn--bcher-kva.ch";
     ui.set_domain_choice(domain.into());
@@ -36,7 +43,8 @@ fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilde
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn builder_flow_rapid_template_switch() {
+#[test]
+fn builder_flow_rapid_template_switch() {
     let ui = create();
     let templates = ["Modern", "Minimal", "Corporate", "Classic", "Bold"];
     for _ in 0..10 {
@@ -47,7 +55,8 @@ fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilde
     }
 }
 
-#[test] fn builder_flow_price_input_validation() {
+#[test]
+fn builder_flow_price_input_validation() {
     let ui = create();
     ui.set_product_price("10.00".into());
     assert_eq!(ui.get_product_price(), "10.00");

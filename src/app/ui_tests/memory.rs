@@ -1,23 +1,29 @@
 use crate::app;
 
-fn create() -> app::SwarmMemory { crate::ui_tests::init(); app::SwarmMemory::new().unwrap() }
+fn create() -> app::SwarmMemory {
+    crate::ui_tests::init();
+    app::SwarmMemory::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn memory_xss_activity() {
+#[test]
+fn memory_xss_activity() {
     let ui = create();
     let xss = "<script>alert('mesh')</script>";
     ui.set_mesh_activity(xss.into());
     assert_eq!(ui.get_mesh_activity(), xss);
 }
 
-#[test] fn memory_velocity_overflow() {
+#[test]
+fn memory_velocity_overflow() {
     let ui = create();
     ui.set_velocity_score(2147483647);
     assert_eq!(ui.get_velocity_score(), 2147483647);
 }
 
-#[test] fn memory_velocity_negative() {
+#[test]
+fn memory_velocity_negative() {
     let ui = create();
     ui.set_velocity_score(-999);
     assert_eq!(ui.get_velocity_score(), -999);
@@ -25,16 +31,20 @@ fn create() -> app::SwarmMemory { crate::ui_tests::init(); app::SwarmMemory::new
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn memory_flow_walkthrough_callback() {
+#[test]
+fn memory_flow_walkthrough_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_view_walkthrough(move || { *c.borrow_mut() = true; });
+    ui.on_view_walkthrough(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_view_walkthrough();
     assert!(*called.borrow());
 }
 
-#[test] fn memory_flow_sync_loop() {
+#[test]
+fn memory_flow_sync_loop() {
     let ui = create();
     for i in 0..50 {
         let act = format!("Activity {}", i);

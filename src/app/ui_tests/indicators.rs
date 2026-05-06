@@ -1,10 +1,14 @@
 use crate::app;
 
-fn create() -> app::AgentStatusIndicatorWindow { crate::ui_tests::init(); app::AgentStatusIndicatorWindow::new().unwrap() }
+fn create() -> app::AgentStatusIndicatorWindow {
+    crate::ui_tests::init();
+    app::AgentStatusIndicatorWindow::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn indicators_flow_active_toggle() {
+#[test]
+fn indicators_flow_active_toggle() {
     let ui = create();
     ui.set_is_active(true);
     assert!(ui.get_is_active());
@@ -12,7 +16,8 @@ fn create() -> app::AgentStatusIndicatorWindow { crate::ui_tests::init(); app::A
     assert!(!ui.get_is_active());
 }
 
-#[test] fn indicators_flow_status_logic() {
+#[test]
+fn indicators_flow_status_logic() {
     let ui = create();
     ui.set_status_text("Error".into());
     ui.set_status_color("red".into());
@@ -20,7 +25,8 @@ fn create() -> app::AgentStatusIndicatorWindow { crate::ui_tests::init(); app::A
     assert_eq!(ui.get_status_color(), "red");
 }
 
-#[test] fn indicators_xss_text() {
+#[test]
+fn indicators_xss_text() {
     let ui = create();
     let xss = "<script>alert('indicator')</script>";
     ui.set_status_text(xss.into());

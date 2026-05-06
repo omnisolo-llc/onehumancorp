@@ -1,17 +1,22 @@
 use crate::app;
 
-fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new().unwrap() }
+fn create() -> app::AgentConfig {
+    crate::ui_tests::init();
+    app::AgentConfig::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn agentcfg_xss_name() {
+#[test]
+fn agentcfg_xss_name() {
     let ui = create();
     let xss = "<script>alert('agentcfg')</script>";
     ui.set_selected_agent(xss.into());
     assert_eq!(ui.get_selected_agent(), xss);
 }
 
-#[test] fn agentcfg_step_bounds() {
+#[test]
+fn agentcfg_step_bounds() {
     let ui = create();
     ui.set_step(10);
     assert_eq!(ui.get_step(), 10);
@@ -19,7 +24,8 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
     assert_eq!(ui.get_step(), -5);
 }
 
-#[test] fn agentcfg_freq_bounds() {
+#[test]
+fn agentcfg_freq_bounds() {
     let ui = create();
     ui.set_frequency_value(5.0);
     assert_eq!(ui.get_frequency_value(), 5.0);
@@ -27,18 +33,22 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn agentcfg_flow_activate_callback() {
+#[test]
+fn agentcfg_flow_activate_callback() {
     let ui = create();
     let called_agent = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_agent.clone();
-    ui.on_activate_agent(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
+    ui.on_activate_agent(move |name, _, _, _, _, _| {
+        *c.borrow_mut() = name.to_string();
+    });
 
     ui.set_selected_agent("Robot".into());
     ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into());
     assert_eq!(*called_agent.borrow(), "Robot");
 }
 
-#[test] fn agentcfg_flow_toast() {
+#[test]
+fn agentcfg_flow_toast() {
     let ui = create();
     ui.set_show_toast(true);
     assert!(ui.get_show_toast());

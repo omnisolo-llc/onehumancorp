@@ -3,7 +3,9 @@ use crate::app;
 // 1. Sign-Up & Account Creation transition to Setup Wizard
 #[test]
 fn test_e2e_onboarding_signup_to_wizard() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -28,13 +30,18 @@ fn test_e2e_onboarding_signup_to_wizard() {
 
     // The backend responds telling them to start the setup wizard
     login_ui.invoke_start_setup_wizard();
-    assert!(*start_setup_wizard_called.borrow(), "Setup Wizard should launch seamlessly from login");
+    assert!(
+        *start_setup_wizard_called.borrow(),
+        "Setup Wizard should launch seamlessly from login"
+    );
 }
 
 // 2. Setup Wizard Template Selection
 #[test]
 fn test_e2e_onboarding_template_preview_selection() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
     let ui = app::SetupWizard::new().unwrap();
 
@@ -51,7 +58,9 @@ fn test_e2e_onboarding_template_preview_selection() {
 // 3. First Product / Service Add
 #[test]
 fn test_e2e_onboarding_first_product_creation() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
     let ui = app::SetupWizard::new().unwrap();
 
@@ -73,7 +82,9 @@ fn test_e2e_onboarding_first_product_creation() {
 // 4. Domain & Go-Live
 #[test]
 fn test_e2e_onboarding_domain_and_launch() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
     let ui = app::SetupWizard::new().unwrap();
 
@@ -88,13 +99,25 @@ fn test_e2e_onboarding_domain_and_launch() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _an, _ap| {
-        assert_eq!(website_template, "Modern");
-        assert_eq!(product_name, "Vegan Chocolate Cake");
-        assert_eq!(product_price, "45.00");
-        assert_eq!(domain_choice, "subdomain");
-        *launch_called_clone.borrow_mut() = true;
-    });
+    ui.on_launch(
+        move |_bt,
+              _cn,
+              _cd,
+              _pp,
+              _ae,
+              website_template,
+              product_name,
+              product_price,
+              domain_choice,
+              _an,
+              _ap| {
+            assert_eq!(website_template, "Modern");
+            assert_eq!(product_name, "Vegan Chocolate Cake");
+            assert_eq!(product_price, "45.00");
+            assert_eq!(domain_choice, "subdomain");
+            *launch_called_clone.borrow_mut() = true;
+        },
+    );
 
     ui.set_website_template("Modern".into());
     ui.set_product_name("Vegan Chocolate Cake".into());
@@ -102,17 +125,31 @@ fn test_e2e_onboarding_domain_and_launch() {
     ui.set_domain_choice("subdomain".into());
 
     ui.invoke_launch(
-        "".into(), "".into(), "".into(), "".into(), "".into(),
-        ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice(), "".into(), "".into()
+        "".into(),
+        "".into(),
+        "".into(),
+        "".into(),
+        "".into(),
+        ui.get_website_template(),
+        ui.get_product_name(),
+        ui.get_product_price(),
+        ui.get_domain_choice(),
+        "".into(),
+        "".into(),
     );
 
-    assert!(*launch_called.borrow(), "Launch should be called successfully");
+    assert!(
+        *launch_called.borrow(),
+        "Launch should be called successfully"
+    );
 }
 
 // 5. Welcome Checklist
 #[test]
 fn test_e2e_onboarding_welcome_checklist_progress() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let ui = app::WelcomeChecklist::new().unwrap();
@@ -139,13 +176,18 @@ fn test_e2e_onboarding_welcome_checklist_progress() {
     });
 
     ui.invoke_go_to_dashboard();
-    assert!(*dashboard_triggered.borrow(), "Go to Dashboard callback works");
+    assert!(
+        *dashboard_triggered.borrow(),
+        "Go to Dashboard callback works"
+    );
 }
 
 #[test]
 fn test_e2e_onboarding_sso_signup() {
     crate::ui_tests::init();
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = crate::app::Login::new().unwrap();
     let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -157,13 +199,18 @@ fn test_e2e_onboarding_sso_signup() {
     });
 
     login_ui.invoke_oauth_login("Google".into());
-    assert!(*oauth_called.borrow(), "OAuth login should trigger SSO signup flow");
+    assert!(
+        *oauth_called.borrow(),
+        "OAuth login should trigger SSO signup flow"
+    );
 }
 
 #[test]
 fn test_e2e_onboarding_domain_assignment() {
     crate::ui_tests::init();
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
     wizard_ui.set_step(8);
@@ -177,13 +224,18 @@ fn test_e2e_onboarding_domain_assignment() {
     });
 
     wizard_ui.invoke_select_domain("subdomain".into());
-    assert!(*domain_selected.borrow(), "Free subdomain assignment should work");
+    assert!(
+        *domain_selected.borrow(),
+        "Free subdomain assignment should work"
+    );
 }
 
 #[test]
 fn test_e2e_onboarding_product_ai_generation() {
     crate::ui_tests::init();
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
     wizard_ui.set_step(7);
@@ -198,13 +250,18 @@ fn test_e2e_onboarding_product_ai_generation() {
     });
 
     wizard_ui.invoke_generate_product_description("Vegan Cupcakes".into());
-    assert!(*ai_gen_called.borrow(), "AI generation for products should work");
+    assert!(
+        *ai_gen_called.borrow(),
+        "AI generation for products should work"
+    );
 }
 
 #[test]
 fn test_e2e_onboarding_cross_device_resume() {
     crate::ui_tests::init();
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
     wizard_ui.set_step(5);
@@ -217,13 +274,18 @@ fn test_e2e_onboarding_cross_device_resume() {
     });
 
     wizard_ui.invoke_save_state();
-    assert!(*save_called.borrow(), "State should persist for cross-device resume");
+    assert!(
+        *save_called.borrow(),
+        "State should persist for cross-device resume"
+    );
 }
 
 #[test]
 fn test_e2e_onboarding_welcome_checklist() {
     crate::ui_tests::init();
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
     wizard_ui.set_step(100);
@@ -236,5 +298,8 @@ fn test_e2e_onboarding_welcome_checklist() {
     });
 
     wizard_ui.invoke_show_welcome_checklist();
-    assert!(*checklist_called.borrow(), "Welcome checklist post-onboarding should work");
+    assert!(
+        *checklist_called.borrow(),
+        "Welcome checklist post-onboarding should work"
+    );
 }

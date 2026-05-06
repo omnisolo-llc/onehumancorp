@@ -1,12 +1,22 @@
 use crate::app;
 
-fn create_p() -> app::Pricing { crate::ui_tests::init(); app::Pricing::new().unwrap() }
-fn create_m() -> app::MyPlan { crate::ui_tests::init(); app::MyPlan::new().unwrap() }
-fn create_c() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard::new().unwrap() }
+fn create_p() -> app::Pricing {
+    crate::ui_tests::init();
+    app::Pricing::new().unwrap()
+}
+fn create_m() -> app::MyPlan {
+    crate::ui_tests::init();
+    app::MyPlan::new().unwrap()
+}
+fn create_c() -> app::CostDashboard {
+    crate::ui_tests::init();
+    app::CostDashboard::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn price_annual_rapid_toggle() {
+#[test]
+fn price_annual_rapid_toggle() {
     let ui = create_p();
     for _ in 0..50 {
         ui.set_is_annual(true);
@@ -16,21 +26,24 @@ fn create_c() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboar
     }
 }
 
-#[test] fn price_tier_xss() {
+#[test]
+fn price_tier_xss() {
     let ui = create_m();
     let xss = "<iframe src=javascript:alert(1)>";
     ui.set_tier(xss.into());
     assert_eq!(ui.get_tier(), xss);
 }
 
-#[test] fn price_spend_injection() {
+#[test]
+fn price_spend_injection() {
     let ui = create_c();
     let inj = "100.00'); UPDATE spend SET amount=0; --";
     ui.set_total_spend(inj.into());
     assert_eq!(ui.get_total_spend(), inj);
 }
 
-#[test] fn price_tier_unicode() {
+#[test]
+fn price_tier_unicode() {
     let ui = create_m();
     let tier = "💎 VIP Elite 💎";
     ui.set_tier(tier.into());
@@ -39,7 +52,8 @@ fn create_c() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboar
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn price_dashboard_spend_update_flow() {
+#[test]
+fn price_dashboard_spend_update_flow() {
     let ui = create_c();
     let amounts = ["$10.00", "€20.50", "£5.00", "¥1000", "0.00"];
     for a in amounts {
@@ -94,21 +108,30 @@ fn test_upgrade_prompt_visibility_when_empty() {
 fn test_upgrade_prompt_visibility_storage_limit() {
     let ui = create_m();
     ui.set_upgrade_prompt_message("Storage limit exceeded (500MB). Upgrade to Starter.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "Storage limit exceeded (500MB). Upgrade to Starter.");
+    assert_eq!(
+        ui.get_upgrade_prompt_message(),
+        "Storage limit exceeded (500MB). Upgrade to Starter."
+    );
 }
 
 #[test]
 fn test_upgrade_prompt_visibility_agent_limit() {
     let ui = create_m();
     ui.set_upgrade_prompt_message("Agent limit exceeded (1 max). Upgrade to Pro.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "Agent limit exceeded (1 max). Upgrade to Pro.");
+    assert_eq!(
+        ui.get_upgrade_prompt_message(),
+        "Agent limit exceeded (1 max). Upgrade to Pro."
+    );
 }
 
 #[test]
 fn test_upgrade_prompt_visibility_action_limit() {
     let ui = create_m();
     ui.set_upgrade_prompt_message("Monthly action limit reached (100). Upgrade to Starter.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "Monthly action limit reached (100). Upgrade to Starter.");
+    assert_eq!(
+        ui.get_upgrade_prompt_message(),
+        "Monthly action limit reached (100). Upgrade to Starter."
+    );
 }
 
 #[test]

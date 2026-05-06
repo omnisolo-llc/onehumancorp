@@ -1,5 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
-use sqlx::{sqlite::{SqlitePoolOptions, SqliteConnectOptions}, SqlitePool};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    SqlitePool,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use std::str::FromStr;
 
@@ -17,7 +20,10 @@ impl ActionQueue {
         if !tmp_dir.exists() {
             std::fs::create_dir_all(&tmp_dir).map_err(|e| e.to_string())?;
         }
-        let db_path = format!("sqlite:{}?mode=rwc", tmp_dir.join("action_queue.db").display());
+        let db_path = format!(
+            "sqlite:{}?mode=rwc",
+            tmp_dir.join("action_queue.db").display()
+        );
         let options = SqliteConnectOptions::from_str(&db_path)
             .map_err(|e| e.to_string())?
             .create_if_missing(true);
@@ -34,7 +40,7 @@ impl ActionQueue {
                 payload TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -99,7 +105,8 @@ impl ActionQueue {
     }
 
     async fn execute_action(&self, action: &str, payload: &str) -> Result<(), String> {
-        let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        let url =
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
 
         match crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(url).await {
             Ok(_client) => {
@@ -108,10 +115,12 @@ impl ActionQueue {
                     let parsed: Result<serde_json::Value, _> = serde_json::from_str(payload);
                     if let Ok(json) = parsed {
                         if let Some(task_id) = json.get("task_id").and_then(|v| v.as_str()) {
-                            let _request = tonic::Request::new(crate::ohc::orchestration::ApproveTaskRequest {
-                                task_id: task_id.to_string(),
-                                is_approved: true,
-                            });
+                            let _request = tonic::Request::new(
+                                crate::ohc::orchestration::ApproveTaskRequest {
+                                    task_id: task_id.to_string(),
+                                    is_approved: true,
+                                },
+                            );
                             // We do a best-effort call since ApproveTaskRequest doesn't exist in the current proto dummy,
                             // we just do a health check or a generic call to simulate
                             // Let's call ping or save_wizard_state as a simulated network execution if approve_task isn't compiled in

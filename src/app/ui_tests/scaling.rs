@@ -1,23 +1,29 @@
 use crate::app;
 
-fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwrap() }
+fn create() -> app::Scaling {
+    crate::ui_tests::init();
+    app::Scaling::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn scaling_xss_role() {
+#[test]
+fn scaling_xss_role() {
     let ui = create();
     let xss = "<script>alert('scaling')</script>";
     ui.set_selected_role(xss.into());
     assert_eq!(ui.get_selected_role(), xss);
 }
 
-#[test] fn scaling_count_overflow() {
+#[test]
+fn scaling_count_overflow() {
     let ui = create();
     ui.set_target_count(9999);
     assert_eq!(ui.get_target_count(), 9999);
 }
 
-#[test] fn scaling_count_negative() {
+#[test]
+fn scaling_count_negative() {
     let ui = create();
     ui.set_target_count(-100);
     assert_eq!(ui.get_target_count(), -100);
@@ -25,7 +31,8 @@ fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwra
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn scaling_flow_callback_trigger() {
+#[test]
+fn scaling_flow_callback_trigger() {
     let ui = create();
     let called_role = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let called_count = std::rc::Rc::new(std::cell::RefCell::new(0));
@@ -35,13 +42,14 @@ fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwra
         *c1.borrow_mut() = role.to_string();
         *c2.borrow_mut() = count;
     });
-    
+
     ui.invoke_scale_agents("DEVOPS".into(), 5);
     assert_eq!(*called_role.borrow(), "DEVOPS");
     assert_eq!(*called_count.borrow(), 5);
 }
 
-#[test] fn scaling_flow_rapid_count_change() {
+#[test]
+fn scaling_flow_rapid_count_change() {
     let ui = create();
     for i in 1..20 {
         ui.set_target_count(i);
