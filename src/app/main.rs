@@ -222,6 +222,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+    // Mock locale-based currency detection
+    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+        "GBP"
+    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
+        "EUR"
+    } else {
+        "USD"
+    };
+    setup_wizard_ui.set_product_currency(detected_currency.into());
+
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -2239,6 +2250,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    setup_wizard_ui.on_trigger_photo_upload({
+        let ui_weak = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.set_is_cropping_photo(true);
+            }
+        }
+    });
+
     setup_wizard_ui.on_generate_product_description({
         let ui_weak = setup_wizard_handle.clone();
         move |prod_name| {
@@ -2428,6 +2448,17 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+    // Mock locale-based currency detection
+    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+        "GBP"
+    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
+        "EUR"
+    } else {
+        "USD"
+    };
+    setup_wizard_ui.set_product_currency(detected_currency.into());
+
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -2498,6 +2529,16 @@ mod growth_e2e_tests {
         let login_ui_handle = login_ui.as_weak();
 
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
+
+        let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+            "GBP"
+        } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
+            "EUR"
+        } else {
+            "USD"
+        };
+        setup_wizard_ui.set_product_currency(detected_currency.into());
+
         let setup_wizard_handle = setup_wizard_ui.as_weak();
 
         let _ = setup_wizard_ui.hide();
