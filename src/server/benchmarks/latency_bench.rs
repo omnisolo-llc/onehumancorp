@@ -95,24 +95,13 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for _ in 0..iterations {
+        let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db, hub.clone());
+
         let start = Instant::now();
-
-        let hub1 = hub.clone();
-        let hub2 = hub.clone();
-        let hub3 = hub.clone();
-
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
-        );
-        let _ = agents_res.unwrap_or_default();
-        let _ = meetings_res.unwrap_or_default();
-        let _ = cost_res.unwrap_or_default();
-
+        use crate::ohc::app::dashboard_service_server::DashboardService;
+        let _ = dashboard_service.get_dashboard(tonic::Request::new(req_desktop)).await.unwrap().into_inner();
         fetch_times.push(start.elapsed().as_micros());
     }
 
