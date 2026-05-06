@@ -3,7 +3,6 @@ mod parity_tests {
     use crate::db::{DB, DbStore};
     use std::sync::Arc;
     use sqlx::Row;
-    use chrono::Utc;
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::postgres::PgPoolOptions;
 
