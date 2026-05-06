@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-#build --config=buildbuddy
-#test --config=buildbuddy
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
