@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"onehumancorp/srcs/server/orchestration"
 )
@@ -56,17 +57,33 @@ func (s *Service) StartOnboarding(ctx context.Context, req OnboardingRequest) (*
 	payload, _ := json.Marshal(req)
 	rawPayload := json.RawMessage(payload)
 
+	var wg sync.WaitGroup
+	errs := make(chan error, len(tasks))
+
 	for _, taskData := range tasks {
-		task := &orchestration.SharedTask{
-			OrganizationID: tenant.ID,
-			Title:          taskData.Title,
-			Description:    &taskData.Description,
-			Status:         "PENDING",
-			Priority:       "P0",
-			Payload:        &rawPayload,
-		}
-		if err := s.taskStore.CreateTask(ctx, task); err != nil {
-			return nil, fmt.Errorf("failed to dispatch task %s: %w", taskData.Title, err)
+		wg.Add(1)
+		go func(tTitle, tDesc string) {
+			defer wg.Done()
+			task := &orchestration.SharedTask{
+				OrganizationID: tenant.ID,
+				Title:          tTitle,
+				Description:    &tDesc,
+				Status:         "PENDING",
+				Priority:       "P0",
+				Payload:        &rawPayload,
+			}
+			if err := s.taskStore.CreateTask(ctx, task); err != nil {
+				errs <- fmt.Errorf("failed to dispatch task %s: %w", tTitle, err)
+			}
+		}(taskData.Title, taskData.Description)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			return nil, err
 		}
 	}
 

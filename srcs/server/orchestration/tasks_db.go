@@ -339,6 +339,9 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 }
 
 func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
     // Generate UUID in Go for SQLite if it doesn't have gen_random_uuid()
 	query := `
 		INSERT INTO shared_tasks (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at)
