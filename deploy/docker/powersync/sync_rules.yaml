@@ -1,8 +1,0 @@
-bucket_definitions:
-  tenant_data:
-    parameters:
-      - select: request.jwt()->>'organization_id'
-    data:
-      - select: * FROM tenant_registry WHERE organization_id = bucket.parameters[0]
-      - select: * FROM agent_missions WHERE organization_id = bucket.parameters[0]
-      - select: * FROM agent_memories WHERE organization_id = bucket.parameters[0]
