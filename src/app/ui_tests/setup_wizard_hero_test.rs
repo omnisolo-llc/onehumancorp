@@ -92,6 +92,20 @@ fn test_ui_setup_wizard_hero_animation() {
 }
 
 #[test]
+fn test_ui_setup_wizard_progressive_disclosure() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
+
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
 fn test_ui_setup_wizard_checklist_navigation() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     super::init();

@@ -279,6 +279,12 @@ export component SetupWizard inherits Window {
                         generate_company_description(company_name, business_type);
                     }
                 }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "JSON Config Export"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "{ \"name\": \"...\" }"; height: 80px; }
+                }
             }
 
             // Step 3: What do you sell
@@ -316,6 +322,12 @@ export component SetupWizard inherits Window {
                     background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_subscriptions(); } }
+                }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Taxonomy Tags"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "e.g. category_id_1, category_id_2"; height: 44px; }
                 }
             }
 
@@ -360,6 +372,12 @@ export component SetupWizard inherits Window {
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Stripe Webhook Secret"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "whsec_..."; height: 44px; }
+                }
             }
 
             // Step 5: Admin Account
@@ -383,6 +401,12 @@ export component SetupWizard inherits Window {
                 Button { text: "Continue with Google"; height: 44px; }
                 Button { text: "Continue with Apple"; height: 44px; }
                 Button { text: "Next"; height: 44px; clicked => { next_step(); } }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Identity Provider Endpoint"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "https://idp.example.com/oauth2"; height: 44px; }
+                }
             }
 
             // Step 6: Choose a Template
@@ -451,6 +475,12 @@ export component SetupWizard inherits Window {
                         Text { text: "Vibrant, high-contrast style for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_template("Bold"); save_state(); } }
+                }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Custom CSS Override URL"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    LineEdit { placeholder-text: "https://..."; height: 44px; }
                 }
             }
 
