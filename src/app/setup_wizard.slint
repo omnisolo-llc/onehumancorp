@@ -58,7 +58,7 @@ export component SetupWizard inherits Window {
     property <float> pulse_scale: 1.0;
     in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
-    callback launch(string, string, string, string, string, string, string, string, string, string, string);
+    callback launch(string, string, string, string, string, string, string, string, string, string, string, string);
     callback copy_link(string);
     callback generate_instant_preview();
     callback generate_company_description(string, string);
@@ -764,7 +764,7 @@ export component SetupWizard inherits Window {
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;
-                    launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password);
+                    launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
                 } }
             }
 
