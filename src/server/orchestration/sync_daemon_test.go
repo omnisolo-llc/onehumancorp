@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+    "time"
 
 	// Using the blank import for modern sqlite driver
 	_ "github.com/mattn/go-sqlite3"
@@ -32,6 +33,19 @@ func setupTestDB(t *testing.T) *sql.DB {
 		status TEXT NOT NULL,
 		payload BLOB,
 		synced_to_cloud BOOLEAN DEFAULT FALSE
+	);
+	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+		id TEXT PRIMARY KEY,
+		parent_task_id TEXT,
+		agent_role TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		attempts INTEGER DEFAULT 0,
+		max_attempts INTEGER DEFAULT 3,
+		run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+		locked_until TIMESTAMPTZ,
+		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err = db.Exec(createTableQuery)
@@ -62,6 +76,14 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)
 	}
+
+    oldTime := time.Now().Add(-2 * time.Hour).Format("2006-01-02 15:04:05")
+    recentTime := time.Now().Add(-5 * time.Minute).Format("2006-01-02 15:04:05")
+
+    _, err = db.Exec(`INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, updated_at) VALUES ('stuck-job', 'parent', 'role', '{}', 'RUNNING', ?)`, oldTime)
+    if err != nil { t.Fatalf("Failed to insert job %v", err) }
+    _, err = db.Exec(`INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, updated_at) VALUES ('active-job', 'parent', 'role', '{}', 'RUNNING', ?)`, recentTime)
+    if err != nil { t.Fatalf("Failed to insert job %v", err) }
 
 	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
 
@@ -99,4 +121,14 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 			t.Errorf("Mission %s: expected synced_to_cloud=%v, got %v", id, expected, synced)
 		}
 	}
+
+    var stuckStatus string
+    err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'stuck-job'").Scan(&stuckStatus)
+    if err != nil { t.Fatalf("query failed") }
+    if stuckStatus != "FAILED" { t.Fatalf("expected FAILED, got %v", stuckStatus) }
+
+    var activeStatus string
+    err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'active-job'").Scan(&activeStatus)
+    if err != nil { t.Fatalf("query failed") }
+    if activeStatus != "RUNNING" { t.Fatalf("expected RUNNING, got %v", activeStatus) }
 }

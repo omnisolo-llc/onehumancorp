@@ -46,13 +46,9 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                // Prune any stuck mission in CLOUD_ESCALATION or active processing to FAILED
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'EXECUTING' OR status = 'CLOUD_ESCALATION') AND updated_at < $1 AND organization_id = $2")
                     .bind(stuck_threshold)
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
-                sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
