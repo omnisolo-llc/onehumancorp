@@ -34,3 +34,19 @@ message HealthAck {
   string target_node_id = 2;
   int64 timestamp_ms = 3;
 }
+
+// Dispatches a background job to the builtin agent.
+message JobDispatch {
+  string job_id = 1;
+  string tenant_id = 2;
+  string action_name = 3;
+  bytes payload_json = 4;
+  int64 timestamp_ms = 5;
+}
+
+// Acknowledges receipt of a JobDispatch.
+message JobAck {
+  string job_id = 1;
+  string node_id = 2;
+  int64 timestamp_ms = 3;
+}
