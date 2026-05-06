@@ -602,7 +602,7 @@ export component SetupWizard inherits Window {
                         Text { text: "🎉 CONFETTI SUCCESS! Your business is live! 🎉"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
-                            text: "Copy Store Link";
+                            text: "Copy Shareable Link";
                             height: 44px;
                             clicked => { copy_link(shareable_link); }
                         }
@@ -773,6 +773,13 @@ export component SetupWizard inherits Window {
                 background: rgba(168, 85, 247, 1.0);
                 VerticalBox { alignment: center; Text { text: "View Live Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { step = 100; } }
+            }
+
+            if (step == 9 && launch_success) : GlassCard {
+                height: 54px;
+                background: rgba(16, 185, 129, 1.0);
+                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = 10; } }
             }
 
             if (step == 10) : GlassCard {
