@@ -2,6 +2,7 @@
 
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 ### Cloud Scaling Improvements
+- Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
 - Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
 - Fix gRPC calls with App UI Interceptor (#9cb3)
 - Final MaintenanceWorker implementation and Build Fix (#33a8)
