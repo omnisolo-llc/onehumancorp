@@ -256,7 +256,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_setup_wizard_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -290,7 +291,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                         if let Ok(resp) = client.get_wizard_state(req).await {
-                            let state = resp.into_inner().state;
+                            let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = weak_wizard.upgrade() {
                                     if let Some(val) = state.get("step") { if let Ok(s) = val.parse::<i32>() { ui.set_step(s); } }
@@ -345,7 +347,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                             if let Ok(resp) = client.get_wizard_state(req).await {
-                                let state = resp.into_inner().state;
+                                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                                 // In the SetupWizard, step 10 is the final welcome checklist.
                                 // If they haven't reached step 10, they need to complete the wizard.
                                 if let Some(step) = state.get("step") {
@@ -580,7 +583,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_ui_handle.upgrade() {
                         if let Some(step_str) = state.get("step") {
@@ -668,7 +672,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -759,7 +764,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -868,7 +874,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -978,7 +985,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -1037,7 +1045,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
@@ -1180,7 +1189,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(mut client) => {
                         let response: Result<tonic::Response<_>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
-                            let referrals = resp.into_inner().referrals;
+                            let inner: ohc::orchestration::ReferralsResponse = resp.into_inner();
+                            let referrals = inner.referrals;
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
@@ -1200,7 +1210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         let stats_response: Result<tonic::Response<_>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(stats_resp) = stats_response {
-                            let stats = stats_resp.into_inner();
+                            let stats: ohc::orchestration::ReferralStatsResponse = stats_resp.into_inner();
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
@@ -1218,7 +1228,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(vc_resp) = vc_response {
-                            let vc = vc_resp.into_inner();
+                            let vc: ohc::orchestration::ViralCoefficientResponse = vc_resp.into_inner();
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
@@ -1498,7 +1508,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
             }
             if let Ok(res) = client.get_my_plan(req).await {
-                let plan = res.into_inner();
+                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
                 if let Some(ui) = my_plan_handle_fetch.upgrade() {
                     ui.set_tier(format!("{} Tier", plan.current_plan).into());
                     ui.set_total_actions(plan.ai_actions_used.to_string().into());
@@ -1519,7 +1529,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
             }
             if let Ok(res) = client.get_cost_dashboard(req).await {
-                let dash = res.into_inner();
+                let dash: ohc::orchestration::CostDashboardResponse = res.into_inner();
                 if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                                         ui.set_total_spend(format!("${}", dash.total_costs).into());
                     ui.set_total_tokens(dash.llm_cost.to_string().into());
@@ -1579,7 +1589,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
                             if let Ok(resp) = resp {
-                                let quota = resp.into_inner();
+                                let quota: ohc::orchestration::QuotaMetrics = resp.into_inner();
                                 let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
@@ -2065,7 +2075,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                 let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                 if let Ok(resp) = resp {
-                    let analytics = resp.into_inner();
+                    let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
                     let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
@@ -2140,7 +2150,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                         if let Ok(resp) = response {
-                            let content = resp.into_inner().content;
+                            let inner: ohc::orchestration::ReasonResponse = resp.into_inner();
+                            let content = inner.content;
                             // Simple JSON extraction attempt
                             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
                                 if let Some(n) = v.get("company_name").and_then(|n| n.as_str()) { company_name = n.to_string(); }
@@ -2192,7 +2203,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                     if let Ok(resp) = response {
-                        description = resp.into_inner().content.trim().to_string();
+                        let inner: ohc::orchestration::ReasonResponse = resp.into_inner();
+                        description = inner.content.trim().to_string();
                     }
                 }
                 slint::invoke_from_event_loop(move || {
@@ -2220,7 +2232,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
                     if let Ok(resp) = response {
-                        description = resp.into_inner().content.trim().to_string();
+                        let inner: ohc::orchestration::ReasonResponse = resp.into_inner();
+                        description = inner.content.trim().to_string();
                     }
                 }
                 slint::invoke_from_event_loop(move || {
@@ -2318,7 +2331,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let response: Result<tonic::Response<ohc::orchestration::StartOnboardingResponse>, tonic::Status> = client.start_onboarding(onboarding_request).await;
                         match response {
                             Ok(resp) => {
-                                let r = resp.into_inner();
+                                let r: ohc::orchestration::StartOnboardingResponse = resp.into_inner();
                                 let msg = r.message.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
