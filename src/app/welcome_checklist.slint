@@ -14,13 +14,13 @@ export component WelcomeChecklist inherits Window {
     callback go_to_connect_instagram();
     callback go_to_share_link();
 
-    property <bool> task1_done: true;
-    property <bool> task2_done: false;
-    property <bool> task3_done: false;
-    property <bool> task4_done: false;
+    in-out property <bool> task1_done: false;
+    in-out property <bool> task2_done: false;
+    in-out property <bool> task3_done: false;
+    in-out property <bool> task4_done: false;
 
-    in-out property <int> progress: 0;
-    in-out property <bool> is_completed: false;
+    out property <int> progress: (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0);
+    out property <bool> is_completed: task1_done && task2_done && task3_done && task4_done;
 
     VerticalBox {
         alignment: center;
@@ -52,7 +52,7 @@ export component WelcomeChecklist inherits Window {
                     spacing: 10px;
                     CheckBox {
                         checked: task1_done;
-                        toggled => { task1_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task1_done = self.checked; }
                     }
                     Text { text: "Business live"; color: white; font-family: "Inter"; }
                 }
@@ -60,7 +60,7 @@ export component WelcomeChecklist inherits Window {
                     spacing: 10px;
                     CheckBox {
                         checked: task2_done;
-                        toggled => { task2_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task2_done = self.checked; }
                     }
                     TouchArea {
                         width: 100%;
@@ -73,7 +73,7 @@ export component WelcomeChecklist inherits Window {
                     spacing: 10px;
                     CheckBox {
                         checked: task3_done;
-                        toggled => { task3_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task3_done = self.checked; }
                     }
                     TouchArea {
                         width: 100%;
@@ -86,7 +86,7 @@ export component WelcomeChecklist inherits Window {
                     spacing: 10px;
                     CheckBox {
                         checked: task4_done;
-                        toggled => { task4_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task4_done = self.checked; }
                     }
                     TouchArea {
                         width: 100%;

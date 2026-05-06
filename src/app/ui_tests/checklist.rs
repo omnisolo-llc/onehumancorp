@@ -4,21 +4,7 @@ fn create() -> app::WelcomeChecklist { crate::ui_tests::init(); app::WelcomeChec
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn checklist_flow_progress_bounds() {
-    let ui = create();
-    ui.set_progress(101);
-    assert_eq!(ui.get_progress(), 101);
-    ui.set_progress(-50);
-    assert_eq!(ui.get_progress(), -50);
-}
 
-#[test] fn checklist_flow_completion_toggle() {
-    let ui = create();
-    ui.set_is_completed(true);
-    assert!(ui.get_is_completed());
-    ui.set_is_completed(false);
-    assert!(!ui.get_is_completed());
-}
 
 #[test] fn checklist_flow_callbacks() {
     let ui = create();
@@ -42,13 +28,3 @@ fn create() -> app::WelcomeChecklist { crate::ui_tests::init(); app::WelcomeChec
 
 // --- Consolidated Verified Tests ---
 
-#[test]
-fn create_verify_progress() {
-    let ui = create();
-    ui.set_progress(1);
-    assert_eq!(ui.get_progress(), 1);
-    ui.set_progress(25);
-    assert_eq!(ui.get_progress(), 25);
-    ui.set_progress(50);
-    assert_eq!(ui.get_progress(), 50);
-}

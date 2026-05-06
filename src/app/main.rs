@@ -3306,8 +3306,10 @@ mod tests {
         // Verify initial state
         assert_eq!(ui.get_progress(), 0);
         assert_eq!(ui.get_is_completed(), false);
-        ui.set_progress(100);
-        ui.set_is_completed(true);
+        ui.set_task1_done(true);
+        ui.set_task2_done(true);
+        ui.set_task3_done(true);
+        ui.set_task4_done(true);
         assert_eq!(ui.get_progress(), 100);
         assert_eq!(ui.get_is_completed(), true);
 
