@@ -610,6 +610,30 @@ impl Agent {
         Ok(final_resp.message.content)
     }
 
+    /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
+    /// that returns an async iterator (stream) of messages. Uses a "dumb loop" Gather-Act-Verify cycle.
+    pub fn query(
+        self: Arc<Self>,
+        cfg: AgentRunConfig,
+        initial_message: String,
+    ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            let mut on_event = |event: AgentEvent| {
+                // We use an unbounded channel so send does not block or drop events if the consumer is slow.
+                let _ = tx.send(event);
+            };
+
+            if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
+                // Propagate the error through the stream so it is not silently swallowed.
+                let _ = tx.send(AgentEvent::TaskError { error: format!("Agent run failed: {}", e) });
+            }
+        });
+
+        rx
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -3465,5 +3489,61 @@ mod tests {
             }
         }
         assert!(found_event, "UserInterventionRequired event should be emitted");
+    }
+}
+
+#[cfg(test)]
+mod stream_tests {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use std::sync::Arc;
+
+    struct StreamMockLlmClient {
+        responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for StreamMockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("default stream content"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_async_stream() {
+        let client = Arc::new(StreamMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Streamed response chunk 1"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let cfg = AgentRunConfig::default();
+
+        let mut rx = agent.query(cfg, "Start streaming".to_string());
+
+        let mut events = vec![];
+        while let Some(event) = rx.recv().await {
+            events.push(event);
+        }
+
+        let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
+        assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
     }
 }
