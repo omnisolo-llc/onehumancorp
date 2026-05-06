@@ -164,7 +164,7 @@ mod tests {
             .await
             .unwrap();
 
-        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
 
         let manager = HandoffManager::new(mesh, db, false);
         let manager_arc = Arc::new(manager);

@@ -18,7 +18,7 @@ mod parity_tests {
 
         // Run migrations/schema setup for SQLite
         let db = DB {
-            pool: PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();
