@@ -76,11 +76,13 @@ export component AgentConfig inherits Window {
                             Text { text: "🎧"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Ambassador"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Customer Success — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle { width: 10px; }
+                            Rectangle { height: 32px; background: selected_agent == "CustomerSuccess" ? #10b981 : rgba(255,255,255,0.1); border-radius: 16px; width: 32px; Text { text: selected_agent == "CustomerSuccess" ? "✓" : "+"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "The Ambassador"; } }
+                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "Customer Support"; } }
                     }
                     GlassCard {
                         height: 90px;
@@ -90,25 +92,29 @@ export component AgentConfig inherits Window {
                             Text { text: "📱"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Promoter"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Marketing & Advertising — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle { width: 10px; }
+                            Rectangle { height: 32px; background: selected_agent == "Marketing" ? #10b981 : rgba(255,255,255,0.1); border-radius: 16px; width: 32px; Text { text: selected_agent == "Marketing" ? "✓" : "+"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_agent = "Marketing"; selected_agent_display = "The Promoter"; } }
+                        TouchArea { clicked => { selected_agent = "Marketing"; selected_agent_display = "Social Media Manager"; } }
                     }
                     GlassCard {
                         height: 90px;
                         background: selected_agent == "Sales" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "🤝"; font-size: 32px; }
+                            Text { text: "📈"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Salesperson"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Sales & Acquisition — finds and wins customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                Text { text: "SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Finds and wins customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle { width: 10px; }
+                            Rectangle { height: 32px; background: selected_agent == "Sales" ? #10b981 : rgba(255,255,255,0.1); border-radius: 16px; width: 32px; Text { text: selected_agent == "Sales" ? "✓" : "+"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_agent = "Sales"; selected_agent_display = "The Salesperson"; } }
+                        TouchArea { clicked => { selected_agent = "Sales"; selected_agent_display = "SEO Booster"; } }
                     }
                     GlassCard {
                         height: 90px;
@@ -118,25 +124,29 @@ export component AgentConfig inherits Window {
                             Text { text: "📦"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Operations — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                Text { text: "Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle { width: 10px; }
+                            Rectangle { height: 32px; background: selected_agent == "Operations" ? #10b981 : rgba(255,255,255,0.1); border-radius: 16px; width: 32px; Text { text: selected_agent == "Operations" ? "✓" : "+"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_agent = "Operations"; selected_agent_display = "The Manager"; } }
+                        TouchArea { clicked => { selected_agent = "Operations"; selected_agent_display = "Order Manager"; } }
                     }
                     GlassCard {
                         height: 90px;
                         background: selected_agent == "Finance" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "💰"; font-size: 32px; }
+                            Text { text: "📧"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Accountant"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Finance & Payments — makes sure money flows"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                Text { text: "Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Makes sure money flows"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle { width: 10px; }
+                            Rectangle { height: 32px; background: selected_agent == "Finance" ? #10b981 : rgba(255,255,255,0.1); border-radius: 16px; width: 32px; Text { text: selected_agent == "Finance" ? "✓" : "+"; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_agent = "Finance"; selected_agent_display = "The Accountant"; } }
+                        TouchArea { clicked => { selected_agent = "Finance"; selected_agent_display = "Email Marketer"; } }
                     }
                 }
             }
@@ -146,47 +156,74 @@ export component AgentConfig inherits Window {
         // Step 1: Capabilities
         if (step == 1) : VerticalBox {
             spacing: 16px;
-            Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
+            Text { text: "What should this helper do?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             
-            HorizontalBox {
-                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+            GlassCard {
+                height: 60px;
+                background: can_reply ? rgba(16, 185, 129, 0.2) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                HorizontalBox {
+                    padding: 16px; alignment: space-between;
+                    Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; font-weight: 700; vertical-alignment: center;}
+                    CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+                }
             }
-            HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            GlassCard {
+                height: 60px;
+                background: can_social ? rgba(16, 185, 129, 0.2) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                HorizontalBox {
+                    padding: 16px; alignment: space-between;
+                    Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; font-weight: 700; vertical-alignment: center;}
+                    CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+                }
             }
-            HorizontalBox {
-                Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+            GlassCard {
+                height: 60px;
+                background: can_write_descriptions ? rgba(16, 185, 129, 0.2) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                HorizontalBox {
+                    padding: 16px; alignment: space-between;
+                    Text { text: "Write product descriptions"; color: white; font-family: "Inter"; font-weight: 700; vertical-alignment: center;}
+                    CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+                }
             }
-            HorizontalBox {
-                Text { text: "Send order updates"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+            GlassCard {
+                height: 60px;
+                background: can_send_updates ? rgba(16, 185, 129, 0.2) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                HorizontalBox {
+                    padding: 16px; alignment: space-between;
+                    Text { text: "Send order updates"; color: white; font-family: "Inter"; font-weight: 700; vertical-alignment: center;}
+                    CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+                }
             }
         }
 
         // Step 2: Frequency
         if (step == 2) : VerticalBox {
             spacing: 20px;
-            Text { text: "How often should this helper work?"; color: white; font-family: "Inter"; }
+            Text { text: "How often should this helper work?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             
-            HorizontalBox {
-                spacing: 10px;
-                Slider {
-                    minimum: 0.0;
-                    maximum: 3.0;
-                    value <=> frequency_value;
-                    width: 100%;
+            GlassCard {
+                height: 120px;
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 24px;
+                    HorizontalBox {
+                        spacing: 10px;
+                        Slider {
+                            minimum: 0.0;
+                            maximum: 3.0;
+                            value <=> frequency_value;
+                            width: 100%;
+                        }
+                    }
+                    Text { text: "Schedule: " + frequency; color: #a855f7; horizontal-alignment: center; font-family: "Inter"; font-size: 18px; font-weight: 700; }
                 }
             }
-            Text { text: "Schedule: " + frequency; color: #a855f7; horizontal-alignment: center; font-family: "Inter"; font-weight: 700; }
         }
 
         // Step 3: Review
         if (step == 3) : VerticalBox {
             spacing: 16px;
-            Text { text: "Review & Activate"; color: white; font-family: "Inter"; }
+            Text { text: "Review & Activate"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             GlassCard {
                 VerticalBox {
                     padding: 16px;
@@ -205,19 +242,27 @@ export component AgentConfig inherits Window {
 
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
+            if (step > 0) : GlassCard {
+                width: 80px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = step - 1; } }
             }
+            if (step == 0) : Rectangle { width: 80px; } // spacer
             Rectangle {} // Spacer
-            Button {
-                text: step == 3 ? "Activate" : "Next";
-                clicked => {
-                    if (step < 3) {
-                        next_step();
-                    } else {
-                        show_toast = true;
-                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
+            GlassCard {
+                width: 120px;
+                height: 44px;
+                background: step == 3 ? rgba(16, 185, 129, 0.8) : rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: step == 3 ? "Activate ✓" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    clicked => {
+                        if (step < 3) {
+                            next_step();
+                        } else {
+                            show_toast = true;
+                            activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
+                        }
                     }
                 }
             }

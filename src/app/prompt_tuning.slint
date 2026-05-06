@@ -99,24 +99,28 @@ export component PromptTuning inherits Window {
             // Step 1: Focus
             if (step == 1) : VerticalBox {
                 spacing: 12px;
-                Text { text: "Domain focus"; color: white; font-family: "Inter"; }
+                Text { text: "Focus Topics"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "Select rules for your agent"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                GlassCard {
-                    height: 44px;
-                    background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🎯 Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                HorizontalBox {
+                    spacing: 8px;
+                    GlassCard {
+                        height: 44px;
+                        background: focus_only_business ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: focus_only_business ? "✓ Only about my products" : "+ Only about my products"; font-family: "Inter"; font-size: 14px; color: white; } }
+                        TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                    }
+                    GlassCard {
+                        height: 44px;
+                        background: focus_avoid_competitors ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: focus_avoid_competitors ? "✓ Avoid competitor mentions" : "+ Avoid competitor mentions"; font-family: "Inter"; font-size: 14px; color: white; } }
+                        TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                    }
                 }
                 GlassCard {
                     height: 44px;
-                    background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🛡️ Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
-                }
-                GlassCard {
-                    height: 44px;
-                    background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🌐 Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    background: focus_reply_spanish ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: focus_reply_spanish ? "✓ Always reply in Spanish" : "+ Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
                 }
             }
@@ -124,10 +128,13 @@ export component PromptTuning inherits Window {
             // Step 2: Examples
             if (step == 2) : VerticalBox {
                 spacing: 16px;
-                Text { text: "Example interactions"; color: white; font-family: "Inter"; }
-                Button { 
-                    text: "✨ Add Example Interaction";
-                    clicked => { add_example(); }
+                Text { text: "Example interactions"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "Provide up to 3 Q&A examples for the AI to follow"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                GlassCard {
+                    height: 44px;
+                    background: rgba(168, 85, 247, 0.4);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "✨ Add Example Interaction"; font-family: "Inter"; font-size: 14px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { add_example(); } }
                 }
                 ScrollView {
                     height: 200px;
@@ -147,12 +154,12 @@ export component PromptTuning inherits Window {
             // Step 3: Review
             if (step == 3) : VerticalBox {
                 spacing: 16px;
-                Text { text: "Review & Save"; color: white; font-family: "Inter"; }
+                Text { text: "Review & Save"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 GlassCard {
                     VerticalBox {
                         padding: 16px;
                         spacing: 8px;
-                        Text { text: "Tone: " + tone; color: white; font-family: "Inter"; }
+                        Text { text: "Tone: " + tone; color: white; font-family: "Inter"; font-weight: 700; }
                         Text { text: "Focus Business: " + (focus_only_business ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
                         Text { text: "Avoid Competitors: " + (focus_avoid_competitors ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
                         Text { text: "Spanish Only: " + (focus_reply_spanish ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
@@ -165,19 +172,27 @@ export component PromptTuning inherits Window {
 
             // Navigation
             HorizontalBox {
-                if (step > 0) : Button {
-                    text: "Back";
-                    clicked => { step = step - 1; }
+                if (step > 0) : GlassCard {
+                    width: 80px;
+                    height: 44px;
+                    VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { step = step - 1; } }
                 }
+                if (step == 0) : Rectangle { width: 80px; } // spacer
                 Rectangle {} // Spacer
-                Button {
-                    text: step == 3 ? "Save" : "Next";
-                    clicked => {
-                        if (step < 3) {
-                            next_step();
-                        } else {
-                            show_toast = true;
-                            save_prompt();
+                GlassCard {
+                    width: 120px;
+                    height: 44px;
+                    background: step == 3 ? rgba(16, 185, 129, 0.8) : rgba(168, 85, 247, 0.8);
+                    VerticalBox { alignment: center; Text { text: step == 3 ? "Save ✓" : "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea {
+                        clicked => {
+                            if (step < 3) {
+                                next_step();
+                            } else {
+                                show_toast = true;
+                                save_prompt();
+                            }
                         }
                     }
                 }
