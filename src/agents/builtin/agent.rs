@@ -124,6 +124,11 @@ impl AgentProgress {
     }
 }
 
+/// OpenAI Codex Mechanic: Strict Hierarchical Priority Stack
+/// 1. Server-controlled System Message (Highest Priority)
+/// 2. Tool Definitions
+/// 3. Developer Instructions
+/// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
@@ -136,11 +141,14 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
     let user_instr = &cfg.user_instructions[..end_idx];
 
     let mut combined_system = String::new();
+
+    // Priority 1: Server-controlled System Message
     if !cfg.server_system_message.is_empty() {
+        combined_system.push_str("[Server System Message]\n");
         combined_system.push_str(&cfg.server_system_message);
     }
 
-    // Format tools into [Tool Definitions]
+    // Priority 2: Tool Definitions
     if !tools.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -151,10 +159,13 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
             combined_system.push_str(&format!("Description: {}\n", tool.description));
             combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
         }
-        // Remove trailing newline
-        combined_system.pop();
+        // Remove trailing newline to keep formatting clean
+        if combined_system.ends_with('\n') {
+            combined_system.pop();
+        }
     }
 
+    // Priority 3: Developer Instructions
     if !cfg.developer_instructions.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -163,6 +174,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str(&cfg.developer_instructions);
     }
 
+    // Priority 4: User Instructions
     if !user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -170,6 +182,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str("[User Instructions]\n");
         combined_system.push_str(user_instr);
     }
+
     combined_system
 }
 
@@ -1427,6 +1440,58 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_openai_codex_strict_hierarchical_priority_stack() {
+        use super::{AgentRunConfig, build_hierarchical_system_prompt};
+        use crate::tools::Tool;
+        use std::sync::Arc;
+
+        struct DummyExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for DummyExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("dummy".to_string())
+            }
+        }
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "SERVER_SYSTEM_MESSAGE".to_string();
+        cfg.developer_instructions = "DEVELOPER_INSTRUCTIONS".to_string();
+
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: Arc::new(DummyExecutor),
+        };
+
+        // Create user instructions larger than 32 KiB
+        let large_user_instr = "a".repeat(33000);
+        cfg.user_instructions = large_user_instr.clone();
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
+
+        // 1. Verify exact string ordering for hierarchy
+        let pos_server = prompt.find("[Server System Message]").expect("Server System Message missing");
+        let pos_tool = prompt.find("[Tool Definitions]").expect("Tool Definitions missing");
+        let pos_dev = prompt.find("[Developer Instructions]").expect("Developer Instructions missing");
+        let pos_user = prompt.find("[User Instructions]").expect("User Instructions missing");
+
+        assert!(pos_server < pos_tool, "Server message should precede tools");
+        assert!(pos_tool < pos_dev, "Tools should precede developer instructions");
+        assert!(pos_dev < pos_user, "Developer instructions should precede user instructions");
+
+        // 2. Verify truncation to 32 KiB
+        // "[User Instructions]\n" + 32768 chars = 32788 chars roughly for the last section
+        let user_section_start = pos_user + "[User Instructions]\n".len();
+        let user_content = &prompt[user_section_start..];
+
+        // Assert length is exactly 32768
+        assert_eq!(user_content.len(), 32768, "User instructions should be truncated to exactly 32768 bytes");
+        assert!(user_content.chars().all(|c| c == 'a'), "Truncated content should consist of 'a's");
+    }
+
     #[tokio::test]
     async fn test_llmcompiler_plan_and_execute_mechanic() {
         struct LLMCompilerMockClient {
@@ -2569,7 +2634,7 @@ mod tests {
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
 
-        let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
         assert_eq!(prompt, expected);
     }
@@ -2584,7 +2649,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
         );
     }
 
@@ -2598,7 +2663,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "Server System Message\n\n[User Instructions]\nUser Instructions"
+            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
         );
 
         let mut cfg2 = AgentRunConfig::default();
