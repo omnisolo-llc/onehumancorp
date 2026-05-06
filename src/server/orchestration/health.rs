@@ -20,7 +20,7 @@ pub async fn run_health_monitor(
         };
 
         if !ping_ok {
-            tracing::warn!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
+            tracing::debug!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
         }
 
         let mut to_fire_now: Vec<String> = Vec::new();
@@ -62,10 +62,10 @@ pub async fn run_health_monitor(
                 }
             }
             Ok(Err(e)) => {
-                tracing::error!("HEALTH MONITOR: Failed to get active agents: {}", e);
+                tracing::debug!("HEALTH MONITOR: Failed to get active agents: {}", e);
             }
             Err(_) => {
-                tracing::error!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
+                tracing::debug!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
             }
         }
     }
