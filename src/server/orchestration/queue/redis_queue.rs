@@ -18,6 +18,18 @@ impl RedisTaskQueue {
 
 #[async_trait]
 impl TaskQueue for RedisTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut pipe = redis::pipe();
+        for job in jobs {
+            let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+            pipe.cmd("RPUSH").arg(&self.queue_name).arg(payload_json);
+        }
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;

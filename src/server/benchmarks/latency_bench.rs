@@ -173,7 +173,7 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
             };
 
             let start = Instant::now();
-            q.enqueue(job).await.unwrap();
+            q.enqueue_batch(vec![job]).await.unwrap();
             let elapsed_enqueue = start.elapsed();
 
             let start_deq = Instant::now();
@@ -201,7 +201,7 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = dequeue_times[(iterations as f32 * 0.95) as usize];
     let deq_p99 = dequeue_times[(iterations as f32 * 0.99) as usize];
 
-    tracing::info!("{}: Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    tracing::info!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
     tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 

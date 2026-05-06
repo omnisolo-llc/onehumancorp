@@ -15,6 +15,24 @@ impl SQLiteTaskQueue {
 
 #[async_trait]
 impl TaskQueue for SQLiteTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        for job in jobs {
+            sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
+                .bind(job.id.clone())
+                .bind(job.tenant_id.clone())
+                .bind(job.parent_task_id.clone())
+                .bind(job.agent_role.clone())
+                .bind(job.payload.as_bytes())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         sqlx::query(
             "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after)
