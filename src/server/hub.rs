@@ -155,6 +155,10 @@ impl Hub {
         agents.len()
     }
 
+    pub fn get_redis_client(&self) -> Option<redis::Client> {
+        self.redis_client.clone()
+    }
+
     pub fn fire_agent(&self, id: &str) {
         let mut agents = self.agents.write().unwrap();
         let mut inbox = self.inbox.write().unwrap();

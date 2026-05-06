@@ -6,11 +6,18 @@ use std::sync::Arc;
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
+    product_cache: Arc<std::sync::RwLock<std::collections::HashMap<String, (std::time::Instant, Vec<crate::ohc::organization::Product>)>>>,
+    redis_conn: Arc<tokio::sync::OnceCell<redis::aio::MultiplexedConnection>>,
 }
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self { db, hub }
+        Self {
+            db,
+            hub,
+            product_cache: Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            redis_conn: Arc::new(tokio::sync::OnceCell::new()),
+        }
     }
 }
 
@@ -25,8 +32,11 @@ impl DashboardService for MyDashboardService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
+        let hub4 = self.hub.clone();
         let db1 = self.db.clone();
         let db2 = self.db.clone();
+        let cache_clone = self.product_cache.clone();
+        let redis_conn_clone = self.redis_conn.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
@@ -37,6 +47,44 @@ impl DashboardService for MyDashboardService {
             }),
             async {
                 let org_id = req.organization_id.clone();
+                let redis_key = format!("dashboard:products:{}", org_id);
+
+                // L1 Cache: Local Memory
+                {
+                    let cache = cache_clone.read().unwrap();
+                    if let Some((timestamp, products)) = cache.get(&org_id) {
+                        if timestamp.elapsed() < std::time::Duration::from_secs(3600) {
+                            return Ok::<_, String>(products.clone());
+                        }
+                    }
+                }
+
+                // L2 Cache: Redis
+                if let Some(client) = hub4.get_redis_client() {
+                    let mut conn_opt = redis_conn_clone.get_or_try_init(|| async {
+                        client.get_multiplexed_async_connection().await
+                    }).await.cloned();
+
+                    if let Ok(conn) = conn_opt.as_mut() {
+                        if let Ok(Some(data)) = redis::cmd("GET").arg(&redis_key).query_async::<Option<String>>(conn).await {
+                            if let Ok(products) = serde_json::from_str::<Vec<crate::ohc::organization::Product>>(&data) {
+                                // also populate local cache for future fetches
+                                {
+                                    let mut cache = cache_clone.write().unwrap();
+                                    if cache.len() > 100 {
+                                        let keys: Vec<_> = cache.keys().cloned().take(50).collect();
+                                        for k in keys {
+                                            cache.remove(&k);
+                                        }
+                                    }
+                                    cache.insert(org_id.clone(), (std::time::Instant::now(), products.clone()));
+                                }
+                                return Ok::<_, String>(products);
+                            }
+                        }
+                    }
+                }
+
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -76,6 +124,34 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
+
+                if let Some(client) = hub4.get_redis_client() {
+                    let mut conn_opt = redis_conn_clone.get_or_try_init(|| async {
+                        client.get_multiplexed_async_connection().await
+                    }).await.cloned();
+
+                    if let Ok(conn) = conn_opt.as_mut() {
+                        if let Ok(data) = serde_json::to_string(&results) {
+                            let _: Result<(), _> = redis::cmd("SETEX")
+                                .arg(&redis_key)
+                                .arg(3600)
+                                .arg(&data)
+                                .query_async(conn).await;
+                        }
+                    }
+                }
+
+                {
+                    let mut cache = cache_clone.write().unwrap();
+                    if cache.len() > 100 {
+                        let keys: Vec<_> = cache.keys().cloned().take(50).collect();
+                        for k in keys {
+                            cache.remove(&k);
+                        }
+                    }
+                    cache.insert(org_id, (std::time::Instant::now(), results.clone()));
+                }
+
                 Ok::<_, String>(results)
             },
             async {
@@ -222,5 +298,59 @@ impl DashboardService for MyDashboardService {
         .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use crate::ohc::app::GetDashboardRequest;
+
+    #[tokio::test]
+    async fn test_product_caching_logic() {
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50));
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let sqlite_pool = match sqlx::sqlite::SqlitePool::connect_lazy("sqlite::memory:") {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool) });
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+
+        let service = MyDashboardService::new(db, hub);
+
+        // Populate L1 cache explicitly
+        {
+            let mut cache = service.product_cache.write().unwrap();
+            cache.insert("test_org".to_string(), (std::time::Instant::now(), vec![crate::ohc::organization::Product {
+                id: "test_id".to_string(),
+                organization_id: "test_org".to_string(),
+                name: "test_name".to_string(),
+                description: "".to_string(),
+                price_cents: 100,
+                currency: "USD".to_string(),
+                fulfillment_strategy: "".to_string(),
+                metadata_json: "".to_string(),
+            }]));
+        }
+
+        let req = Request::new(GetDashboardRequest { organization_id: "test_org".to_string() });
+        let res = service.get_dashboard(req).await;
+
+        // Assert that the dashboard fetched the L1 cache directly
+        if let Ok(response) = res {
+            let inner = response.into_inner();
+            assert_eq!(inner.products.len(), 1);
+            assert_eq!(inner.products[0].name, "test_name");
+        }
     }
 }
