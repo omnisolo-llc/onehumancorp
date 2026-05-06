@@ -76,3 +76,9 @@ fn test_close_callback() {
 
     assert!(*called.borrow());
 }
+
+#[test]
+fn test_default_values_extra() {
+    let ui = create();
+    assert_eq!(ui.get_total_subscribers(), 150);
+}
