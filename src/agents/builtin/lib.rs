@@ -20,6 +20,7 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
+pub mod autogen;
 pub mod ralph_loop;
 
 pub use ohc_builtin_agent_llm as llm;
