@@ -29,8 +29,8 @@ export component GrowthReferralWidget inherits Rectangle {
     VerticalBox {
         padding: 16px;
         spacing: 10px;
-        Text { text: "Referral Program"; font-family: "Outfit"; font-weight: 700; color: white; }
-        Text { text: "Invite a collaborator to securely view agents in Cloud Mode"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
+        Text { text: "Referral Program"; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
+        Text { text: "Share OHC with a friend, both get 1 month free Pro."; font-family: "Inter"; color: #64748b; font-size: 14px; }
         Button { text: "Invite User"; clicked => { root.invite_user(); } }
     }
 }
@@ -44,14 +44,14 @@ export component UserManagement inherits Window {
     callback delete_user(string);
     callback invite_user();
 
-    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    background: #f8fafc;
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "User Management"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             GrowthReferralWidget {
                 invite_user => { root.invite_user(); }
@@ -61,7 +61,12 @@ export component UserManagement inherits Window {
         VerticalBox {
             spacing: 12px;
             
-            for u in users : GlassCard {
+            for u in users : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
                 HorizontalBox {
                     padding: 16px;
                     Rectangle {
@@ -73,7 +78,7 @@ export component UserManagement inherits Window {
                     }
                     VerticalBox {
                         HorizontalBox {
-                            Text { text: u.username; font-weight: 700; color: white; }
+                            Text { text: u.username; font-weight: 700; color: #1e293b; }
                             Rectangle { 
                                 background: rgba(168, 85, 247, 0.2); 
                                 border-radius: 4px; 
@@ -83,7 +88,7 @@ export component UserManagement inherits Window {
                                 }
                             }
                         }
-                        Text { text: u.email; color: #94a3b8; }
+                        Text { text: u.email; color: #64748b; }
                         Text { text: "Joined: " + u.joined_at; color: #9ca3af; font-size: 12px; }
                     }
                     Rectangle {} 
