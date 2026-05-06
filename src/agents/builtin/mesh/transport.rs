@@ -129,6 +129,13 @@ impl MeshTransport for MemoryTransport {
 
 
 #[derive(Clone)]
+/// Standalone Mode Transport (SQLite-backed IPC)
+///
+/// Implements the Hybrid Protocol for offline or localized environments where the system
+/// degrades to an isolated desktop wrapper. It utilizes advisory locks in a local SQLite file
+/// to perform mutual exclusion securely without the need for external network calls or a Redis instance.
+/// Event streams and message checkpoints are durably stored locally so handoffs function identically
+/// when moving from Cloud-native multi-tenant execution back to local.
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
@@ -357,6 +364,12 @@ impl MeshTransport for IpcTransport {
     }
 }
 
+/// Cloud-Native Transport (Redis-backed)
+///
+/// The robust multi-tenant implementation of the Hybrid Protocol designed for horizontal pod scaling.
+/// It utilizes Redis Pub/Sub for high-throughput task routing across the distributed orchestrator.
+/// Mutual exclusion in Cloud Mode leverages Redis Redlock logic applied to resources prefix-scoped
+/// by the business's `tenant_id`, guaranteeing cross-tenant data safety during high concurrency.
 pub struct RedisTransport {
 
     client: redis::Client,
