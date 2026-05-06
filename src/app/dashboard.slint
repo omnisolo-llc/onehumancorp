@@ -181,10 +181,16 @@ export component Dashboard inherits Window {
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
                 StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
-                StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                }
             }
         }
 
@@ -203,7 +209,7 @@ export component Dashboard inherits Window {
                 border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
                 height: 200px;
-                HorizontalBox { alignment: center; Text { text: root.telemetry_chart_placeholder; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
+                HorizontalBox { alignment: center; Text { text: "[ Assistant Performance Chart ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
             }
         }
 
@@ -256,7 +262,7 @@ export component Dashboard inherits Window {
         }
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Agent Activity Feed"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Needs Your Approval"; font-size: 20px; font-weight: 700; color: white; }
 
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
