@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+
+## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
+### Cloud Scaling Improvements
+- feat: KAIROS Shared Task List Schema and Orchestration APIs (#11066)
+
+### Privacy/Offline Improvements
+- Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137)
 ## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
 ### Cloud Scaling Improvements
 - Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
