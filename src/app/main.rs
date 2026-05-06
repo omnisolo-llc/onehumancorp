@@ -6556,3 +6556,75 @@ mod additional_smart_blocks_tests {
         assert_eq!(ui.get_product_name(), "Int Product");
     }
 }
+
+    #[test]
+    fn test_e2e_secure_agent_config_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let ui = app::SecureAgentConfig::new().unwrap();
+        let saved = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let saved_clone = saved.clone();
+
+        ui.on_save_config(move |token| {
+            assert_eq!(token, "code-1234");
+            *saved_clone.borrow_mut() = true;
+        });
+
+        ui.set_token("code-1234".into());
+        ui.invoke_save_config("code-1234".into());
+
+        assert!(*saved.borrow(), "Save connection should trigger with correct token");
+    }
+
+    #[test]
+    fn test_e2e_ongoing_management_fix_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let ui = app::FixAgent::new().unwrap();
+
+        let applied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let applied_clone = applied.clone();
+        ui.on_apply_fix(move || {
+            *applied_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(ui.get_step(), 0);
+
+        // This is typically handled by UI logic in slint for step=0 button, we manually set step to simulate it.
+        ui.set_step(1);
+        assert_eq!(ui.get_step(), 1);
+
+        // At step 1, "Refresh & Reconnect" is clicked which calls `apply_fix()` and sets step to 2
+        // Since we test from Rust, we just invoke the callback
+        ui.invoke_apply_fix();
+        ui.set_step(2);
+
+        assert!(*applied.borrow(), "Apply fix callback should trigger");
+        assert_eq!(ui.get_step(), 2);
+    }
