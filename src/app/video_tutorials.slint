@@ -17,7 +17,18 @@ export component VideoTutorials inherits Window {
     background: #0f172a;
     in-out property <string> selected_video_title: "";
     in-out property <bool> is_playing: false;
-    in-out property <[VideoMetadata]> videos: [];
+    in-out property <[VideoMetadata]> videos: [
+        { title: "How to add your first product", description: "Learn the basics of listing an item.", duration_sec: 85, url: "https://example.com/video1", thumbnail_url: "" },
+        { title: "Setting up payments", description: "Accept Apple Pay and credit cards.", duration_sec: 60, url: "https://example.com/video2", thumbnail_url: "" },
+        { title: "Connect your Instagram", description: "Link your social media easily.", duration_sec: 45, url: "https://example.com/video3", thumbnail_url: "" },
+        { title: "Create a discount code", description: "Boost sales with a promo code.", duration_sec: 50, url: "https://example.com/video4", thumbnail_url: "" },
+        { title: "Managing orders", description: "How to fulfill and ship orders.", duration_sec: 75, url: "https://example.com/video5", thumbnail_url: "" },
+        { title: "Using the AI Helper", description: "Let AI draft your emails.", duration_sec: 88, url: "https://example.com/video6", thumbnail_url: "" },
+        { title: "Customize your storefront", description: "Change colors and fonts.", duration_sec: 90, url: "https://example.com/video7", thumbnail_url: "" },
+        { title: "View your analytics", description: "Track your sales and visitors.", duration_sec: 55, url: "https://example.com/video8", thumbnail_url: "" },
+        { title: "Set up a custom domain", description: "Use your own website address.", duration_sec: 80, url: "https://example.com/video9", thumbnail_url: "" },
+        { title: "Invite your team", description: "Add staff members to your store.", duration_sec: 40, url: "https://example.com/video10", thumbnail_url: "" }
+    ];
 
     HorizontalBox {
         alignment: center;
