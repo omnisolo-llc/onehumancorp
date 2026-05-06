@@ -29,6 +29,8 @@ mod parity_tests {
         if let Ok(url) = std::env::var("DATABASE_URL") {
             if url.starts_with("postgres") {
                 let pool = PgPoolOptions::new()
+                    .max_connections(1)
+                    .acquire_timeout(std::time::Duration::from_millis(10))
                     .connect(&url)
                     .await
                     .ok()?;
