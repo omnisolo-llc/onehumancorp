@@ -387,8 +387,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.fill('input[placeholder="Password"]', 'password123');
     await page.click('text=Next →');
 
-    // Select Minimalist template
-    await page.click('text=Minimalist');
+    // Select Modern template instead of Minimalist as it's not present
+    await page.click('text=✨ Modern');
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');

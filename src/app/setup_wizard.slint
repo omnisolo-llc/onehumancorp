@@ -89,9 +89,9 @@ export component SetupWizard inherits Window {
     toggle_sell_services => { sell_services = !sell_services; save_state(); }
     toggle_sell_food => { sell_food = !sell_food; save_state(); }
     toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
-    select_template(t) => { website_template = t; step = step + 1; save_state(); }
-    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
+    select_payment_pref(p) => { payment_pref = p; save_state(); }
+    select_template(t) => { website_template = t; save_state(); }
+    select_domain(d) => { domain_choice = d; save_state(); }
     toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -382,7 +382,6 @@ export component SetupWizard inherits Window {
 
                 Button { text: "Continue with Google"; height: 44px; }
                 Button { text: "Continue with Apple"; height: 44px; }
-                Button { text: "Next"; height: 44px; clicked => { next_step(); } }
             }
 
             // Step 6: Choose a Template
@@ -742,7 +741,7 @@ export component SetupWizard inherits Window {
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 
-            if (step > 0 && step < 9 && step != 1 && step != 4 && step != 5 && step != 6 && step != 8) : GlassCard {
+            if (step > 0 && step < 9 && step != 1) : GlassCard {
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
