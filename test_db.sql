@@ -1,22 +1,14 @@
-CREATE TABLE IF NOT EXISTS swarm_tasks (
-    mission_id UUID PRIMARY KEY,
-    parent_plan_id TEXT,
-    dependencies JSONB,
-    title VARCHAR,
-    status VARCHAR,
-    assigned_agent_id VARCHAR,
+CREATE TABLE IF NOT EXISTS shared_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    agent_id TEXT,
+    priority TEXT NOT NULL DEFAULT 'P2',
     payload JSONB,
-    locked_until TIMESTAMP,
-    created_at TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS state_machine_transitions (
-    id SERIAL PRIMARY KEY,
-    entity_id UUID,
-    entity_type VARCHAR,
-    from_state VARCHAR,
-    to_state VARCHAR,
-    agent_id VARCHAR,
-    reason TEXT,
-    created_at TIMESTAMP
+    parent_plan_id TEXT,
+    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
