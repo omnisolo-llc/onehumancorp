@@ -2017,7 +2017,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {
                     let dashboard_handle_for_ready = dashboard_handle.clone();
                     let action_queue_for_ready = action_queue.clone();
+                    let orders_processed = std::rc::Rc::new(std::cell::RefCell::new(0));
                     dashboard.on_action_mark_order_ready(move || {
+                        let mut processed = orders_processed.borrow_mut();
+                        *processed += 1;
                         if let Some(ui) = dashboard_handle_for_ready.upgrade() {
                             let current_count = ui.get_new_orders_count();
                             if current_count > 0 {
@@ -2027,6 +2030,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 tokio::spawn(async move {
                                     let _ = action_queue_clone.enqueue("mark_order_ready", "{}").await;
                                 });
+                            }
+
+                            if *processed == 3 {
+                                ui.set_show_milestone(true);
+                                ui.set_milestone_title("🎉 3rd Order!".into());
+                                ui.set_milestone_message("You completed 3 orders!".into());
+                            } else if *processed == 10 {
+                                ui.set_show_milestone(true);
+                                ui.set_milestone_title("🎉 10th Order!".into());
+                                ui.set_milestone_message("You completed 10 orders!".into());
                             }
                         }
                     });
