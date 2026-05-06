@@ -132,10 +132,11 @@ impl MeshTransport for MemoryTransport {
 pub struct IpcTransport {
     pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
+    subscriber_id: String,
 }
 
 impl IpcTransport {
-    pub async fn new(db_url: &str) -> Result<Self, String> {
+    pub async fn new(db_url: &str, subscriber_id: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
@@ -174,7 +175,7 @@ impl IpcTransport {
             "CREATE TABLE IF NOT EXISTS mesh_locks (
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
-                expires_at DATETIME NOT NULL
+                expires_at INTEGER NOT NULL
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
@@ -182,13 +183,13 @@ impl IpcTransport {
             "CREATE TABLE IF NOT EXISTS mesh_presence (
                 agent_id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
-                expires_at DATETIME NOT NULL
+                expires_at INTEGER NOT NULL
             )"
         ).execute(&pool).await.map_err(|e| e.to_string())?;
 
         let subs = DashMap::new();
 
-        Ok(IpcTransport { pool, subs })
+        Ok(IpcTransport { pool, subs, subscriber_id: subscriber_id.to_string() })
     }
 
     pub async fn start_worker(&self) {
@@ -196,7 +197,7 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = self.subscriber_id.clone();
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -294,18 +295,23 @@ impl MeshTransport for IpcTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let now = chrono::Utc::now().timestamp();
+        let expires_at = now + ttl_seconds as i64;
+
         // Cleanup expired locks
-        let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= datetime('now')")
+        let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= ?")
+            .bind(now)
             .execute(&self.pool)
             .await;
 
         let result = sqlx::query(
-            "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = excluded.owner"
+            "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, ?)
+             ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE mesh_locks.expires_at <= ? OR mesh_locks.owner = excluded.owner"
         )
         .bind(resource)
         .bind(owner)
-        .bind(format!("+{} seconds", ttl_seconds))
+        .bind(expires_at)
+        .bind(now)
         .execute(&self.pool)
         .await;
 
@@ -326,13 +332,14 @@ impl MeshTransport for IpcTransport {
     }
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
         sqlx::query(
-            "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES (?, ?, datetime('now', ?))
+            "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES (?, ?, ?)
              ON CONFLICT(agent_id) DO UPDATE SET status = excluded.status, expires_at = excluded.expires_at"
         )
         .bind(agent_id)
         .bind(status)
-        .bind(format!("+{} seconds", ttl_seconds))
+        .bind(expires_at)
         .execute(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -340,7 +347,9 @@ impl MeshTransport for IpcTransport {
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        let _ = sqlx::query("DELETE FROM mesh_presence WHERE expires_at <= datetime('now')")
+        let now = chrono::Utc::now().timestamp();
+        let _ = sqlx::query("DELETE FROM mesh_presence WHERE expires_at <= ?")
+            .bind(now)
             .execute(&self.pool)
             .await;
 
@@ -616,7 +625,7 @@ impl MeshTransport for NatsTransport {
 }
 
 
-pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
+pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool, subscriber_id: &str) -> Result<Arc<dyn MeshTransport>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
@@ -648,7 +657,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     // Standalone fallback
     if let Ok(db_url) = std::env::var("DATABASE_URL") {
         if db_url.starts_with("sqlite") {
-            match IpcTransport::new(&db_url).await {
+            match IpcTransport::new(&db_url, subscriber_id).await {
                 Ok(t) => {
                     let t_clone = t.clone();
                     tokio::spawn(async move { t_clone.start_worker().await; });
@@ -689,7 +698,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, "test_node_ipc").await.unwrap();
 
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
@@ -728,7 +737,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_checkpoints_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, "test_node_checkpoints").await.unwrap();
 
         let msg = Message {
             agent_id: "test".to_string(),
@@ -745,7 +754,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = "test_node_checkpoints".to_string();
         let last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_one(&transport.pool)
@@ -760,7 +769,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_locks_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, "test_node_locks").await.unwrap();
 
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
@@ -819,7 +828,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_transport_standalone() {
-        let _transport = create_transport(None, false).await.unwrap();
+        let _transport = create_transport(None, false, "test_node_standalone").await.unwrap();
         // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
@@ -827,12 +836,12 @@ mod tests {
     #[tokio::test]
     async fn test_create_transport_redis_fails() {
         // Provide invalid url
-        let transport = create_transport(Some("redis://localhost:9999"), false).await;
+        let transport = create_transport(Some("redis://localhost:9999"), false, "test_node_redis_fails").await;
         // In standalone, it should fallback to Memory, so it's Ok
         assert!(transport.is_ok());
 
         // In cloud, it should err
-        let transport = create_transport(Some("redis://localhost:9999"), true).await;
+        let transport = create_transport(Some("redis://localhost:9999"), true, "test_node_redis_fails").await;
         assert!(transport.is_err());
     }
 

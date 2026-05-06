@@ -1211,7 +1211,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
-        is_cloud
+        is_cloud,
+        "server_node"
     ).await.expect("Failed to create MeshTransport");
 
     // Initialize Handoff Manager

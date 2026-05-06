@@ -151,7 +151,7 @@ mod tests {
             provider_type: "test".to_string(),
         });
 
-        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false, "health_monitor_test_node").await.unwrap();
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
         let monitor_hub = hub.clone();
 

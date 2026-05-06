@@ -240,7 +240,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
             let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
             if !db_path.to_string_lossy().is_empty() && db_path.to_string_lossy() != ":memory:" {
-                match ohc_builtin_agent::mesh::transport::IpcTransport::new(&db_url).await {
+                match ohc_builtin_agent::mesh::transport::IpcTransport::new(&db_url, "server_node").await {
                     Ok(transport) => {
                         let t_clone = transport.clone();
                         tokio::spawn(async move { t_clone.start_worker().await; });

@@ -166,7 +166,7 @@ impl TeammateMesh for TeammateMeshClient {
 }
 
 pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn TeammateMesh>, String> {
-    match crate::mesh::transport::create_transport(redis_url, is_cloud).await {
+    match crate::mesh::transport::create_transport(redis_url, is_cloud, "builtin_agent_node").await {
         Ok(transport) => {
             Ok(Arc::new(TeammateMeshClient::new(transport)))
         }
