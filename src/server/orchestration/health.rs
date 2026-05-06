@@ -5,7 +5,6 @@ use ohc_builtin_agent::mesh::transport::MeshTransport;
 pub async fn run_health_monitor(
     monitor_transport: Arc<dyn MeshTransport>,
     monitor_hub: Arc<Hub>,
-    is_cloud: bool,
     tick_duration: std::time::Duration,
 ) {
     let mut interval = tokio::time::interval(tick_duration);
@@ -113,13 +112,16 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, false, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
         });
 
         // Let the monitor loop run once
         let _ = tokio::time::timeout(tokio::time::Duration::from_millis(50), handle).await;
 
-        // Both agents should be fired (removed) immediately in standalone mode
+        // Let it run a few more times to reach the retry limit (3)
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+        // Both agents should be fired (removed) after retries in standalone mode
         assert!(hub.get_agent("agent_idle").is_none());
         assert!(hub.get_agent("agent_busy").is_none());
     }
@@ -156,7 +158,7 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
