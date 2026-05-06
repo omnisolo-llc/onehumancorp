@@ -1,3 +1,12 @@
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensured mesh communication layer degrades gracefully into isolated standalone instances (#11313)
+
+
 ## [0.4.27] (Cloud) / v0.4.27+1 (Standalone) - 2024-05-06
 
 ### Cloud
