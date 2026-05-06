@@ -1535,6 +1535,47 @@ impl Agent {
         Ok(())
     }
 
+
+    fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
+        if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
+            if let Some(args_obj) = args.as_object() {
+                for req in req_array {
+                    if let Some(req_str) = req.as_str() {
+                        if !args_obj.contains_key(req_str) {
+                            return Err(format!("missing required parameter: '{}'", req_str));
+                        }
+                    }
+                }
+            } else if !req_array.is_empty() {
+                return Err("arguments must be an object".to_string());
+            }
+        }
+
+        if let Some(props) = schema.get("properties").and_then(|v| v.as_object()) {
+            if let Some(args_obj) = args.as_object() {
+                for (k, v) in args_obj {
+                    if let Some(prop_schema) = props.get(k) {
+                        if let Some(expected_type) = prop_schema.get("type").and_then(|t| t.as_str()) {
+                            let type_matches = match expected_type {
+                                "string" => v.is_string(),
+                                "number" | "integer" => v.is_number(),
+                                "boolean" => v.is_boolean(),
+                                "object" => v.is_object(),
+                                "array" => v.is_array(),
+                                _ => true, // Unknown type, skip validation for now
+                            };
+                            if !type_matches {
+                                return Err(format!("parameter '{}' has invalid type: expected {}", k, expected_type));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     async fn execute_tool(
         &self,
         tc: &ToolCall,
@@ -1557,12 +1598,101 @@ impl Agent {
             }
         }
 
+        if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
+        }
+
         tool.execute.execute(args).await
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+
+    #[tokio::test]
+    async fn test_tool_schema_validation() {
+        struct MockLlmClient;
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "schema_tool".to_string(),
+                description: "tool with schema".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "str_param": { "type": "string" },
+                        "int_param": { "type": "integer" }
+                    },
+                    "required": ["str_param"]
+                }),
+                execute: Arc::new(DummyToolExecutor),
+            }
+        ];
+
+        let client = Arc::new(MockLlmClient);
+        let agent = Agent::new(client, tools.clone());
+
+        // Test valid args
+        let valid_call = ToolCall {
+            id: "1".to_string(),
+            name: "schema_tool".to_string(),
+            arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
+        };
+        let res = agent.execute_tool(&valid_call, &tools, &[]).await;
+        assert!(res.is_ok());
+
+        // Test missing required
+        let missing_call = ToolCall {
+            id: "2".to_string(),
+            name: "schema_tool".to_string(),
+            arguments: serde_json::json!({ "int_param": 42 }),
+        };
+        let res = agent.execute_tool(&missing_call, &tools, &[]).await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("missing required parameter: 'str_param'"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+
+        // Test wrong type
+        let wrong_type_call = ToolCall {
+            id: "3".to_string(),
+            name: "schema_tool".to_string(),
+            arguments: serde_json::json!({ "str_param": 123 }),
+        };
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[]).await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("parameter 'str_param' has invalid type: expected string"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
     #[tokio::test]
     async fn test_llmcompiler_plan_and_execute_mechanic() {
         struct LLMCompilerMockClient {
