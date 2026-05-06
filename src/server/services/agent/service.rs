@@ -24,16 +24,14 @@ impl MyAgentManagerService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+        let (agents, meetings, cost_res) = tokio::join!(
+            hub1.get_agents(),
+            hub2.get_meetings(),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             })
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut agent_costs = Vec::new();
@@ -98,7 +96,7 @@ impl AgentManagerService for MyAgentManagerService {
             provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
 
-        self.hub.register_agent(agent);
+        self.hub.register_agent(agent).await;
 
         Ok(Response::new(self.get_snapshot().await?))
     }
@@ -112,7 +110,7 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("agentId is required"));
         }
 
-        self.hub.fire_agent(&req.agent_id);
+        self.hub.fire_agent(&req.agent_id).await;
 
         Ok(Response::new(self.get_snapshot().await?))
     }
@@ -128,7 +126,7 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("from_agent_id and to_agent_id are required"));
         }
 
-        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
+        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task).await
             .map_err(|e| Status::invalid_argument(e))?;
 
         Ok(Response::new(self.get_snapshot().await?))
@@ -161,7 +159,7 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
-        let agents = self.hub.get_agents();
+        let agents = self.hub.get_agents().await;
         let now = Utc::now();
         let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
             agent_id: a.id.clone(),
@@ -229,12 +227,10 @@ impl AgentManagerService for MyAgentManagerService {
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        let (agents, meetings) = tokio::join!(
+            hub1.get_agents(),
+            hub2.get_meetings()
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut msg_count = 0;
         for m in meetings.iter() {

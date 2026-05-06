@@ -71,13 +71,11 @@ impl OrgService for MyOrgService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
-        let (agents_res, meetings_res, summary_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+        let (agents, meetings, summary_res) = tokio::join!(
+            hub1.get_agents(),
+            hub2.get_meetings(),
             tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
         
         let mut total_msgs = 0;

@@ -299,7 +299,7 @@ impl OpsService for MyOpsService {
             return Err(Status::invalid_argument("role is required"));
         }
 
-        let agents = self.hub.get_agents();
+        let agents = self.hub.get_agents().await;
         let mut current_count = 0;
         let mut idle_agent_ids = Vec::new();
         let mut active_agent_ids = Vec::new();
@@ -328,15 +328,15 @@ impl OpsService for MyOpsService {
                     status: "IDLE".to_string(),
                     provider_type: "mock".to_string(),
                 };
-                self.hub.register_agent(new_agent);
+                self.hub.register_agent(new_agent).await;
             }
         } else if diff < 0 {
             let to_remove = -diff;
             for i in 0..to_remove {
                 if i < idle_agent_ids.len() as i32 {
-                    self.hub.fire_agent(&idle_agent_ids[i as usize]);
+                    self.hub.fire_agent(&idle_agent_ids[i as usize]).await;
                 } else if (i as usize - idle_agent_ids.len()) < active_agent_ids.len() {
-                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]);
+                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]).await;
                 }
             }
         }

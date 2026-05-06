@@ -25,7 +25,8 @@ pub async fn run_health_monitor(
                 }
 
                 let mut to_fire = Vec::new();
-                for agent in monitor_hub.get_agents().iter() {
+                let agents = monitor_hub.get_agents().await;
+                for agent in agents.iter() {
                     // Fire agents that are missing from active agents mesh list, regardless of their IDLE/BUSY status
                     if !active_agent_ids.contains(&agent.id) {
                         to_fire.push(agent.id.clone());
@@ -47,7 +48,7 @@ pub async fn run_health_monitor(
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k));
                 for agent_id in to_fire_now {
                     tracing::warn!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
-                    monitor_hub.fire_agent(&agent_id);
+                    monitor_hub.fire_agent(&agent_id).await;
                     pending_fires.remove(&agent_id);
                 }
             }
@@ -92,7 +93,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
         // Register a busy agent
         hub.register_agent(crate::ohc::orchestration::Agent {
@@ -102,7 +103,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "BUSY".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
         assert!(hub.get_agent("agent_idle").is_some());
         assert!(hub.get_agent("agent_busy").is_some());
@@ -150,7 +151,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
         let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();

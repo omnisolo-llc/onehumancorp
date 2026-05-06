@@ -113,20 +113,22 @@ impl Hub {
         }
     }
 
-    fn invalidate_agent_cache(&self) {
+    async fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().unwrap() = None;
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:agents");
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                let _: Result<(), _> = redis::cmd("DEL").arg("hub:agents").query_async(&mut conn).await;
             }
         }
     }
 
-    fn invalidate_meetings_cache(&self) {
+    async fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:meetings");
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                let _: Result<(), _> = redis::cmd("DEL").arg("hub:meetings").query_async(&mut conn).await;
             }
         }
     }
@@ -139,10 +141,12 @@ impl Hub {
         self.telemetry_tx.clone()
     }
 
-    pub fn register_agent(&self, agent: Agent) {
-        let mut agents = self.agents.write().unwrap();
-        agents.insert(agent.id.clone(), agent);
-        self.invalidate_agent_cache();
+    pub async fn register_agent(&self, agent: Agent) {
+        {
+            let mut agents = self.agents.write().unwrap();
+            agents.insert(agent.id.clone(), agent);
+        }
+        self.invalidate_agent_cache().await;
     }
 
     pub fn get_agent(&self, id: &str) -> Option<Agent> {
@@ -155,16 +159,17 @@ impl Hub {
         agents.len()
     }
 
-    pub fn fire_agent(&self, id: &str) {
-        let mut agents = self.agents.write().unwrap();
-        let mut inbox = self.inbox.write().unwrap();
-        
-        agents.remove(id);
-        inbox.remove(id);
-        self.invalidate_agent_cache();
+    pub async fn fire_agent(&self, id: &str) {
+        {
+            let mut agents = self.agents.write().unwrap();
+            let mut inbox = self.inbox.write().unwrap();
+            agents.remove(id);
+            inbox.remove(id);
+        }
+        self.invalidate_agent_cache().await;
     }
 
-    pub fn get_agents(&self) -> Arc<Vec<Agent>> {
+    pub async fn get_agents(&self) -> Arc<Vec<Agent>> {
         {
             let cache = self.agent_cache.read().unwrap();
             if let Some(agents) = &*cache {
@@ -173,8 +178,9 @@ impl Hub {
         }
 
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:agents") {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:agents").await {
                     if let Ok(agents) = serde_json::from_str::<Vec<Agent>>(&data) {
                         let arc = Arc::new(agents);
                         *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
@@ -184,17 +190,20 @@ impl Hub {
             }
         }
 
-        let agents = self.agents.read().unwrap();
-        let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
-        agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
-
-        let arc = Arc::new(agents_vec);
-        *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+        let arc = {
+            let agents = self.agents.read().unwrap();
+            let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
+            agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+            let arc = Arc::new(agents_vec);
+            *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+            arc
+        };
 
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
                 if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600);
+                    let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600).await;
                 }
             }
         }
@@ -202,7 +211,7 @@ impl Hub {
         arc
     }
 
-    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
+    pub async fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
             .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
@@ -212,37 +221,39 @@ impl Hub {
         agents_vec
     }
 
-    pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
-        let mut meetings = self.meetings.write().unwrap();
-        let mut agents = self.agents.write().unwrap();
-        
+    pub async fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let meeting = MeetingRoom {
             id: id.clone(),
             agenda,
             participants: participants.clone(),
             transcript: vec![],
         };
-        
-        meetings.insert(id, meeting.clone());
-        
-        for participant in participants {
-            if let Some(agent) = agents.get_mut(&participant) {
-                agent.status = "IN_MEETING".to_string();
+        {
+            let mut meetings = self.meetings.write().unwrap();
+            let mut agents = self.agents.write().unwrap();
+
+            meetings.insert(id, meeting.clone());
+
+            for participant in participants {
+                if let Some(agent) = agents.get_mut(&participant) {
+                    agent.status = "IN_MEETING".to_string();
+                }
             }
         }
         
-        self.invalidate_agent_cache();
-        self.invalidate_meetings_cache();
+        self.invalidate_agent_cache().await;
+        self.invalidate_meetings_cache().await;
 
         meeting
     }
 
-    pub fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
-        let mut inbox = self.inbox.write().unwrap();
-        let mut meetings = self.meetings.write().unwrap();
-        let subs = self.subs.read().unwrap();
-        
+        pub async fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
         let to_agent = msg.to_agent.clone();
+
+        let tx_opt = {
+            let subs = self.subs.read().unwrap();
+            subs.get(&to_agent).cloned()
+        };
 
         // Check rate limiting
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
@@ -257,42 +268,58 @@ impl Hub {
         });
         
         // Add to recipient's inbox
-        let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
-        messages.push(msg.clone());
+        {
+            let mut inbox = self.inbox.write().unwrap();
+            let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
+            messages.push(msg.clone());
+        }
         
         // Add to meeting transcript if applicable
         if !msg.meeting_id.is_empty() {
-            if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
-                meeting.transcript.push(msg.clone());
-                self.invalidate_meetings_cache();
+            let mut do_summarize = false;
+            let mut t_len = 0;
+            let mut mtg_transcript = vec![];
+            {
+                let mut meetings = self.meetings.write().unwrap();
+                if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
+                    meeting.transcript.push(msg.clone());
+                    t_len = meeting.transcript.len();
+                    mtg_transcript = meeting.transcript.clone();
+                }
+            }
+            if t_len > 10 && !self.minimax_api_key.is_empty() {
+                do_summarize = true;
+            }
+
+            self.invalidate_meetings_cache().await;
+
+            if do_summarize {
+                let api_key = self.minimax_api_key.clone();
+                let m_id = msg.meeting_id.clone();
+                let hub = self.clone();
+                let transcript = mtg_transcript;
                 
-                // Aggressive AI Context Summarization
-                if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
-                    let api_key = self.minimax_api_key.clone();
-                    let m_id = msg.meeting_id.clone();
-                    let transcript = meeting.transcript.clone();
-                    let hub = self.clone();
+                tokio::spawn(async move {
+                    let client = crate::minimax::MinimaxClient::new(api_key);
+                    let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
                     
-                    tokio::spawn(async move {
-                        let client = crate::minimax::MinimaxClient::new(api_key);
-                        let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
-                        
-                        for m in &transcript {
-                            prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
-                        }
-                        
-                        match client.reason(&prompt).await {
-                            Ok(summary) => {
+                    for m in &transcript {
+                        prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
+                    }
+
+                    match client.reason(&prompt).await {
+                        Ok(summary) => {
+                            {
                                 let mut meetings = hub.meetings.write().unwrap();
                                 if let Some(mtg) = meetings.get_mut(&m_id) {
                                     let mut new_transcript = vec![Message {
-                                        id: format!("summary-{}", Utc::now().timestamp()),
+                                        id: format!("summary-{}", chrono::Utc::now().timestamp()),
                                         from_agent: "SYSTEM_SUMMARIZER".to_string(),
                                         to_agent: "all".to_string(),
                                         r#type: "status".to_string(),
                                         content: format!("[CONTEXT SUMMARIZED]: {}", summary),
                                         meeting_id: m_id.clone(),
-                                        occurred_at_unix: Utc::now().timestamp(),
+                                        occurred_at_unix: chrono::Utc::now().timestamp(),
                                     }];
                                     
                                     if mtg.transcript.len() > 3 {
@@ -301,25 +328,26 @@ impl Hub {
                                         new_transcript.extend(mtg.transcript.iter().cloned());
                                     }
                                     mtg.transcript = new_transcript;
-                                    hub.invalidate_meetings_cache();
                                 }
                             }
-                            Err(e) => println!("Summarization failed: {}", e),
+                            hub.invalidate_meetings_cache().await;
                         }
-                    });
-                }
+                        Err(e) => println!("Summarization failed: {}", e),
+                    }
+                });
             }
         }
         
         // Notify subscribers
-        if let Some(tx) = subs.get(&to_agent) {
+        if let Some(tx) = tx_opt {
             let _ = tx.send(msg);
         }
         
         Ok(())
     }
 
-    pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
+
+    pub async fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
             if let Some(meetings) = &*cache {
@@ -328,8 +356,9 @@ impl Hub {
         }
 
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:meetings") {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:meetings").await {
                     if let Ok(meetings) = serde_json::from_str::<Vec<MeetingRoom>>(&data) {
                         let arc = Arc::new(meetings);
                         *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
@@ -339,16 +368,19 @@ impl Hub {
             }
         }
 
-        let meetings = self.meetings.read().unwrap();
-        let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
-
-        let arc = Arc::new(meetings_vec);
-        *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+        let arc = {
+            let meetings = self.meetings.read().unwrap();
+            let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
+            let arc = Arc::new(meetings_vec);
+            *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+            arc
+        };
 
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
                 if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:meetings", json, 3600);
+                    let _: Result<(), _> = conn.set_ex("hub:meetings", json, 3600).await;
                 }
             }
         }
@@ -370,7 +402,7 @@ impl Hub {
         tx.subscribe()
     }
 
-    pub fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
+    pub async fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
         
         if !self.agents.read().unwrap().contains_key(&from_agent_id) {
@@ -383,10 +415,10 @@ impl Hub {
         task.from_agent = from_agent_id;
         task.to_agent = to_agent_id;
         
-        self.publish(task)
+        self.publish(task).await
     }
 
-    pub fn delegate_sub_task(
+    pub async fn delegate_sub_task(
         self: std::sync::Arc<Self>,
         from_agent_id: &str,
         target_role: &str,
@@ -412,8 +444,8 @@ impl Hub {
         };
 
         agents.insert(sub_agent_id.clone(), sub_agent);
-        self.invalidate_agent_cache();
         drop(agents);
+        self.invalidate_agent_cache().await;
 
         let msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
@@ -425,7 +457,7 @@ impl Hub {
             meeting_id: String::new(),
         };
 
-        self.publish(msg)?;
+        self.publish(msg).await?;
 
         Ok(sub_agent_id)
     }
@@ -615,7 +647,7 @@ impl Hub {
         Ok(())
     }
 
-    pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
+    pub async fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
         let mut agents = self.agents.write().unwrap();
         
         let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
@@ -631,8 +663,9 @@ impl Hub {
         };
         
         agents.insert(child_id.clone(), child);
-        self.invalidate_agent_cache();
-        drop(agents); // Release lock before calling publish!
+        drop(agents);
+
+        self.invalidate_agent_cache().await;
         
         // Copy history
         let history = {
@@ -644,7 +677,7 @@ impl Hub {
             let mut child_msg = msg.clone();
             child_msg.id = format!("msg-{}", uuid::Uuid::new_v4());
             child_msg.to_agent = child_id.clone();
-            self.clone().publish(child_msg)?;
+            self.clone().publish(child_msg).await?;
         }
         
         // Send directive
@@ -658,7 +691,7 @@ impl Hub {
             meeting_id: String::new(),
         };
         
-        self.clone().publish(directive_msg)?;
+        self.clone().publish(directive_msg).await?;
         
         Ok(child_id)
     }
@@ -787,7 +820,7 @@ mod tests {
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
 
         // 1. Initial get caches empty state
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 0);
 
         // Cache should be populated
@@ -801,29 +834,29 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 3. Get agents caches again
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 1);
         assert!(hub.agent_cache.read().unwrap().is_some());
 
         // 4. Fire agent invalidates
-        hub.fire_agent("agent1");
+        hub.fire_agent("agent1").await;
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 5. Open meeting invalidates both caches
-        let meetings = hub.get_meetings();
+        let meetings = hub.get_meetings().await;
         assert_eq!(meetings.len(), 0);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 
-        hub.open_meeting("meeting1".to_string(), vec![], "agenda".to_string());
+        hub.open_meeting("meeting1".to_string(), vec![], "agenda".to_string()).await;
         assert!(hub.meetings_cache.read().unwrap().is_none());
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 6. Publish invalidates meeting cache
-        let meetings = hub.get_meetings();
+        let meetings = hub.get_meetings().await;
         assert_eq!(meetings.len(), 1);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 
@@ -835,7 +868,7 @@ mod tests {
             content: "test".to_string(),
             occurred_at_unix: 0,
             meeting_id: "meeting1".to_string(),
-        });
+        }).await;
         assert!(hub.meetings_cache.read().unwrap().is_none());
     }
     #[tokio::test]
