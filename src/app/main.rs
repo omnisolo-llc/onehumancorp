@@ -2712,6 +2712,10 @@ mod growth_e2e_tests {
         let checklist_ui = app::WelcomeChecklist::new().unwrap();
         checklist_ui.set_progress(25);
         assert_eq!(checklist_ui.get_progress(), 25);
+
+        let wizard_ui2 = app::SetupWizard::new().unwrap();
+        wizard_ui2.set_step(2);
+        assert_eq!(wizard_ui2.get_step(), 2);
     }
 
     #[test]
