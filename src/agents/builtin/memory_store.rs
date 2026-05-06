@@ -317,14 +317,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type IN ('TASK_SUMMARY', 'SUPPORT_TICKET')")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type IN ('TASK_SUMMARY', 'SUPPORT_TICKET')")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -334,7 +334,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -1252,8 +1252,24 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
+        let record3 = EmbeddingRecord {
+            id: "rec3".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 3".to_string(),
+            embedding: vec![2.0, 2.0, 2.0],
+            source_type: "SUPPORT_TICKET".to_string(), // Should be deleted
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
         repo.upsert(&record1).await.unwrap();
         repo.upsert(&record2).await.unwrap();
+        repo.upsert(&record3).await.unwrap();
 
         // Prune stale test
         repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
