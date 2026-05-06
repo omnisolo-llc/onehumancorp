@@ -122,6 +122,10 @@ impl Hub {
         }
     }
 
+    pub fn get_redis_client(&self) -> Option<redis::Client> {
+        self.redis_client.clone()
+    }
+
     fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
         if let Some(client) = &self.redis_client {

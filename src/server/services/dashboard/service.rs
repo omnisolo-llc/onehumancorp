@@ -3,14 +3,31 @@ use crate::ohc::app::*;
 use crate::ohc::app::dashboard_service_server::DashboardService;
 use std::sync::Arc;
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct CachedProduct {
+    id: String,
+    organization_id: String,
+    name: String,
+    description: String,
+    price_cents: i64,
+    currency: String,
+    fulfillment_strategy: String,
+    metadata_json: String,
+}
+
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
+    product_cache: Arc<dashmap::DashMap<String, (std::time::Instant, Vec<crate::ohc::organization::Product>)>>,
 }
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self { db, hub }
+        Self {
+            db,
+            hub,
+            product_cache: Arc::new(dashmap::DashMap::new()),
+        }
     }
 }
 
@@ -25,8 +42,10 @@ impl DashboardService for MyDashboardService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
+        let hub4 = self.hub.clone();
         let db1 = self.db.clone();
         let db2 = self.db.clone();
+        let product_cache = self.product_cache.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
@@ -37,6 +56,34 @@ impl DashboardService for MyDashboardService {
             }),
             async {
                 let org_id = req.organization_id.clone();
+                let cache_key = format!("hub:products:{}", org_id);
+                let redis_client = hub4.get_redis_client();
+
+                if let Some(client) = &redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let res: Result<Option<String>, _> = redis::cmd("GET").arg(&cache_key).query_async(&mut conn).await;
+                        if let Ok(Some(data)) = res {
+                            if let Ok(cached) = serde_json::from_str::<Vec<CachedProduct>>(&data) {
+                                let products = cached.into_iter().map(|c| crate::ohc::organization::Product {
+                                    id: c.id,
+                                    organization_id: c.organization_id,
+                                    name: c.name,
+                                    description: c.description,
+                                    price_cents: c.price_cents,
+                                    currency: c.currency,
+                                    fulfillment_strategy: c.fulfillment_strategy,
+                                    metadata_json: c.metadata_json,
+                                }).collect();
+                                return Ok::<_, String>(products);
+                            }
+                        }
+                    }
+                } else if let Some(entry) = product_cache.get(&org_id) {
+                    if entry.value().0.elapsed().as_secs() < 3600 {
+                        return Ok::<_, String>(entry.value().1.clone());
+                    }
+                }
+
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -76,6 +123,28 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
+
+                let to_cache = results.clone();
+                if let Some(client) = &redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let cached: Vec<CachedProduct> = to_cache.iter().map(|p| CachedProduct {
+                            id: p.id.clone(),
+                            organization_id: p.organization_id.clone(),
+                            name: p.name.clone(),
+                            description: p.description.clone(),
+                            price_cents: p.price_cents,
+                            currency: p.currency.clone(),
+                            fulfillment_strategy: p.fulfillment_strategy.clone(),
+                            metadata_json: p.metadata_json.clone(),
+                        }).collect();
+                        if let Ok(json) = serde_json::to_string(&cached) {
+                            let _: Result<(), _> = redis::cmd("SETEX").arg(&cache_key).arg(3600).arg(json).query_async(&mut conn).await;
+                        }
+                    }
+                } else {
+                    product_cache.insert(org_id, (std::time::Instant::now(), to_cache));
+                }
+
                 Ok::<_, String>(results)
             },
             async {
@@ -116,6 +185,46 @@ impl DashboardService for MyDashboardService {
 
         let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
 
+        let mut final_agents: Vec<crate::ohc::agent::Agent> = _filtered_agents.into_iter().map(|a| {
+            let role = match a.role.to_lowercase().as_str() {
+                "ceo" => crate::ohc::common::Role::Ceo as i32,
+                "product_manager" => crate::ohc::common::Role::ProductManager as i32,
+                "software_engineer" => crate::ohc::common::Role::SoftwareEngineer as i32,
+                "growth_agent" => crate::ohc::common::Role::GrowthAgent as i32,
+                _ => crate::ohc::common::Role::Unspecified as i32,
+            };
+
+            let status = match a.status.to_uppercase().as_str() {
+                "IDLE" => crate::ohc::common::AgentStatus::Idle as i32,
+                "ACTIVE" => crate::ohc::common::AgentStatus::Active as i32,
+                "IN_MEETING" => crate::ohc::common::AgentStatus::InMeeting as i32,
+                "BLOCKED" => crate::ohc::common::AgentStatus::Blocked as i32,
+                _ => crate::ohc::common::AgentStatus::StatusUnspecified as i32,
+            };
+
+            crate::ohc::agent::Agent {
+                id: a.id,
+                name: a.name,
+                role,
+                status,
+                organization_id: a.organization_id,
+            }
+        }).collect();
+
+        let mut final_products = products;
+
+        if req.mobile_optimized {
+            for a in &mut final_agents {
+                a.role = crate::ohc::common::Role::Unspecified as i32;
+                a.status = crate::ohc::common::AgentStatus::StatusUnspecified as i32;
+            }
+            for p in &mut final_products {
+                p.description.clear();
+                p.metadata_json.clear();
+                p.fulfillment_strategy.clear();
+            }
+        }
+
         let mut status_map = std::collections::HashMap::new();
         for a in agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
@@ -132,12 +241,12 @@ impl DashboardService for MyDashboardService {
 
         Ok(Response::new(DashboardSnapshot {
             organization: None, // Need to query DB for org info
-            agents: vec![],
+            agents: final_agents,
             meetings: out_meetings,
             cost_summary: Some(cost_summary),
             statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),
-            products,
+            products: final_products,
             orders,
         }))
     }
