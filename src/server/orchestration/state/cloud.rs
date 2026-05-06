@@ -149,6 +149,17 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
+        let lock_key = "ohc:lock:system:pull_tasks".to_string();
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
+        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(guard)) => guard,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => {
+                tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                return Ok(vec![]);
+            }
+        };
+
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
         crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
