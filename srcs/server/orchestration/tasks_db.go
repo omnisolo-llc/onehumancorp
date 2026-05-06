@@ -111,7 +111,7 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", task.OrganizationID)
 	if err != nil {
 		return err
 	}
@@ -149,10 +149,6 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
 		return nil, err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
-	if err != nil {
-		return nil, err
-	}
 
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
@@ -195,10 +191,6 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
-	if err != nil {
-		return err
-	}
 
 	query := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err = tx.ExecContext(ctx, query, status, id)
@@ -215,7 +207,7 @@ func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organiza
 		return nil, err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", organizationID)
 	if err != nil {
 		return nil, err
 	}
