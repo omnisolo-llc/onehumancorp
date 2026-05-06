@@ -114,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_autodream_pipeline_sqlite() {
         // Mock to make it cover
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap();
         let db_mock = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()) });
         let _pipe = AutoDreamPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
         assert!(true);
@@ -128,7 +128,7 @@ mod tests {
             .await
             .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| panic!("Failed lazy"));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| panic!("Failed lazy"));
         let db = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(pool.clone()) });
 
         // Initialize schema
@@ -181,8 +181,7 @@ mod tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
             .connect(database_url)

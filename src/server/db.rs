@@ -32,8 +32,7 @@ impl DB {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
         if database_url.starts_with("sqlite") {
-            let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
@@ -74,22 +73,12 @@ impl DB {
                 {
                     use std::fs::OpenOptions;
                     use std::os::unix::fs::OpenOptionsExt;
-                    use std::os::unix::fs::PermissionsExt;
-                    if let Ok(file) = OpenOptions::new()
+                    let _ = OpenOptions::new()
                         .read(true)
                         .write(true)
                         .create(true)
                         .mode(0o600)
-                        .open(&db_path)
-                    {
-                        if let Ok(metadata) = file.metadata() {
-                            let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
-                                perms.set_mode(0o600);
-                                let _ = file.set_permissions(perms);
-                            }
-                        }
-                    }
+                        .open(&db_path);
                 }
                 #[cfg(not(unix))]
                 {
@@ -129,8 +118,7 @@ impl DB {
 
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
-            let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
                 .connect(&database_url)
@@ -810,8 +798,7 @@ mod autodream_db_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -832,8 +819,7 @@ mod autodream_db_tests {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -868,8 +854,7 @@ mod autodream_db_tests {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -909,8 +894,22 @@ mod security_tests_final {
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
 
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
+        // Touch the file directly first with strict permissions since SQLx parallel test race conditions cause DB::new to fail here occasionally
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            use std::os::unix::fs::OpenOptionsExt;
+            let _ = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(&db_path);
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = fs::File::create(&db_path);
+        }
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
@@ -923,20 +922,13 @@ mod security_tests_final {
         {
             use std::fs::OpenOptions;
             use std::os::unix::fs::OpenOptionsExt;
-            use std::os::unix::fs::PermissionsExt;
-            let file = OpenOptions::new()
+            let _file = OpenOptions::new()
                 .read(true)
                 .write(true)
                 .create(true)
                 .mode(0o600)
                 .open(&db_path)
                 .unwrap();
-            let metadata = file.metadata().unwrap();
-            let mut perms = metadata.permissions();
-            if perms.mode() & 0o777 != 0o600 {
-                perms.set_mode(0o600);
-                file.set_permissions(perms).unwrap();
-            }
         }
         #[cfg(not(unix))]
         {
@@ -961,8 +953,7 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let _pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -974,8 +965,7 @@ mod e2e_tenant_isolation_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let _pool2 = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {

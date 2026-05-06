@@ -13,8 +13,7 @@ pub async fn bench_queue_latency() {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
@@ -44,8 +43,7 @@ pub async fn bench_dashboard_snapshot() {
         return;
     }
 
-    let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+    let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
         .connect(&database_url).await;
 
     let pg_pool = match pool_res {

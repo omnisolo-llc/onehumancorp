@@ -8,7 +8,7 @@ mod tests {
         // According to the problem description:
         // "Write backend E2E tests verifying that queries attempting to access data from a different tenant_id return zero rows."
 
-        let pool = PgPoolOptions::new()
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 

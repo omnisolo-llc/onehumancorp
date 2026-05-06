@@ -7,7 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_sub_agent_queue_isolation() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
                 .connect_lazy(&db_url)
                 .unwrap();
 
