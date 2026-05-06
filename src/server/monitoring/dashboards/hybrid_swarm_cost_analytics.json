@@ -34,20 +34,6 @@
       }
     },
     {
-      "type": "text",
-      "title": "",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
-      }
-    },
-    {
       "title": "Swarm Throughput",
       "type": "timeseries",
       "datasource": "Prometheus",
@@ -55,7 +41,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 2
       },
       "targets": [
         {
@@ -73,7 +59,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 2
       },
       "targets": [
         {
@@ -91,7 +77,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 10
       },
       "targets": [
         {
@@ -109,7 +95,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 10
       },
       "targets": [
         {
