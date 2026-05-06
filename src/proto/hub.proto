@@ -1602,9 +1602,9 @@ service McpService {
 message MyPlanResponse {
   string current_plan = 1;
   int32 ai_actions_used = 2;
-  int32 ai_actions_limit = 3;
+  optional int32 ai_actions_limit = 3;
   int64 storage_used_bytes = 4;
-  int64 storage_limit_bytes = 5;
+  optional int64 storage_limit_bytes = 5;
   int64 next_bill_estimated = 6;
 }
 
