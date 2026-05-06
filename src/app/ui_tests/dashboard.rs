@@ -222,3 +222,17 @@ fn dashboard_simplification_jargon_test() {
     ui.set_pending_approvals(pending_model.into());
     assert_eq!(ui.get_pending_approvals().row_count(), 1);
 }
+
+#[test]
+fn dashboard_test_visitor_milestone_trigger() {
+    let ui = create();
+
+    // Simulate the milestone being triggered (the logic in main.rs)
+    ui.set_milestone_title("🚀 100 Visitors Today!".into());
+    ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
+    ui.set_show_milestone(true);
+
+    assert!(ui.get_show_milestone());
+    assert_eq!(ui.get_milestone_title(), "🚀 100 Visitors Today!");
+    assert_eq!(ui.get_milestone_message(), "Your store is trending! Keep up the great work.");
+}

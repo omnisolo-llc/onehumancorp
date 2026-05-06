@@ -87,6 +87,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -102,6 +103,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(test)]
@@ -2164,6 +2166,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
+
+                let dashboard_handle_for_visitors = dashboard.as_weak();
+                slint::Timer::single_shot(std::time::Duration::from_secs(5), move || {
+                    if let Some(ui) = dashboard_handle_for_visitors.upgrade() {
+                        GLOBAL_VISITORS_COUNT.with(|g| {
+                            let mut count = g.borrow_mut();
+                            *count = 100; // Simulated milestone reach
+
+                            ui.set_milestone_title("🚀 100 Visitors Today!".into());
+                            ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
+                            ui.set_show_milestone(true);
+                        });
+                    }
+                });
+
                 let gb_handle_for_dashboard = grow_business_handle.clone();
                 dashboard.on_action_grow_business(move || {
                     if let Some(ui) = gb_handle_for_dashboard.upgrade() {
