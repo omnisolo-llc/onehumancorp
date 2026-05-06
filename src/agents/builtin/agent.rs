@@ -665,12 +665,52 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-        let plan_resp = self.llm.chat(plan_req).await?;
+        let plan_resp = self.llm.chat(plan_req.clone()).await?;
         let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
 
-        let plan: Vec<serde_json::Value> = serde_json::from_str(plan_json_text).map_err(|e| format!("Failed to parse planner output as JSON array: {} (Output: {})", e, plan_json_text))?;
+        let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
+            Ok(p) => p,
+            Err(e) => {
+                // Fallback mechanic: Legacy RetryWithErrorOutputParser
+                // Feed the original prompt, the failed completion, and the parsing error back to the model.
+                let mut attempt = 0;
+                let mut current_req = plan_req;
+                let mut last_error = e.to_string();
+                let mut final_plan = None;
+
+                current_req.messages.push(Message::assistant(plan_resp.message.content.clone()));
+                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
+                current_req.messages.push(Message::user(error_msg));
+
+                while attempt < 3 {
+                    attempt += 1;
+                    let resp = self.llm.chat(current_req.clone()).await?;
+                    let completion = resp.message.content.clone();
+
+                    let json_text = completion.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                    match serde_json::from_str(json_text) {
+                        Ok(p) => {
+                            final_plan = Some(p);
+                            break;
+                        }
+                        Err(e) => {
+                            last_error = e.to_string();
+                            current_req.messages.push(Message::assistant(completion));
+                            let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
+                            current_req.messages.push(Message::user(error_msg));
+                        }
+                    }
+                }
+
+                if let Some(p) = final_plan {
+                    p
+                } else {
+                    return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", last_error).into());
+                }
+            }
+        };
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
