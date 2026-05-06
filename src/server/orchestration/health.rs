@@ -31,6 +31,7 @@ pub async fn run_health_monitor(
                     }
                 }
                 for agent_id in to_fire {
+                    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "0".to_string()) == "0";
                     if is_cloud {
                         let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                         *count += 1;
