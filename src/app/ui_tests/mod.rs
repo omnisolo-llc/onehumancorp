@@ -41,6 +41,7 @@ pub mod prompt_tuning;
 pub mod secure_agent_config;
 pub mod agent_config;
 pub mod daily_briefing;
+pub mod business_manager_ux;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]
