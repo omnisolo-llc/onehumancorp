@@ -29,7 +29,6 @@ pub async fn run_health_monitor(
                 let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
-                    tracing::debug!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -51,7 +50,6 @@ pub async fn run_health_monitor(
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
-                        tracing::debug!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);

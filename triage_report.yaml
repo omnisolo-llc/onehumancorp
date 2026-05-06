@@ -2,5 +2,6 @@ issue_category: cleanup
 status: completed
 details:
   - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
-  - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
+  - Reduced verbosity of health monitor logs by removing redundant tracing::debug.
+  - Implemented local-to-cloud mission sync health probes in wizard.rs.
+  - Sanitized the agent_missions queue in sip.rs to eliminate 'STUCK' missions state entirely.

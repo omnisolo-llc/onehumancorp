@@ -57,25 +57,20 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
