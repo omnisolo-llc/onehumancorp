@@ -71,7 +71,7 @@ impl Default for AgentRunConfig {
             max_tokens: 2048,
             temperature: 0.0,
             max_iterations: 100,
-            max_task_tokens: 0,
+            max_task_tokens: 100_000,
             confidence_threshold: 0.0,
             enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
@@ -751,6 +751,8 @@ impl Agent {
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut malformed_retries = 0;
+        let max_malformed_retries = 3;
 
         let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
@@ -913,8 +915,25 @@ impl Agent {
                 Ok(r) => r,
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
-                    on_event(AgentEvent::TaskError { error: err.clone() });
-                    return Err(err.into());
+                    if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
+                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(err_msg.into());
+                    } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {
+                        malformed_retries += 1;
+                        if malformed_retries >= max_malformed_retries {
+                             let err_msg = format!("Terminal condition reached: Malformed LLM response retries exhausted ({}).", max_malformed_retries);
+                             on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                             return Err(err_msg.into());
+                        }
+                        let err_msg = format!("Malformed LLM response: {}. Agent retrying...", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        messages.push(Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted."));
+                        continue;
+                    } else {
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
                 }
             };
 
@@ -929,6 +948,13 @@ impl Agent {
             let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+
+            // Enforce Server-side token budget strictly every turn
+            if global_turn_tokens >= cfg.max_task_tokens {
+                let err_msg = format!("Terminal condition reached: Server-side token budget exhausted ({} / {}). Agent transitioning to PAUSED state.", global_turn_tokens, cfg.max_task_tokens);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
 
             // Unified Cost Calculation Mechanic
             // Note: We use the local pricing calculator logic to avoid a direct
