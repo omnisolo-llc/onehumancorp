@@ -117,13 +117,13 @@ export component Dashboard inherits Window {
                 padding: 16px;
                 spacing: 8px;
 
-                Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
-                Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
+                TooltipElement { tooltip_id: "help_center"; Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } } }
+                TooltipElement { tooltip_id: "billing"; Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } } }
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
-                Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
-                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
-                Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+                TooltipElement { tooltip_id: "video_tutorials"; Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } } }
+                TooltipElement { tooltip_id: "app_tour"; Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } } }
+                TooltipElement { tooltip_id: "kairos_tour"; Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } } }
+                TooltipElement { tooltip_id: "whats_new"; Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } } }
             }
         }
 

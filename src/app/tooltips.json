@@ -11,5 +11,10 @@
   "view_orders": "View and manage your recent orders.",
   "messages": "Check your customer messages.",
   "api_docs": "Advanced: Connect other tools to your store.",
-  "advisory_hint": "Tips and advice from your business helper."
+  "advisory_hint": "Tips and advice from your business helper.",
+  "billing": "Manage your subscription and billing details.",
+  "video_tutorials": "Watch short videos to learn how to use OHC.",
+  "app_tour": "Take a quick tour of the app.",
+  "kairos_tour": "Learn how the Kairos orchestration system works.",
+  "whats_new": "See the latest updates to the app."
 }
