@@ -4661,6 +4661,276 @@ mod docs_tests {
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
     }
 
+
+    #[test]
+    fn test_e2e_fix_agent_wizard_flow() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let view_orders_called_clone = view_orders_called.clone();
+        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let check_messages_called_clone = check_messages_called.clone();
+        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let see_analytics_called_clone = see_analytics_called.clone();
+        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_store_called_clone = share_store_called.clone();
+        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+
+        let ui = app::FixAgent::new().unwrap();
+        let fix_applied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_applied_clone = fix_applied.clone();
+
+        ui.on_apply_fix(move || {
+            *fix_applied_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(ui.get_step(), 0);
+        ui.set_step(1);
+        ui.invoke_apply_fix();
+
+        assert!(*fix_applied.borrow(), "Apply fix action should trigger successful state change");
+
+        ui.set_step(2);
+        assert_eq!(ui.get_step(), 2);
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_wizard_flow_advanced() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+
+        let ui = app::FixAgent::new().unwrap();
+        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_called_clone = save_called.clone();
+
+        ui.on_save_state(move || {
+            *save_called_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        ui.invoke_save_state();
+
+        assert!(*save_called.borrow(), "Advanced mode save action should successfully trigger state persist");
+        assert_eq!(ui.get_is_advanced(), true);
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_wizard_flow_return() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+
+        let ui = app::FixAgent::new().unwrap();
+        let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let return_called_clone = return_called.clone();
+
+        ui.on_return_to_agents(move || {
+            *return_called_clone.borrow_mut() = true;
+        });
+
+        ui.set_step(2);
+        ui.invoke_return_to_agents();
+
+        assert!(*return_called.borrow(), "Return to agents action should successfully trigger navigation");
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_wizard_flow_apply_step_transitions() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+
+        let ui = app::FixAgent::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.set_step(1);
+        assert_eq!(ui.get_step(), 1);
+
+        let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let apply_called_clone = apply_called.clone();
+        ui.on_apply_fix(move || {
+            *apply_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_apply_fix();
+        assert!(*apply_called.borrow());
+
+        ui.set_step(2);
+        assert_eq!(ui.get_step(), 2);
+    }
+
+    #[test]
+    fn test_e2e_fix_agent_wizard_flow_error_handling() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_product_called_clone = add_product_called.clone();
+        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+
+        let agents_ui = app::Agents::new().unwrap();
+        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fix_agent_opened_clone = fix_agent_opened.clone();
+
+        agents_ui.on_fix_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *fix_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_fix_agent("agent_1".into());
+
+        let ui = app::FixAgent::new().unwrap();
+
+        ui.set_step(0);
+        assert_eq!(ui.get_step(), 0);
+
+        assert_eq!(ui.get_is_advanced(), false);
+
+        ui.set_is_advanced(true);
+        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let save_called_clone = save_called.clone();
+        ui.on_save_state(move || {
+            *save_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_save_state();
+        assert!(*save_called.borrow());
+    }
+
     #[test]
     fn test_e2e_ai_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
