@@ -37,6 +37,7 @@ export component SetupWizard inherits Window {
     in-out property <string> product_name: "";
     in-out property <string> product_description: "";
     in-out property <string> product_price: "";
+    in-out property <string> product_currency: "USD";
     in-out property <string> price_type: "fixed"; // fixed, starting_at, request_quote
     in-out property <string> product_sku: "";
     in-out property <string> product_inventory: "";
@@ -53,6 +54,7 @@ export component SetupWizard inherits Window {
     in-out property <string> launch_status: "Your business is setting up…";
     in-out property <string> launch_details: "Deploying AI helpers...\nBuilding website...";
     in-out property <bool> launch_success: false;
+    in-out property <bool> is_cropping_photo: false;
 
     // Animation state
     property <float> pulse_scale: 1.0;
@@ -63,6 +65,7 @@ export component SetupWizard inherits Window {
     callback generate_instant_preview();
     callback generate_company_description(string, string);
     callback generate_product_description(string);
+    callback trigger_photo_upload();
 
     callback go_to_add_products();
     callback go_to_connect_instagram();
@@ -513,7 +516,16 @@ export component SetupWizard inherits Window {
                 if (price_type != "request_quote") : VerticalBox {
                     spacing: 8px;
                     Text { text: price_type == "fixed" ? "Price" : "Starting Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                    HorizontalBox {
+                        spacing: 8px;
+                        GlassCard {
+                            width: 60px;
+                            height: 44px;
+                            background: rgba(255, 255, 255, 0.05);
+                            VerticalBox { alignment: center; Text { text: product_currency; color: white; horizontal-alignment: center; } }
+                        }
+                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                    }
                 }
 
                 if (is_advanced) : VerticalBox {
@@ -528,8 +540,13 @@ export component SetupWizard inherits Window {
                     height: 100px;
                     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
+                        Text { text: is_cropping_photo ? "✂️ Crop Photo" : "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                        Text { text: is_cropping_photo ? "Pinch and drag to crop" : "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
+                    }
+                    TouchArea {
+                        clicked => {
+                            if (is_cropping_photo) { is_cropping_photo = false; } else { trigger_photo_upload(); }
+                        }
                     }
                 }
             }
