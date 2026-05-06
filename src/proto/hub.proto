@@ -191,7 +191,7 @@ message SharedTask {
   string status = 7;
   string assigned_agent_id = 8;
   string priority = 9;
-  string payload = 10;
+  bytes payload = 10;
   int64 locked_until_unix = 11;
   int64 created_at_unix = 12;
   int64 updated_at_unix = 13;
@@ -1128,7 +1128,7 @@ message ProtoTask {
   int64 created_at_unix = 7;
   int64 last_run_at_unix = 8;
   int64 next_run_at_unix = 9;
-  string payload = 10;
+  bytes payload = 10;
 }
 
 message ScheduledTasksResponse {
@@ -1640,4 +1640,10 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message TaskPayload {
+  string system_prompt = 1;
+  string department = 2;
+  string model = 3;
 }
