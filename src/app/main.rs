@@ -3560,10 +3560,71 @@ mod tests {
 
 
     #[test]
-    fn test_setup_wizard_creation() {
+
+    #[test]
+    fn test_e2e_setup_wizard_flow_comprehensive() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::SetupWizard::new().unwrap();
+        crate::ui_tests::init();
+
+        let ui = app::SetupWizard::new().unwrap();
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        ui.on_launch(move |bt, cn, cd, pp, ae, wt, pn, pr, dc, an, pw| {
+            assert_eq!(bt, "Online Store");
+            assert_eq!(cn, "Maya's Cakes");
+            assert_eq!(cd, "Best cakes in town");
+            assert_eq!(pp, "online");
+            assert_eq!(ae, "maya@example.com");
+            assert_eq!(wt, "Minimalist");
+            assert_eq!(pn, "Custom Cake");
+            assert_eq!(pr, "50.00");
+            assert_eq!(dc, "subdomain");
+            assert_eq!(an, "Maya");
+            assert_eq!(pw, "password123");
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_step(), 2);
+        ui.set_company_name("Maya's Cakes".into());
+        ui.set_company_description("Best cakes in town".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 4);
+        ui.invoke_select_payment_pref("online".into());
+        assert_eq!(ui.get_step(), 5);
+        ui.set_admin_name("Maya".into());
+        ui.set_admin_email("maya@example.com".into());
+        ui.set_admin_password("password123".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+        ui.invoke_select_template("Minimalist".into());
+        assert_eq!(ui.get_step(), 7);
+        ui.set_product_name("Custom Cake".into());
+        ui.set_product_price("50.00".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 8);
+        ui.invoke_select_domain("subdomain".into());
+        assert_eq!(ui.get_step(), 9);
+        ui.invoke_launch(
+            "Online Store".into(), "Maya's Cakes".into(), "Best cakes in town".into(),
+            "online".into(), "maya@example.com".into(), "Minimalist".into(),
+            "Custom Cake".into(), "50.00".into(), "subdomain".into(),
+            "Maya".into(), "password123".into(),
+        );
+
+        assert!(*launch_called.borrow(), "Launch should have been called");
     }
+
+    #[test]
+
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
