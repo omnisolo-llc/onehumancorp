@@ -2,14 +2,7 @@ package orchestration
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"log"
 	"sync"
-	"time"
-
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/redis/go-redis/v9"
 )
 
 // MeshHub defines the interface for the highly available realtime communication layer.
@@ -84,164 +77,22 @@ func (m *LocalTeammateMesh) Subscribe(ctx context.Context, channel string, handl
 	return nil
 }
 
-// IpcTeammateMesh implements MeshHub using an SQLite database for cross-process standalone operation.
-type IpcTeammateMesh struct {
-	db *sql.DB
-}
-
-// NewIpcTeammateMesh creates a new IpcTeammateMesh and initializes the schema.
-func NewIpcTeammateMesh(db *sql.DB) (*IpcTeammateMesh, error) {
-	mesh := &IpcTeammateMesh{db: db}
-
-	// Initialize schema to mirror Rust's IpcTransport
-	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS mesh_messages (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			topic TEXT NOT NULL,
-			payload BLOB NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			msg_id TEXT
-		);
-		CREATE TABLE IF NOT EXISTS mesh_checkpoints (
-			subscriber_id TEXT PRIMARY KEY,
-			last_id INTEGER NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS mesh_locks (
-			resource TEXT PRIMARY KEY,
-			owner TEXT NOT NULL,
-			expires_at DATETIME NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS mesh_presence (
-			agent_id TEXT PRIMARY KEY,
-			status TEXT NOT NULL,
-			expires_at DATETIME NOT NULL
-		);
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize schema: %w", err)
-	}
-
-	return mesh, nil
-}
-
-// Publish sends data by inserting it into the mesh_messages table.
-func (m *IpcTeammateMesh) Publish(ctx context.Context, channel string, data []byte) error {
-	_, err := m.db.ExecContext(ctx, "INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)", channel, data)
-	if err != nil {
-		return fmt.Errorf("failed to publish message: %w", err)
-	}
-	return nil
-}
-
-// Subscribe registers a handler and spawns a polling goroutine.
-func (m *IpcTeammateMesh) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
-	subscriberID := fmt.Sprintf("go_server_node_%s", channel)
-
-	// Get last processed ID
-	var lastID int64
-	err := m.db.QueryRowContext(ctx, "SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?", subscriberID).Scan(&lastID)
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("failed to get last_id: %w", err)
-	}
-
-	go func() {
-		ticker := time.NewTicker(50 * time.Millisecond)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				rows, err := m.db.QueryContext(ctx, "SELECT id, payload FROM mesh_messages WHERE id > ? AND topic = ? ORDER BY id ASC", lastID, channel)
-				if err != nil {
-					log.Printf("IpcTeammateMesh poll error: %v", err)
-					continue
-				}
-
-				var maxID int64
-				for rows.Next() {
-					var id int64
-					var payload []byte
-					if err := rows.Scan(&id, &payload); err != nil {
-						log.Printf("IpcTeammateMesh scan error: %v", err)
-						continue
-					}
-
-					maxID = id
-					// Execute handler in a goroutine to avoid blocking the poller
-					go handler(payload)
-				}
-				rows.Close()
-
-				if maxID > lastID {
-					lastID = maxID
-					_, err = m.db.ExecContext(ctx, "INSERT INTO mesh_checkpoints (subscriber_id, last_id) VALUES (?, ?) ON CONFLICT(subscriber_id) DO UPDATE SET last_id = excluded.last_id", subscriberID, lastID)
-					if err != nil {
-						log.Printf("IpcTeammateMesh checkpoint update error: %v", err)
-					}
-				}
-
-				// Optional cleanup of old messages could be done here or in a separate background job.
-				// We rely on Rust's IpcTransport for cleanup (it deletes messages older than 1 hour).
-			}
-		}
-	}()
-
-	return nil
-}
-
-// CentrifugeMesh implements MeshHub using go-redis for cloud-native setup.
+// CentrifugeMesh implements MeshHub using rueidis and Centrifugo primitives.
+// This is currently a stub for cloud-native setup.
 type CentrifugeMesh struct {
-	client *redis.Client
 }
 
 // NewCentrifugeMesh creates a new CentrifugeMesh.
-func NewCentrifugeMesh(redisURL string) (*CentrifugeMesh, error) {
-	opts, err := redis.ParseURL(redisURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse redis URL: %w", err)
-	}
-
-	client := redis.NewClient(opts)
-	// Verify connection
-	if err := client.Ping(context.Background()).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to redis: %w", err)
-	}
-
-	return &CentrifugeMesh{client: client}, nil
+func NewCentrifugeMesh() *CentrifugeMesh {
+	return &CentrifugeMesh{}
 }
 
-// Publish sends data via Redis Pub/Sub.
+// Publish is a stub for CentrifugeMesh.
 func (m *CentrifugeMesh) Publish(ctx context.Context, channel string, data []byte) error {
-	err := m.client.Publish(ctx, channel, data).Err()
-	if err != nil {
-		return fmt.Errorf("failed to publish to redis: %w", err)
-	}
 	return nil
 }
 
-// Subscribe registers a handler and spawns a goroutine to listen for messages via Redis Pub/Sub.
+// Subscribe is a stub for CentrifugeMesh.
 func (m *CentrifugeMesh) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
-	pubsub := m.client.Subscribe(ctx, channel)
-
-	go func() {
-		defer pubsub.Close()
-		ch := pubsub.Channel()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case msg, ok := <-ch:
-				if !ok {
-					return
-				}
-				// Execute handler in a goroutine
-				go handler([]byte(msg.Payload))
-			}
-		}
-	}()
-
 	return nil
 }

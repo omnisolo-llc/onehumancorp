@@ -25,17 +25,17 @@ pub async fn tier_middleware(
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
                 if status.soft_limit_reached {
-                    let msg = status.user_message.unwrap_or_else(|| "You reached the limit for your current plan. Please upgrade to continue.".to_string());
+                    let msg = status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
                     return (
                         StatusCode::PAYMENT_REQUIRED,
                         Json(json!({ "error": "TierLimitExceeded", "message": msg })),
                     ).into_response();
                 }
             }
-            Err(_) => {
+            Err(e) => {
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": "RateLimitError", "message": "We are experiencing a temporary issue. Please try again later." })),
+                    Json(json!({ "error": "RateLimitError", "message": e })),
                 ).into_response();
             }
         }

@@ -214,7 +214,7 @@ fn e2e_test_onboarding_wizard_data_flow() {
     // The E2E tests inside src/app/main.rs check end-to-end routing.
     // This provides coverage for the UI getters correctly holding the required variables.
 
-    let launch_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
     ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
@@ -222,7 +222,7 @@ fn e2e_test_onboarding_wizard_data_flow() {
         assert_eq!(product_name, "Vegan Chocolate Cake");
         assert_eq!(product_price, "45.00");
         assert_eq!(domain_choice, "custom");
-        *launch_called_clone.lock().unwrap() = true;
+        *launch_called_clone.borrow_mut() = true;
     });
 
     ui.invoke_launch(
@@ -239,7 +239,7 @@ fn e2e_test_onboarding_wizard_data_flow() {
         ui.get_admin_password()
     );
 
-    assert!(*launch_called.lock().unwrap(), "Launch should be called with updated properties");
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
@@ -251,7 +251,7 @@ fn e2e_test_onboarding_wizard_data_flow_modern() {
     ui.set_product_price("10.0".into());
     ui.set_domain_choice("custom".into());
 
-    let launch_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
     ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
@@ -259,7 +259,7 @@ fn e2e_test_onboarding_wizard_data_flow_modern() {
         assert_eq!(product_name, "My Product");
         assert_eq!(product_price, "10.0");
         assert_eq!(domain_choice, "custom");
-        *launch_called_clone.lock().unwrap() = true;
+        *launch_called_clone.borrow_mut() = true;
     });
 
     ui.invoke_launch(
@@ -276,7 +276,7 @@ fn e2e_test_onboarding_wizard_data_flow_modern() {
         ui.get_admin_password()
     );
 
-    assert!(*launch_called.lock().unwrap(), "Launch should be called with updated properties");
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
@@ -288,7 +288,7 @@ fn e2e_test_onboarding_wizard_data_flow_classic() {
     ui.set_product_price("99.99".into());
     ui.set_domain_choice("auto".into());
 
-    let launch_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
     ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
@@ -296,7 +296,7 @@ fn e2e_test_onboarding_wizard_data_flow_classic() {
         assert_eq!(product_name, "My Other Product");
         assert_eq!(product_price, "99.99");
         assert_eq!(domain_choice, "auto");
-        *launch_called_clone.lock().unwrap() = true;
+        *launch_called_clone.borrow_mut() = true;
     });
 
     ui.invoke_launch(
@@ -313,7 +313,7 @@ fn e2e_test_onboarding_wizard_data_flow_classic() {
         ui.get_admin_password()
     );
 
-    assert!(*launch_called.lock().unwrap(), "Launch should be called with updated properties");
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
@@ -325,7 +325,7 @@ fn e2e_test_onboarding_wizard_data_flow_bold() {
     ui.set_product_price("50.0".into());
     ui.set_domain_choice("auto".into());
 
-    let launch_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
     ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
@@ -333,7 +333,7 @@ fn e2e_test_onboarding_wizard_data_flow_bold() {
         assert_eq!(product_name, "Another Product");
         assert_eq!(product_price, "50.0");
         assert_eq!(domain_choice, "auto");
-        *launch_called_clone.lock().unwrap() = true;
+        *launch_called_clone.borrow_mut() = true;
     });
 
     ui.invoke_launch(
@@ -350,7 +350,7 @@ fn e2e_test_onboarding_wizard_data_flow_bold() {
         ui.get_admin_password()
     );
 
-    assert!(*launch_called.lock().unwrap(), "Launch should be called with updated properties");
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
@@ -362,7 +362,7 @@ fn e2e_test_onboarding_wizard_data_flow_empty() {
     ui.set_product_price("".into());
     ui.set_domain_choice("".into());
 
-    let launch_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
     ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
@@ -370,7 +370,7 @@ fn e2e_test_onboarding_wizard_data_flow_empty() {
         assert_eq!(product_name, "");
         assert_eq!(product_price, "");
         assert_eq!(domain_choice, "");
-        *launch_called_clone.lock().unwrap() = true;
+        *launch_called_clone.borrow_mut() = true;
     });
 
     ui.invoke_launch(
@@ -387,7 +387,7 @@ fn e2e_test_onboarding_wizard_data_flow_empty() {
         ui.get_admin_password()
     );
 
-    assert!(*launch_called.lock().unwrap(), "Launch should be called with updated properties");
+    assert!(*launch_called.borrow(), "Launch should be called with updated properties");
 }
 
 #[test]
@@ -482,16 +482,16 @@ fn wizard_copy_link_integration() {
     let test_url = "https://ohc.app/test_share_link_123".to_string();
 
     // We register a callback directly on the created UI handle for the test context
-    let clipboard_val = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let clipboard_val = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let cv_clone = clipboard_val.clone();
 
     ui.on_copy_link(move |link| {
-        *cv_clone.lock().unwrap() = link.to_string();
+        *cv_clone.borrow_mut() = link.to_string();
     });
 
     ui.invoke_copy_link(test_url.clone().into());
 
-    assert_eq!(*clipboard_val.lock().unwrap(), test_url);
+    assert_eq!(*clipboard_val.borrow(), test_url);
 }
 
 #[test]

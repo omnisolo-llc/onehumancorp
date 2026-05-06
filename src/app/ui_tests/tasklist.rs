@@ -58,11 +58,11 @@ fn create() -> app::TaskList { crate::ui_tests::init(); app::TaskList::new().unw
 
 #[test] fn tasklist_flow_refresh_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_refresh(move || { *c.lock().unwrap() = true; });
+    ui.on_refresh(move || { *c.borrow_mut() = true; });
     ui.invoke_refresh();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 // --- Unique Scenarios with Verification ---

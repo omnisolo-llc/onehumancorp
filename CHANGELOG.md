@@ -1,12 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
-### Cloud Scaling Improvements
-- Update Grafana dashboards for PostgreSQL and Redis metrics (#10982)
-
-### Privacy/Offline Improvements
-- Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137)
-
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
@@ -21,13 +14,6 @@
 - Implement automated checks for PII leakage (#e930)
 - SQLite memory consolidation schema parity (#edc2)
 - Add UI cards for missing tool integrations in Slint dashboard (#5748)
-
-## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
-### Cloud Scaling Improvements
-- Formalized multi-tenant K8s deployment pipelines to ensure isolated workload execution per tenant and resilient agent auto-scaling under heavy traffic.
-
-### Privacy/Offline Improvements
-- Engineered a fully encapsulated desktop binary wrapper enforcing strict local data residency via SQLite, completely bypassing external cloud services for maximum data privacy.
 
 ## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
 ### Cloud Scaling Improvements

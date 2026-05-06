@@ -7,11 +7,11 @@ fn create() -> app::AiHelpChat { crate::ui_tests::init(); app::AiHelpChat::new()
 
 #[test] fn chat_help_flow_send_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_send_message(move || { *c.lock().unwrap() = true; });
+    ui.on_send_message(move || { *c.borrow_mut() = true; });
     ui.invoke_send_message();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn chat_help_xss_input() {
@@ -49,26 +49,26 @@ fn test_e2e_ai_help_chat_ask_anything_button_click() {
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
-    let login_successful = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
     login_ui.on_login(move |email, password| {
-        *login_successful_clone.lock().unwrap() = true;
+        *login_successful_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.lock().unwrap(), "User login should be successful");
+    assert!(*login_successful.borrow(), "User login should be successful");
 
     let dashboard_ui = app::Dashboard::new().unwrap();
-    let ai_chat_opened = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let ai_chat_opened_clone = ai_chat_opened.clone();
 
     dashboard_ui.on_open_ai_chat(move || {
-        *ai_chat_opened_clone.lock().unwrap() = true;
+        *ai_chat_opened_clone.borrow_mut() = true;
     });
 
     dashboard_ui.invoke_open_ai_chat();
-    assert!(*ai_chat_opened.lock().unwrap(), "AI Chat should be opened from Dashboard");
+    assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
 }
 
 #[test]
@@ -77,27 +77,27 @@ fn test_e2e_ai_help_chat_send_message_updates_ui() {
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
-    let login_successful = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
     login_ui.on_login(move |email, password| {
-        *login_successful_clone.lock().unwrap() = true;
+        *login_successful_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.lock().unwrap(), "User login should be successful");
+    assert!(*login_successful.borrow(), "User login should be successful");
 
     let ui = app::AiHelpChat::new().unwrap();
     ui.set_user_input("Testing input".into());
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
 
     ui.on_send_message(move || {
-        *c.lock().unwrap() = true;
+        *c.borrow_mut() = true;
     });
 
     ui.invoke_send_message();
-    assert!(*called.lock().unwrap(), "Send message should be invokable");
+    assert!(*called.borrow(), "Send message should be invokable");
 }
 
 #[test]
@@ -106,28 +106,28 @@ fn test_e2e_ai_help_chat_open_article_link() {
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
-    let login_successful = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
     login_ui.on_login(move |email, password| {
-        *login_successful_clone.lock().unwrap() = true;
+        *login_successful_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.lock().unwrap(), "User login should be successful");
+    assert!(*login_successful.borrow(), "User login should be successful");
 
     let ui = app::AiHelpChat::new().unwrap();
 
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
 
     ui.on_open_article(move |link| {
         assert_eq!(link, "test-link");
-        *c.lock().unwrap() = true;
+        *c.borrow_mut() = true;
     });
 
     ui.invoke_open_article("test-link".into());
-    assert!(*called.lock().unwrap(), "Open article should be invokable");
+    assert!(*called.borrow(), "Open article should be invokable");
 }
 
 #[test]
@@ -136,15 +136,15 @@ fn test_e2e_ai_help_chat_message_list_verification() {
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
-    let login_successful = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
     login_ui.on_login(move |email, password| {
-        *login_successful_clone.lock().unwrap() = true;
+        *login_successful_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.lock().unwrap(), "User login should be successful");
+    assert!(*login_successful.borrow(), "User login should be successful");
 
     let ui = app::AiHelpChat::new().unwrap();
 
@@ -169,15 +169,15 @@ fn test_e2e_ai_help_chat_initial_message_content() {
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
-    let login_successful = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
     login_ui.on_login(move |email, password| {
-        *login_successful_clone.lock().unwrap() = true;
+        *login_successful_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.lock().unwrap(), "User login should be successful");
+    assert!(*login_successful.borrow(), "User login should be successful");
 
     let ui = app::AiHelpChat::new().unwrap();
 

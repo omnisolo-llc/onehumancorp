@@ -27,11 +27,11 @@ fn create() -> app::SwarmMemory { crate::ui_tests::init(); app::SwarmMemory::new
 
 #[test] fn memory_flow_walkthrough_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_view_walkthrough(move || { *c.lock().unwrap() = true; });
+    ui.on_view_walkthrough(move || { *c.borrow_mut() = true; });
     ui.invoke_view_walkthrough();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn memory_flow_sync_loop() {

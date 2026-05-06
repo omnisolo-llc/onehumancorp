@@ -33,14 +33,6 @@ impl HandoffManager {
                 let mesh = mesh_clone.clone();
                 let msg_id_for_ack = msg.msg_id.clone();
 
-                if !msg_id_for_ack.is_empty() {
-                    let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
-                    let mesh_for_ack = mesh_clone.clone();
-                    tokio::spawn(async move {
-                        let _ = mesh_for_ack.publish(&ack_topic, vec![]).await;
-                    });
-                }
-
                 tokio::spawn(async move {
                     let lock_key = format!("handoff:{}:{}:{}", handoff.entity_type, handoff.tenant_id, handoff.state_id);
                     if let Ok(true) = mesh.acquire_lock(&lock_key, "handoff_manager", 60).await {
@@ -77,25 +69,16 @@ impl HandoffManager {
                             },
                             "shared_tasks" => {
                                 // For shared_tasks, serialized_state is a SharedTask protobuf
-                                let payload_bytes = if let Ok(task) = crate::ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
+                                let payload_str = if let Ok(task) = crate::ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
                                     task.payload
                                 } else {
-                                    Vec::new()
+                                    String::from_utf8_lossy(&handoff.serialized_state).to_string()
                                 };
-                                let mut payload_str = "{}".to_string();
-                                if let Ok(task_payload) = crate::ohc::orchestration::TaskPayload::decode(&payload_bytes[..]) {
-                                    if let Ok(json) = serde_json::to_string(&serde_json::json!({
-                                        "system_prompt": task_payload.system_prompt,
-                                        "department": task_payload.department,
-                                        "model": task_payload.model
-                                    })) {
-                                        payload_str = json;
-                                    }
-                                }
                                 match &db_clone.store {
                                     DbStore::Postgres => {
+                                        let payload_json: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(serde_json::json!({}));
                                         if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = $1, updated_at = to_timestamp($2::double precision) WHERE id = $3 AND updated_at < to_timestamp($2::double precision)")
-                                            .bind(&payload_str)
+                                            .bind(&payload_json)
                                             .bind(handoff.timestamp)
                                             .bind(&handoff.state_id)
                                             .execute(&db_clone.pool)
@@ -123,6 +106,11 @@ impl HandoffManager {
                             }
                         }
                         let _ = mesh.release_lock(&lock_key, "handoff_manager").await;
+                    }
+
+                    if !msg_id_for_ack.is_empty() {
+                        let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
+                        let _ = mesh.publish(&ack_topic, vec![]).await;
                     }
                 });
             }
@@ -234,7 +222,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
@@ -361,17 +349,13 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
 
         let cancel = manager.start_listener().await.unwrap();
 
-        let mut tp = crate::ohc::orchestration::TaskPayload::default();
-        tp.system_prompt = "hello".to_string();
-        let mut tp_bytes = Vec::new();
-        tp.encode(&mut tp_bytes).unwrap();
         let shared_task = crate::ohc::orchestration::SharedTask {
             id: "task_123".to_string(),
             organization_id: "org_1".to_string(),
@@ -382,7 +366,7 @@ mod tests {
             status: "pending".to_string(),
             assigned_agent_id: "agent_1".to_string(),
             priority: "high".to_string(),
-            payload: tp_bytes,
+            payload: r#"{"key": "value"}"#.to_string(),
             action_risk: 0,
             approval_status: "approved".to_string(),
             created_at_unix: 0,
@@ -417,7 +401,7 @@ mod tests {
             .unwrap();
 
         let content: String = row.get("payload");
-        assert_eq!(content, r#"{"department":"","model":"","system_prompt":"hello"}"#);
+        assert_eq!(content, r#"{"key": "value"}"#);
 
         cancel();
     }

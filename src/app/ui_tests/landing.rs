@@ -14,32 +14,32 @@ fn create() -> app::Landing { crate::ui_tests::init(); app::Landing::new().unwra
 
 #[test] fn landing_flow_start_setup_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_start_business_setup(move || { *c.lock().unwrap() = true; });
+    ui.on_start_business_setup(move || { *c.borrow_mut() = true; });
     ui.invoke_start_business_setup();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn landing_flow_continue_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_continue_to_dashboard(move || { *c.lock().unwrap() = true; });
+    ui.on_continue_to_dashboard(move || { *c.borrow_mut() = true; });
     ui.invoke_continue_to_dashboard();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn landing_flow_download_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_download(move |os| { *c.lock().unwrap() = os.to_string(); });
+    ui.on_download(move |os| { *c.borrow_mut() = os.to_string(); });
     
     ui.invoke_download("Mac".into());
-    assert_eq!(*called.lock().unwrap(), "Mac");
+    assert_eq!(*called.borrow(), "Mac");
     ui.invoke_download("Linux".into());
-    assert_eq!(*called.lock().unwrap(), "Linux");
+    assert_eq!(*called.borrow(), "Linux");
 }
 
 // --- Unique Scenarios with Verification ---

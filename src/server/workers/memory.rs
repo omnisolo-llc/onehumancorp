@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
-
 use chrono::Utc;
 
 pub struct MemoryConsolidationWorker {
@@ -35,7 +34,6 @@ impl MemoryConsolidationWorker {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,9 +51,21 @@ mod tests {
 
         worker.start();
 
-        // Let it run for a bit to ensure it doesn't crash on start
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         assert!(true, "Worker started successfully");
+    }
+
+    #[tokio::test]
+    async fn test_worker_initialization() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let worker = MemoryConsolidationWorker::new(repo);
+        assert_eq!(worker.poll_interval.as_secs(), 3600);
     }
 }

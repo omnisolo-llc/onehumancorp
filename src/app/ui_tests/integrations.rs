@@ -49,20 +49,20 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
 
 #[test] fn integr_flow_configure_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Slack".into());
-    assert_eq!(*called.lock().unwrap(), "Slack");
+    assert_eq!(*called.borrow(), "Slack");
 }
 
 #[test] fn integr_flow_invoke_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_invoke_tool(move |id| { *c.lock().unwrap() = id.to_string(); });
+    ui.on_invoke_tool(move |id| { *c.borrow_mut() = id.to_string(); });
     ui.invoke_invoke_tool("TOOL-X".into());
-    assert_eq!(*called.lock().unwrap(), "TOOL-X");
+    assert_eq!(*called.borrow(), "TOOL-X");
 }
 
 // --- Unique Scenarios with Verification ---
@@ -72,72 +72,72 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
 // works for our new integrations, testing the underlying state binding.
 #[test] fn integr_flow_configure_manychat() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("ManyChat".into());
-    assert_eq!(*called.lock().unwrap(), "ManyChat");
+    assert_eq!(*called.borrow(), "ManyChat");
 }
 
 #[test] fn integr_flow_configure_calcom() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Cal.com".into());
-    assert_eq!(*called.lock().unwrap(), "Cal.com");
+    assert_eq!(*called.borrow(), "Cal.com");
 }
 
 #[test] fn integr_flow_configure_twilio() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Twilio".into());
-    assert_eq!(*called.lock().unwrap(), "Twilio");
+    assert_eq!(*called.borrow(), "Twilio");
 }
 
 #[test] fn integr_flow_configure_resend() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Resend".into());
-    assert_eq!(*called.lock().unwrap(), "Resend");
+    assert_eq!(*called.borrow(), "Resend");
 }
 
 #[test] fn integr_flow_configure_shippo() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Shippo".into());
-    assert_eq!(*called.lock().unwrap(), "Shippo");
+    assert_eq!(*called.borrow(), "Shippo");
 }
 
 #[test] fn integr_flow_configure_mercadopago() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Mercado Pago".into());
-    assert_eq!(*called.lock().unwrap(), "Mercado Pago");
+    assert_eq!(*called.borrow(), "Mercado Pago");
 }
 
 #[test] fn integr_flow_configure_razorpay() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Razorpay".into());
-    assert_eq!(*called.lock().unwrap(), "Razorpay");
+    assert_eq!(*called.borrow(), "Razorpay");
 }
 
 #[test] fn integr_flow_configure_zoom() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_configure_integration(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Zoom".into());
-    assert_eq!(*called.lock().unwrap(), "Zoom");
+    assert_eq!(*called.borrow(), "Zoom");
 }

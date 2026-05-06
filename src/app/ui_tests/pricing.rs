@@ -93,22 +93,22 @@ fn test_upgrade_prompt_visibility_when_empty() {
 #[test]
 fn test_upgrade_prompt_visibility_storage_limit() {
     let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the storage limit for your current plan. Please upgrade to upload more files.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the storage limit for your current plan. Please upgrade to upload more files.");
+    ui.set_upgrade_prompt_message("Storage limit exceeded (500MB). Upgrade to Starter.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Storage limit exceeded (500MB). Upgrade to Starter.");
 }
 
 #[test]
 fn test_upgrade_prompt_visibility_agent_limit() {
     let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.");
+    ui.set_upgrade_prompt_message("Agent limit exceeded (1 max). Upgrade to Pro.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Agent limit exceeded (1 max). Upgrade to Pro.");
 }
 
 #[test]
 fn test_upgrade_prompt_visibility_action_limit() {
     let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit for your current plan. Please upgrade to continue.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit for your current plan. Please upgrade to continue.");
+    ui.set_upgrade_prompt_message("Monthly action limit reached (100). Upgrade to Starter.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Monthly action limit reached (100). Upgrade to Starter.");
 }
 
 #[test]
@@ -118,39 +118,4 @@ fn test_upgrade_prompt_visibility_clears() {
     assert_eq!(ui.get_upgrade_prompt_message(), "Some error");
     ui.set_upgrade_prompt_message("".into());
     assert_eq!(ui.get_upgrade_prompt_message(), "");
-}
-
-#[test]
-fn test_plain_language_product_limit() {
-    let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit of 10 products for your current plan. Please upgrade to add more.");
-}
-
-#[test]
-fn test_plain_language_agent_limit() {
-    let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.");
-}
-
-#[test]
-fn test_plain_language_storage_limit() {
-    let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the storage limit for your current plan. Please upgrade to upload more files.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the storage limit for your current plan. Please upgrade to upload more files.");
-}
-
-#[test]
-fn test_plain_language_general_action() {
-    let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit for your current plan. Please upgrade to continue.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit for your current plan. Please upgrade to continue.");
-}
-
-#[test]
-fn test_plain_language_team_member() {
-    let ui = create_m();
-    ui.set_upgrade_prompt_message("You reached the limit of team members for your current plan. Please upgrade to invite more.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "You reached the limit of team members for your current plan. Please upgrade to invite more.");
 }

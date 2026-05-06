@@ -1199,7 +1199,59 @@ mod get_conflicts_tests {
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
         assert!(conflicts.is_empty(), "Should have no conflicts");
     }
+
+    #[tokio::test]
+    async fn test_cross_department_sharing() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let record1 = EmbeddingRecord {
+            id: "dept_a_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "sales_agent".to_string(),
+            content: "customer unhappy with pricing".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SUPPORT_TICKET".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+
+        let results = repo.semantic_search("org1", &[0.5, 0.5, 0.5], 5).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "customer unhappy with pricing");
+        assert_eq!(results[0].agent_id, "sales_agent");
+    }
 }
+
 
 #[cfg(test)]
 mod anthropic_memory_tests {

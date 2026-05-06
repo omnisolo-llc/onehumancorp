@@ -91,13 +91,13 @@ fn create() -> app::Login { crate::ui_tests::init(); app::Login::new().unwrap() 
 
 #[test] fn login_callback_chain() {
     let ui = create();
-    let counter = std::sync::Arc::new(std::sync::Mutex::new(0));
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
     let c = counter.clone();
-    ui.on_login(move |_, _| { *c.lock().unwrap() += 1; });
+    ui.on_login(move |_, _| { *c.borrow_mut() += 1; });
     
     ui.invoke_login("u1".into(), "p1".into());
     ui.invoke_login("u2".into(), "p2".into());
-    assert_eq!(*counter.lock().unwrap(), 2);
+    assert_eq!(*counter.borrow(), 2);
 }
 
 // --- Unique Data Tests with Verification ---
@@ -187,13 +187,13 @@ fn login_responsive_desktop_1024() {
 #[test]
 fn login_handles_advanced_options_to_app_settings() {
     let ui = create();
-    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_open_settings(move || {
-        *invoked_clone.lock().unwrap() = true;
+        *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_open_settings();
-    assert!(*invoked.lock().unwrap(), "The Advanced Options button should invoke open_settings");
+    assert!(*invoked.borrow(), "The Advanced Options button should invoke open_settings");
 }
 
 #[test]
@@ -217,14 +217,14 @@ fn grandmother_test_login_no_technical_jargon() {
 #[test]
 fn grandmother_test_login_advanced_options_callback_preservation() {
     let ui = create();
-    let counter = std::sync::Arc::new(std::sync::Mutex::new(0));
+    let counter = std::rc::Rc::new(std::cell::RefCell::new(0));
     let counter_clone = counter.clone();
     ui.on_open_settings(move || {
-        *counter_clone.lock().unwrap() += 1;
+        *counter_clone.borrow_mut() += 1;
     });
     ui.invoke_open_settings();
     ui.invoke_open_settings();
-    assert_eq!(*counter.lock().unwrap(), 2, "Callback for Advanced Options should remain intact and fire multiple times.");
+    assert_eq!(*counter.borrow(), 2, "Callback for Advanced Options should remain intact and fire multiple times.");
 }
 
 #[test]
@@ -240,40 +240,40 @@ fn grandmother_test_login_advanced_options_width_constraint() {
 #[test]
 fn login_handles_oauth() {
     let ui = create();
-    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_oauth_login(move |provider| {
         assert_eq!(provider, "SSO");
-        *invoked_clone.lock().unwrap() = true;
+        *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_oauth_login("SSO".into());
-    assert!(*invoked.lock().unwrap(), "The Continue with Google/Apple button should invoke oauth_login");
+    assert!(*invoked.borrow(), "The Continue with Google/Apple button should invoke oauth_login");
 }
 
 #[test]
 fn login_handles_sign_in_click() {
     let ui = create();
-    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_login(move |username, password| {
         assert_eq!(username, "testuser");
         assert_eq!(password, "testpass");
-        *invoked_clone.lock().unwrap() = true;
+        *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_login("testuser".into(), "testpass".into());
-    assert!(*invoked.lock().unwrap(), "The Sign In button should invoke login");
+    assert!(*invoked.borrow(), "The Sign In button should invoke login");
 }
 
 #[test]
 fn login_handles_start_setup_wizard_programmatically() {
     let ui = create();
-    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_start_setup_wizard(move || {
-        *invoked_clone.lock().unwrap() = true;
+        *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_start_setup_wizard();
-    assert!(*invoked.lock().unwrap(), "start_setup_wizard should still be callable programmatically");
+    assert!(*invoked.borrow(), "start_setup_wizard should still be callable programmatically");
 }
 
 #[test]
@@ -296,7 +296,7 @@ fn test_login_sso_button_text() {
 #[test]
 fn test_login_settings_button_text() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "⚙ App Settings");
+    assert_eq!(ui.get_settings_button_text(), "App Settings");
 }
 
 #[test]

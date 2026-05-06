@@ -773,7 +773,7 @@ mod tests {
             payload: serde_json::json!({
                 "model": "gpt-4-test",
                 "department": "sales"
-            }).to_string().into_bytes(),
+            }).to_string(),
             ..Default::default()
         };
 
@@ -857,15 +857,15 @@ pub async fn start_builtin_agent(
                 let mut department = String::new();
                 let mut model = String::new();
 
-                if let Ok(payload) = crate::proto::hub::TaskPayload::decode(&shared_task.payload[..]) {
-                    if !payload.system_prompt.is_empty() {
-                        system_prompt = payload.system_prompt.clone();
+                if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&shared_task.payload) {
+                    if let Some(sp) = payload_json.get("system_prompt").and_then(|v| v.as_str()) {
+                        system_prompt = sp.to_string();
                     }
-                    if !payload.department.is_empty() {
-                        department = payload.department.clone();
+                    if let Some(dep) = payload_json.get("department").and_then(|v| v.as_str()) {
+                        department = dep.to_string();
                     }
-                    if !payload.model.is_empty() {
-                        model = payload.model.clone();
+                    if let Some(m) = payload_json.get("model").and_then(|v| v.as_str()) {
+                        model = m.to_string();
                     }
                 }
 
@@ -879,7 +879,7 @@ pub async fn start_builtin_agent(
                     max_tokens: 0,
                     temperature: 0.0,
                     max_context_messages: 0,
-                    injected_context_json: String::from_utf8_lossy(&shared_task.payload).to_string(),
+                    injected_context_json: shared_task.payload.clone(),
                     runtime_config: None,
                     toolset_config: None,
                     department,

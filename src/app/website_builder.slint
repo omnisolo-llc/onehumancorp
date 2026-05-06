@@ -69,63 +69,84 @@ export component WebsiteBuilder inherits Window {
             Text { text: "Choose a template"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Optimized for your business"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
             
-            ScrollView {
-                VerticalBox {
-                    spacing: 16px;
-
-                    GlassCard {
-                        height: 120px;
-                        background: selected_template == "Modern Minimal" ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox {
-                            padding: 12px; spacing: 8px;
-                            Text { text: "Modern Minimal"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                            Text { text: "Industry: Portfolios, Creatives"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                            Rectangle { height: 40px; background: selected_template == "Modern Minimal" ? #10b981 : rgba(255,255,255,0.1); border-radius: 4px; Text { text: selected_template == "Modern Minimal" ? "Use this template →" : "Preview..."; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
+            HorizontalBox {
+                spacing: 12px;
+                alignment: center;
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: white; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "✦"; color: #a855f7; font-size: 24px; horizontal-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_template = "Modern Minimal"; } }
+                        Text { text: "✨ Modern"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Clean & Glassy"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
                     }
-                    GlassCard {
-                        height: 120px;
-                        background: selected_template == "Bold Retail" ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox {
-                            padding: 12px; spacing: 8px;
-                            Text { text: "Bold Retail"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                            Text { text: "Industry: E-commerce, Stores"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                            Rectangle { height: 40px; background: selected_template == "Bold Retail" ? #10b981 : rgba(255,255,255,0.1); border-radius: 4px; Text { text: selected_template == "Bold Retail" ? "Use this template →" : "Preview..."; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
+                    TouchArea { clicked => { selected_template = "Modern"; } }
+                }
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: #f1f5f9; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "🏛️"; color: #475569; font-size: 24px; horizontal-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_template = "Bold Retail"; } }
+                        Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Elegant & Solid"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
                     }
-                    GlassCard {
-                        height: 120px;
-                        background: selected_template == "Classic Service" ? rgba(16, 185, 129, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox {
-                            padding: 12px; spacing: 8px;
-                            Text { text: "Classic Service"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                            Text { text: "Industry: Consulting, Services"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                            Rectangle { height: 40px; background: selected_template == "Classic Service" ? #10b981 : rgba(255,255,255,0.1); border-radius: 4px; Text { text: selected_template == "Classic Service" ? "Use this template →" : "Preview..."; color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; } }
+                    TouchArea { clicked => { selected_template = "Classic"; } }
+                }
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: #7e22ce; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "🔥"; color: white; font-size: 24px; horizontal-alignment: center; } }
                         }
-                        TouchArea { clicked => { selected_template = "Classic Service"; } }
+                        Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "High Impact"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
                     }
+                    TouchArea { clicked => { selected_template = "Bold"; } }
                 }
             }
         }
 
-        // Step 1: Branding
+        // Step 1: Colors
         if (step == 1) : VerticalBox {
             spacing: 16px;
             Text { text: "Brand Colors & Logo"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-            Text { text: "Make it yours. AI suggests palettes based on your business type."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-
-            Text { text: "Primary Color Palette"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+            Text { text: "AI suggested 3 palettes"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
             HorizontalBox {
-                spacing: 12px;
-                Rectangle { height: 44px; border-radius: 4px; width: 44px; background: #FF3B30; border-color: primary_color == "#FF3B30" ? white : transparent; border-width: 2px; TouchArea { clicked => { primary_color = "#FF3B30"; } } }
-                Rectangle { height: 44px; border-radius: 4px; width: 44px; background: #34C759; border-color: primary_color == "#34C759" ? white : transparent; border-width: 2px; TouchArea { clicked => { primary_color = "#34C759"; } } }
-                Rectangle { height: 44px; border-radius: 4px; width: 44px; background: #007AFF; border-color: primary_color == "#007AFF" ? white : transparent; border-width: 2px; TouchArea { clicked => { primary_color = "#007AFF"; } } }
-                Rectangle { height: 44px; border-radius: 4px; width: 44px; background: #AF52DE; border-color: primary_color == "#AF52DE" ? white : transparent; border-width: 2px; TouchArea { clicked => { primary_color = "#AF52DE"; } } }
+                spacing: 10px;
+                GlassCard {
+                    height: 80px;
+                    background: primary_color == "#FF3B30" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🔴 Bold Red"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    }
+                    TouchArea { clicked => { primary_color = "#FF3B30"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: primary_color == "#34C759" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🟢 Nature Green"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    }
+                    TouchArea { clicked => { primary_color = "#34C759"; } }
+                }
+                GlassCard {
+                    height: 80px;
+                    background: primary_color == "#007AFF" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🔵 Trust Blue"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    }
+                    TouchArea { clicked => { primary_color = "#007AFF"; } }
+                }
             }
-
             GlassCard {
                 height: 60px;
                 background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -140,7 +161,7 @@ export component WebsiteBuilder inherits Window {
                 background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
                     Text { text: "📷 Upload Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                    Text { text: "Background will be removed with AI"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
+                    Text { text: "Background will be removed"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                 }
                 TouchArea { clicked => { upload_logo(); } }
             }
@@ -163,9 +184,9 @@ export component WebsiteBuilder inherits Window {
 
             GlassCard {
                 height: 44px;
-                background: rgba(168, 85, 247, 0.4);
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "✨ Auto-generate description with AI"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    Text { text: "✨ Auto-generate description"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
                 }
                 TouchArea { clicked => { generate_description(); } }
             }
@@ -174,7 +195,7 @@ export component WebsiteBuilder inherits Window {
                 height: 100px;
                 background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "📷 Upload Photo (Camera/Upload)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                 }
                 TouchArea { clicked => { upload_photo(); } }

@@ -37,13 +37,13 @@ fn create() -> app::Meetings { crate::ui_tests::init(); app::Meetings::new().unw
 
 #[test] fn meetings_injection_join() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_join_room(move |name| { *c.lock().unwrap() = name.to_string(); });
+    ui.on_join_room(move |name| { *c.borrow_mut() = name.to_string(); });
     
     let inj = "room'); DROP TABLE meetings; --";
     ui.invoke_join_room(inj.into());
-    assert_eq!(*called.lock().unwrap(), inj);
+    assert_eq!(*called.borrow(), inj);
 }
 
 // --- Interaction / Flow Tests ---
@@ -62,11 +62,11 @@ fn create() -> app::Meetings { crate::ui_tests::init(); app::Meetings::new().unw
 
 #[test] fn meetings_flow_new_room_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_new_room(move || { *c.lock().unwrap() = true; });
+    ui.on_new_room(move || { *c.borrow_mut() = true; });
     ui.invoke_new_room();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 // --- Unique Scenarios with Verification ---

@@ -96,7 +96,7 @@ fn convert_to_proto(t: Task) -> ProtoTask {
         created_at_unix: t.created_at.timestamp(),
         last_run_at_unix: t.last_run_at.map(|dt| dt.timestamp()).unwrap_or(0),
         next_run_at_unix: t.next_run_at.map(|dt| dt.timestamp()).unwrap_or(0),
-        payload: serde_json::to_string(&t.payload).unwrap_or_default().into_bytes(),
+        payload: serde_json::to_string(&t.payload).unwrap_or_default(),
     }
 }
 
