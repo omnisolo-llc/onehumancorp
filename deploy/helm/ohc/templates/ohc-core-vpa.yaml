@@ -1,4 +1,4 @@
-{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled .Values.ohcCore.vpa.enabled }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:

@@ -1,4 +1,4 @@
-{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
+{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled .Values.chatwoot.vpa.enabled }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
