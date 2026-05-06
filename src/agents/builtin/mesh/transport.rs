@@ -85,7 +85,7 @@ impl MeshTransport for MemoryTransport {
                 Ok(true)
             }
             Entry::Occupied(mut e) => {
-                if e.get().0 == owner {
+                if e.get().1 <= now || e.get().0 == owner {
                     e.insert((owner.to_string(), expires_at));
                     Ok(true)
                 } else {
