@@ -6,6 +6,7 @@ import { StatCard } from "stat_card.slint";
 
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 import { DailyBriefing } from "daily_briefing.slint";
+import { WebsitePreviewWidget } from "website_preview.slint";
 
 export struct UiPendingApproval {
     task_id: string,
@@ -236,6 +237,16 @@ export component Dashboard inherits Window {
                         Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
                     }
                 }
+            }
+        }
+
+        WebsitePreviewWidget {
+            url: "https://mybusiness.ohc.app";
+            open_full_screen => {
+                // Handle open full screen
+            }
+            edit_website => {
+                // Open website builder
             }
         }
 

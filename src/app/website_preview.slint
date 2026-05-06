@@ -1,0 +1,144 @@
+import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component WebsitePreviewWidget inherits Rectangle {
+    in property <string> url: "https://mybusiness.ohc.app";
+    in property <bool> is_loading: false;
+
+    callback open_full_screen();
+    callback edit_website();
+
+    background: transparent;
+
+    VerticalBox {
+        spacing: 12px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text {
+                text: "Website Preview";
+                font-size: 20px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+                vertical-alignment: center;
+            }
+            TooltipElement {
+                tooltip_id: "edit_website";
+                Button {
+                    text: "Edit";
+                    width: 64px;
+                    height: 36px;
+                    clicked => { edit_website(); }
+                }
+            }
+        }
+
+        GlassCard {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            height: 300px;
+
+            VerticalBox {
+                padding: 0px;
+
+                // Browser Chrome (Fake Address Bar)
+                Rectangle {
+                    height: 36px;
+                    background: #1e293b;
+                    border-top-left-radius: 12px;
+                    border-top-right-radius: 12px;
+
+                    HorizontalBox {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        alignment: start;
+                        spacing: 8px;
+
+                        // Fake window buttons
+                        Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #ef4444; y: 12px; }
+                        Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #eab308; y: 12px; }
+                        Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #22c55e; y: 12px; }
+
+                        Rectangle { width: 16px; } // spacer
+
+                        GlassCard {
+                            height: 24px;
+                            width: 200px;
+                            y: 6px;
+                            background: rgba(255,255,255,0.05);
+                            border-radius: 4px;
+                            HorizontalBox {
+                                alignment: center;
+                                Text {
+                                    text: "🔒 " + url;
+                                    color: #cbd5e1;
+                                    font-size: 12px;
+                                    font-family: "Inter";
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Content area
+                Rectangle {
+                    clip: true;
+                    background: #0f172a;
+                    border-bottom-left-radius: 12px;
+                    border-bottom-right-radius: 12px;
+
+                    if (is_loading) : VerticalBox {
+                        alignment: center;
+                        Text {
+                            text: "Loading Preview...";
+                            color: #94a3b8;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    if (!is_loading) : VerticalBox {
+                        padding: 16px;
+                        spacing: 16px;
+
+                        Text {
+                            text: "Welcome to My Business";
+                            font-size: 24px;
+                            font-family: "Outfit";
+                            font-weight: 700;
+                            color: white;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "The best services in town.";
+                            color: #94a3b8;
+                            horizontal-alignment: center;
+                        }
+
+                        HorizontalBox {
+                            alignment: center;
+                            Button {
+                                text: "Book Now";
+                                height: 36px;
+                            }
+                        }
+                    }
+
+                    TouchArea {
+                        clicked => { open_full_screen(); }
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: "Tap to view in full screen";
+            font-size: 12px;
+            color: #64748b;
+            horizontal-alignment: center;
+        }
+    }
+}
