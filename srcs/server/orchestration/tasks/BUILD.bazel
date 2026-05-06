@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tasks",
+    srcs = ["task_decomposition_service.go"],
+    importpath = "onehumancorp/srcs/server/orchestration/tasks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "tasks_test",
+    srcs = [
+        "task_decomposition_service_test.go",
+        "task_decomposition_service_mock_test.go",
+    ],
+    embed = [":tasks"],
+    deps = [
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
