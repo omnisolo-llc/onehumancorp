@@ -371,6 +371,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_loading(false);
                                 if needs_wizard {
+                                    let _ = ui.hide();
                                     ui.invoke_start_setup_wizard();
                                 } else {
                                     ui.hide().unwrap();
@@ -2563,6 +2564,7 @@ mod growth_e2e_tests {
                         }
 
                         if needs_wizard {
+                            let _ = ui.hide();
                             ui.invoke_start_setup_wizard();
                         }
                     }
@@ -5895,6 +5897,99 @@ mod e2e_hybrid_blob_tests {
         });
         login_ui.invoke_start_setup_wizard();
         assert!(*start_setup_called.borrow(), "Start setup wizard should be invoked from Login UI");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_full_loop_physical_store() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+
+        let flow_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let flow_started_clone = flow_started.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *flow_started_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*flow_started.borrow(), "Setup Wizard should launch from Login");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_full_loop_service_business() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+
+        let flow_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let flow_started_clone = flow_started.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *flow_started_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_username("carlos@example.com".into());
+        login_ui.set_password("repairs123".into());
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*flow_started.borrow(), "Setup Wizard should launch from Login for Service Business");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_full_loop_digital_products() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+
+        let flow_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let flow_started_clone = flow_started.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *flow_started_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_username("creative@example.com".into());
+        login_ui.set_password("digital123".into());
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*flow_started.borrow(), "Setup Wizard should launch from Login for Digital Products");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_full_loop_food_beverage() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+
+        let flow_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let flow_started_clone = flow_started.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *flow_started_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_username("fatima@example.com".into());
+        login_ui.set_password("cart123".into());
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*flow_started.borrow(), "Setup Wizard should launch from Login for Food Cart");
+    }
+
+    #[test]
+    fn test_e2e_onboarding_full_loop_creative_portfolio() {
+        crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+
+        let flow_started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let flow_started_clone = flow_started.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *flow_started_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_username("leo@example.com".into());
+        login_ui.set_password("music123".into());
+        login_ui.invoke_start_setup_wizard();
+
+        assert!(*flow_started.borrow(), "Setup Wizard should launch from Login for Creative Portfolio");
     }
 
     #[test]
