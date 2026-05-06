@@ -29,7 +29,6 @@ rust_binary(
     name = "app",
     srcs = [
         "main.rs",
-        "action_queue.rs",
     ],
     compile_data = ["tooltips.json"],
     data = [
@@ -124,7 +123,6 @@ rust_test(
     size = "large",
     srcs = [
         "main.rs",
-        "action_queue.rs",
     ] + glob(["ui_tests/**/*.rs"]),
     compile_data = ["tooltips.json"],
     crate_root = "main.rs",
@@ -220,7 +218,7 @@ rust_test(
 # Note: Build bindings with: bazel build //src/app:app_web_bindgen
 rust_shared_library(
     name = "app_web",
-    srcs = ["main.rs", "action_queue.rs"],
+    srcs = ["main.rs"],
     crate_root = "main.rs",
     data = glob(["*.slint"]),
     edition = "2024",
