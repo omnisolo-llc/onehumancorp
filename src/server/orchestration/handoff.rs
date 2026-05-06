@@ -171,6 +171,8 @@ mod tests {
 
         let cancel = manager_arc.start_listener().await.unwrap();
 
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
         let res = manager_arc.initiate_handoff("tenant1", "state1", b"some_state".to_vec(), "agent_memories").await;
 
         // Let listener process loop
