@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 export struct UiAgent {
@@ -16,7 +17,7 @@ export component Agents inherits Window {
     height: 600px;
     title: "Helpers";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <[UiAgent]> agents;
 
@@ -36,7 +37,7 @@ export component Agents inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Helpers"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             Button { text: "Hire Helper"; clicked => { hire_agent(); } }
         }
@@ -44,15 +45,11 @@ export component Agents inherits Window {
         VerticalBox {
             spacing: 10px;
             
-            for agent in agents : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            for agent in agents : GlassCard {
                 
                 if (agent.is_new) : Rectangle {
                     background: transparent;
-                    border-radius: 8px;
+                    border-radius: 12px;
                     border-width: 2px;
                     border-color: #10b981;
                     property <bool> is_bright: true;
@@ -68,13 +65,14 @@ export component Agents inherits Window {
                     padding: 16px;
                     Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
                     VerticalBox {
-                        Text { text: agent.name; font-weight: 700; color: #1e293b; }
-                        Text { text: agent.role; color: #64748b; }
+                        Text { text: agent.name; font-family: "Inter"; font-weight: 700; color: white; }
+                        Text { text: agent.role; font-family: "Inter"; color: #94a3b8; }
                     }
                     Rectangle {} 
                     VerticalBox {
                         Text { 
                             text: agent.status; 
+                            font-family: "Inter";
                             color: agent.is_running ? #10b981 : #ef4444; 
                             horizontal-alignment: center; 
                         }
