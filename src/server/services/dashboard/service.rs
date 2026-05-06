@@ -91,8 +91,56 @@ impl DashboardService for MyDashboardService {
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
 
+        let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
+        let agent_id_set: std::collections::HashSet<String> = _filtered_agents.iter().map(|a| a.id.clone()).collect();
+
+        let mut filtered_app_agents = Vec::new();
+        for a in _filtered_agents.iter() {
+            let role_enum = match a.role.to_uppercase().as_str() {
+                "CEO" => 1,
+                "PRODUCT_MANAGER" => 2,
+                "SOFTWARE_ENGINEER" => 3,
+                "ENGINEERING_DIRECTOR" => 4,
+                "QA_TESTER" => 5,
+                "SECURITY_ENGINEER" => 6,
+                "DESIGNER" => 7,
+                "MARKETING_MANAGER" => 8,
+                "GROWTH_AGENT" => 9,
+                "CONTENT_STRATEGIST" => 10,
+                "SEO_SPECIALIST" => 11,
+                "PAID_MEDIA_MANAGER" => 12,
+                "ANALYTICS_ENGINEER" => 13,
+                "CFO" => 14,
+                "BOOKKEEPER" => 15,
+                "TAX_SPECIALIST" => 16,
+                "AUDIT_MANAGER" => 17,
+                "PAYROLL_MANAGER" => 18,
+                "AI_NEWS_COLLECTOR" => 19,
+                _ => 0,
+            };
+            let status_enum = match a.status.to_uppercase().as_str() {
+                "IDLE" => 1,
+                "ACTIVE" => 2,
+                "IN_MEETING" => 3,
+                "BLOCKED" => 4,
+                _ => 0,
+            };
+
+            filtered_app_agents.push(crate::ohc::agent::Agent {
+                id: a.id.clone(),
+                organization_id: a.organization_id.clone(),
+                name: a.name.clone(),
+                role: role_enum,
+                status: status_enum,
+            });
+        }
+
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
+            if !m.participants.iter().any(|p| agent_id_set.contains(p)) {
+                continue;
+            }
+
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
                 for msg in &m.transcript {
@@ -114,25 +162,46 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
-
         let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
+        for a in _filtered_agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
+        let mut filtered_total_cost = 0.0;
+        let mut filtered_total_tokens = 0;
+        let mut filtered_agent_costs = Vec::new();
+
+        for (name, cost, token_used, roi, efficiency) in _agent_costs_data {
+            if agent_id_set.contains(&name) {
+                filtered_total_cost += cost;
+                filtered_total_tokens += token_used;
+                filtered_agent_costs.push(crate::ohc::billing::AgentCostSummary {
+                    agent_id: name,
+                    cost_usd: cost,
+                    token_used,
+                    roi,
+                    efficiency,
+                    pct: 0.0,
+                });
+            }
+        }
+
+        for ac in &mut filtered_agent_costs {
+            ac.pct = if filtered_total_cost > 0.0 { (ac.cost_usd / filtered_total_cost) as f32 } else { 0.0 };
+        }
+
         let cost_summary = crate::ohc::billing::CostSummary {
             organization_id: req.organization_id.clone(),
-            total_cost_usd: total_cost,
-            total_tokens,
-            projected_monthly_usd: 0.0,
-            agents: vec![],
+            total_cost_usd: filtered_total_cost,
+            total_tokens: filtered_total_tokens,
+            projected_monthly_usd: filtered_total_cost * 30.0,
+            agents: filtered_agent_costs,
         };
 
         Ok(Response::new(DashboardSnapshot {
             organization: None, // Need to query DB for org info
-            agents: vec![],
+            agents: filtered_app_agents,
             meetings: out_meetings,
             cost_summary: Some(cost_summary),
             statuses,

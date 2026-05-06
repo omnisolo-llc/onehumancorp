@@ -20,7 +20,7 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(&self) -> Result<DashboardSnapshot, Status> {
+    async fn get_snapshot(&self, org_id: &str) -> Result<DashboardSnapshot, Status> {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
@@ -34,36 +34,56 @@ impl MyAgentManagerService {
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (_total_cost, _total_tokens, agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut agent_costs = Vec::new();
-        for (name, cost, _token_used, roi, efficiency) in agent_costs_data {
-            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
-            agent_costs.push(AgentCostSummary {
-                name,
-                cost_usd: cost,
-                roi,
-                efficiency,
-                pct,
-            });
+        let filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id))).cloned().collect();
+        let agent_id_set: std::collections::HashSet<String> = filtered_agents.iter().map(|a| a.id.clone()).collect();
+
+        let mut out_meetings: Vec<crate::ohc::orchestration::MeetingRoom> = Vec::new();
+        for m in meetings.iter() {
+            if m.participants.iter().any(|p| agent_id_set.contains(p)) {
+                out_meetings.push(m.clone());
+            }
         }
 
-        let costs = Summary {
-            total_cost_usd: total_cost,
-            agent_costs,
-            total_tokens,
-        };
-
         let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
+        for a in filtered_agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
+        let mut filtered_total_cost = 0.0;
+        let mut filtered_total_tokens = 0;
+        let mut filtered_agent_costs = Vec::new();
+
+        for (name, cost, token_used, roi, efficiency) in agent_costs_data {
+            if agent_id_set.contains(&name) {
+                filtered_total_cost += cost;
+                filtered_total_tokens += token_used;
+                filtered_agent_costs.push(AgentCostSummary {
+                    name,
+                    cost_usd: cost,
+                    roi,
+                    efficiency,
+                    pct: 0.0,
+                });
+            }
+        }
+
+        for ac in &mut filtered_agent_costs {
+            ac.pct = if filtered_total_cost > 0.0 { (ac.cost_usd / filtered_total_cost) as f32 } else { 0.0 };
+        }
+
+        let costs = Summary {
+            total_cost_usd: filtered_total_cost,
+            agent_costs: filtered_agent_costs,
+            total_tokens: filtered_total_tokens,
+        };
+
         Ok(DashboardSnapshot {
-            meetings: meetings.to_vec(),
+            meetings: out_meetings,
             costs: Some(costs),
-            agents: agents.to_vec(),
+            agents: filtered_agents,
             statuses,
             task_queue: vec![],
             queue_length: 0,
@@ -93,20 +113,24 @@ impl AgentManagerService for MyAgentManagerService {
             id,
             name: req.name,
             role: req.role,
-            organization_id: org_id,
+            organization_id: org_id.clone(),
             status: "IDLE".to_string(),
             provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
 
         self.hub.register_agent(agent);
 
-        Ok(Response::new(self.get_snapshot().await?))
+        Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
     async fn fire_agent(
         &self,
         request: Request<FireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agentId is required"));
@@ -114,13 +138,17 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.fire_agent(&req.agent_id);
 
-        Ok(Response::new(self.get_snapshot().await?))
+        Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
     async fn delegate_task(
         &self,
         request: Request<DelegateTaskRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
         let req = request.into_inner();
         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
         
@@ -131,7 +159,7 @@ impl AgentManagerService for MyAgentManagerService {
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
 
-        Ok(Response::new(self.get_snapshot().await?))
+        Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
     async fn get_agent_providers(
@@ -268,20 +296,28 @@ impl AgentManagerService for MyAgentManagerService {
 
     async fn get_dashboard_snapshot(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        Ok(Response::new(self.get_snapshot().await?))
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+        Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
     async fn restore_snapshot(
         &self,
         request: Request<RestoreSnapshotRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
         let req = request.into_inner();
         if req.snapshot_id.is_empty() {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot().await?))
+        Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 }
