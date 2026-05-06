@@ -185,6 +185,73 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst), "Should receive message published via CentrifugeNode");
     }
+
+    #[tokio::test]
+    async fn test_mesh_acquire_lock() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let node = CentrifugeNode::new(transport);
+
+        let acquired = node.acquire_lock("test_resource", "agent_1", 10).await.unwrap();
+        assert!(acquired);
+
+        let acquired_again = node.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        assert!(!acquired_again);
+
+        node.release_lock("test_resource", "agent_1").await.unwrap();
+
+        let acquired_after_release = node.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        assert!(acquired_after_release);
+    }
+
+    #[tokio::test]
+    async fn test_mesh_register_presence() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let node = CentrifugeNode::new(transport);
+
+        node.register_presence("agent_1", "online", 10).await.unwrap();
+        node.register_presence("agent_2", "busy", 10).await.unwrap();
+
+        let mut agents = node.get_active_agents().await.unwrap();
+        agents.sort();
+
+        assert_eq!(agents.len(), 2);
+        assert_eq!(agents[0], ("agent_1".to_string(), "online".to_string()));
+        assert_eq!(agents[1], ("agent_2".to_string(), "busy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_mesh_ping_pong() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let node = CentrifugeNode::new(transport);
+
+        let _cancel_responder = node.start_health_responder().await.unwrap();
+
+        // Give the responder a moment to subscribe
+        sleep(Duration::from_millis(50)).await;
+
+        let result = node.ping().await;
+        assert!(result.is_ok(), "Ping should receive an ack successfully");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_state_handoff() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let node = CentrifugeNode::new(transport);
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = node.subscribe_state_handoff(Box::new(move |msg| {
+            if msg.payload == b"state_data" {
+                received_clone.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        node.publish_state_handoff(b"state_data".to_vec()).await.unwrap();
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst), "Should receive state handoff message");
+    }
     #[tokio::test]
     async fn test_get_mesh_transport_sqlite_memory() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
