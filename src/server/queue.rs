@@ -1035,7 +1035,7 @@ mod tests {
     impl JobPayloadHandler for MockHandler {
         async fn handle(&self, payload: Vec<u8>) -> Result<(), String> {
             let s = String::from_utf8(payload).unwrap();
-            println!("MockHandler received: {}", s);
+            tracing::info!("MockHandler received: {}", s);
             Ok(())
         }
     }
