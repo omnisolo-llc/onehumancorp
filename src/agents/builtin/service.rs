@@ -315,6 +315,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            max_retries: 2,
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
             model,
@@ -563,6 +564,7 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                max_retries: 2,
                 enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },

@@ -27,6 +27,8 @@ pub enum AgentEvent {
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
+    /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+    pub max_retries: usize,
     pub model: String,
     pub server_system_message: String,
     pub developer_instructions: String,
@@ -64,6 +66,7 @@ impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
             agent_id: "default-agent".to_string(),
+            max_retries: 2,
             model: String::new(),
             server_system_message: String::new(),
             developer_instructions: String::new(),
@@ -361,6 +364,7 @@ impl Agent {
 
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
+        let cfg_max_retries = cfg.max_retries;
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
             Box::pin(async move {
@@ -393,7 +397,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = 2;
+                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let mut final_res;
 
                             loop {
@@ -471,7 +475,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = 2;
+                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let mut final_res;
 
                         loop {
@@ -1093,12 +1097,13 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
+                let cfg_max_retries = cfg.max_retries;
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = 2;
+                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1243,7 +1248,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = 2;
+                let max_retries = cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
