@@ -11,15 +11,11 @@ export struct UiUser {
     avatar_letter: string,
 }
 
-export component GrowthReferralWidget inherits Rectangle {
+export component GrowthReferralWidget inherits GlassCard {
     callback invite_user();
 
     background: ta.has-hover ? rgba(255, 255, 255, 0.05) : rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
     drop-shadow-blur: ta.has-hover ? 25px : 20px;
-    drop-shadow-color: rgba(0, 0, 0, 0.5);
 
     animate background { duration: 200ms; easing: ease-in-out; }
     animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
