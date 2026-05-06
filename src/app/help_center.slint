@@ -22,12 +22,17 @@ export component HelpCenter inherits Window {
     changed search_query => { root.execute_search(); }
 
     in property <[HelpArticle]> articles: [
-        { category: "Getting Started", title: "Set up your store in 5 minutes", description: "Follow our simple guide to add your first product and go live." },
-        { category: "My Store", title: "How to add products", description: "Learn how to list new items, add photos, and set prices." },
-        { category: "Payments & Billing", title: "How to accept Apple Pay", description: "Enable Apple Pay with one click in your payment settings." },
-        { category: "AI Helpers", title: "What can the Customer Success Helper do?", description: "Your helper can reply to customer emails and Instagram DMs automatically." },
-        { category: "Marketing", title: "How to run a promotion", description: "Learn how to create discount codes and share them on social media." },
-        { category: "Account & Billing", title: "How to change your subscription", description: "Find out how to upgrade or downgrade your plan and view past invoices." }
+        { category: "Getting Started", title: "Welcome to OneHumanCorp!", description: "We're so glad you're here! Our mission is to help you launch your business in under 10 minutes. Use the Setup Wizard to get started with no technical skills needed." },
+        { category: "Getting Started", title: "Guided Setup vs Instant Build", description: "Choose 'Guided Setup' to walk through every detail, or 'Instant Build' to let our AI design your entire storefront from a short description of your business." },
+        { category: "My Store", title: "Adding Your Products", description: "Go to 'Add' in the bottom menu to list what you sell. You can add photos, set prices, and even let AI write your product descriptions for you." },
+        { category: "My Store", title: "Managing Your Inventory", description: "Keep track of what's in stock. You can set inventory limits for physical products like Maya's cakes or Priya's boutique items." },
+        { category: "Payments", title: "How to Get Paid", description: "Connect your bank account via Stripe to accept credit cards, Apple Pay, and Google Pay. You can take payments online or in-person using your phone." },
+        { category: "Payments", title: "Deposits & Custom Quotes", description: "If you're a service provider like Carlos the handyman, you can ask for a deposit or send a custom quote before the job starts." },
+        { category: "AI Helpers", title: "Meet Your AI Team", description: "Your AI Helpers (The Manager, The Promoter, The Ambassador) work in the background 24/7. They handle customer questions, post to social media, and track your sales." },
+        { category: "AI Helpers", title: "Training Your Helpers", description: "You can adjust how your helpers talk to customers. Want them to be 'Friendly' like Maya or 'Professional' like Priya? Just head to Helper Settings." },
+        { category: "Marketing", title: "Promoting Your Business", description: "Use the 'Grow Business' tool to run email campaigns or connect your Instagram. Your helpers can even draft posts for you to approve." },
+        { category: "Marketing", title: "Sharing Your Store", description: "Click 'Share Store' to get a beautiful link for your TikTok bio or to send to friends via WhatsApp." },
+        { category: "Account & Billing", title: "Simple, Transparent Pricing", description: "We offer a 'Free' tier to get you started. As you grow, you can upgrade to 'Pro' for more AI power and a custom domain (like www.yourname.com)." }
     ];
 
     HorizontalBox {

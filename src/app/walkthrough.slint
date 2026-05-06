@@ -41,7 +41,7 @@ export component Walkthrough inherits Window {
                 }
                 
                 Text {
-                    text: current_step == 0 ? "Your agent writes down what it learned and saves it on your computer." :
+                    text: current_step == 0 ? "Your helper writes down what it learned and saves it on your computer." :
                           current_step == 1 ? "The system checks your computer for any new knowledge that hasn't been shared yet." :
                           current_step == 2 ? "The system gathers all the new knowledge together to send it out." :
                           current_step == 3 ? "The system safely sends your gathered knowledge over the internet to your cloud backup." :

@@ -1,18 +1,18 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-export component AgentConfig inherits Window {
+export component HelperConfig inherits Window {
     width: 600px;
     height: 500px;
     title: "Configure Helper";
 
-    callback activate_agent(string, bool, bool, bool, bool, string);
+    callback activate_helper(string, bool, bool, bool, bool, string);
     callback next_step();
     callback save_state();
 
     in-out property <int> step: 0;
-    in-out property <string> selected_agent: "";
-    in-out property <string> selected_agent_display: "";
+    in-out property <string> selected_helper: "";
+    in-out property <string> selected_helper_display: "";
     in-out property <bool> can_reply: false;
     in-out property <bool> can_social: false;
     in-out property <bool> can_write_descriptions: false;
@@ -54,12 +54,12 @@ export component AgentConfig inherits Window {
             }
         }
 
-        // Step 0: Choose Agent
+        // Step 0: Choose Helper
         if (step == 0) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
                 Text { text: "Developer: Raw Config Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "{ \"agent_id\": \"override-123\" }"; }
+                LineEdit { placeholder-text: "{ \"helper_id\": \"override-123\" }"; }
             }
             spacing: 20px;
             Text { text: "Choose a helper to add to your team"; font-family: "Inter"; color: white; }
@@ -70,7 +70,7 @@ export component AgentConfig inherits Window {
                     spacing: 12px;
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "CustomerSuccess" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_helper == "CustomerSuccess" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "🎧"; font-size: 32px; }
@@ -80,11 +80,11 @@ export component AgentConfig inherits Window {
                                 Text { text: "Customer Success — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "The Ambassador"; } }
+                        TouchArea { clicked => { selected_helper = "CustomerSuccess"; selected_helper_display = "The Ambassador"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "Marketing" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_helper == "Marketing" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "📱"; font-size: 32px; }
@@ -94,11 +94,11 @@ export component AgentConfig inherits Window {
                                 Text { text: "Marketing & Advertising — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Marketing"; selected_agent_display = "The Promoter"; } }
+                        TouchArea { clicked => { selected_helper = "Marketing"; selected_helper_display = "The Promoter"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "Sales" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_helper == "Sales" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "🤝"; font-size: 32px; }
@@ -108,11 +108,11 @@ export component AgentConfig inherits Window {
                                 Text { text: "Sales & Acquisition — finds and wins customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Sales"; selected_agent_display = "The Salesperson"; } }
+                        TouchArea { clicked => { selected_helper = "Sales"; selected_helper_display = "The Salesperson"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "Operations" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_helper == "Operations" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "📦"; font-size: 32px; }
@@ -122,11 +122,11 @@ export component AgentConfig inherits Window {
                                 Text { text: "Operations — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Operations"; selected_agent_display = "The Manager"; } }
+                        TouchArea { clicked => { selected_helper = "Operations"; selected_helper_display = "The Manager"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "Finance" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_helper == "Finance" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "💰"; font-size: 32px; }
@@ -136,11 +136,11 @@ export component AgentConfig inherits Window {
                                 Text { text: "Finance & Payments — makes sure money flows"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Finance"; selected_agent_display = "The Accountant"; } }
+                        TouchArea { clicked => { selected_helper = "Finance"; selected_helper_display = "The Accountant"; } }
                     }
                 }
             }
-            Text { text: "Selected: " + selected_agent_display; color: #a855f7; font-family: "Inter"; font-weight: 700; }
+            Text { text: "Selected: " + selected_helper_display; color: #a855f7; font-family: "Inter"; font-weight: 700; }
         }
 
         // Step 1: Capabilities
@@ -191,7 +191,7 @@ export component AgentConfig inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "Helper: " + selected_agent_display; color: white; font-family: "Inter"; font-weight: 700; }
+                    Text { text: "Helper: " + selected_helper_display; color: white; font-family: "Inter"; font-weight: 700; }
                     Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
                     Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
                     Text { text: "Write Descriptions: " + (can_write_descriptions ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
@@ -217,7 +217,7 @@ export component AgentConfig inherits Window {
                         next_step();
                     } else {
                         show_toast = true;
-                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
+                        activate_helper(selected_helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
                     }
                 }
             }

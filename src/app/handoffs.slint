@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export struct UiHandoff {
     id: string,
     intent: string,
-    agent_name: string,
+    helper_name: string,
     description: string,
     date: string,
     status: string,
@@ -56,7 +56,7 @@ export component Handoffs inherits Window {
                         Text { text: h.date; color: #64748b; font-size: 12px; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Escalated by Helper: " + h.agent_name; color: #1e293b; font-weight: 700; }
+                    Text { text: "Escalated by Helper: " + h.helper_name; color: #1e293b; font-weight: 700; }
                     Text { text: h.description; color: #1e293b; wrap: word-wrap; }
                     
                     HorizontalBox {

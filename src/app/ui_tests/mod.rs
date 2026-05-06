@@ -5,7 +5,7 @@ pub mod dashboard;
 pub mod referrals;
 pub mod builder;
 pub mod pricing;
-pub mod agents;
+pub mod helpers;
 pub mod settings;
 pub mod chat;
 pub mod ai_config;
@@ -38,8 +38,8 @@ pub mod channels;
 pub mod cost_dashboard;
 pub mod logs;
 pub mod prompt_tuning;
-pub mod secure_agent_config;
-pub mod agent_config;
+pub mod secure_helper_config;
+pub mod helper_config;
 pub mod daily_briefing;
 
 pub fn init() {

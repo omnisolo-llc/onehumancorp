@@ -4220,6 +4220,7 @@ dependencies = [
  "hex",
  "hmac",
  "jsonwebtoken",
+ "mockito",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",

@@ -39,8 +39,8 @@ fn create_verify_user_input() {
     assert_eq!(ui.get_user_input(), "How do I add a product?");
     ui.set_user_input("Can I use Apple Pay?".into());
     assert_eq!(ui.get_user_input(), "Can I use Apple Pay?");
-    ui.set_user_input("What is an AI agent?".into());
-    assert_eq!(ui.get_user_input(), "What is an AI agent?");
+    ui.set_user_input("What is an AI helper?".into());
+    assert_eq!(ui.get_user_input(), "What is an AI helper?");
 }
 
 #[test]

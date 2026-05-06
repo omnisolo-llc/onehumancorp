@@ -5,7 +5,7 @@ export struct UiPricingTier {
     price: string,
     description: string,
     is_recommended: bool,
-    agent_limit: string,
+    helper_limit: string,
     storage_limit: string,
     support_level: string,
     features: [string],
@@ -27,40 +27,40 @@ export component Pricing inherits Window {
             price: is_annual ? "$0/mo" : "$0/mo",
             description: "Up to 100 AI Actions, 500MB storage.",
             is_recommended: false,
-            agent_limit: "1 agent limit",
+            helper_limit: "1 helper limit",
             storage_limit: "500MB storage limit",
             support_level: "Community support",
-            features: ["Basic Storefront", "Standard Agents", "Community Support"],
+            features: ["Basic Storefront", "Standard Helpers", "Community Support"],
         },
         {
             name: "Starter",
             price: is_annual ? "$7/mo (20% off)" : "$9/mo",
             description: "Up to 1000 AI Actions, 5GB storage.",
             is_recommended: false,
-            agent_limit: "5 agent limit",
+            helper_limit: "5 helper limit",
             storage_limit: "5GB storage limit",
             support_level: "Email support",
-            features: ["Custom Domain", "Advanced Agents", "Email Support"],
+            features: ["Custom Domain", "Advanced Helpers", "Email Support"],
         },
         {
             name: "Pro",
             price: is_annual ? "$23/mo (20% off)" : "$29/mo",
             description: "Unlimited AI Actions, 50GB storage.",
             is_recommended: true,
-            agent_limit: "Unlimited number of agents",
+            helper_limit: "Unlimited number of helpers",
             storage_limit: "50GB storage limit",
             support_level: "Priority support",
-            features: ["Multiple Locations", "Pro Agents", "Priority Support"],
+            features: ["Multiple Locations", "Pro Helpers", "Priority Support"],
         },
         {
             name: "Business",
             price: is_annual ? "$63/mo (20% off)" : "$79/mo",
             description: "Business features and support.",
             is_recommended: false,
-            agent_limit: "Unlimited number of agents",
+            helper_limit: "Unlimited number of helpers",
             storage_limit: "Unlimited storage limit",
             support_level: "Dedicated support",
-            features: ["White-label", "Custom Agents", "Dedicated Support"],
+            features: ["White-label", "Custom Helpers", "Dedicated Support"],
         },
     ];
 
@@ -116,7 +116,7 @@ export component Pricing inherits Window {
                         Text { text: tier.price; font-size: 16px; color: #a855f7; }
                         Text { text: tier.description; color: #64748b; wrap: word-wrap; width: 100%; }
 
-                        Text { text: tier.agent_limit; color: #475569; }
+                        Text { text: tier.helper_limit; color: #475569; }
                         Text { text: tier.storage_limit; color: #475569; }
                         Text { text: tier.support_level; color: #475569; }
 

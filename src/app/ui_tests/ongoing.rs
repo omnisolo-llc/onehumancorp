@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
+fn create_f() -> app::FixHelper { crate::ui_tests::init(); app::FixHelper::new().unwrap() }
 fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
 fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unwrap() }
 
@@ -96,7 +96,7 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
 // --- Unique Scenarios with Verification ---
 
-#[test] fn fix_agent_callbacks() {
+#[test] fn fix_helper_callbacks() {
     let ui = create_f();
 
     let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -107,8 +107,8 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
     let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let return_called_clone = return_called.clone();
-    ui.on_return_to_agents(move || { *return_called_clone.borrow_mut() = true; });
-    ui.invoke_return_to_agents();
+    ui.on_return_to_helpers(move || { *return_called_clone.borrow_mut() = true; });
+    ui.invoke_return_to_helpers();
     assert!(*return_called.borrow());
 }
 

@@ -1,7 +1,7 @@
 import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-export struct UiAgentCost {
+export struct UiHelperCost {
     name: string,
     cost: string,
     roi: string,
@@ -17,7 +17,7 @@ export component CostDashboard inherits Window {
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";
-    in-out property <[UiAgentCost]> agent_costs;
+    in-out property <[UiHelperCost]> helper_costs;
 
     callback refresh_data();
 
@@ -103,7 +103,7 @@ export component CostDashboard inherits Window {
                 padding: 16px;
                 spacing: 12px;
                 
-                for ac in agent_costs : VerticalBox {
+                for ac in helper_costs : VerticalBox {
                     spacing: 4px;
                     HorizontalBox {
                         Text { text: ac.name; color: white; }

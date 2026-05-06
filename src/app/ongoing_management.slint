@@ -1,7 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-export component FixAgent inherits Window {
+export component FixHelper inherits Window {
     preferred-width: 400px;
     min-width: 375px;
     height: 600px;
@@ -12,7 +12,7 @@ export component FixAgent inherits Window {
     in-out property <bool> is_advanced: false;
 
     callback apply_fix();
-    callback return_to_agents();
+    callback return_to_helpers();
     callback save_state();
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -87,7 +87,7 @@ export component FixAgent inherits Window {
                             border-radius: 4px;
                             HorizontalLayout {
                                 padding: 8px;
-                                Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "$ kubectl rollout restart deploy/helper-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                             }
                         }
                     }
@@ -113,10 +113,10 @@ export component FixAgent inherits Window {
                     spacing: 16px;
                     alignment: center;
                     Text { text: "✓"; font-size: 48px; color: #10b981; horizontal-alignment: center; }
-                    Text { text: "Fix applied successfully! The agent is healthy again."; color: white; horizontal-alignment: center; font-family: "Inter"; font-size: 16px; }
+                    Text { text: "Fix applied successfully! The helper is healthy again."; color: white; horizontal-alignment: center; font-family: "Inter"; font-size: 16px; }
                 }
             }
-            Button { text: "Return to Helpers"; clicked => { return_to_agents(); } }
+            Button { text: "Return to Helpers"; clicked => { return_to_helpers(); } }
         }
     }
 }
@@ -170,7 +170,7 @@ export component Upgrade inherits Window {
             GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New performance tracking"; color: white; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "What's new:\n• Improved helper reasoning\n• 2x faster orchestration\n• New performance tracking"; color: white; font-family: "Inter"; font-size: 14px; }
                 }
             }
             Button { text: "Upgrade in 1 click"; clicked => { is_upgrading = true; /* simulate */ done = true; is_upgrading = false; } }

@@ -98,10 +98,10 @@ fn test_upgrade_prompt_visibility_storage_limit() {
 }
 
 #[test]
-fn test_upgrade_prompt_visibility_agent_limit() {
+fn test_upgrade_prompt_visibility_helper_limit() {
     let ui = create_m();
-    ui.set_upgrade_prompt_message("Agent limit exceeded (1 max). Upgrade to Pro.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "Agent limit exceeded (1 max). Upgrade to Pro.");
+    ui.set_upgrade_prompt_message("Helper limit exceeded (1 max). Upgrade to Pro.".into());
+    assert_eq!(ui.get_upgrade_prompt_message(), "Helper limit exceeded (1 max). Upgrade to Pro.");
 }
 
 #[test]
