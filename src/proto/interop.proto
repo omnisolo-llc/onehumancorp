@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ohc.interop;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/interop;interoppb";
+
+// Mode specifies the execution environment.
+enum DeploymentMode {
+  MODE_UNSPECIFIED = 0;
+  MODE_CLOUD = 1;
+  MODE_STANDALONE = 2;
+}
+
+// StateHandoff carries mission context across the mode boundary.
+message StateHandoff {
+  string mission_id = 1;
+  string tenant_id = 2;
+  DeploymentMode source_mode = 3;
+  DeploymentMode target_mode = 4;
+  int64 timestamp_ms = 5;
+  bytes state_snapshot_json = 6;
+}
+
+// HealthPing is broadcasted across the Swarm to check connectivity.
+message HealthPing {
+  string source_node_id = 1;
+  DeploymentMode current_mode = 2;
+  int64 timestamp_ms = 3;
+}
+
+// HealthAck acknowledges receipt of a HealthPing.
+message HealthAck {
+  string source_node_id = 1;
+  string target_node_id = 2;
+  int64 timestamp_ms = 3;
+}
