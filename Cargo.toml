@@ -82,5 +82,5 @@ prost-types = "0.13"
 futures = "0.3"
 
 [dev-dependencies]
-temp-env = { version = "0.3.6", features = ["async_closure"] }
+temp-env = "0.3.6"
 futures-util = "0.3.32"
