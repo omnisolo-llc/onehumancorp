@@ -173,8 +173,8 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
-        let _config = verify_environment(&env).unwrap();
-        // assert!(config.telemetry_enabled); // Thin client sets headless, but telemetry is not necessarily enabled.
+        let config = verify_environment(&env).unwrap();
+        assert!(config.telemetry_enabled);
     }
 
     #[test]
@@ -182,11 +182,12 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
         env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
         assert_eq!(config.api_endpoint, "https://api.ohc.io");
-        // assert!(config.telemetry_enabled); // Thin client sets headless, but telemetry is not necessarily enabled.
+        assert!(config.telemetry_enabled);
     }
 
     #[test]
