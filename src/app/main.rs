@@ -2479,6 +2479,26 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        let wizard_handle = setup_wizard_ui_from_login.clone();
+        move || {
+            if let Some(wizard) = wizard_handle.upgrade() {
+                let weak_wizard = wizard.as_weak();
+                wasm_bindgen_futures::spawn_local(async move {
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = weak_wizard.upgrade() {
+                            ui.set_step(0);
+                        }
+                    }).unwrap();
+                });
+                let _ = wizard.show();
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
 
     login_ui.run()?;
 
