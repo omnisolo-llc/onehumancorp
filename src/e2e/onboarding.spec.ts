@@ -92,27 +92,21 @@ test.describe('Onboarding Flow', () => {
     // Go to login -> click "Sign Up" -> fill email/password
     await page.goto('/login');
     const signUpToggle = page.locator('button:has-text("Don\'t have an account? Sign Up")');
-    if (await signUpToggle.isVisible()) {
-      await signUpToggle.click();
-    }
+    await signUpToggle.click();
 
     await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test@example.com');
     await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('password123');
 
     // Click "Sign Up"
     const signUpBtn = page.locator('button:has-text("Sign Up")').first();
-    if (await signUpBtn.isVisible()) {
-      await signUpBtn.click();
-    }
+    await signUpBtn.click();
 
     // Verify "Check your email" shows
     await expect(page.locator('text=/Check your email|verify your account/i')).toBeVisible({ timeout: 5000 });
 
     // Click "Resend Verification"
     const resendBtn = page.locator('button:has-text("Resend Verification Email"), button:has-text("Resend")').first();
-    if (await resendBtn.isVisible()) {
-      await resendBtn.click();
-    }
+    await resendBtn.click();
 
     // Verify it navigates to Setup Wizard
     await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 });
@@ -120,42 +114,114 @@ test.describe('Onboarding Flow', () => {
     // Advance through steps to get to product add step
     for (let i = 0; i < 6; i++) {
       const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
-      if (await nextBtn.isVisible()) {
-        await nextBtn.click();
-      }
+      await nextBtn.click();
     }
 
     // At step 7 (product add), fill Product Name, click "Auto-generate description"
     const productNameInput = page.locator('input[placeholder*="Product Name"], input[placeholder*="Cake"]').first();
-    if (await productNameInput.isVisible()) {
-      await productNameInput.fill('My Custom Product');
-    }
+    await productNameInput.fill('My Custom Product');
 
     const autoGenBtn = page.locator('button:has-text("Auto-generate description")').first();
-    if (await autoGenBtn.isVisible()) {
-      await autoGenBtn.click();
-    }
+    await autoGenBtn.click();
 
     // Verify product description was generated
     const descInput = page.locator('input[placeholder*="Description"], input:has-text("A premium")').first();
-    if (await descInput.isVisible()) {
-      await expect(descInput).toHaveValue(/A premium.*/);
-    }
+    await expect(descInput).toHaveValue(/A premium.*/);
 
     // Finish the wizard
     for (let i = 0; i < 3; i++) {
       const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue"), button:has-text("Launch")').first();
-      if (await nextBtn.isVisible()) {
-        await nextBtn.click();
-      }
+      await nextBtn.click();
     }
 
     // Verify Confetti success and Copy Link button are visible
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
     const copyLinkBtn = page.locator('button:has-text("Copy Shareable Link")').first();
-    if (await copyLinkBtn.isVisible()) {
-      await copyLinkBtn.click();
+    await expect(copyLinkBtn).toBeVisible();
+  });
+
+  test('should seamlessly transition to setup wizard from sign up', async ({ page }) => {
+    await page.goto('/login');
+    const signUpToggle = page.locator('button:has-text("Don\'t have an account? Sign Up")');
+    await signUpToggle.click();
+
+    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test.new@example.com');
+    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('securepassword123');
+
+    const signUpBtn = page.locator('button:has-text("Sign Up")').first();
+    await signUpBtn.click();
+
+    await expect(page.locator('text=/Check your email|verify your account/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should open business setup correctly for fresh accounts', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('new.business@example.com');
+    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('securepassword123');
+
+    const signInBtn = page.locator('button:has-text("Sign In")').first();
+    await signInBtn.click();
+
+    // Simulate auto-redirect handling for fresh accounts to the wizard
+    await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should handle instant storefront preview safely', async ({ page }) => {
+    // Navigating organically from login
+    await page.goto('/login');
+    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test.instant@example.com');
+    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('securepassword123');
+
+    const signInBtn = page.locator('button:has-text("Sign In")').first();
+    await signInBtn.click();
+
+    await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 });
+
+    // Proceed to Step 11: Instant Build
+    for (let i = 0; i < 11; i++) {
+        const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+        await nextBtn.click();
     }
+
+    const bioInput = page.locator('input[placeholder*="I run a local bakery"]');
+    await expect(bioInput).toBeVisible({ timeout: 3000 });
+    await bioInput.fill("Test Business Bio");
+
+    const generateBtn = page.locator('text=Generate Storefront →');
+    await generateBtn.click();
+    await expect(page.locator('text=AI is brainstorming...')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should validate end-to-end product addition with real prices', async ({ page }) => {
+    // Navigating organically from login
+    await page.goto('/login');
+    await page.locator('input[type="email"], input[placeholder*="Email"]').first().fill('test.product@example.com');
+    await page.locator('input[type="password"], input[placeholder*="Password"]').first().fill('securepassword123');
+
+    const signInBtn = page.locator('button:has-text("Sign In")').first();
+    await signInBtn.click();
+
+    await expect(page.locator('text=/Setup Wizard|What kind of business/i')).toBeVisible({ timeout: 5000 });
+
+    // Proceed to Step 7: Product
+    for (let i = 0; i < 6; i++) {
+        const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+        await nextBtn.click();
+    }
+
+    const nameInput = page.locator('input[placeholder*="Product Name"], input[placeholder*="Cake"]').first();
+    await expect(nameInput).toBeVisible({ timeout: 3000 });
+    await nameInput.fill('Real Test Product');
+
+    const priceInput = page.locator('input[placeholder*="Price"], input[placeholder*="e.g. 50.00"]').first();
+    await priceInput.fill('99.99');
+
+    const autoGenBtn = page.locator('button:has-text("Auto-generate description")').first();
+    await autoGenBtn.click();
+
+    // Verify product description was generated
+    const descInput = page.locator('input[placeholder*="Description"], input:has-text("A premium")').first();
+    await expect(descInput).toHaveValue(/A premium.*/);
   });
 });
 
