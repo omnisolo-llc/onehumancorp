@@ -61,7 +61,10 @@ sequenceDiagram
     OHC->>Stripe: Process Payment
     Stripe-->>OHC: Success
     OHC->>Maya: Push Notification "New Order Paid!" (Retention)
-    OHC->>AI_Mark: Suggests "Upgrade for Custom Domain" (Revenue)
+    Maya->>OHC: Clicks "Upgrade to Starter" (Revenue)
+    OHC->>Stripe: Setup Recurring Billing
+    Maya->>OHC: Shares Store Link with Friend (Referral)
+    OHC->>Maya: Credit "Bakery Credit" for Referral
 ```
 
 #### 2. Carlos (The Handyman) Journey
@@ -88,6 +91,8 @@ sequenceDiagram
     AI_Sales-->>Cust: Sends Official Quote
     Cust->>OHC: Books Time & Pays Deposit
     OHC->>Carlos: Notification "Job Booked" (Retention)
+    Carlos->>OHC: Taps "Earn $50: Refer a Pro" (Referral)
+    Carlos->>Cust: Taps "Send 10% Discount to Friend" (Viral Loop)
 ```
 
 #### 3. Priya (The Boutique Owner) Journey
@@ -110,6 +115,8 @@ sequenceDiagram
     POS->>OHC: Update Inventory
     OHC->>Priya: Daily Analytics Report (Retention)
     AI_Adv->>Priya: "Inventory low. Upgrade tier for automated re-order alerts." (Revenue)
+    Priya->>OHC: Selects "Pro Plan" (Revenue)
+    OHC->>Priya: Enables Multi-Store Sync
 ```
 
 #### 4. Leo (The Music Tutor) Journey
