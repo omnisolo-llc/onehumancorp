@@ -140,6 +140,7 @@ mod tests {
         }
 
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(2))
             .connect(&database_url)
             .await
             .unwrap();
@@ -154,7 +155,7 @@ mod tests {
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
             .bind(task_id)
             .execute(&pool)
             .await
