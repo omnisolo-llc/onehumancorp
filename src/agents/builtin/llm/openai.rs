@@ -360,6 +360,7 @@ impl LlmClient for OpenAIClient {
                 tool_calls,
                 tool_results: vec![],
                 response_id: result.id.clone(),
+                previous_response_id: None,
             },
             usage,
             stop_reason: finish_reason,

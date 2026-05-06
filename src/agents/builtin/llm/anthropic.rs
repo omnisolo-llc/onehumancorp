@@ -374,6 +374,7 @@ impl LlmClient for AnthropicClient {
                 tool_calls,
                 tool_results: vec![],
                 response_id: result.id.clone(),
+                previous_response_id: None,
             },
                         usage: Usage {
                 input_tokens: result.usage.input_tokens,

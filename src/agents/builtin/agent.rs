@@ -311,6 +311,7 @@ impl Agent {
                         tool_calls,
                         tool_results,
                         response_id: None,
+                previous_response_id: None,
                     });
                 }
 
@@ -899,6 +900,7 @@ impl Agent {
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
+        let mut last_response_id: Option<String> = None;
         let mut last_assistant_content = String::new();
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
@@ -1035,6 +1037,10 @@ impl Agent {
                     }
                 }
             };
+
+                        if let Some(rid) = &resp.response_id {
+                last_response_id = Some(rid.clone());
+            }
 
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
@@ -1495,6 +1501,7 @@ impl Agent {
                 tool_calls: vec![],
                 tool_results,
                 response_id: None,
+                previous_response_id: last_response_id.clone(),
             });
 
             // State Management Checkpointing Mechanic
@@ -1916,6 +1923,7 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -1934,6 +1942,7 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2032,6 +2041,7 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2052,6 +2062,7 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2116,6 +2127,7 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2179,6 +2191,7 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2222,6 +2235,7 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2305,6 +2319,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2321,6 +2336,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2373,6 +2389,7 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -2385,6 +2402,7 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -2397,6 +2415,7 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -2474,6 +2493,7 @@ mod tests {
                     }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2525,6 +2545,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2541,6 +2562,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2557,6 +2579,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2573,6 +2596,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2647,6 +2671,7 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2697,6 +2722,7 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2738,6 +2764,7 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2767,6 +2794,7 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2796,6 +2824,7 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -2832,6 +2861,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -2891,6 +2921,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3045,6 +3076,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3194,6 +3226,7 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3297,6 +3330,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3372,6 +3406,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -3614,6 +3649,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3693,6 +3729,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3738,6 +3775,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3768,6 +3806,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3820,6 +3859,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
+                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
