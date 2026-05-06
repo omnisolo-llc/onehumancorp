@@ -163,10 +163,10 @@ fn test_dashboard_shimmer_does_not_block_interaction() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::Dashboard::new().unwrap();
-    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
     let invoked_clone = invoked.clone();
     ui.on_open_ai_chat(move || {
-        *invoked_clone.borrow_mut() = true;
+        *invoked_clone.lock().unwrap() = true;
     });
 
     // Set loading state
@@ -174,7 +174,7 @@ fn test_dashboard_shimmer_does_not_block_interaction() {
 
     // User should still be able to click Ask AI button
     ui.invoke_open_ai_chat();
-    assert!(*invoked.borrow(), "User should be able to open AI chat while loading");
+    assert!(*invoked.lock().unwrap(), "User should be able to open AI chat while loading");
 }
 
 #[test]

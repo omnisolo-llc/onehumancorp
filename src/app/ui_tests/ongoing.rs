@@ -55,43 +55,43 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     let ui = create_f();
     assert!(!ui.get_is_advanced());
 
-    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || { *save_called_clone.lock().unwrap() = true; });
 
     // In UI, we toggle. Programmatically simulating setting it
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
     ui.invoke_save_state();
-    assert!(*save_called.borrow());
+    assert!(*save_called.lock().unwrap());
 }
 
 #[test] fn ongoing_upgrade_advanced_toggle() {
     let ui = create_u();
     assert!(!ui.get_is_advanced());
 
-    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || { *save_called_clone.lock().unwrap() = true; });
 
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
     ui.invoke_save_state();
-    assert!(*save_called.borrow());
+    assert!(*save_called.lock().unwrap());
 }
 
 #[test] fn ongoing_billing_advanced_toggle() {
     let ui = create_b();
     assert!(!ui.get_is_advanced());
 
-    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || { *save_called_clone.lock().unwrap() = true; });
 
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
     ui.invoke_save_state();
-    assert!(*save_called.borrow());
+    assert!(*save_called.lock().unwrap());
 }
 
 // --- Unique Scenarios with Verification ---
@@ -99,17 +99,17 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 #[test] fn fix_agent_callbacks() {
     let ui = create_f();
 
-    let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let apply_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let apply_called_clone = apply_called.clone();
-    ui.on_apply_fix(move || { *apply_called_clone.borrow_mut() = true; });
+    ui.on_apply_fix(move || { *apply_called_clone.lock().unwrap() = true; });
     ui.invoke_apply_fix();
-    assert!(*apply_called.borrow());
+    assert!(*apply_called.lock().unwrap());
 
-    let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let return_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let return_called_clone = return_called.clone();
-    ui.on_return_to_agents(move || { *return_called_clone.borrow_mut() = true; });
+    ui.on_return_to_agents(move || { *return_called_clone.lock().unwrap() = true; });
     ui.invoke_return_to_agents();
-    assert!(*return_called.borrow());
+    assert!(*return_called.lock().unwrap());
 }
 
 // --- Consolidated Verified Tests ---

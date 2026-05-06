@@ -119,49 +119,49 @@ fn grow_business_test_callbacks() {
     let ui = create();
 
     // Test toggle advanced
-    let toggle_advanced_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let toggle_advanced_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let t1 = toggle_advanced_called.clone();
     ui.on_toggle_advanced(move || {
-        *t1.borrow_mut() = true;
+        *t1.lock().unwrap() = true;
     });
     ui.invoke_toggle_advanced();
-    assert!(*toggle_advanced_called.borrow());
+    assert!(*toggle_advanced_called.lock().unwrap());
 
     // Test select strategy
-    let select_strategy_called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let select_strategy_called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let s1 = select_strategy_called.clone();
     ui.on_select_strategy(move |s| {
-        *s1.borrow_mut() = s.to_string();
+        *s1.lock().unwrap() = s.to_string();
     });
     ui.invoke_select_strategy("Connect Instagram".into());
-    assert_eq!(*select_strategy_called.borrow(), "Connect Instagram");
+    assert_eq!(*select_strategy_called.lock().unwrap(), "Connect Instagram");
 
     // Test next_step
-    let next_step_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let next_step_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let n1 = next_step_called.clone();
     ui.on_next_step(move || {
-        *n1.borrow_mut() = true;
+        *n1.lock().unwrap() = true;
     });
     ui.invoke_next_step();
-    assert!(*next_step_called.borrow());
+    assert!(*next_step_called.lock().unwrap());
 
     // Test prev_step
-    let prev_step_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let prev_step_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let p1 = prev_step_called.clone();
     ui.on_prev_step(move || {
-        *p1.borrow_mut() = true;
+        *p1.lock().unwrap() = true;
     });
     ui.invoke_prev_step();
-    assert!(*prev_step_called.borrow());
+    assert!(*prev_step_called.lock().unwrap());
 
     // Test return_to_dashboard
-    let return_to_dashboard_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let return_to_dashboard_called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let r1 = return_to_dashboard_called.clone();
     ui.on_return_to_dashboard(move || {
-        *r1.borrow_mut() = true;
+        *r1.lock().unwrap() = true;
     });
     ui.invoke_return_to_dashboard();
-    assert!(*return_to_dashboard_called.borrow());
+    assert!(*return_to_dashboard_called.lock().unwrap());
 }
 
 #[test]

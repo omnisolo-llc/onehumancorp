@@ -15,16 +15,16 @@ fn test_login_start_setup_wizard_button_triggers_callback() {
 
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
-    let callback_triggered = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let callback_triggered = std::sync::Arc::new(std::sync::Mutex::new(false));
     let callback_triggered_clone = callback_triggered.clone();
 
     ui.on_start_setup_wizard(move || {
-        *callback_triggered_clone.borrow_mut() = true;
+        *callback_triggered_clone.lock().unwrap() = true;
     });
 
     ui.invoke_start_setup_wizard();
 
-    assert!(*callback_triggered.borrow(), "The start setup wizard button should trigger the start_setup_wizard callback.");
+    assert!(*callback_triggered.lock().unwrap(), "The start setup wizard button should trigger the start_setup_wizard callback.");
 }
 
 #[cfg(test)]
@@ -76,15 +76,15 @@ mod additional_login_tests {
         crate::ui_tests::init();
         let ui = crate::app::Login::new().unwrap();
 
-        let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked = std::sync::Arc::new(std::sync::Mutex::new(false));
         let clicked_clone = clicked.clone();
 
         ui.on_open_settings(move || {
-            *clicked_clone.borrow_mut() = true;
+            *clicked_clone.lock().unwrap() = true;
         });
 
         ui.invoke_open_settings();
 
-        assert!(*clicked.borrow(), "The settings callback should fire when invoked.");
+        assert!(*clicked.lock().unwrap(), "The settings callback should fire when invoked.");
     }
 }

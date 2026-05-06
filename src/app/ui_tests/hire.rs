@@ -28,12 +28,12 @@ fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().u
 
 #[test] fn hire_flow_deploy_callback() {
     let ui = create();
-    let called_name = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let called_name = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let c = called_name.clone();
-    ui.on_deploy_agent(move |name, _, _| { *c.borrow_mut() = name.to_string(); });
+    ui.on_deploy_agent(move |name, _, _| { *c.lock().unwrap() = name.to_string(); });
     
     ui.invoke_deploy_agent("Robot".into(), "Cleaner".into(), "Local".into());
-    assert_eq!(*called_name.borrow(), "Robot");
+    assert_eq!(*called_name.lock().unwrap(), "Robot");
 }
 
 #[test] fn hire_flow_next_enabled_logic() {

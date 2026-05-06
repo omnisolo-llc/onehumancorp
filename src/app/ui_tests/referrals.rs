@@ -148,9 +148,9 @@ fn create_verify_click_count() {
 #[test]
 fn share_flow_send_invite_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_send_invite_message(move |_| { *c.borrow_mut() = true; });
+    ui.on_send_invite_message(move |_| { *c.lock().unwrap() = true; });
     ui.invoke_send_invite_message("test_link".into());
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
