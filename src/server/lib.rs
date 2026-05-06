@@ -28,6 +28,7 @@ pub mod integrations;
 pub mod utils;
 pub mod orchestration;
 pub mod storage;
+pub mod interop;
 #[cfg(test)]
 pub mod benchmarks;
 
