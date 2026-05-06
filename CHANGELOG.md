@@ -1,5 +1,18 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+### Cloud Scaling Improvements
+- Optimize parallel fetch latency in dashboard API endpoints (#4867)
+- Implement Business Journey Architecture with state machine and RLS (#c0f0)
+- Resolve unused variables and scope compilation errors in Rust backend (#f8e3)
+
+### Privacy/Offline Improvements
+- Implement Cost Transparency Dashboard UI and Backend Schema Fixes (#d0c1)
+- Enhance Sentinel Hybrid Security Fix for Tenant Leakage in Background Workers (#ee05)
+- Improve UI jargon and testing for Login screen and Walkthrough (#3dc2, #6107)
+- Implement success milestones logic for offline tracking (#a755)
+
+
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
