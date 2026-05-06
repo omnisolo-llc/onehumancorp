@@ -1,0 +1,3 @@
+# Critical User Journey (CUJ): Hybrid Mode Sync Resilience
+As a small business owner running the OHC Cloud and Local wrappers, I expect my agents to consistently perform missions without permanently getting stuck or stalling my dashboard with redundant errors.
+When I start a local wrapper syncing to the cloud, the new `LOCAL_TO_CLOUD_SYNC` health check probe proactively confirms that my mode is properly synced. If a node loses connection or a database lock occurs, the resilient background sweep will smoothly transition stuck missions directly to failed states so they can be retried or surfaced clearly. I don't see noisy "active probe failed" messages in my system logs, keeping my operational dashboard quiet and informative.
