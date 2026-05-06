@@ -457,8 +457,7 @@ test.describe('Video Tutorials', () => {
     await videoItem.click();
     await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 });
   });
-});
-test.describe('API Documentation', () => {
+});test.describe('API Documentation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
     await page.locator('input[type="email"]').fill('test@example.com');
