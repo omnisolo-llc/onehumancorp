@@ -26,7 +26,7 @@ impl DashboardService for MyDashboardService {
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
         let db1 = self.db.clone();
-        let db2 = self.db.clone();
+        let _db2 = self.db.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),

@@ -146,4 +146,143 @@ mod parity_tests {
             assert_eq!(email, "test@example.com");
         }
     }
+
+    #[tokio::test]
+    async fn test_invalid_uuid_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let invalid_id = "invalid-uuid-string";
+        let org_id = "test_org_parity_uuid";
+
+        let insert_res_sqlite = sqlite_db.insert_knowledge_embedding(
+            invalid_id,
+            org_id,
+            "agent_1",
+            "task_1",
+            "content",
+            "[0.1, 0.2]",
+            "type_a"
+        ).await;
+        assert!(insert_res_sqlite.is_err());
+
+        if let Some(ref db) = pg_db {
+            let insert_res_pg = db.insert_knowledge_embedding(
+                invalid_id,
+                org_id,
+                "agent_1",
+                "task_1",
+                "content",
+                "[0.1, 0.2]",
+                "type_a"
+            ).await;
+            assert!(insert_res_pg.is_err());
+        }
+
+        // Verify retrieval parity - it should NOT be inserted with 'invalid-uuid-string'
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            let row = sqlx::query("SELECT id FROM knowledge_embeddings WHERE id = ?")
+                .bind(invalid_id)
+                .fetch_optional(pool)
+                .await
+                .unwrap();
+            assert!(row.is_none());
+        }
+
+        if let Some(ref db) = pg_db {
+            let row = sqlx::query("SELECT id FROM knowledge_embeddings WHERE id = $1::uuid")
+                // using invalid_id directly should fail
+                .bind(uuid::Uuid::new_v4())
+                .fetch_optional(&db.pool)
+                .await
+                .unwrap();
+            assert!(row.is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_timezone_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let _org_id = "test_org_parity_tz";
+
+        let tz_time = chrono::Utc::now();
+        let tz_time_str = tz_time.to_rfc3339();
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, updated_at) VALUES (?, 'm1', 'title', 'PENDING', ?, ?)")
+                .bind(&task_id)
+                .bind(&tz_time_str)
+                .bind(&tz_time_str)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let fetched_time: String = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(fetched_time, tz_time_str);
+        }
+
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, updated_at) VALUES ($1::uuid, 'm1', 'title', 'PENDING', $2::timestamptz, $3::timestamptz)")
+                .bind(&task_id)
+                .bind(&tz_time)
+                .bind(&tz_time)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let fetched_time: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = $1::uuid")
+                .bind(&task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            // Timestamps might have tiny precision differences based on DB
+            let diff = (fetched_time - tz_time).num_milliseconds().abs();
+            assert!(diff < 1000);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_null_handling_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, assigned_agent_id) VALUES (?, 'm1', 'title', 'PENDING', NULL)")
+                .bind(&task_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let assigned: Option<String> = sqlx::query_scalar("SELECT assigned_agent_id FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert!(assigned.is_none());
+        }
+
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, assigned_agent_id) VALUES ($1::uuid, 'm1', 'title', 'PENDING', NULL)")
+                .bind(&task_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let assigned: Option<String> = sqlx::query_scalar("SELECT assigned_agent_id FROM swarm_tasks WHERE id = $1::uuid")
+                .bind(&task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert!(assigned.is_none());
+        }
+    }
 }

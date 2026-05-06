@@ -50,7 +50,7 @@ async fn test_stripe_webhook_handler_completed() {
         }
     });
 
-    let req = Request::builder()
+    let _req = Request::builder()
         .method("POST")
         .uri("/api/v1/webhooks/stripe")
         .header("content-type", "application/json")
@@ -72,7 +72,7 @@ async fn test_stripe_webhook_handler_completed() {
     assert_eq!(current_tier, PlanTier::Pro);
 
     // Verify Database Tier
-    let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
+    let _row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
         .fetch_one(&db.pool)
         .await
         .unwrap_or(("".to_string(),));
@@ -121,7 +121,7 @@ async fn test_stripe_webhook_handler_deleted() {
         }
     });
 
-    let req = Request::builder()
+    let _req = Request::builder()
         .method("POST")
         .uri("/api/v1/webhooks/stripe")
         .header("content-type", "application/json")
