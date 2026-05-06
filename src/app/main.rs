@@ -531,7 +531,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
                         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                            let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             if let Ok(resp) = client.get_wizard_state(req).await {
                                 let state = resp.into_inner().state;
                                 // In the SetupWizard, step 10 is the final welcome checklist.

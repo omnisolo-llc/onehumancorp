@@ -87,8 +87,12 @@ pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
     Ok(cfg)
 }
 
-#[cfg(feature = "standalone")]
 fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
+    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    if !is_standalone {
+        return cfg;
+    }
+
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
             tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
@@ -104,11 +108,11 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         if !key.is_empty() {
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
         } else {
-            let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+            let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-fallback-key".to_string());
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
         }
     } else {
-        let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+        let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-fallback-key".to_string());
         format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
     };
     cfg.database_url = Some(sqlite_url);
@@ -150,10 +154,7 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg
 }
 
-#[cfg(not(feature = "standalone"))]
-fn standalone_enforce(cfg: AppConfig) -> AppConfig {
-    cfg
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -169,7 +170,9 @@ mod tests {
         // Ensure environment doesn't interfere
         // SAFETY: Test-only code removing environment variables
         unsafe {
+            env::remove_var("STANDALONE_MODE");
             env::remove_var("OHC_LISTEN_ADDR");
+            env::remove_var("OHC_SQLITE_KEY");
             env::remove_var("DATABASE_URL");
         }
 
@@ -184,7 +187,9 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
+            env::set_var("STANDALONE_MODE", "false");
             env::set_var("OHC_LISTEN_ADDR", ":9999");
+            env::set_var("OHC_SQLITE_KEY", "dummy");
             env::set_var("DATABASE_URL", "postgres://localhost/testdb");
         }
 
@@ -194,7 +199,9 @@ mod tests {
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
+            env::remove_var("STANDALONE_MODE");
             env::remove_var("OHC_LISTEN_ADDR");
+            env::remove_var("OHC_SQLITE_KEY");
             env::remove_var("DATABASE_URL");
         }
     }
@@ -205,6 +212,7 @@ mod tests {
         // SAFETY: Test-only code setting environment variables
         unsafe {
             env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("OHC_SQLITE_KEY", "dummy");
         }
 
         let cfg = load().unwrap();

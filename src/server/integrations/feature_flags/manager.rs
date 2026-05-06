@@ -22,7 +22,7 @@ impl FeatureFlagsManager {
     }
 
     pub fn from_env(store: Box<dyn FeatureStore>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
         Self::new(store, is_cloud)
     }
 
@@ -125,13 +125,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_env() {
-        temp_env::with_var("OHC_MULTITENANT", Some("true"), || {
+        temp_env::with_var("STANDALONE_MODE", Some("false"), || {
             let store = Box::new(MemoryFeatureStore::new());
             let manager = FeatureFlagsManager::from_env(store);
             assert!(manager.is_cloud);
         });
 
-        temp_env::with_var("OHC_MULTITENANT", None::<&str>, || {
+        temp_env::with_var("STANDALONE_MODE", None::<&str>, || {
             let store = Box::new(MemoryFeatureStore::new());
             let manager = FeatureFlagsManager::from_env(store);
             assert!(!manager.is_cloud);

@@ -138,7 +138,7 @@ mod tests {
         temp_env::with_var("OHC_AGENT_AUTH_DISABLED", Some("true"), || {
             let cfg = AuthConfig::from_env();
 
-            let mut req = Request::new(());
+            let req = Request::new(());
             // Since it's SPIFFE mode, it will fail because x-spiffe-id header is missing
             let result = cfg.authenticate(&req);
             assert!(result.is_err());
@@ -168,7 +168,7 @@ mod tests {
         let hash = hmac_token(token);
         let cfg = AuthConfig { mode: AuthMode::Token(hash) };
 
-        let mut req = Request::new(());
+        let req = Request::new(());
         req.metadata_mut().insert("authorization", MetadataValue::from_str(&format!("Bearer {}", token)).unwrap());
 
         assert!(cfg.authenticate(&req).is_ok());

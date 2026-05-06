@@ -5,6 +5,5 @@ pub mod audit;
 pub mod wizard;
 pub mod onboarding_agent;
 pub mod dayone;
-pub mod cli;
 pub mod diagnostics;
 pub mod env_verifier;

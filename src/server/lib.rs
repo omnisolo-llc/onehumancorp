@@ -1233,7 +1233,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::orchestration::health::run_health_monitor(
             monitor_transport,
             monitor_hub,
-            std::time::Duration::from_secs(30)
+            std::time::Duration::from_secs(30),
+            is_cloud
         ).await;
     });
 
