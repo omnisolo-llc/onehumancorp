@@ -6,11 +6,18 @@ use std::sync::Arc;
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
+    product_cache: std::sync::RwLock<std::collections::HashMap<String, (std::time::Instant, Vec<crate::ohc::organization::Product>)>>,
+    org_cache: std::sync::RwLock<std::collections::HashMap<String, (std::time::Instant, crate::ohc::organization::Organization)>>,
 }
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self { db, hub }
+        Self {
+            db,
+            hub,
+            product_cache: std::sync::RwLock::new(std::collections::HashMap::new()),
+            org_cache: std::sync::RwLock::new(std::collections::HashMap::new()),
+        }
     }
 }
 
@@ -29,6 +36,28 @@ impl DashboardService for MyDashboardService {
         let db2 = self.db.clone();
         let db3 = self.db.clone();
 
+        let org_id_1 = req.organization_id.clone();
+        let org_id_2 = req.organization_id.clone();
+        let org_id_3 = req.organization_id.clone();
+
+        let mut cached_products = None;
+        if let Ok(cache) = self.product_cache.read() {
+            if let Some((ts, prods)) = cache.get(&req.organization_id) {
+                if ts.elapsed().as_secs() < 3600 {
+                    cached_products = Some(prods.clone());
+                }
+            }
+        }
+
+        let mut cached_org = None;
+        if let Ok(cache) = self.org_cache.read() {
+            if let Some((ts, org)) = cache.get(&req.organization_id) {
+                if ts.elapsed().as_secs() < 3600 {
+                    cached_org = Some(org.clone());
+                }
+            }
+        }
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
@@ -36,8 +65,11 @@ impl DashboardService for MyDashboardService {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
-            async {
-                let org_id = req.organization_id.clone();
+            tokio::task::spawn(async move {
+                if let Some(p) = cached_products {
+                    return Ok::<_, String>(p);
+                }
+                let org_id = org_id_1;
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -78,9 +110,9 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(results)
-            },
-            async {
-                let org_id = req.organization_id.clone();
+            }),
+            tokio::task::spawn(async move {
+                let org_id = org_id_2;
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -119,9 +151,12 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(results)
-            },
-            async {
-                let org_id = req.organization_id.clone();
+            }),
+            tokio::task::spawn(async move {
+                if let Some(o) = cached_org {
+                    return Ok::<_, String>(Some(o));
+                }
+                let org_id = org_id_3;
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
@@ -156,15 +191,24 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(org)
-            }
+            })
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+
+        if let Ok(mut cache) = self.product_cache.write() {
+            cache.insert(req.organization_id.clone(), (std::time::Instant::now(), products.clone()));
+        }
+        if let Some(ref o) = org {
+            if let Ok(mut cache) = self.org_cache.write() {
+                cache.insert(req.organization_id.clone(), (std::time::Instant::now(), o.clone()));
+            }
+        }
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
