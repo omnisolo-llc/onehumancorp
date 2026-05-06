@@ -108,11 +108,11 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         if !key.is_empty() {
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
         } else {
-            let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-fallback-key".to_string());
+            let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| if cfg!(test) { "test-fallback".to_string() } else { panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.") });
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
         }
     } else {
-        let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "test-fallback-key".to_string());
+        let fallback_key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| if cfg!(test) { "test-fallback".to_string() } else { panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.") });
         format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
     };
     cfg.database_url = Some(sqlite_url);
