@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS Changelog
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+
+### Cloud Scaling Improvements
+
+- Update Grafana dashboards for PostgreSQL and Redis metrics (#10982).
+
+### Privacy and Offline Improvements
+
+- Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137).
+
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 
 ### Cloud Scaling Improvements

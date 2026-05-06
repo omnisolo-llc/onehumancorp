@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+
+- Scaling (Cloud): Update Grafana dashboards for PostgreSQL and Redis metrics (#10982).
+- Privacy and Offline (Standalone): Shield Sentry: Enhanced Chaos Resilience & Mode Parity (#a137).
+
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 
 - Scaling (Cloud): Formalized real-time teammate mesh APIs and KAIROS DAG orchestration for distributed pod execution.
