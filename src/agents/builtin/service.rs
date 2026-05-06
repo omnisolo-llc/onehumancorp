@@ -144,12 +144,23 @@ impl AgentServiceImpl {
 
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
-            match sqlx::PgPool::connect_lazy(&db_url) {
-                Ok(pool) => {
-                    self.memory = Some(Arc::new(VectorRepository::new(pool)));
+            if db_url.starts_with("sqlite") {
+                match sqlx::SqlitePool::connect_lazy(&db_url) {
+                    Ok(pool) => {
+                        self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to sqlite for memory store: {}", e);
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Failed to connect to database for memory store: {}", e);
+            } else {
+                match sqlx::PgPool::connect_lazy(&db_url) {
+                    Ok(pool) => {
+                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database for memory store: {}", e);
+                    }
                 }
             }
         }
@@ -251,8 +262,9 @@ impl AgentServiceImpl {
             req.model.clone()
         };
 
+        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+
         let memories = if let Some(store) = &self.memory {
-            let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
             let embedding = if !req.task.is_empty() {
                 llm.generate_embedding(&req.task).await.unwrap_or_default()
             } else {
@@ -286,6 +298,15 @@ impl AgentServiceImpl {
         } else {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
+
+        let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = self.memory.as_ref().map(|repo| {
+            Arc::new(crate::memory_store::PersistentMemoryStore {
+                repo: repo.clone(),
+                tenant_id: org_id.clone(),
+                agent_id: self.agent_id.clone(),
+                llm: llm.clone(),
+            }) as Arc<dyn crate::memory_store::LongTermMemory>
+        });
 
         // Attempt to load AGENTS.md for user instructions
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
@@ -347,6 +368,8 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+            // Long-term memory store for cross-department context sharing
+            long_term_memory,
         }
     }
 
@@ -598,6 +621,7 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+                long_term_memory: None,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

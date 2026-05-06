@@ -317,14 +317,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -732,7 +732,7 @@ mod tests {
 
 
 #[async_trait]
-pub trait LongTermMemory: Send + Sync {
+pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
     
@@ -756,6 +756,59 @@ pub trait LongTermMemory: Send + Sync {
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
+pub struct PersistentMemoryStore {
+    pub repo: std::sync::Arc<VectorRepository>,
+    pub tenant_id: String,
+    pub agent_id: String,
+    pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+}
+
+impl std::fmt::Debug for PersistentMemoryStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PersistentMemoryStore")
+            .field("tenant_id", &self.tenant_id)
+            .field("agent_id", &self.agent_id)
+            .finish()
+    }
+}
+
+#[async_trait]
+impl LongTermMemory for PersistentMemoryStore {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
+        let records = self.repo.semantic_search(&self.tenant_id, &embedding, limit as i64).await?;
+        Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
+        let embedding = self.llm.generate_embedding(content).await.map_err(|e| e.to_string())?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now();
+
+        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string()) || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string()) {
+            "TASK_SUMMARY"
+        } else {
+            "MANUAL"
+        };
+
+        let record = EmbeddingRecord {
+            id,
+            tenant_id: self.tenant_id.clone(),
+            agent_id: self.agent_id.clone(),
+            content: content.to_string(),
+            embedding,
+            source_type: source_type.to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 0,
+            reliability_score: 100,
+            owner_override: false,
+            metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
+        };
+        self.repo.upsert(&record).await
+    }
+}
+
 /// Anthropic 3-Tier Memory Store implementation
 /// 1) Lightweight index (~150 chars/entry, always loaded in context)
 /// 2) Detailed topic files (pulled on demand)
@@ -767,6 +820,12 @@ pub struct Anthropic3TierMemoryStore {
     index_file: std::path::PathBuf,
     topics_dir: std::path::PathBuf,
     transcripts_dir: std::path::PathBuf,
+}
+
+impl std::fmt::Debug for Anthropic3TierMemoryStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Anthropic3TierMemoryStore").finish()
+    }
 }
 
 impl Anthropic3TierMemoryStore {
@@ -922,6 +981,14 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 pub struct RedisMemoryStore {
     client: redis::Client,
     namespace: String,
+}
+
+impl std::fmt::Debug for RedisMemoryStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedisMemoryStore")
+            .field("namespace", &self.namespace)
+            .finish()
+    }
 }
 
 impl RedisMemoryStore {
@@ -1243,7 +1310,7 @@ mod get_conflicts_tests {
             agent_id: "agent1".to_string(),
             content: "hello world 2".to_string(),
             embedding: vec![3.0, 2.0, 1.0],
-            source_type: "TASK_SUMMARY".to_string(), // Should be deleted
+            source_type: "TASK_DECOMPOSITION".to_string(), // Should be deleted
             created_at: old_time,
             last_referenced_at: old_time,
             reference_count: 1,
@@ -1448,6 +1515,67 @@ mod get_conflicts_tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "customer unhappy with pricing");
         assert_eq!(results[0].agent_id, "sales_agent");
+    }
+
+    #[tokio::test]
+    async fn test_persistent_memory_store_retrieve_store() {
+        use std::sync::Arc;
+        use ohc_builtin_agent_llm::LlmClient;
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant(""),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![0.1, 0.2, 0.3])
+            }
+        }
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let llm = Arc::new(MockLlm);
+        let store = PersistentMemoryStore {
+            repo: repo.clone(),
+            tenant_id: "tenant1".to_string(),
+            agent_id: "agent1".to_string(),
+            llm: llm.clone(),
+        };
+
+        store.store("test content", vec!["tag1".to_string()]).await.unwrap();
+
+        let retrieved = store.retrieve("query", 10).await.unwrap();
+        assert_eq!(retrieved.len(), 1);
+        assert_eq!(retrieved[0], "test content");
     }
 }
 
