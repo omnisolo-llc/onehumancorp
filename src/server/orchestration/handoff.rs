@@ -154,7 +154,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -211,7 +211,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -332,7 +332,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
