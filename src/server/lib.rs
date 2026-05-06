@@ -250,7 +250,7 @@ impl HubService for MyHubService {
         let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
         if savings > 0.0 {
-            println!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
+            tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
         let url = client.create_checkout_session(&req.plan_id, &tenant_id, Some(optimal_pm)).await
