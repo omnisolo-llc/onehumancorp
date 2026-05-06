@@ -206,6 +206,9 @@ mod tests {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
         let db = Arc::new(DB::new().await.ok()?);
+        let _ = db.run_migrations().await;
+
+
         Some(db)
     }
 
@@ -215,6 +218,9 @@ mod tests {
             Some(db) => db,
             None => return,
         };
+
+        let _ = db.run_migrations().await;
+
         let agent = OnboardingAgent::new(db);
 
         let req = StartOnboardingRequest {
@@ -275,6 +281,10 @@ mod tests {
             Some(db) => db,
             None => return,
         };
+        let _ = db.run_migrations().await;
+
+
+
         let agent = OnboardingAgent::new(db.clone());
 
         // Test Service Business

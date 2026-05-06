@@ -538,6 +538,12 @@ mod tests {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match PgPool::connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+
+        if let Ok(db) = crate::db::DB::new().await {
+            let _ = db.run_migrations().await;
+
+        }
+
         let service = MyGrowthService::new(pool);
 
         let mut req = Request::new(CreateReferralRequest {
@@ -550,7 +556,7 @@ mod tests {
         assert_eq!(resp.user_id, "test_user");
         assert_eq!(resp.referral_code, "TESTCODE");
 
-        let _ = sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ('org1', 'Test Org', 'Free') ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO organizations (id, name, plan_tier, tenant_id) VALUES ('org1', 'Test Org', 'Free', 'org1') ON CONFLICT DO NOTHING")
             .execute(&service.pool).await;
 
         let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
