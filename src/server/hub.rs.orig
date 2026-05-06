@@ -159,7 +159,7 @@ impl Hub {
     pub fn fire_agent(&self, id: &str) {
         let mut agents = self.agents.write().unwrap();
         let mut inbox = self.inbox.write().unwrap();
-        
+
         agents.remove(id);
         inbox.remove(id);
         self.invalidate_agent_cache();
@@ -216,22 +216,22 @@ impl Hub {
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let mut meetings = self.meetings.write().unwrap();
         let mut agents = self.agents.write().unwrap();
-        
+
         let meeting = MeetingRoom {
             id: id.clone(),
             agenda,
             participants: participants.clone(),
             transcript: vec![],
         };
-        
+
         meetings.insert(id, meeting.clone());
-        
+
         for participant in participants {
             if let Some(agent) = agents.get_mut(&participant) {
                 agent.status = "IN_MEETING".to_string();
             }
         }
-        
+
         self.invalidate_agent_cache();
         self.invalidate_meetings_cache();
 
@@ -242,7 +242,7 @@ impl Hub {
         let mut inbox = self.inbox.write().unwrap();
         let mut meetings = self.meetings.write().unwrap();
         let subs = self.subs.read().unwrap();
-        
+
         let to_agent = msg.to_agent.clone();
 
         // Check rate limiting
@@ -256,32 +256,32 @@ impl Hub {
                 }
             }
         });
-        
+
         // Add to recipient's inbox
         let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);
         messages.push(msg.clone());
-        
+
         // Add to meeting transcript if applicable
         if !msg.meeting_id.is_empty() {
             if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
                 meeting.transcript.push(msg.clone());
                 self.invalidate_meetings_cache();
-                
+
                 // Aggressive AI Context Summarization
                 if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
                     let api_key = self.minimax_api_key.clone();
                     let m_id = msg.meeting_id.clone();
                     let transcript = meeting.transcript.clone();
                     let hub = self.clone();
-                    
+
                     tokio::spawn(async move {
                         let client = crate::minimax::MinimaxClient::new(api_key);
                         let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
-                        
+
                         for m in &transcript {
                             prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
                         }
-                        
+
                         match client.reason(&prompt).await {
                             Ok(summary) => {
                                 let mut meetings = hub.meetings.write().unwrap();
@@ -295,7 +295,7 @@ impl Hub {
                                         meeting_id: m_id.clone(),
                                         occurred_at_unix: Utc::now().timestamp(),
                                     }];
-                                    
+
                                     if mtg.transcript.len() > 3 {
                                         new_transcript.extend(mtg.transcript.iter().cloned().skip(mtg.transcript.len() - 3));
                                     } else {
@@ -311,12 +311,12 @@ impl Hub {
                 }
             }
         }
-        
+
         // Notify subscribers
         if let Some(tx) = subs.get(&to_agent) {
             let _ = tx.send(msg);
         }
-        
+
         Ok(())
     }
 
@@ -373,17 +373,17 @@ impl Hub {
 
     pub fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
-        
+
         if !self.agents.read().unwrap().contains_key(&from_agent_id) {
             return Err("sender agent is not registered".to_string());
         }
         if !self.agents.read().unwrap().contains_key(&to_agent_id) {
             return Err("recipient agent is not registered".to_string());
         }
-        
+
         task.from_agent = from_agent_id;
         task.to_agent = to_agent_id;
-        
+
         self.publish(task)
     }
 
@@ -397,7 +397,7 @@ impl Hub {
         check_documentation_gate(instruction)?;
 
         let mut agents = self.agents.write().unwrap();
-        
+
         if agents.len() >= 10 {
             return Err("VRAM quota limit exceeded".to_string());
         }
@@ -526,7 +526,7 @@ impl Hub {
         if self.get_token_usage.is_none() {
             return;
         }
-        
+
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
             loop {
@@ -540,7 +540,7 @@ impl Hub {
         if let Some(ref get_usage) = self.get_token_usage {
             let usages = get_usage();
             let mut forecasts_to_record = Vec::new();
-            
+
             {
                 let mut history = self.token_usage_history.write().unwrap();
                 let mut active_orgs = HashMap::new();
@@ -567,7 +567,7 @@ impl Hub {
 
                 history.retain(|org_id, _| active_orgs.contains_key(org_id));
             }
-            
+
             for (org_id, forecast) in forecasts_to_record {
                 let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
             }
@@ -581,7 +581,7 @@ impl Hub {
         }
         auto_cor_track.insert(event_id.to_string());
         drop(auto_cor_track);
-        
+
         struct Guard<'a>(&'a Hub, &'a str);
         impl<'a> Drop for Guard<'a> {
             fn drop(&mut self) {
@@ -590,9 +590,9 @@ impl Hub {
             }
         }
         let _guard = Guard(self, event_id);
-        
+
         let mut temp: HashMap<String, serde_json::Value> = serde_json::from_slice(payload).map_err(|e| e.to_string())?;
-        
+
         let mut corrected = false;
         for (_k, v) in temp.iter_mut() {
             if let Some(s) = v.as_str() {
@@ -604,7 +604,7 @@ impl Hub {
                 }
             }
         }
-        
+
         self.log_event(serde_json::json!({
             "event_id": event_id,
             "agent_id": agent_id,
@@ -612,15 +612,15 @@ impl Hub {
             "payload": temp,
             "corrected": corrected,
         }));
-        
+
         Ok(())
     }
 
     pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
         let mut agents = self.agents.write().unwrap();
-        
+
         let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
-        
+
         let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
         let child = Agent {
             id: child_id.clone(),
@@ -630,24 +630,24 @@ impl Hub {
             status: "IDLE".to_string(),
             provider_type: parent.provider_type.clone(),
         };
-        
+
         agents.insert(child_id.clone(), child);
         self.invalidate_agent_cache();
         drop(agents); // Release lock before calling publish!
-        
+
         // Copy history
         let history = {
             let inbox = self.inbox.read().unwrap();
             inbox.get(parent_id).cloned().unwrap_or_default()
         };
-        
+
         for msg in history {
             let mut child_msg = msg.clone();
             child_msg.id = format!("msg-{}", uuid::Uuid::new_v4());
             child_msg.to_agent = child_id.clone();
             self.clone().publish(child_msg)?;
         }
-        
+
         // Send directive
         let directive_msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
@@ -658,9 +658,9 @@ impl Hub {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
-        
+
         self.clone().publish(directive_msg)?;
-        
+
         Ok(child_id)
     }
 
@@ -719,11 +719,11 @@ fn get_feature_regex() -> &'static Regex {
 
 pub fn check_documentation_gate(content: &str) -> Result<(), String> {
     let regex = get_feature_regex();
-    
+
     if let Some(caps) = regex.captures(content) {
         let feature_name: &str = caps.get(1).unwrap().as_str();
         let base_dir = format!("docs/features/{}", feature_name);
-        
+
         let required_files = ["design-doc.md", "cuj.md", "test-plan.md"];
         for file in &required_files {
             let path = std::path::Path::new(&base_dir).join(file);
@@ -732,7 +732,7 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
             }
         }
     }
-    
+
     Ok(())
 }
 
