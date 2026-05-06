@@ -1,3 +1,19 @@
+# OHC Hybrid Agentic OS v0.4.30
+
+We are excited to announce the v0.4.30 release of the OHC Hybrid Agentic OS! This release continues our commitment to delivering a scalable cloud experience alongside a secure, offline-capable standalone desktop binary.
+
+## 🚀 Cloud Scaling Improvements (v0.4.30)
+- Enhanced multi-tenant Kubernetes pod routing for improved scaling.
+- Performance optimization in agent mesh telemetry.
+- Improved cost auditing tracking capabilities.
+
+## 🔒 Standalone Privacy & Offline Improvements (v0.4.30+1)
+- Strengthened local data isolation for improved privacy.
+- Enhanced offline state synchronization (StateSync MCP).
+- Streamlined desktop binary packaging.
+
+*Enjoy the best of both worlds with OHC!*
+
 # OHC Hybrid Agentic OS Changelog
 
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
