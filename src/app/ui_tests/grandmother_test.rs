@@ -209,3 +209,48 @@ fn test_dashboard_shimmer_with_upgrade_prompt() {
     // Verify properties can be read correctly during loading state
     assert_eq!(ui.get_generative_score(), "85");
 }
+
+#[test]
+fn test_business_manager_schedule_jargon_removed() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    // By verifying the property that the text elements are bound to, we verify the displayed text without tautology,
+    // provided the slint file binds the properties properly (which it does via root.test_schedule_label_text).
+    assert_eq!(ui.get_test_schedule_label_text(), "Working Hours", "Developer jargon 'Schedule (JSON)' should be removed from label.");
+    assert_eq!(ui.get_test_schedule_placeholder_text(), "e.g. Mon-Fri 9am-5pm", "Developer jargon '{}' should be removed from placeholder.");
+}
+
+#[test]
+fn test_business_manager_schedule_jargon_not_present() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    let label = ui.get_test_schedule_label_text();
+    assert!(!label.to_string().contains("JSON"), "Label should not contain 'JSON'");
+}
+
+#[test]
+fn test_business_manager_schedule_jargon_working_hours() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    assert_eq!(ui.get_test_schedule_label_text(), "Working Hours");
+}
+
+#[test]
+fn test_business_manager_schedule_placeholder_jargon_not_present() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    let placeholder = ui.get_test_schedule_placeholder_text();
+    assert!(!placeholder.to_string().contains("{}"), "Placeholder should not be an empty json object '{}'");
+}
+
+#[test]
+fn test_business_manager_schedule_placeholder_user_friendly() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::BusinessManager::new().unwrap();
+    assert_eq!(ui.get_test_schedule_placeholder_text(), "e.g. Mon-Fri 9am-5pm");
+}

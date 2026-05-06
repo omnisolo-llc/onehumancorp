@@ -2,6 +2,8 @@ import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } fr
 import { GlassCard } from "glass_card.slint";
 
 export component BusinessManager inherits Window {
+    out property <string> test_schedule_label_text: "Working Hours";
+    out property <string> test_schedule_placeholder_text: "e.g. Mon-Fri 9am-5pm";
     preferred-width: 500px;
     min-width: 375px;
     height: 600px;
@@ -115,8 +117,8 @@ export component BusinessManager inherits Window {
                 }
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Schedule (JSON)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                    LineEdit { text <=> service_schedule; placeholder-text: "{}"; height: 44px; }
+                    Text { text: root.test_schedule_label_text; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_schedule; placeholder-text: root.test_schedule_placeholder_text; height: 44px; }
                 }
             }
         }
