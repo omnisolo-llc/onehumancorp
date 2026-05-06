@@ -6,6 +6,7 @@ use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::local_proxy::server::LocalProxyServer;
+use crate::integrations::pubsub::mcp::PubSubManager;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -13,16 +14,18 @@ pub struct MyMcpService {
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     local_proxy_server: Arc<LocalProxyServer>,
+    pubsub_manager: Arc<PubSubManager>,
 }
 
 impl MyMcpService {
-    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>, pubsub_manager: Arc<PubSubManager>) -> Self {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
             local_proxy_server: Arc::new(LocalProxyServer::new()),
+            pubsub_manager,
         }
     }
 }
@@ -66,8 +69,10 @@ impl McpService for MyMcpService {
         let mut tools = self.dynamic_tools.read().unwrap().clone();
         let hybrid_fs_tools = self.hybrid_fs_server.get_tools();
         let local_proxy_tools = self.local_proxy_server.get_tools();
+        let pubsub_tools = self.pubsub_manager.get_tools();
         tools.extend(hybrid_fs_tools);
         tools.extend(local_proxy_tools);
+        tools.extend(pubsub_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -207,6 +212,12 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
+            "pubsub_publish" | "pubsub_subscribe" => {
+                match self.pubsub_manager.invoke_tool(&req).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
+            }
             _ => {
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
             }
@@ -304,7 +315,9 @@ mod tests {
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-        let service = MyMcpService::new(registry, hub);
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let pubsub_manager = Arc::new(crate::integrations::pubsub::mcp::PubSubManager::new(transport, false));
+        let service = MyMcpService::new(registry, hub, pubsub_manager);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
         let resp = service.sync_missions(req).await;
@@ -322,7 +335,9 @@ mod tests {
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-        let service = MyMcpService::new(registry, hub);
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let pubsub_manager = Arc::new(crate::integrations::pubsub::mcp::PubSubManager::new(transport, false));
+        let service = MyMcpService::new(registry, hub, pubsub_manager);
 
         let req = Request::new(SyncContextRequest {
             memory_id: "test".to_string(),
@@ -345,7 +360,9 @@ mod tests {
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-        let service = MyMcpService::new(registry, hub);
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let pubsub_manager = Arc::new(crate::integrations::pubsub::mcp::PubSubManager::new(transport, false));
+        let service = MyMcpService::new(registry, hub, pubsub_manager);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
@@ -365,7 +382,9 @@ mod tests {
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-        let service = MyMcpService::new(registry, hub);
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new());
+        let pubsub_manager = Arc::new(crate::integrations::pubsub::mcp::PubSubManager::new(transport, false));
+        let service = MyMcpService::new(registry, hub, pubsub_manager);
 
         let mut req = Request::new(SyncContextRequest {
             memory_id: "test".to_string(),

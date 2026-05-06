@@ -1408,12 +1408,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
+    let registry = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+    let pubsub_manager = std::sync::Arc::new(crate::integrations::pubsub::mcp::PubSubManager::from_env(mesh_transport.clone()));
+    let mcp_service = crate::services::mcp::service::MyMcpService::new(registry, hub.clone(), pubsub_manager);
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(crate::ohc::orchestration::mcp_service_server::McpServiceServer::with_interceptor(mcp_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
