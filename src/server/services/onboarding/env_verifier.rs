@@ -173,7 +173,7 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
-        let config = verify_environment(&env).unwrap();
+        let _config = verify_environment(&env).unwrap();
         // assert!(config.telemetry_enabled); // Thin client sets headless, but telemetry is not necessarily enabled.
     }
 
