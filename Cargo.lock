@@ -164,7 +164,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.4.26"
+version = "0.4.27"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
@@ -4200,7 +4200,7 @@ dependencies = [
 
 [[package]]
 name = "ohc-mono"
-version = "0.4.26"
+version = "0.4.27"
 dependencies = [
  "aes-gcm",
  "async-nats",
