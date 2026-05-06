@@ -108,12 +108,23 @@ mod parity_tests {
         let pg_db = setup_postgres_db().await;
 
         let customer_id = uuid::Uuid::new_v4().to_string();
-        let org_id = "test_org_parity";
+        let customer_uuid = uuid::Uuid::parse_str(&customer_id).unwrap();
+        let org_id_str = "00000000-0000-0000-0000-000000000000";
+        let org_uuid = uuid::Uuid::parse_str(org_id_str).unwrap();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO tenants (tenant_id, owner_id, business_name, tier) VALUES (?, ?, ?, ?)")
+                .bind(org_id_str)
+                .bind("owner_1")
+                .bind("Test Business")
+                .bind("free")
+                .execute(pool)
+                .await
+                .unwrap();
+
             sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
                 .bind(&customer_id)
-                .bind(org_id)
+                .bind(org_id_str)
                 .bind("test@example.com")
                 .bind("Test User")
                 .execute(pool)
@@ -129,9 +140,18 @@ mod parity_tests {
         }
 
         if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO tenants (tenant_id, owner_id, business_name, tier) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind(&org_uuid)
+                .bind("owner_1")
+                .bind("Test Business")
+                .bind("free")
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
             sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
-                .bind(&customer_id)
-                .bind(org_id)
+                .bind(&customer_uuid)
+                .bind(&org_uuid)
                 .bind("test@example.com")
                 .bind("Test User")
                 .execute(&db.pool)
@@ -139,7 +159,7 @@ mod parity_tests {
                 .unwrap();
 
             let email: String = sqlx::query_scalar("SELECT email FROM customers WHERE id = $1")
-                .bind(&customer_id)
+                .bind(&customer_uuid)
                 .fetch_one(&db.pool)
                 .await
                 .unwrap();
