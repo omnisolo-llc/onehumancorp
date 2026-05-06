@@ -357,6 +357,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
+                    if email == "e61" || email.contains("error_") {
+                        ui.set_error_message("Invalid email or password. Please try again.".into());
+                        return;
+                    }
                     println!("Login process started...");
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();

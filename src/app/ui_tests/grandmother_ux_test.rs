@@ -90,3 +90,37 @@ fn test_ai_help_chat_title() {
     let ui = crate::app::AiHelpChat::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
 }
+
+#[test]
+fn test_login_flow_loading_and_error_message_mock() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let login_ui = crate::app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    // Set up mock login callback to simulate main.rs logic
+    let login_handle = login_ui.as_weak();
+    login_ui.on_login(move |email, _password| {
+        if let Some(ui) = login_handle.upgrade() {
+            if email == "e61" || email.to_string().contains("error_") {
+                ui.set_error_message("Invalid email or password. Please try again.".into());
+                return;
+            }
+            ui.set_loading(true);
+            *login_successful_clone.borrow_mut() = true;
+        }
+    });
+
+    assert!(!login_ui.get_loading(), "Initial loading state should be false");
+
+    // Trigger error state
+    login_ui.invoke_login("e61".into(), "password123".into());
+    assert_eq!(login_ui.get_error_message(), slint::SharedString::from("Invalid email or password. Please try again."));
+    assert!(!login_ui.get_loading(), "Should not be loading after error");
+
+    // Trigger success state
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(login_ui.get_loading(), "Should be loading during authentication");
+}

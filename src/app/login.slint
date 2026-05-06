@@ -83,6 +83,14 @@ export component Login inherits Window {
                     text <=> password;
                 }
 
+                if (loading) : Rectangle {
+                    height: 4px;
+                    width: 100%;
+                    background: #a855f7; // Purple
+                    border-radius: 2px;
+                    animate background { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
+                }
+
                 if (show_verification) : VerticalBox {
                     spacing: 8px;
                     alignment: center;

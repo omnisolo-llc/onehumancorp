@@ -35,7 +35,7 @@ export component Dashboard inherits Window {
     // AutoDream Memory Pipeline Telemetry
     in property <string> telemetry_cache_hits: "84%";
     in property <string> telemetry_rag_latency: "120ms";
-    in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
+    in property <string> telemetry_chart_placeholder: "Loading your chart...";
     in-out property <bool> show_telemetry_visualization: true;
 
     in property <[UiPendingApproval]> pending_approvals;
@@ -365,9 +365,9 @@ export component Dashboard inherits Window {
 
     // Floating Help & Chat Buttons
     Rectangle {
-        x: parent.width - 130px;
+        x: parent.width - 180px;
         y: parent.height - 160px;
-        width: 120px;
+        width: 170px;
         height: 60px;
 
         HorizontalBox {
@@ -401,7 +401,7 @@ export component Dashboard inherits Window {
             TooltipElement {
                 tooltip_id: "ask_ai";
                 Rectangle {
-                    width: 50px;
+                    width: 100px;
                     height: 50px;
                     border-radius: 25px;
                     background: #8b5cf6; // Purple
