@@ -4228,7 +4228,7 @@ mod docs_tests {
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
         tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
         assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI assistant for help or to perform tasks.");
+        assert_eq!(tr.get_active_text(), "Ask your helper to do things for you.");
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
 
