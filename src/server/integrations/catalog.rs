@@ -36,5 +36,15 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     };
     catalog.push(twilio_provider);
 
+    let sendgrid_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "sendgrid".to_string(),
+            name: "SendGrid Email".to_string(),
+            category: "email_marketing".to_string(),
+            base_url: "https://api.sendgrid.com".to_string(),
+        }
+    };
+    catalog.push(sendgrid_provider);
+
     catalog
 }

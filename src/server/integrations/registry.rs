@@ -17,6 +17,7 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendgridProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -40,6 +41,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -139,6 +141,11 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
+        if integration_id == "sendgrid" {
+            let mut clients = self.sendgrid_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendgridProvider::new(creds.api_token.clone())));
+        }
+
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
@@ -298,5 +305,26 @@ mod tests {
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+    }
+}
+
+impl IntegrationsRegistry {
+    pub fn send_email(&self, integration_id: &str, to: &str, from: &str, subject: &str, body: &str) -> Result<(), String> {
+        let clients = self.sendgrid_clients.read().unwrap();
+        if let Some(client) = clients.get(integration_id) {
+            let client = client.clone();
+            let to = to.to_string();
+            let from = from.to_string();
+            let subject = subject.to_string();
+            let body = body.to_string();
+            tokio::spawn(async move {
+                if let Err(e) = client.send_email(&to, &from, &subject, &body).await {
+                    tracing::error!("Failed to send Sendgrid email: {}", e);
+                }
+            });
+            Ok(())
+        } else {
+            Err(format!("Sendgrid integration '{}' not found or not connected", integration_id))
+        }
     }
 }

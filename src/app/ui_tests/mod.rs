@@ -1,3 +1,4 @@
+pub mod email_marketing;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;

@@ -1310,7 +1310,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
-    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
+    let registry = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), registry.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if NOT in standalone mode)

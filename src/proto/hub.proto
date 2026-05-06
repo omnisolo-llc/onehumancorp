@@ -799,6 +799,8 @@ service GrowthService {
   
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+  rpc CreateEmailCampaign(CreateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetEmailCampaigns(GetEmailCampaignsRequest) returns (GetEmailCampaignsResponse);
 }
 
 message ApprovalRequest {
@@ -1640,4 +1642,29 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message EmailCampaign {
+  string id = 1;
+  string organization_id = 2;
+  string template_name = 3;
+  string preview_text = 4;
+  int32 emails_sent = 5;
+  string open_rate = 6;
+  string status = 7;
+}
+
+message CreateEmailCampaignRequest {
+  string organization_id = 1;
+  string template_name = 2;
+  string preview_text = 3;
+  repeated string recipients = 4;
+}
+
+message GetEmailCampaignsRequest {
+  string organization_id = 1;
+}
+
+message GetEmailCampaignsResponse {
+  repeated EmailCampaign campaigns = 1;
 }
