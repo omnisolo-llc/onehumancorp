@@ -240,10 +240,12 @@ mod tests {
     // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
     // to 127.0.0.1:50051 which will fail in the sandboxed test environment unless mocked.
 
-    #[tokio::test]
-    async fn test_subagent_teammate_mode() {
+    #[test]
+    fn test_subagent_teammate_mode() {
+        temp_env::with_vars(vec![("OHC_AGENT_ADDRESS", Some("127.0.0.1:0"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // We set the address to something invalid to quickly trigger connection failure for the background task
-        unsafe { std::env::set_var("OHC_AGENT_ADDRESS", "127.0.0.1:0"); }
+
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = SubagentExecutor { runner };
@@ -286,6 +288,8 @@ mod tests {
         assert!(found, "Background task should have written to outbox");
 
         let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
-        let _ = tokio::fs::remove_dir_all(parent_dir).await;
+                let _ = tokio::fs::remove_dir_all(parent_dir).await;
+            });
+        });
     }
 }
