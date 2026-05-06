@@ -201,8 +201,8 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        // Ensure STANDALONE_MODE is true. Telemetry should be ignored
-        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
+        // Ensure OHC_TELEMETRY_ENABLED is explicitly disabled. Telemetry should be ignored
+        unsafe { std::env::set_var("OHC_TELEMETRY_ENABLED", "false"); }
         let labels = json!({"user_id": "standalone_test"});
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
@@ -300,9 +300,8 @@ mod tests {
                 let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
                 // Assert that the config logic matches the policy:
-                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
-                // In lib.rs, the gate is `is_standalone && config.telemetry_enabled`.
-                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+                // Telemetry relies solely on the configuration flag, not is_standalone gating.
+                let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, false);
             },
@@ -322,8 +321,8 @@ mod tests {
                 let config = crate::config::load().unwrap();
                 let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
-                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
-                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+                // Telemetry relies solely on the configuration flag, not is_standalone gating.
+                let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, true);
             },
