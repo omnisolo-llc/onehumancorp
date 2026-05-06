@@ -869,6 +869,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let integrations_ui = app::Integrations::new()?;
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
+    integrations_ui.on_configure_integration(|id| {
+        let id_clone = id.to_string(); tokio::spawn(async move { println!("Configure integration requested for: {}", id_clone); });
+    });
+    integrations_ui.on_invoke_tool(|id| {
+        let id_clone = id.to_string(); tokio::spawn(async move { println!("Invoke tool requested for: {}", id_clone); });
+    });
     Box::leak(Box::new(integrations_ui));
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
