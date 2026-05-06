@@ -26,11 +26,11 @@ impl SipDB {
         sqlx::query(
             "UPDATE agent_missions
              SET status = 'blocked',
-                 mission_log = COALESCE(mission_log, '') || '\n' || $1,
+                 mission_log = COALESCE(mission_log, '') || $1,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND organization_id = $3"
         )
-        .bind(blockers)
+        .bind(&extract_blockers_message(blockers))
         .bind(mission_id)
         .bind(&self.org_id)
         .execute(&mut *tx)
@@ -383,4 +383,9 @@ mod tests {
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
+}
+
+// Additional refactoring: extracted inline functions for clarity.
+pub fn extract_blockers_message(blockers: &str) -> String {
+    format!("\n{}", blockers)
 }
