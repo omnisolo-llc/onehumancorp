@@ -4,6 +4,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use std::collections::VecDeque;
+use std::sync::Mutex;
+
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -36,12 +39,14 @@ pub trait TaskQueue: Send + Sync {
 
 pub struct MemoryTaskQueue {
     jobs: DashMap<String, Job>,
+    role_queues: DashMap<String, Mutex<VecDeque<String>>>,
 }
 
 impl MemoryTaskQueue {
     pub fn new() -> Self {
         MemoryTaskQueue {
             jobs: DashMap::new(),
+            role_queues: DashMap::new(),
         }
     }
 }
@@ -49,16 +54,31 @@ impl MemoryTaskQueue {
 #[async_trait]
 impl TaskQueue for MemoryTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        self.jobs.insert(job.id.clone(), job);
+        let role = job.agent_role.clone();
+        let id = job.id.clone();
+        self.jobs.insert(id.clone(), job);
+
+        let queue = self.role_queues.entry(role).or_insert_with(|| Mutex::new(VecDeque::new()));
+        let mut q = queue.lock().unwrap();
+        q.push_back(id);
+
         Ok(())
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        for mut job_ref in self.jobs.iter_mut() {
-            if job_ref.status == "PENDING" && roles.contains(&job_ref.agent_role) {
-                job_ref.status = "IN_PROGRESS".to_string();
-                job_ref.updated_at = Utc::now();
-                return Ok(Some(job_ref.clone()));
+        for role in roles {
+            if let Some(queue) = self.role_queues.get(&role) {
+                let mut q = queue.lock().unwrap();
+                // Pop until we find a valid pending job, or queue is empty
+                while let Some(job_id) = q.pop_front() {
+                    if let Some(mut job_ref) = self.jobs.get_mut(&job_id) {
+                        if job_ref.status == "PENDING" {
+                            job_ref.status = "IN_PROGRESS".to_string();
+                            job_ref.updated_at = Utc::now();
+                            return Ok(Some(job_ref.clone()));
+                        }
+                    }
+                }
             }
         }
         Ok(None)
@@ -92,7 +112,13 @@ impl TaskQueue for MemoryTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        self.jobs.insert(job.id.clone(), job);
+        let role = job.agent_role.clone();
+        let id = job.id.clone();
+        self.jobs.insert(id.clone(), job);
+
+        let queue = self.role_queues.entry(role).or_insert_with(|| Mutex::new(VecDeque::new()));
+        let mut q = queue.lock().unwrap();
+        q.push_back(id);
         Ok(())
     }
 }
