@@ -1341,7 +1341,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
+
+    let auth_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        if crate::config::get().multitenant {
+            panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+        }
+        "default_secret_for_standalone_and_tests_not_for_prod".to_string()
+    }).into_bytes();
+
+    let auth_repo: std::sync::Arc<dyn auth::UserRepository> = match &db.store {
+        crate::db::DbStore::Postgres => std::sync::Arc::new(auth::postgres_store::PgUserRepository::new(db.pool.clone(), auth_secret)),
+        crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone(), auth_secret)),
+    };
+
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if crate::config::get().telemetry_enabled {
@@ -1417,7 +1429,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
+        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(auth_repo)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
