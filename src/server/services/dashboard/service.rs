@@ -42,7 +42,7 @@ impl DashboardService for MyDashboardService {
         let filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
 
         let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
+        for a in filtered_agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
