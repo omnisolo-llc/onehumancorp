@@ -130,12 +130,13 @@ impl MeshTransport for MemoryTransport {
 
 #[derive(Clone)]
 pub struct IpcTransport {
+    instance_id: String,
     pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
 }
 
 impl IpcTransport {
-    pub async fn new(db_url: &str) -> Result<Self, String> {
+    pub async fn new(db_url: &str, instance_id: String) -> Result<Self, String> {
         use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
@@ -188,7 +189,7 @@ impl IpcTransport {
 
         let subs = DashMap::new();
 
-        Ok(IpcTransport { pool, subs })
+        Ok(IpcTransport { instance_id, pool, subs })
     }
 
     pub async fn start_worker(&self) {
@@ -196,7 +197,7 @@ impl IpcTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = self.instance_id.clone();
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -648,7 +649,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     // Standalone fallback
     if let Ok(db_url) = std::env::var("DATABASE_URL") {
         if db_url.starts_with("sqlite") {
-            match IpcTransport::new(&db_url).await {
+            match IpcTransport::new(&db_url, uuid::Uuid::new_v4().to_string()).await {
                 Ok(t) => {
                     let t_clone = t.clone();
                     tokio::spawn(async move { t_clone.start_worker().await; });
@@ -689,7 +690,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, uuid::Uuid::new_v4().to_string()).await.unwrap();
 
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
@@ -728,7 +729,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_checkpoints_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, uuid::Uuid::new_v4().to_string()).await.unwrap();
 
         let msg = Message {
             agent_id: "test".to_string(),
@@ -745,7 +746,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = transport.instance_id.clone();
         let last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_one(&transport.pool)
@@ -760,7 +761,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_locks_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let transport = IpcTransport::new(&db_url).await.unwrap();
+        let transport = IpcTransport::new(&db_url, uuid::Uuid::new_v4().to_string()).await.unwrap();
 
         let t_clone = transport.clone();
         tokio::spawn(async move { t_clone.start_worker().await; });
