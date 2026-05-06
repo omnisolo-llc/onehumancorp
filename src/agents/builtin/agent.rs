@@ -1011,7 +1011,7 @@ impl Agent {
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
-                        let err = format!("User intervention required: {}", msg);
+                        let err = format!("USER_FIXABLE: {}", msg);
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
@@ -1046,7 +1046,7 @@ impl Agent {
                 if let Err(e) = Self::check_tool_gating(&tc, false, cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
-                            let err = format!("User intervention required: {}", msg);
+                            let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
@@ -1131,7 +1131,7 @@ impl Agent {
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
-                            let err = format!("User intervention required: {}", msg);
+                            let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
@@ -1800,7 +1800,7 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         let err_str = result.unwrap_err().to_string();
-        assert!(err_str.contains("User intervention required"));
+        assert!(err_str.contains("USER_FIXABLE"));
         assert!(err_str.contains("requires explicit user confirmation"));
 
     }
@@ -2300,7 +2300,7 @@ mod tests {
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                error.contains("User intervention required: please login to external service")
+                error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
             }
