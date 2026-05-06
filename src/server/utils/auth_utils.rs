@@ -4,7 +4,7 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if org_id.is_empty() {
+    if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.
