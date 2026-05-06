@@ -83,8 +83,8 @@ fn grow_business_test_set_selected_strategy() {
     let ui = create();
     ui.set_selected_strategy("Add 5 more products".into());
     assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
-    ui.set_selected_strategy("Connect Instagram".into());
-    assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+    ui.set_selected_strategy("Connect my Instagram".into());
+    assert_eq!(ui.get_selected_strategy(), "Connect my Instagram");
 }
 
 #[test]
@@ -133,8 +133,8 @@ fn grow_business_test_callbacks() {
     ui.on_select_strategy(move |s| {
         *s1.borrow_mut() = s.to_string();
     });
-    ui.invoke_select_strategy("Connect Instagram".into());
-    assert_eq!(*select_strategy_called.borrow(), "Connect Instagram");
+    ui.invoke_select_strategy("Connect my Instagram".into());
+    assert_eq!(*select_strategy_called.borrow(), "Connect my Instagram");
 
     // Test next_step
     let next_step_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -167,8 +167,8 @@ fn grow_business_test_callbacks() {
 #[test]
 fn grow_business_test_social_media_connect_instagram() {
     let ui = create();
-    ui.set_selected_strategy("Connect Instagram".into());
-    assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+    ui.set_selected_strategy("Connect my Instagram".into());
+    assert_eq!(ui.get_selected_strategy(), "Connect my Instagram");
 }
 
 #[test]

@@ -83,12 +83,12 @@ export component GrowBusiness inherits Window {
 
                     GlassCard {
                         height: 70px;
-                        background: selected_strategy == "Connect Instagram" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_strategy == "Connect my Instagram" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "📸 Connect Instagram"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "📸 Connect my Instagram"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                             Text { text: "Auto-post your products to your followers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                         }
-                        TouchArea { clicked => { select_strategy("Connect Instagram"); } }
+                        TouchArea { clicked => { select_strategy("Connect my Instagram"); } }
                     }
 
                     GlassCard {

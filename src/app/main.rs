@@ -1159,7 +1159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = em_handle_for_gb.upgrade() {
                     let _ = ui.show();
                 }
-            } else if strategy == "Connect Instagram" {
+            } else if strategy == "Connect my Instagram" {
                 if let Some(dash) = dashboard_handle_for_gb.upgrade() {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
@@ -1168,7 +1168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             current_tasks.push(item);
                         }
                     }
-                    println!("Growth Feature: Social Media Auto-Posting Connect Instagram executed via OHC UI");
+                    println!("Growth Feature: Social Media Auto-Posting Connect my Instagram executed via OHC UI");
                     current_tasks.push(app::UiPendingApproval {
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
@@ -2894,7 +2894,7 @@ mod e2e_tests {
         let dashboard_handle = dashboard_ui.as_weak();
 
         gb_ui.on_execute(move |strategy, _kpi| {
-            if strategy == "Connect Instagram" {
+            if strategy == "Connect my Instagram" {
                 if let Some(dash) = dashboard_handle.upgrade() {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
@@ -2915,7 +2915,7 @@ mod e2e_tests {
 
         assert_eq!(gb_ui.get_step(), 0);
 
-        gb_ui.invoke_select_strategy("Connect Instagram".into());
+        gb_ui.invoke_select_strategy("Connect my Instagram".into());
         gb_ui.invoke_next_step();
 
         assert_eq!(gb_ui.get_step(), 1);
@@ -4964,7 +4964,7 @@ mod remaining_e2e_tests {
         });
 
         social_posting_ui.invoke_connect_instagram();
-        assert!(*connect_instagram_called.borrow(), "Connect Instagram should be invoked");
+        assert!(*connect_instagram_called.borrow(), "Connect my Instagram should be invoked");
 
         let connect_facebook_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let connect_facebook_called_clone = connect_facebook_called.clone();
