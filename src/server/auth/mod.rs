@@ -104,8 +104,38 @@ impl Store {
                 if crate::config::get().multitenant {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
-                tracing::warn!("falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
-                random_bytes(32)
+
+                let secret_path = std::path::Path::new(".ohc_jwt_secret");
+                if secret_path.exists() {
+                    if let Ok(bytes) = std::fs::read(secret_path) {
+                        if bytes.len() >= 32 {
+                            return bytes;
+                        }
+                    }
+                }
+
+                tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
+                let new_secret = random_bytes(32);
+
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    use std::io::Write;
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .mode(0o600)
+                        .open(secret_path)
+                    {
+                        let _ = file.write_all(&new_secret);
+                    }
+                }
+                #[cfg(not(unix))]
+                {
+                    let _ = std::fs::write(secret_path, &new_secret);
+                }
+
+                new_secret
             });
 
         let mut roles = HashMap::new();
