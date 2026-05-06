@@ -60,3 +60,15 @@ fn test_api_docs_is_advanced_toggle() {
     ui.set_is_advanced(true);
     assert_eq!(ui.get_is_advanced(), true);
 }
+
+#[test] fn docs_extra_validation() {
+    let ui = create();
+    ui.set_api_key("Test".into());
+    assert_eq!(ui.get_api_key(), "Test");
+}
+
+#[test] fn docs_extra_validation_two() {
+    let ui = create();
+    ui.set_endpoint_url("Another test".into());
+    assert_eq!(ui.get_endpoint_url(), "Another test");
+}

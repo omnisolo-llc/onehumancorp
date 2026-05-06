@@ -90,3 +90,27 @@ fn test_ai_help_chat_title() {
     let ui = crate::app::AiHelpChat::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
 }
+
+#[test]
+fn test_walkthrough_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::InteractiveWalkthrough::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Walkthrough"));
+}
+
+#[test]
+fn test_video_tutorials_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::VideoTutorials::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Video Tutorials"));
+}
+
+#[test]
+fn test_release_notes_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::ReleaseNotes::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("What's New"));
+}

@@ -185,3 +185,15 @@ fn test_e2e_ai_help_chat_initial_message_content() {
     assert_eq!(msg.sender, "AI");
     assert!(msg.text.contains("Hi! I'm your OHC Help Assistant"));
 }
+
+#[test] fn chat_help_extra_validation() {
+    let ui = create();
+    ui.set_user_input("Test".into());
+    assert_eq!(ui.get_user_input(), "Test");
+}
+
+#[test] fn chat_help_extra_validation_two() {
+    let ui = create();
+    ui.set_user_input("Another test".into());
+    assert_eq!(ui.get_user_input(), "Another test");
+}

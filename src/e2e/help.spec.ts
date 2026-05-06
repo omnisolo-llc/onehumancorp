@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Help Center', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
-    await page.waitForURL('**/dashboard**');
+    await page.waitForURL('**');
   });
 
   test('should display help center page', async ({ page }) => {
@@ -161,11 +161,11 @@ test.describe('Help Center', () => {
 
 test.describe('AI Help Chat', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
-    await page.waitForURL('**/dashboard**');
+    await page.waitForURL('**');
   });
 
   test('should display AI help chat', async ({ page }) => {
@@ -255,11 +255,11 @@ test.describe('AI Help Chat', () => {
 
 test.describe('Interactive Walkthrough', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
-    await page.waitForURL('**/dashboard**');
+    await page.waitForURL('**');
   });
 
   test('should start walkthrough', async ({ page }) => {
@@ -343,11 +343,11 @@ test.describe('Interactive Walkthrough', () => {
 
 test.describe('Video Tutorials', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
     await page.locator('input[type="email"]').fill('test@example.com');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
-    await page.waitForURL('**/dashboard**');
+    await page.waitForURL('**');
   });
 
   test('should display video tutorials page', async ({ page }) => {

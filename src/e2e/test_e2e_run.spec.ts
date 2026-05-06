@@ -247,3 +247,25 @@ test('verify login empty submission', async ({ page }) => {
     // Wait for validation error
     await expect(page.locator('text="Username cannot be empty"')).toBeVisible();
 });
+
+test('verify help center from dashboard', async ({ page }) => {
+    // Navigate to the home page
+    await page.goto('/');
+
+    // Login
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    // Wait for the Dashboard
+    await expect(page.locator('text="Welcome"')).toBeVisible();
+
+    // Open Menu
+    await page.click('button:has-text("Menu")');
+
+    // Click Help Center
+    await page.click('button:has-text("Help Center")');
+
+    // Verify it is displayed
+    await expect(page.locator('text="Help Center"')).toBeVisible();
+});

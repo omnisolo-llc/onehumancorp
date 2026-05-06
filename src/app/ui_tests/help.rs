@@ -38,3 +38,15 @@ fn create_verify_search_query() {
     ui.set_search_query("payment methods".into());
     assert_eq!(ui.get_search_query(), "payment methods");
 }
+
+#[test] fn help_extra_validation() {
+    let ui = create();
+    ui.set_search_query("Test".into());
+    assert_eq!(ui.get_search_query(), "Test");
+}
+
+#[test] fn help_extra_validation_two() {
+    let ui = create();
+    ui.set_search_query("Another test".into());
+    assert_eq!(ui.get_search_query(), "Another test");
+}

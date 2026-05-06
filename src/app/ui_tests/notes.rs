@@ -48,3 +48,15 @@ fn create_verify_show_latest_only() {
     ui.set_show_latest_only(false);
     assert_eq!(ui.get_show_latest_only(), false);
 }
+
+#[test] fn notes_extra_validation() {
+    let ui = create();
+    ui.set_current_version("Test".into());
+    assert_eq!(ui.get_current_version(), "Test");
+}
+
+#[test] fn notes_extra_validation_two() {
+    let ui = create();
+    ui.set_current_version("Another test".into());
+    assert_eq!(ui.get_current_version(), "Another test");
+}

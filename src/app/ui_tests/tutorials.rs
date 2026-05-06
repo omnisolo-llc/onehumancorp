@@ -51,3 +51,15 @@ fn create_verify_is_playing() {
     ui.set_is_playing(false);
     assert_eq!(ui.get_is_playing(), false);
 }
+
+#[test] fn tutorials_extra_validation() {
+    let ui = create();
+    ui.set_selected_video_title("Test".into());
+    assert_eq!(ui.get_selected_video_title(), "Test");
+}
+
+#[test] fn tutorials_extra_validation_two() {
+    let ui = create();
+    ui.set_selected_video_title("Another test".into());
+    assert_eq!(ui.get_selected_video_title(), "Another test");
+}
