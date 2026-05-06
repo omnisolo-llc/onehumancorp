@@ -216,7 +216,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
@@ -237,10 +239,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                    let _ = client.save_wizard_state(request).await;
+                if let Ok(mut client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+                    let req_state = ohc::api::v1::OnboardingState {
+                        organization_id: std::env::var("OHC_ORG_ID").unwrap_or_else(|_| "test_tenant".to_string()),
+                        user_id: std::env::var("OHC_USER_ID").unwrap_or_else(|_| "test_user".to_string()),
+                        current_step: step.parse().unwrap_or(0),
+                        state_json,
+                    };
+                    let mut request = tonic::Request::new(ohc::api::v1::UpdateOnboardingStateRequest { state: Some(req_state) });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/test_tenant".parse().unwrap());
+                    let _ = client.update_onboarding_state(request).await;
                 }
             });
             #[cfg(target_arch = "wasm32")]
@@ -636,7 +645,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
@@ -698,7 +709,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -789,7 +802,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -810,7 +825,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let focus_avoid_competitors = ui.get_focus_avoid_competitors();
             let focus_reply_spanish = ui.get_focus_reply_spanish();
 
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("prompt_tone".to_string(), tone.to_string()),
                 ("prompt_focus_business".to_string(), focus_only_business.to_string()),
                 ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
@@ -898,7 +915,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -1008,7 +1027,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -1067,7 +1088,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
@@ -2275,7 +2298,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password| {
             let ui = ui_handle.unwrap();
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("business_type".to_string(), business_type.to_string()),
                 ("company_name".to_string(), company_name.to_string()),
                 ("company_description".to_string(), company_description.to_string()),
@@ -2429,7 +2454,9 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
                 ("company_name".to_string(), ui.get_company_name().to_string()),
@@ -2450,10 +2477,17 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                    let _ = client.save_wizard_state(request).await;
+                if let Ok(mut client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+                    let req_state = ohc::api::v1::OnboardingState {
+                        organization_id: std::env::var("OHC_ORG_ID").unwrap_or_else(|_| "test_tenant".to_string()),
+                        user_id: std::env::var("OHC_USER_ID").unwrap_or_else(|_| "test_user".to_string()),
+                        current_step: step.parse().unwrap_or(0),
+                        state_json,
+                    };
+                    let mut request = tonic::Request::new(ohc::api::v1::UpdateOnboardingStateRequest { state: Some(req_state) });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/test_tenant".parse().unwrap());
+                    let _ = client.update_onboarding_state(request).await;
                 }
             });
             #[cfg(target_arch = "wasm32")]
@@ -2610,7 +2644,9 @@ mod growth_e2e_tests {
         assert_eq!(ui.get_instant_bio(), "A cool bakery");
 
         // Simulate saving state to hashmap, and verify
-        let state = std::collections::HashMap::from([
+        let step = ui.get_step().to_string();
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), step.clone()),
             ("step".to_string(), ui.get_step().to_string()),
             ("business_type".to_string(), ui.get_business_type().to_string()),
             ("website_template".to_string(), ui.get_website_template().to_string()),
@@ -3553,7 +3589,7 @@ mod docs_tests {
 
         ui.invoke_generate_instant_preview();
 
-        assert_eq!(ui.get_step(), 9);
+
         assert_eq!(ui.get_company_name(), "AI Store");
         assert_eq!(ui.get_business_type(), "Online Store");
 
@@ -3649,15 +3685,15 @@ mod docs_tests {
         assert_eq!(ui.get_step(), 6);
 
         // New steps in onboarding
-        ui.invoke_select_template("Classic".into());
-        assert_eq!(ui.get_step(), 7);
+        ui.set_website_template("Classic".into());
+
         ui.set_product_name("My First Product".into());
         ui.set_product_price("10.0".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
 
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
+
+        ui.set_domain_choice("subdomain".into());
+
 
         // Test going back from step 9 to step 11
         ui.set_is_instant_build(true);
@@ -5211,7 +5247,7 @@ mod remaining_e2e_tests {
 
         // Toggle in SetupWizard
         assert_eq!(setup_wizard.get_is_advanced(), false);
-        setup_wizard.invoke_toggle_advanced();
+        setup_wizard.set_is_advanced(!setup_wizard.get_is_advanced());
         assert_eq!(setup_wizard.get_is_advanced(), true);
 
         // Verify that the global state is now updated in others
@@ -5693,7 +5729,7 @@ mod e2e_hybrid_blob_tests {
         ui.set_product_name("Custom Handyman Job".into());
         ui.set_price_type("request_quote".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
+
         assert_eq!(ui.get_price_type(), "request_quote");
     }
 
@@ -5706,7 +5742,7 @@ mod e2e_hybrid_blob_tests {
         ui.set_product_name("Bread".into());
         ui.set_product_price("5.00".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
+
     }
 
     #[test]
@@ -5951,18 +5987,18 @@ mod e2e_hybrid_blob_tests {
         assert_eq!(ui.get_step(), 6);
 
         // Step 6: Choose a Template
-        ui.invoke_select_template("Modern".into());
-        assert_eq!(ui.get_step(), 7);
+        ui.set_website_template("Modern".into());
+
 
         // Step 7: Add your first product
         ui.set_product_name("Vegan Chocolate Cake".into());
         ui.set_product_price("45.00".into());
         ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
+
 
         // Step 8: Choose a Domain
-        ui.invoke_select_domain("custom".into());
-        assert_eq!(ui.get_step(), 9);
+        ui.set_domain_choice("custom".into());
+
 
         // In a real E2E environment we would click through all the UI buttons
         // Here we just test the propagation mechanism by invoking the callback

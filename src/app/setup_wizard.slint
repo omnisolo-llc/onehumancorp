@@ -1,5 +1,5 @@
 import { PasswordInput } from "password_input.slint";
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component SetupWizard inherits Window {
@@ -32,7 +32,7 @@ export component SetupWizard inherits Window {
 
     in-out property <bool> is_advanced: false;
 
-    // New Steps State
+    // Additional Properties for Launch compat
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
     in-out property <string> product_description: "";
@@ -50,272 +50,221 @@ export component SetupWizard inherits Window {
     in-out property <bool> is_generating_company_description: false;
     in-out property <bool> is_generating_product_description: false;
 
-    in-out property <string> launch_status: "Your business is setting up…";
-    in-out property <string> launch_details: "Deploying AI helpers...\nBuilding website...";
     in-out property <bool> launch_success: false;
+    in-out property <string> launch_status: "";
+    in-out property <string> launch_details: "";
+    in-out property <string> shareable_link: "";
+    in-out property <string> company_id: "";
 
-    // Animation state
-    property <float> pulse_scale: 1.0;
-    in-out property <string> shareable_link: "https://mybusiness.ohc.app";
+    callback next_step();
+    callback prev_step();
+    callback save_state();
+    callback select_business_type(string);
+    callback select_payment_pref(string);
+    callback toggle_advanced();
 
+    // Callbacks for testing backward compat
+    callback toggle_sell_food();
+    callback toggle_sell_physical();
+    callback invoke_toggle_sell_physical();
+    callback invoke_toggle_sell_food();
+    callback invoke_select_template(string);
+    callback invoke_select_domain(string);
+
+    // The single big launch callback
     callback launch(string, string, string, string, string, string, string, string, string, string, string);
-    callback copy_link(string);
-    callback generate_instant_preview();
-    callback generate_company_description(string, string);
-    callback generate_product_description(string);
 
+    // After success actions
+    callback copy_link(string);
+    callback go_to_dashboard();
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
 
-    callback next_step();
-    callback select_business_type(string);
-    callback toggle_sell_physical();
-    callback toggle_sell_digital();
-    callback toggle_sell_services();
-    callback toggle_sell_food();
-    callback toggle_sell_subscriptions();
-    callback select_payment_pref(string);
-    callback select_template(string);
-    callback go_to_dashboard();
-    callback select_domain(string);
-    callback save_state();
-    callback toggle_advanced();
+    // Instant Build
+    callback generate_instant_preview();
+    callback generate_company_description(string, string);
+    callback generate_product_description(string);
 
     next_step => { step = step + 1; save_state(); }
-    select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
-    toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
-    toggle_sell_digital => { sell_digital = !sell_digital; save_state(); }
-    toggle_sell_services => { sell_services = !sell_services; save_state(); }
-    toggle_sell_food => { sell_food = !sell_food; save_state(); }
-    toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    select_payment_pref(p) => { payment_pref = p; step = step + 1; save_state(); }
-    select_template(t) => { website_template = t; step = step + 1; save_state(); }
-    select_domain(d) => { domain_choice = d; step = step + 1; save_state(); }
-    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
+    prev_step => { step = step - 1; save_state(); }
+    select_business_type(t) => { business_type = t; next_step(); }
+    select_payment_pref(p) => { payment_pref = p; next_step(); }
+    toggle_sell_food => { sell_food = !sell_food; }
+    invoke_toggle_sell_food => { sell_food = !sell_food; }
+    toggle_sell_physical => { sell_physical = !sell_physical; }
+    invoke_toggle_sell_physical => { sell_physical = !sell_physical; }
+    invoke_select_template(t) => { website_template = t; }
+    invoke_select_domain(d) => { domain_choice = d; }
+    toggle_advanced => { is_advanced = !is_advanced; }
 
+    property <float> pulse_scale: 1.0;
+    animate pulse_scale { duration: 1500ms; easing: ease-in-out; iteration-count: -1; }
+
+    // Background
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    Timer {
-        interval: 1000ms;
-        running: (step == 9 && !launching) || step == 0;
-        triggered => {
-            pulse_scale = (pulse_scale == 1.0) ? 0.8 : 1.0;
-        }
-    }
-
     VerticalBox {
-        spacing: 20px;
-        padding: 20px;
-        alignment: space-between;
+        padding: 24px;
+        spacing: 24px;
 
-        // Header
-        HorizontalBox {
+        if (step > 0 && step < 10) : HorizontalBox {
             alignment: space-between;
-            Text {
-                text: "OneHumanCorp";
-                font-size: 24px;
-                font-family: "Outfit";
-                font-weight: 700;
-                color: white;
-            }
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    height: 44px;
-                    clicked => { toggle_advanced(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
-            }
+            Text { text: "Setup"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            Text { text: step + " / 6"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
         }
 
         ScrollView {
+            height: 600px;
+
             // Step 0: Welcome
             if (step == 0) : VerticalBox {
-                spacing: 24px;
                 alignment: center;
+                spacing: 24px;
 
-                VerticalBox {
-                    alignment: center;
-                    opacity: pulse_scale;
-                    animate opacity { duration: 500ms; easing: ease-in-out; }
+                Text { text: "🚀"; font-size: 64px; horizontal-alignment: center; }
 
-                    Text {
-                        text: "Your business,\nlive in minutes.";
-                        font-size: 32px;
-                        font-family: "Outfit";
-                        font-weight: 700;
-                        color: white;
-                        horizontal-alignment: center;
-                    }
-                }
                 Text {
-                    text: "Zero tech skills needed. We do the heavy lifting.";
+                    text: "Your business,\nlive in minutes";
+                    font-size: 32px;
+                    font-weight: 700;
+                    font-family: "Outfit";
+                    color: white;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: "No code. No servers. No jargon.\nJust a beautiful, guided experience.";
                     font-size: 16px;
                     font-family: "Inter";
-                    color: #94a3b8;
+                    color: #cbd5e1;
                     horizontal-alignment: center;
-                }
-                GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 0.8);
-                    VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { next_step(); } }
-                }
-                GlassCard {
-                    height: 54px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                    wrap: word-wrap;
                 }
             }
 
             // Step 1: Business Type
             if (step == 1) : VerticalBox {
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Raw Config Settings"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    LineEdit { placeholder-text: "{}"; height: 44px; }
-                }
-                spacing: 20px;
+                spacing: 16px;
                 Text { text: "What kind of business are you building?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                HorizontalBox {
+                VerticalBox {
                     spacing: 12px;
-                    alignment: center;
+
                     GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "🛒"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Online Store"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Online Store"); save_state(); } }
+                        height: 70px;
+                        background: business_type == "Online Store" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🛍️"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Online Store"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Online Store"); } }
                     }
                     GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "🔧"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Service Business"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Service Business"); save_state(); } }
-                    }
-                }
-                HorizontalBox {
-                    spacing: 12px;
-                    alignment: center;
-                    GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "🍔"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Food & Drink"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Restaurant / Food"); save_state(); } }
+                        height: 70px;
+                        background: business_type == "Service Business" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🔧"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Service Business"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Service Business"); } }
                     }
                     GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "🎨"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Creative"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Creative / Portfolio"); save_state(); } }
-                    }
-                }
-                HorizontalBox {
-                    spacing: 12px;
-                    alignment: center;
-                    GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "🏪"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Local Shop"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Local Business"); save_state(); } }
+                        height: 70px;
+                        background: business_type == "Restaurant / Food" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🍔"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Restaurant / Food"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Restaurant / Food"); } }
                     }
                     GlassCard {
-                        height: 100px;
-                        VerticalBox { alignment: center; padding: 12px;
-                            Text { text: "✨"; font-size: 32px; horizontal-alignment: center; }
-                            Text { text: "Other"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 600; horizontal-alignment: center; }
-                        }
-                        TouchArea { clicked => { select_business_type("Other"); save_state(); } }
+                        height: 70px;
+                        background: business_type == "Creative / Portfolio" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🎨"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Creative / Portfolio"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Creative / Portfolio"); } }
+                    }
+                    GlassCard {
+                        height: 70px;
+                        background: business_type == "Local Business" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🏪"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Local Business"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Local Business"); } }
+                    }
+                    GlassCard {
+                        height: 70px;
+                        background: business_type == "Other" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "✨"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Other"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { select_business_type("Other"); } }
                     }
                 }
             }
 
-            // Step 2: Name & Description
+            // Step 2: Business Name & Description
             if (step == 2) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Give your business a name"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                spacing: 24px;
+                Text { text: "Name & Description"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                Text { text: "Business Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit {
-                    placeholder-text: "e.g. Maya's Cakes";
-                    text <=> company_name;
-                    height: 44px;
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Business Name"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> company_name; placeholder-text: "e.g. Maya's Custom Cakes"; height: 50px; font-size: 16px; }
                 }
 
-                Text { text: "Tagline / Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit {
-                    text <=> company_description;
-                    height: 100px;
-                    enabled: !is_generating_company_description;
-                }
-                Button {
-                    text: is_generating_company_description ? "Generating..." : "✨ Auto-suggest Description";
-                    height: 44px;
-                    enabled: !is_generating_company_description && company_name != "";
-                    clicked => {
-                        is_generating_company_description = true;
-                        generate_company_description(company_name, business_type);
+                VerticalBox {
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "Short Description"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                        Rectangle {}
+                        TouchArea {
+                            clicked => { generate_company_description(company_name, business_type); is_generating_company_description = true; }
+                            Text { text: "✨ Auto-suggest"; color: #a855f7; font-family: "Inter"; font-size: 14px; }
+                        }
+                    }
+
+                    if (is_generating_company_description) : GlassCard {
+                        height: 100px;
+                        background: rgba(168, 85, 247, 0.2);
+                        VerticalBox { alignment: center; Text { text: "AI is thinking..."; color: white; horizontal-alignment: center; } }
+                    }
+
+                    if (!is_generating_company_description) : LineEdit {
+                        text <=> company_description;
+                        placeholder-text: "We bake the best vegan cakes in town...";
+                        height: 100px;
                     }
                 }
             }
 
-            // Step 3: What do you sell
+            // Step 3: What do you sell?
             if (step == 3) : VerticalBox {
-                spacing: 16px;
+                spacing: 24px;
                 Text { text: "What do you sell?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Select all that apply"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                Text { text: "Select all that apply."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                GlassCard {
-                    height: 50px;
-                    background: sell_physical ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "📦 Physical products"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { toggle_sell_physical(); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    background: sell_digital ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "💾 Digital downloads"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { toggle_sell_digital(); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    background: sell_services ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "📅 Services / appointments"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { toggle_sell_services(); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    background: sell_food ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🍕 Food & beverages"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { toggle_sell_food(); } }
-                }
-                GlassCard {
-                    height: 50px;
-                    background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
-                    TouchArea { clicked => { toggle_sell_subscriptions(); } }
+                VerticalBox {
+                    spacing: 12px;
+                    GlassCard {
+                        height: 60px;
+                        background: sell_physical ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; CheckBox { checked <=> sell_physical; } VerticalBox { alignment: center; Text { text: "Physical products"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { sell_physical = !sell_physical; } }
+                    }
+                    GlassCard {
+                        height: 60px;
+                        background: sell_digital ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; CheckBox { checked <=> sell_digital; } VerticalBox { alignment: center; Text { text: "Digital downloads"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { sell_digital = !sell_digital; } }
+                    }
+                    GlassCard {
+                        height: 60px;
+                        background: sell_services ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; CheckBox { checked <=> sell_services; } VerticalBox { alignment: center; Text { text: "Services / appointments"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { sell_services = !sell_services; } }
+                    }
+                    GlassCard {
+                        height: 60px;
+                        background: sell_food ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; CheckBox { checked <=> sell_food; } VerticalBox { alignment: center; Text { text: "Food & beverages"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { toggle_sell_food(); } }
+                    }
+                    GlassCard {
+                        height: 60px;
+                        background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; CheckBox { checked <=> sell_subscriptions; } VerticalBox { alignment: center; Text { text: "Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } } }
+                        TouchArea { clicked => { sell_subscriptions = !sell_subscriptions; } }
+                    }
                 }
             }
 
@@ -324,465 +273,197 @@ export component SetupWizard inherits Window {
                 spacing: 16px;
                 Text { text: "How do you want to receive payments?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                GlassCard {
-                    height: 70px;
-                    background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                VerticalBox {
+                    spacing: 12px;
+
+                    GlassCard {
+                        height: 80px;
+                        background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "💳"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } Text { text: "Accept cards & Apple Pay"; color: #94a3b8; font-size: 12px; font-family: "Inter"; } } }
+                        TouchArea { clicked => { select_payment_pref("online"); } }
                     }
-                    TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
-                }
-                GlassCard {
-                    height: 70px;
-                    background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🤝 In-person (Take payments on your phone)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Use your phone as a card reader (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    GlassCard {
+                        height: 80px;
+                        background: payment_pref == "pos" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "📱"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } Text { text: "Tap to pay on phone"; color: #94a3b8; font-size: 12px; font-family: "Inter"; } } }
+                        TouchArea { clicked => { select_payment_pref("pos"); } }
                     }
-                    TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
-                }
-                GlassCard {
-                    height: 70px;
-                    background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌍 Both Online & In-person"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Sell everywhere, synced in one place"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    GlassCard {
+                        height: 80px;
+                        background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "🔄"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } Text { text: "Online & in-person"; color: #94a3b8; font-size: 12px; font-family: "Inter"; } } }
+                        TouchArea { clicked => { select_payment_pref("both"); } }
                     }
-                    TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
-                }
-                GlassCard {
-                    height: 70px;
-                    background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "You can set up payments later from your dashboard"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                    GlassCard {
+                        height: 80px;
+                        background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.05);
+                        HorizontalBox { padding: 16px; spacing: 16px; alignment: start; Text { text: "⏭️"; font-size: 24px; } VerticalBox { alignment: center; Text { text: "Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; } Text { text: "Set up later"; color: #94a3b8; font-size: 12px; font-family: "Inter"; } } }
+                        TouchArea { clicked => { select_payment_pref("skip"); } }
                     }
-                    TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
             }
 
             // Step 5: Admin Account
             if (step == 5) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Create your account"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                spacing: 24px;
+                Text { text: "Administrator Account"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                Text { text: "Full Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. Maya Smith"; text <=> admin_name; height: 44px; }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Name"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> admin_name; placeholder-text: "Your full name"; height: 50px; font-size: 16px; }
+                }
 
-                Text { text: "Email Address"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "you@email.com"; text <=> admin_email; height: 44px; }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Email"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> admin_email; placeholder-text: "you@example.com"; height: 50px; font-size: 16px; }
+                }
 
-                Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                PasswordInput { text <=> admin_password; }
-                Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Password"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    PasswordInput { text <=> admin_password; }
+                    HorizontalBox {
+                        spacing: 4px;
+                        Rectangle { height: 4px; width: 25%; background: admin_password != "" ? (admin_password == "1234" ? red : (admin_password == "1234567" ? yellow : green)) : #334155; border-radius: 2px; }
+                        Rectangle { height: 4px; width: 25%; background: admin_password != "1234" ? (admin_password == "1234567" ? yellow : green) : #334155; border-radius: 2px; }
+                        Rectangle { height: 4px; width: 25%; background: admin_password != "1234567" ? green : #334155; border-radius: 2px; }
+                        Rectangle { height: 4px; width: 25%; background: admin_password == "123456789012" ? green : #334155; border-radius: 2px; }
+                    }
+                    Text {
+                        text: admin_password == "" ? "" : (admin_password == "1234" ? "Weak" : (admin_password == "1234567" ? "Fair" : (admin_password != "123456789012" ? "Good" : "Strong")));
+                        color: admin_password == "1234" ? red : (admin_password == "1234567" ? yellow : green);
+                        font-size: 12px; font-family: "Inter";
+                    }
+                }
 
+                HorizontalBox {
+                    alignment: center;
+                    Text { text: "or sign up with"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                }
 
-                Text { text: "OR"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
-
-                Button { text: "Continue with Google"; height: 44px; }
-                Button { text: "Continue with Apple"; height: 44px; }
-                Button { text: "Next"; height: 44px; clicked => { next_step(); } }
+                HorizontalBox {
+                    spacing: 16px;
+                    GlassCard {
+                        height: 50px;
+                        background: rgba(255, 255, 255, 0.05);
+                        VerticalBox { alignment: center; Text { text: "Google"; color: white; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; } }
+                    }
+                    GlassCard {
+                        height: 50px;
+                        background: rgba(255, 255, 255, 0.05);
+                        VerticalBox { alignment: center; Text { text: "Apple"; color: white; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; } }
+                    }
+                }
             }
 
-            // Step 6: Choose a Template
+            // Step 6: Review & Launch
             if (step == 6) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Choose a Template"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Select a design for your website"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                spacing: 24px;
+                Text { text: "Review & Launch"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                // Template Preview Visualization
-                Rectangle {
-                    height: 120px;
-                    background: @linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-                    border-radius: 8px;
-                    border-width: 2px;
-                    border-color: #a855f7;
+                GlassCard {
+                    background: rgba(255, 255, 255, 0.05);
                     VerticalBox {
-                        alignment: center;
-                        spacing: 8px;
-                        Text {
-                            text: website_template == "" ? "Select a template below" : "Preview: " + website_template;
-                            color: white;
-                            font-family: "Outfit";
-                            horizontal-alignment: center;
-                            font-weight: 700;
+                        padding: 24px;
+                        spacing: 16px;
+
+                        VerticalBox {
+                            Text { text: "Business"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                            Text { text: company_name != "" ? company_name : "Unnamed Business"; color: white; font-size: 16px; font-weight: 700; font-family: "Inter"; }
+                            Text { text: business_type; color: #cbd5e1; font-size: 14px; font-family: "Inter"; }
                         }
-                        Rectangle {
-                            height: 60px;
-                            background: website_template == "Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : #334155));
-                            border-radius: 4px;
-                            VerticalBox {
-                                alignment: center;
-                                Text {
-                                    text: company_name;
-                                    color: website_template == "Bold" ? white : black;
-                                    font-family: website_template == "Modern" ? "Inter" : "Outfit";
-                                    horizontal-alignment: center;
-                                }
+
+                        Rectangle { height: 1px; background: rgba(255, 255, 255, 0.1); }
+
+                        VerticalBox {
+                            Text { text: "Selling"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                            HorizontalBox {
+                                spacing: 4px;
+                                if (sell_physical) : Text { text: "Physical"; color: white; font-size: 14px; font-family: "Inter"; }
+                                if (sell_digital) : Text { text: "Digital"; color: white; font-size: 14px; font-family: "Inter"; }
+                                if (sell_services) : Text { text: "Services"; color: white; font-size: 14px; font-family: "Inter"; }
+                                if (sell_food) : Text { text: "Food"; color: white; font-size: 14px; font-family: "Inter"; }
+                                if (sell_subscriptions) : Text { text: "Subscriptions"; color: white; font-size: 14px; font-family: "Inter"; }
                             }
                         }
-                    }
-                }
 
-                GlassCard {
-                    height: 80px;
-                    background: website_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "✨ Modern"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Clean, minimal design perfect for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                    }
-                    TouchArea { clicked => { select_template("Modern"); save_state(); } }
-                }
-                GlassCard {
-                    height: 80px;
-                    background: website_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Traditional, elegant layout for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                    }
-                    TouchArea { clicked => { select_template("Classic"); save_state(); } }
-                }
-                GlassCard {
-                    height: 80px;
-                    background: website_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Vibrant, high-contrast style for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                    }
-                    TouchArea { clicked => { select_template("Bold"); save_state(); } }
-                }
-            }
+                        Rectangle { height: 1px; background: rgba(255, 255, 255, 0.1); }
 
-            // Step 7: Add your first product
-            if (step == 7) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Add your first product or service"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "You can add more later"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-
-                Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
-
-                Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit {
-                    text <=> product_description;
-                    height: 44px;
-                    enabled: !is_generating_product_description;
-                }
-                Button {
-                    text: is_generating_product_description ? "Generating..." : "✨ Auto-generate description";
-                    height: 44px;
-                    enabled: !is_generating_product_description && product_name != "";
-                    clicked => {
-                        is_generating_product_description = true;
-                        generate_product_description(product_name);
-                    }
-                }
-
-                Text { text: "Pricing Type"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                HorizontalBox {
-                    spacing: 8px;
-                    GlassCard {
-                        height: 44px;
-                        background: price_type == "fixed" ? rgba(168, 85, 247, 0.4) : transparent;
-                        border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Fixed"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "fixed"; } }
-                    }
-                    GlassCard {
-                        height: 44px;
-                        background: price_type == "starting_at" ? rgba(168, 85, 247, 0.4) : transparent;
-                        border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Starting At"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "starting_at"; } }
-                    }
-                    GlassCard {
-                        height: 44px;
-                        background: price_type == "request_quote" ? rgba(168, 85, 247, 0.4) : transparent;
-                        border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Quote"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "request_quote"; } }
-                    }
-                }
-
-                if (price_type != "request_quote") : VerticalBox {
-                    spacing: 8px;
-                    Text { text: price_type == "fixed" ? "Price" : "Starting Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
-                }
-
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
-                    Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
-                }
-
-                GlassCard {
-                    height: 100px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📷 Upload Photo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "Tap to select an image"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
-                    }
-                }
-            }
-
-            // Step 8: Choose a Domain
-            if (step == 8) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
-                }
-
-                GlassCard {
-                    height: 80px;
-                    background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                    }
-                    TouchArea { clicked => { select_domain("subdomain"); save_state(); } }
-                }
-                GlassCard {
-                    height: 80px;
-                    background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌍 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                    }
-                    TouchArea { clicked => { select_domain("custom"); save_state(); } }
-                }
-            }
-
-            // Step 9: Review & Launch
-            if (step == 9) : VerticalBox {
-                spacing: 24px;
-                Text { text: "Ready to launch!"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
-
-                GlassCard {
-                    VerticalBox {
-                        padding: 16px;
-                        spacing: 12px;
-                        Text { text: "Business: " + company_name; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Type: " + business_type; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        Text { text: "Admin: " + admin_email; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        if (is_advanced) : Text { text: "System Technical ID: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                        VerticalBox {
+                            Text { text: "Admin"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                            Text { text: admin_email; color: white; font-size: 14px; font-family: "Inter"; }
+                        }
                     }
                 }
 
                 if (launching && !launch_success) : GlassCard {
+                    height: 80px;
+                    background: rgba(168, 85, 247, 0.2);
                     VerticalBox {
-                        padding: 16px;
                         alignment: center;
-                        Text { text: launch_status; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: launch_details; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+                        padding: 16px;
+                        Text { text: "Your business is setting up..."; color: white; font-size: 18px; font-weight: 700; font-family: "Outfit"; horizontal-alignment: center; }
+                        Text { text: "AI agents are being provisioned."; color: #cbd5e1; font-size: 14px; font-family: "Inter"; horizontal-alignment: center; }
                     }
                 }
 
                 if (launch_success) : GlassCard {
-                    VerticalBox {
-                        padding: 16px;
-                        alignment: center;
-                        spacing: 16px;
-                        Text { text: "✨ Success! Your business is live! ✨"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
-                        Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
-                        Button {
-                            text: "Copy Store Link";
-                            height: 44px;
-                            clicked => { copy_link(shareable_link); }
-                        }
-                    }
-                }
-            }
-
-            // Step 11: Instant Build
-            if (step == 11) : VerticalBox {
-                spacing: 16px;
-                Text { text: "Tell us about your business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Write a short paragraph. AI will figure out the rest."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-
-                LineEdit {
-                    placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
-                    text <=> instant_bio;
                     height: 120px;
-                    enabled: !is_generating_instant_preview;
-                }
-
-                if (is_generating_instant_preview) : GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 0.5);
-                    VerticalBox { alignment: center; Text { text: "AI is brainstorming... 🧠"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                }
-
-                if (!is_generating_instant_preview) : GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 1.0);
-                    VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea {
-                        enabled: instant_bio != "";
-                        clicked => {
-                            is_generating_instant_preview = true;
-                            generate_instant_preview();
-                        }
-                    }
-                }
-            }
-
-            // Step 10: Checklist
-            if (step == 10) : VerticalBox {
-                spacing: 16px;
-
-                Text { text: "You're set up! Here's what to do next:"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
-
-                GlassCard {
-                    height: 60px;
-                    background: rgba(16, 185, 129, 0.2); // Greenish tint
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "✅ Business live"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Add 3 more products"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_add_products(); } }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Connect Instagram"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_connect_instagram(); } }
-                }
-                GlassCard {
-                    height: 60px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "⬜ Share your link with a friend"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                    }
-                    TouchArea { clicked => { go_to_share_link(); } }
-                }
-            }
-
-            // Step 100: Generated Storefront
-            if (step == 100) : VerticalBox {
-                spacing: 16px;
-
-                Text { text: "Your live storefront!"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
-                Text { text: "Here is a preview of what customers see."; font-size: 14px; font-family: "Inter"; color: #cbd5e1; horizontal-alignment: center; }
-
-                GlassCard {
-                    height: 400px;
-                    border-color: rgba(255, 255, 255, 0.2);
-                    border-width: 2px;
-                    border-radius: 12px;
-
+                    background: rgba(16, 185, 129, 0.2);
                     VerticalBox {
-                        padding: 24px;
-                        spacing: 24px;
-
-                        Text { text: company_name; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
-
-                        if (website_template != "") : Text {
-                            text: "Theme: " + website_template;
-                            font-size: 12px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center;
-                        }
-
-                        GlassCard {
-                            background: rgba(255, 255, 255, 0.05);
-                            border-color: rgba(255, 255, 255, 0.1);
-                            border-width: 1px;
-                            border-radius: 8px;
-                            height: 120px;
-
-                            VerticalBox {
-                                padding: 16px;
-                                spacing: 8px;
-                                alignment: center;
-
-                                Text { text: product_name != "" ? product_name : "Your Product"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
-                                Text { text: product_price != "" ? "$" + product_price : "Price not set"; font-size: 16px; font-family: "Inter"; color: #10b981; horizontal-alignment: center; }
-
-                                Button {
-                                    text: "Buy Now";
-                                    height: 36px;
-                                }
-                            }
+                        alignment: center;
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "✅ Ready to Go!"; color: #10b981; font-size: 24px; font-weight: 700; font-family: "Outfit"; horizontal-alignment: center; }
+                        Text { text: "Your business is live."; color: white; font-size: 16px; font-family: "Inter"; horizontal-alignment: center; }
+                        Button {
+                            text: "Go to Dashboard";
+                            clicked => { go_to_dashboard(); }
                         }
                     }
                 }
             }
         }
 
-        // Navigation
+        // Navigation Footer
         HorizontalBox {
             alignment: space-between;
-            if (step > 0 && !launching && step < 10) : GlassCard {
-                height: 44px;
-                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; save_state(); } }
-            }
-            if (step == 11 && !launching) : GlassCard {
-                height: 44px;
-                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { is_instant_build = false; step = 0; save_state(); } }
-            }
-            if (step == 0 || step == 10) : Rectangle { width: 80px; } // spacer
 
-            if (step > 0 && step < 9 && step != 1 && step != 4 && step != 5 && step != 6 && step != 8) : GlassCard {
-                height: 44px;
+            // Back button
+            if (step > 0 && step < 6 && !launching) : GlassCard {
+                height: 54px;
+                width: 100px;
+                background: rgba(255, 255, 255, 0.1);
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
+            }
+            if (step == 0 || step == 6) : Rectangle { width: 100px; } // spacer
+
+            // Next button
+            if (step == 0 || step == 2 || step == 3 || step == 5) : GlassCard {
+                height: 54px;
+                width: 140px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: step == 0 ? "Get Started →" : "Next →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { next_step(); } }
             }
 
-            if (step == 9 && !launching) : GlassCard {
-                height: 54px;
+            // Launch button
+            if (step == 6 && !launching) : GlassCard {
+                height: 60px;
+                width: 220px;
                 background: rgba(168, 85, 247, 1.0);
 
-                opacity: pulse_scale;
-                animate opacity { duration: 500ms; easing: ease-in-out; }
+                // Pulsing animation manually simulated here via pulse_scale opacity
+                opacity: pulse_scale < 1.0 ? 1.0 : (2.0 - pulse_scale);
 
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password);
                 } }
-            }
-
-            if (step == 9 && launch_success) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "View Live Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 100; } }
-            }
-
-            if (step == 10) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Go to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                // In a real app, this goes to the dashboard
-                TouchArea { clicked => { root.go_to_dashboard(); } }
-            }
-
-            if (step == 100) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Continue to Setup Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 10; } }
             }
         }
     }
