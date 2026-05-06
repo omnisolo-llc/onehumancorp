@@ -24,10 +24,10 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 	}
 }
 
-// SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
+// SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION' or 'BURSTING'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') LIMIT 100")
 	if err != nil {
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}

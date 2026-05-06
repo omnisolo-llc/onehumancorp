@@ -182,6 +182,18 @@ impl SipDB {
     }
 
     pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+        let mut final_status = status.to_string();
+
+        // Implement Elastic Swarm Bursting: Check for queue saturation
+        let pending_count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE organization_id = $1 AND (status = 'PENDING' OR status = 'RUNNING')")
+            .bind(&self.org_id)
+            .fetch_one(&mut **tx)
+            .await?;
+
+        if pending_count >= 5 && status == "PENDING" {
+            final_status = "BURSTING".to_string();
+        }
+
         let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE")
             .bind(mission_id)
             .bind(&self.org_id)
@@ -192,7 +204,7 @@ impl SipDB {
             let existing_id: String = r.get("id");
             if !existing_id.is_empty() && force_local {
                 sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
-                    .bind(status)
+                    .bind(&final_status)
                     .bind(payload)
                     .bind(mission_id)
                     .bind(&self.org_id)
@@ -209,7 +221,7 @@ impl SipDB {
             if let Some(_) = row_check {
                  if force_local {
                      sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
-                         .bind(status)
+                         .bind(&final_status)
                          .bind(payload)
                          .bind(mission_id)
                          .bind(&self.org_id)
@@ -219,7 +231,7 @@ impl SipDB {
             } else {
                  sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
                      .bind(mission_id)
-                     .bind(status)
+                     .bind(&final_status)
                      .bind(payload)
                      .bind(&self.org_id)
                      .execute(&mut **tx)
