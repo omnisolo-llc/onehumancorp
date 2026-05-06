@@ -15,6 +15,7 @@ rust_library(
         "//src/agents/builtin:__subpackages__",
     ],
     deps = [
+        "@crates//:temp-env",
         "//src/agents/builtin:core",
         "//src/proto:agent_service_tonic",
                 "@crates//:tonic",
