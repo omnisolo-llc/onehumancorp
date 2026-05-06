@@ -10,8 +10,8 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 85
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "500m"
@@ -27,14 +27,14 @@ backend:
   resourceQuota:
     enabled: true
     requests:
-      cpu: "1"
-      memory: "1Gi"
-      ephemeralStorage: "5Gi"
+      cpu: "10"
+      memory: "10Gi"
+      ephemeralStorage: "50Gi"
     limits:
-      cpu: "2"
-      memory: "2Gi"
-      ephemeralStorage: "10Gi"
-      pods: "5"
+      cpu: "40"
+      memory: "80Gi"
+      ephemeralStorage: "100Gi"
+      pods: "50"
   networkPolicy:
     enabled: true
 
@@ -52,8 +52,8 @@ ohcCore:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 85
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "50m"
@@ -94,8 +94,8 @@ chatwoot:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "500m"
@@ -135,8 +135,8 @@ powersync:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "50m"
