@@ -1,4 +1,4 @@
-{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled .Values.powersync.vpa.enabled }}
+{{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
