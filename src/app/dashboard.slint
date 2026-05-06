@@ -11,6 +11,7 @@ export struct UiPendingApproval {
     task_id: string,
     title: string,
     proposed_content: string,
+    helper_name: string,
 }
 
 export struct UiRoleCount {
@@ -269,14 +270,30 @@ export component Dashboard inherits Window {
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
 
                 VerticalBox {
                     padding: 16px;
-                    spacing: 8px;
+                    spacing: 12px;
 
-                    Text { text: approval.title; font-weight: 700; color: white; font-size: 16px; }
-                    Text { text: approval.proposed_content; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                    HorizontalBox {
+                        spacing: 8px;
+                        alignment: start;
+                        Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            background: #8b5cf6;
+                            border-radius: 12px;
+                            Text { text: "✨"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        Text { text: approval.helper_name; color: #a855f7; font-weight: 700; font-size: 12px; vertical-alignment: center; }
+                    }
+
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: approval.title; font-weight: 700; color: white; font-size: 16px; }
+                        Text { text: approval.proposed_content; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                    }
 
                     HorizontalBox {
                         alignment: end;
