@@ -3,7 +3,6 @@ mod parity_tests {
     use crate::db::{DB, DbStore};
     use std::sync::Arc;
     use sqlx::Row;
-    use chrono::Utc;
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::postgres::PgPoolOptions;
 
@@ -221,7 +220,7 @@ mod parity_tests {
                 .unwrap();
 
             // To simulate failure on the second we just perform a normal execute. Sqlite won't lock if not explicitly IMMEDIATE so we skip concurrent tx2 since SQLite memory DB max_connections=1 prevents it.
-            let task_id_clone = task_id.clone();
+
             let rows_affected = 0; // We just simulate tx isolation correctly since we updated it in tx1
 
             assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated
