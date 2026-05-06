@@ -43,14 +43,24 @@ SERVER_PID=$!
 echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
 # Launch the UI Desktop wrapper
+echo -e "${DIM}  Waiting for backend to be ready...${RESET}"
+until curl -s http://localhost:8080/health > /dev/null 2>&1; do
+  sleep 1
+done
+
 npx @bazel/bazelisk run //src/app:app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
 # Launch the Prometheus agent
 docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
-docker run -d --name ohc-prometheus-agent --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 --network host -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
-echo -e "  ${GREEN}✓ Prometheus agent started in Docker${RESET}"
+docker run -d --name ohc-prometheus-agent \
+  --memory="512m" --cpus="0.5" \
+  --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
+  --network host \
+  -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
+echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes
 function cleanup {
