@@ -25,6 +25,10 @@ export component Dashboard inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
+    out property <string> test_helper_score_label: "Helper Score";
+    out property <string> test_helpers_working_label: "Helpers Working";
+    out property <string> test_system_tour_label: "System Tour";
+
     in property <string> todays_sales: "$0.00";
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
@@ -121,7 +125,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: root.test_system_tour_label; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
@@ -169,11 +173,11 @@ export component Dashboard inherits Window {
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: root.test_helpers_working_label; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: root.test_helper_score_label; value: generative_score; value_color: #34d399; }
                 }
             }
 
@@ -188,8 +192,8 @@ export component Dashboard inherits Window {
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: root.test_helpers_working_label; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: root.test_helper_score_label; value: generative_score; value_color: #34d399; }
                 }
             }
         }

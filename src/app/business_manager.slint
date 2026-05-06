@@ -7,6 +7,8 @@ export component BusinessManager inherits Window {
     height: 600px;
     title: "Add Offering";
 
+    out property <string> test_availability_label: "Availability";
+
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
 
@@ -115,8 +117,8 @@ export component BusinessManager inherits Window {
                 }
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Schedule (JSON)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                    LineEdit { text <=> service_schedule; placeholder-text: "{}"; height: 44px; }
+                    Text { text: root.test_availability_label; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_schedule; placeholder-text: "e.g. Mon-Fri 9-5"; height: 44px; }
                 }
             }
         }
