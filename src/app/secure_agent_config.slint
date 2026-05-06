@@ -4,7 +4,7 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 export component SecureAgentConfig inherits Window {
     width: 400px;
     height: 400px;
-    title: "Secure Agent Config";
+    title: "Helper Setup";
 
     callback save_config(string);
 
@@ -18,23 +18,23 @@ export component SecureAgentConfig inherits Window {
         padding: 32px;
         alignment: center;
 
-        Text { text: "Helper Configuration"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Helper Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
         
         Text {
-            text: "Enter your secure SPIFFE Enrollment Token to authenticate the agent.";
+            text: "Enter your connection code to link your helper.";
             color: #64748b;
             wrap: word-wrap;
         }
 
         PasswordInput {
-            placeholder-text: "spiffe://ohc.os/agent/1234";
+            placeholder-text: "Example: code-1234";
             text <=> token;
         }
         
         if (error_text != "") : Text { text: error_text; color: #ef4444; }
 
         Button {
-            text: "Save Configuration";
+            text: "Save Connection";
             enabled: token != "" && error_text == "";
             clicked => { save_config(token); }
         }

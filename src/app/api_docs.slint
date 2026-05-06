@@ -21,20 +21,20 @@ export component ApiDocs inherits Window {
             spacing: 20px;
 
             Text {
-                text: "Custom Integration";
+                text: "Connect Other Apps";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
             }
 
             Text {
-                text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+                text: "You only need this if you are a programmer connecting our app to your own systems.";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
 
             CheckBox {
-                text: "Show Advanced Developer Documentation";
+                text: "Show Programmer Details";
                 checked <=> is_advanced;
             }
 

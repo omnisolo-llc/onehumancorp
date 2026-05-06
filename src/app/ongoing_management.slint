@@ -56,7 +56,7 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "Raw Error Log:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Technical Details:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             border-radius: 4px;
@@ -81,13 +81,13 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "CLI Command:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Fix Instructions:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             border-radius: 4px;
                             HorizontalLayout {
                                 padding: 8px;
-                                Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "We will restart the helper for you."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                             }
                         }
                     }
