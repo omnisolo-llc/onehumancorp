@@ -123,10 +123,10 @@ impl TeammateMesh for TeammateMeshClient {
         let msg_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("mesh:ack:{}", msg_id);
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
-            let _ = tx.try_send(());
+            let _ = tx.send(());
         })).await?;
 
         tokio::task::yield_now().await;
@@ -135,7 +135,7 @@ impl TeammateMesh for TeammateMeshClient {
         let mut backoff = 200;
 
         loop {
-            if retries > 5 {
+            if retries > 10 {
                 cancel();
                 return Err("Failed to receive ack after retries".to_string());
             }
@@ -161,7 +161,7 @@ impl TeammateMesh for TeammateMeshClient {
             }
 
             retries += 1;
-            backoff *= 2;
+            backoff = std::cmp::min(backoff * 2, 2000);
         }
     }
 
