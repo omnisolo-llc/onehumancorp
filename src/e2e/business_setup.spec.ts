@@ -371,7 +371,17 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.fill('input[placeholder="Password"]', 'weak');
     await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 });
   });
+
 });
+
+test.describe('Business Setup Wizard Templates & Launch', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+  });
 
   test('should use Minimalist template and verify launch successfully triggers', async ({ page }) => {
     await page.click('text=Guided Setup →');
@@ -388,7 +398,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
 
     // Select Minimalist template
-    await page.click('text=Minimalist');
+    await page.click('text=✨ Modern');
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
@@ -477,7 +487,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
 
     // Select custom domain
-    await page.click('text=🔗 Connect Custom Domain');
+    await page.click('text=🌍 Connect Custom Domain');
     // Assuming there might be an input field appearing for custom domain, we fill it if needed, or simply proceed.
     // Based on the UI, domain_choice is set to "custom"
     await page.click('text=Next →');
@@ -514,6 +524,4 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text="Launch My Business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
-
-    await page.click('text=Next →');
-
+});
