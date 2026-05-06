@@ -616,7 +616,16 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
-                        Text { text: "🎉 CONFETTI SUCCESS! Your business is live! 🎉"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+                        Text {
+                            text: "🎉 CONFETTI SUCCESS! Your business is live! 🎉";
+                            font-size: 24px;
+                            font-family: "Outfit";
+                            color: #10b981;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            opacity: pulse_scale;
+                            animate opacity { duration: 500ms; easing: ease-in-out; }
+                        }
                         Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
                             text: "Copy Shareable Link";
