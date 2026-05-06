@@ -1,0 +1,101 @@
+import { GlassCard } from "glass_card.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export component ScribeFeatureDashboard inherits Window {
+    preferred-width: 800px;
+    preferred-height: 600px;
+    title: "Documentation Overview";
+    background: #0f172a;
+
+    callback open_help_center();
+    callback open_ai_chat();
+    callback open_walkthrough();
+    callback open_video_tutorials();
+    callback open_api_docs();
+    callback open_release_notes();
+
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            max-width: 800px;
+            width: 100%;
+            padding: 24px;
+            spacing: 24px;
+
+            Text {
+                text: "Documentation Features (Scribe)";
+                font-size: 28px;
+                font-weight: 700;
+                color: white;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 16px;
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "1. Help Center"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "A searchable help portal for all small business owners."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "Open Help Center"; clicked => { root.open_help_center(); } }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "2. Contextual Tooltips"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "Managed globally. Hover over buttons in the main app to see them."; color: #cbd5e1; wrap: word-wrap; }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "3. Interactive Walkthroughs"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "Step-by-step tours for store setup and payments."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "Start Walkthrough"; clicked => { root.open_walkthrough(); } }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "4. AI-Powered Help Chat"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "Ask anything and get answers instantly."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "Open AI Chat"; clicked => { root.open_ai_chat(); } }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "5. Video Tutorials"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "Short videos (<90 seconds) for common tasks."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "Watch Videos"; clicked => { root.open_video_tutorials(); } }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "6. API Documentation"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "For advanced users to connect custom software."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "View API Docs"; clicked => { root.open_api_docs(); } }
+                        }
+                    }
+
+                    GlassCard {
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Text { text: "7. Release Notes"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "What's new in OHC."; color: #cbd5e1; wrap: word-wrap; }
+                            Button { text: "View Release Notes"; clicked => { root.open_release_notes(); } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
