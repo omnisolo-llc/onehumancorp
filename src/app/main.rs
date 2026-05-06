@@ -4819,8 +4819,6 @@ mod docs_tests {
     }
 
     #[test]
-
-    #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_1() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
