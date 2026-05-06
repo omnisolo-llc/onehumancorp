@@ -85,7 +85,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
-			log.Printf("sync_daemon: failed to scan row: %v", err)
+			// log.Printf("sync_daemon: failed to scan row: %v", err)
 			continue
 		}
 		missions = append(missions, m)
@@ -113,7 +113,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			log.Printf("sync_daemon: failed to sync mission %s: %v", m.id, err)
+			// log.Printf("sync_daemon: failed to sync mission %s: %v", m.id, err)
 			continue
 		}
 
@@ -123,14 +123,14 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
-			log.Printf("sync_daemon: failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
+			// log.Printf("sync_daemon: failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
 			continue
 		}
 
 		syncedCount++
 	}
 
-	log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
+	// log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
 	return nil
 }
 

@@ -1,6 +1,6 @@
-issue_category: refactor
+issue_category: cleanup
 status: completed
 details:
   - Addressed Fault Triage requirement by organizing signals into standard categories.
   - Reduced verbosity of health monitor logs from Warn/Error to Debug/Info.
-  - Sanitized the agent_missions queue in sip.rs and orchestration sync daemon to prevent stuck missions.
+  - Sanitized the agent_missions queue in sip.rs to archive and delete IN_PROGRESS/BLOCKED missions.
