@@ -26,6 +26,7 @@ type SandboxPolicy struct {
 	DisabledPatterns []string `json:"disabled_patterns"`
 	ReadOnlyPaths    []string `json:"read_only_paths"`
 	BlockedDomains   []string `json:"blocked_domains"`
+	AllowedDomains   []string `json:"allowed_domains"`
 }
 
 // MacOSSandboxManager wraps command execution using sandbox-exec

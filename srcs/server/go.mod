@@ -1,6 +1,8 @@
 module onehumancorp/srcs/server
 
-go 1.24.3
+go 1.24
+
+toolchain go1.24.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -12,6 +14,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.20.0
 	go.opentelemetry.io/otel/metric v1.20.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -36,5 +39,4 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.opentelemetry.io/otel/trace v1.20.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

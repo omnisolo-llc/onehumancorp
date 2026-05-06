@@ -6,7 +6,7 @@ import (
 )
 
 func TestBwrapSandboxWrapCommand(t *testing.T) {
-	manager := NewBwrapSandboxManager()
+	manager := NewBwrapExecutor()
 	policyJSON := `{
 		"disabled_commands": ["rm"],
 		"disabled_patterns": ["/etc/passwd"]
@@ -39,7 +39,7 @@ func TestBwrapSandboxWrapCommand(t *testing.T) {
 }
 
 func TestBwrapSandboxAnnotateError(t *testing.T) {
-	manager := NewBwrapSandboxManager()
+	manager := NewBwrapExecutor()
 	errStr := manager.AnnotateError(nil, "output")
 	if !strings.Contains(errStr, "BWRAP_FAILURE") || !strings.Contains(errStr, "output") {
 		t.Errorf("Expected BWRAP_FAILURE and output, got %s", errStr)
