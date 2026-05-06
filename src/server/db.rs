@@ -802,12 +802,14 @@ pub async fn insert_autodream_memory(
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_db_new_fails_without_server() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
-        assert!(db.is_err());
+    #[test]
+    fn test_db_new_fails_without_server() {
+        temp_env::with_vars(vec![("DATABASE_URL", Some("postgres://localhost:54321/nonexistent"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let db = DB::new().await;
+                assert!(db.is_err());
+            });
+        });
     }
 }
 
@@ -906,15 +908,16 @@ mod security_tests_final {
 
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
-    #[tokio::test]
-    async fn test_sqlite_secure_directory_creation() {
+    #[test]
+    fn test_sqlite_secure_directory_creation() {
         let _lock = ENV_MUTEX.lock().unwrap();
         // Run with a temporary directory
         let temp_dir = tempfile::tempdir().unwrap();
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        unsafe { std::env::set_var("DATABASE_URL", &database_url) };
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
@@ -961,6 +964,8 @@ mod security_tests_final {
         let meta = fs::metadata(&db_path).unwrap();
         let mode = meta.permissions().mode();
         assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+            });
+        });
     }
 }
 

@@ -16,6 +16,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:temp-env",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
         "//src/proto:hub_tonic",
@@ -93,6 +94,7 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "@crates//:temp-env",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
         "@crates//:tempfile",
@@ -138,8 +140,7 @@ rust_test(
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",
-            "@crates//:temp-env",
-],
+    ],
 )
 
 rust_test(
@@ -149,6 +150,7 @@ rust_test(
     crate_root = "crypto.rs",
     edition = "2024",
     deps = [
+        "@crates//:temp-env",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
         "@crates//:aes-gcm",
