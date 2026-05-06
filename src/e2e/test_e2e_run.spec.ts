@@ -191,7 +191,7 @@ test('verify app settings toggle', async ({ page }) => {
     await page.goto('/');
 
     // We changed 'Advanced Options' to 'App Settings'
-    await page.click('button:has-text("App Settings")');
+    await page.click('button:has-text("⚙ App Settings")');
 
     // Expect the settings to be shown
     await expect(page.locator('text="Settings"')).toBeVisible();
