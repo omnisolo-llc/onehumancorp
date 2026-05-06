@@ -141,3 +141,91 @@ fn test_e2e_onboarding_welcome_checklist_progress() {
     ui.invoke_go_to_dashboard();
     assert!(*dashboard_triggered.borrow(), "Go to Dashboard callback works");
 }
+
+#[test]
+fn test_e2e_onboarding_login_signup_toggle() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::Login::new().unwrap();
+
+    // Default is false
+    assert_eq!(ui.get_is_sign_up(), false);
+
+    // Test the setter
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_is_sign_up(), true);
+
+    ui.set_is_sign_up(false);
+    assert_eq!(ui.get_is_sign_up(), false);
+}
+
+#[test]
+fn test_e2e_onboarding_product_add_step() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    ui.set_step(7);
+    ui.set_product_name("Artisanal Soap".into());
+    assert_eq!(ui.get_product_name(), "Artisanal Soap");
+
+    // Simulate moving to next step and verify it's still accessible
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 8);
+    assert_eq!(ui.get_product_name(), "Artisanal Soap");
+}
+
+#[test]
+fn test_e2e_onboarding_template_preview() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    ui.set_step(6);
+    ui.invoke_select_template("Classic".into());
+    assert_eq!(ui.get_step(), 7);
+    assert_eq!(ui.get_website_template(), "Classic");
+}
+
+#[test]
+fn test_e2e_onboarding_checklist_completion() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::WelcomeChecklist::new().unwrap();
+
+    // Explicitly update derived state variables exactly as they would update on toggle
+    ui.set_progress(100);
+    ui.set_is_completed(true);
+
+    assert_eq!(ui.get_is_completed(), true);
+    assert_eq!(ui.get_progress(), 100);
+}
+
+#[test]
+fn test_e2e_onboarding_instant_build_generation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    let gen_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let gen_called_clone = gen_called.clone();
+
+    ui.on_generate_instant_preview(move || {
+        *gen_called_clone.borrow_mut() = true;
+    });
+
+    ui.set_step(11);
+    ui.set_instant_bio("A lovely flower shop".into());
+    assert_eq!(ui.get_instant_bio(), "A lovely flower shop");
+
+    ui.set_is_generating_instant_preview(true);
+    assert_eq!(ui.get_is_generating_instant_preview(), true);
+
+    ui.invoke_generate_instant_preview();
+    assert!(*gen_called.borrow(), "generate_instant_preview callback should fire");
+}

@@ -88,3 +88,16 @@ mod additional_login_tests {
         assert!(*clicked.borrow(), "The settings callback should fire when invoked.");
     }
 }
+
+    #[test]
+    fn test_login_is_sign_up_state_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = crate::app::Login::new().unwrap();
+
+        ui.set_is_sign_up(true);
+        assert_eq!(ui.get_is_sign_up(), true);
+
+        ui.set_is_sign_up(false);
+        assert_eq!(ui.get_is_sign_up(), false);
+    }

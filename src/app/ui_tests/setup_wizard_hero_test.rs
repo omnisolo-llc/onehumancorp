@@ -120,3 +120,79 @@ fn test_ui_setup_wizard_storefront_preview_state() {
     ui.invoke_next_step();
     assert_eq!(ui.get_step(), 1);
 }
+
+#[test]
+fn test_setup_wizard_template_selection() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
+
+    ui.invoke_select_template("Modern".into());
+    assert_eq!(ui.get_website_template(), "Modern");
+}
+
+#[test]
+fn test_setup_wizard_product_description_ai() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+
+    let generated_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let name_passed = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+
+    let g_clone = generated_called.clone();
+    let n_clone = name_passed.clone();
+
+    ui.on_generate_product_description(move |name| {
+        *g_clone.borrow_mut() = true;
+        *n_clone.borrow_mut() = name.to_string();
+    });
+
+    ui.set_is_generating_product_description(false);
+    ui.set_product_name("Cake".into());
+
+    ui.invoke_generate_product_description(ui.get_product_name());
+
+    assert!(*generated_called.borrow(), "generate_product_description callback should fire");
+    assert_eq!(*name_passed.borrow(), "Cake");
+}
+
+#[test]
+fn test_setup_wizard_price_type_selection() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+
+    // Initial value based on slint file
+    assert_eq!(ui.get_price_type(), "fixed");
+
+    ui.set_price_type("starting_at".into());
+    assert_eq!(ui.get_price_type(), "starting_at");
+
+    ui.set_price_type("request_quote".into());
+    assert_eq!(ui.get_price_type(), "request_quote");
+}
+
+#[test]
+fn test_setup_wizard_business_type_selection() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
+
+    ui.invoke_select_business_type("Service Business".into());
+    assert_eq!(ui.get_business_type(), "Service Business");
+    assert_eq!(ui.get_step(), 1);
+}
+
+#[test]
+fn test_setup_wizard_domain_choice_selection() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.on_save_state(|| {});
+
+    ui.invoke_select_domain("subdomain".into());
+    assert_eq!(ui.get_domain_choice(), "subdomain");
+}
