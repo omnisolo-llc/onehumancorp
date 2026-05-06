@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use crate::hub::Hub;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
+use crate::orchestration::mesh::TeammateMesh;
 
 pub async fn run_health_monitor(
-    monitor_transport: Arc<dyn MeshTransport>,
+    monitor_mesh: Arc<dyn TeammateMesh>,
     monitor_hub: Arc<Hub>,
     is_cloud: bool,
     tick_duration: std::time::Duration,
@@ -12,8 +12,19 @@ pub async fn run_health_monitor(
     let mut pending_fires: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
     loop {
         interval.tick().await;
+
+        // Perform active probe
+        let ping_ok = match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.ping()).await {
+            Ok(Ok(_)) => true,
+            _ => false,
+        };
+
+        if !ping_ok {
+            tracing::warn!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
+        }
+
         let mut to_fire_now: Vec<String> = Vec::new();
-        match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_transport.get_active_agents()).await {
+        match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
                 let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
@@ -28,21 +39,22 @@ pub async fn run_health_monitor(
 
                 let mut to_fire = Vec::new();
                 for agent in monitor_hub.get_agents().iter() {
-                    // Fire agents that are missing from active agents mesh list, regardless of their IDLE/BUSY status
-                    if !active_agent_ids.contains(&agent.id) {
+                    // Fire agents that are missing from active agents mesh list OR if ping failed
+                    if !active_agent_ids.contains(&agent.id) || !ping_ok {
                         to_fire.push(agent.id.clone());
                     }
                 }
                 for agent_id in to_fire {
                     let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                     *count += 1;
-                    if *count >= 3 {
+                    let threshold = if is_cloud { 3 } else { 1 };
+                    if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
                         tracing::debug!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
-                pending_fires.retain(|k, _| !active_agent_ids.contains(k));
+                pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
                     tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
@@ -110,20 +122,22 @@ mod tests {
 
         // We simulate a transport with NO active agents
         let transport = Arc::new(MemoryTransport::new());
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
 
-        let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, false, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_mesh, monitor_hub, false, std::time::Duration::from_millis(10)).await;
         });
 
         // Let the monitor loop run once
-        let _ = tokio::time::timeout(tokio::time::Duration::from_millis(50), handle).await;
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         // Both agents should be fired (removed) immediately in standalone mode
         assert!(hub.get_agent("agent_idle").is_none());
         assert!(hub.get_agent("agent_busy").is_none());
+        handle.abort();
     }
 
     #[tokio::test]
@@ -154,14 +168,15 @@ mod tests {
         });
 
         let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
-        let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }

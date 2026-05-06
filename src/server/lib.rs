@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod builder;
+use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
     pub mod dashboard;
@@ -1224,7 +1225,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
-        handoff_mesh,
+        handoff_mesh.clone(),
         db.clone(),
         is_cloud
     );
@@ -1234,11 +1235,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // Start Cross-Mode Health Monitor
-    let monitor_transport = mesh_transport.clone();
+    let monitor_mesh = handoff_mesh.clone();
     let monitor_hub = hub.clone();
     tokio::spawn(async move {
         crate::orchestration::health::run_health_monitor(
-            monitor_transport,
+            monitor_mesh,
             monitor_hub,
             is_cloud,
             std::time::Duration::from_secs(30)
@@ -1247,6 +1248,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
+    let builtin_mesh = handoff_mesh.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
 
@@ -1262,6 +1264,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
+
+        let _health_cancel = builtin_mesh.start_health_responder().await;
 
         let cfg = ohc_builtin_agent::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
