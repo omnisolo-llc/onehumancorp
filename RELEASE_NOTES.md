@@ -1,3 +1,11 @@
+## [0.4.27] (Cloud) / v0.4.27+1 (Standalone) - 2024-05-06
+
+### Cloud
+- Scaling improvements
+
+### Standalone
+- Privacy and offline mode enhancements
+
 ## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
 ### Cloud Scaling Improvements
 - Optimize parallel fetch latency in dashboard API endpoints (#4867)
