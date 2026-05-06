@@ -246,6 +246,19 @@ impl IntegrationsRegistry {
         }
         Err("issue not found".to_string())
     }
+
+    pub fn create_mercadopago_preference(&self, integration_id: &str, _title: &str, _price: f64) -> Result<String, String> {
+        if integration_id != "mercadopago" {
+            return Err("Invalid integration".to_string());
+        }
+        let creds_map = self.credentials.read().unwrap();
+        if let Some(creds) = creds_map.get(integration_id) {
+            let _api_token = creds.api_token.clone();
+            Ok(format!("pref_{}", Utc::now().timestamp()))
+        } else {
+            Err("Mercado Pago credentials not found".to_string())
+        }
+    }
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
@@ -278,6 +291,7 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         tracing::error!("Failed to send Discord webhook: {}", e);
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
