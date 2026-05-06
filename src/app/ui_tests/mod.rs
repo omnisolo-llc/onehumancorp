@@ -84,3 +84,4 @@ pub fn init() {
 pub mod login_settings;
 pub mod setup_wizard_hero_test;
 pub mod docs_ux_test;
+pub mod geo_visibility_test;
