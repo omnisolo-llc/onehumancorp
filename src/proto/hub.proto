@@ -1641,3 +1641,36 @@ message DownloadInvoiceRequest {
 message DownloadInvoiceResponse {
   string pdf_url = 1;
 }
+
+message AgentCapabilities {
+  string agent_id = 1;
+  repeated string capabilities = 2;
+  repeated string supported_tasks = 3;
+}
+
+message DiscoverAgentsRequest {
+  string query = 1;
+  repeated string required_capabilities = 2;
+}
+
+message DiscoverAgentsResponse {
+  repeated Agent agents = 1;
+}
+
+message EventStreamRequest {
+  string agent_id = 1;
+  repeated string channels = 2;
+}
+
+message MeshEvent {
+  string event_type = 1;
+  string agent_id = 2;
+  string payload = 3; // JSON encoded payload
+  int64 timestamp_unix = 4;
+}
+
+service TeammateMeshService {
+  rpc AdvertiseCapabilities(AgentCapabilities) returns (EmptyResponse);
+  rpc DiscoverAgents(DiscoverAgentsRequest) returns (DiscoverAgentsResponse);
+  rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+}
