@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "interop",
+    srcs = [
+        "types.go",
+        "autogen_adapter.go",
+        "crewai_adapter.go",
+        "openclaw_adapter.go",
+        "semantickernel_adapter.go",
+        "spiffe.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/interop",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "interop_test",
+    srcs = [
+        "autogen_adapter_test.go",
+        "crewai_adapter_test.go",
+        "openclaw_adapter_test.go",
+        "semantickernel_adapter_test.go",
+        "spiffe_test.go",
+    ],
+    embed = [":interop"],
+)
