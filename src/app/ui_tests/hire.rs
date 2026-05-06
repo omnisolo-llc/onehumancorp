@@ -94,3 +94,46 @@ fn create_verify_step() {
     ui.set_step(53);
     assert_eq!(ui.get_step(), 53);
 }
+
+#[test] fn test_wizard_hire_onboarding_full_flow() {
+    let ui = create();
+
+    // Step 0: Initial state, button should be disabled because selected_role is empty
+    ui.set_step(0);
+    ui.set_selected_role("".into());
+    assert!(!ui.get_next_enabled());
+
+    // Select role
+    ui.set_selected_role("Customer Support".into());
+    assert!(ui.get_next_enabled());
+    ui.set_agent_name("Support Bot".into());
+
+    // Move to step 1
+    ui.set_step(1);
+    assert!(ui.get_next_enabled());
+
+    // Select provider
+    ui.set_selected_provider("openai".into());
+
+    // Move to step 6 (Confirm Deployment)
+    ui.set_step(6);
+
+    // Test that the deploy button callback works properly
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called_clone = called.clone();
+    ui.on_deploy_agent(move |name, role, provider| {
+        assert_eq!(name, "Support Bot");
+        assert_eq!(role, "Customer Support");
+        assert_eq!(provider, "openai");
+        *called_clone.borrow_mut() = true;
+    });
+
+    // Trigger deploy
+    ui.invoke_deploy_agent(
+        ui.get_agent_name(),
+        ui.get_selected_role(),
+        ui.get_selected_provider()
+    );
+
+    assert!(*called.borrow());
+}
