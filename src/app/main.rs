@@ -2192,6 +2192,94 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agents_ui = app::Agents::new()?;
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
+    let upgrade_ui = app::Upgrade::new()?;
+    let billing_ui = app::Billing::new()?;
+
+    fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+    let fix_agent_handle = fix_agent_ui.as_weak();
+    let fa_ui_weak = fix_agent_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = fa_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let upgrade_handle = upgrade_ui.as_weak();
+    let up_ui_weak = upgrade_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = up_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    let billing_handle = billing_ui.as_weak();
+    let bi_ui_weak = billing_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = bi_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    fix_agent_ui.on_save_state({
+        let ui_handle = fix_agent_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                let state = std::collections::HashMap::from([
+                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ]);
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        let _ = client.save_wizard_state(request).await;
+                    }
+                });
+            }
+        }
+    });
+
+    upgrade_ui.on_save_state({
+        let ui_handle = upgrade_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                let state = std::collections::HashMap::from([
+                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ]);
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        let _ = client.save_wizard_state(request).await;
+                    }
+                });
+            }
+        }
+    });
+
+    billing_ui.on_save_state({
+        let ui_handle = billing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                let state = std::collections::HashMap::from([
+                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                ]);
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        let _ = client.save_wizard_state(request).await;
+                    }
+                });
+            }
+        }
+    });
+
 
     let agents_ui_handle = agents_ui.as_weak();
     let agent_hire_handle = agent_hire_ui.as_weak();
