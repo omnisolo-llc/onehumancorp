@@ -5,7 +5,7 @@ use crate::orchestration::mesh::TeammateMesh;
 pub async fn run_health_monitor(
     monitor_mesh: Arc<dyn TeammateMesh>,
     monitor_hub: Arc<Hub>,
-    is_cloud: bool,
+    _is_cloud: bool,
     tick_duration: std::time::Duration,
 ) {
     let mut interval = tokio::time::interval(tick_duration);
