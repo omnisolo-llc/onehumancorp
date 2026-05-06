@@ -1103,6 +1103,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
     let business_manager_handle = business_manager_ui.as_weak();
+
+    business_manager_ui.on_submit({
+        let bm_handle = business_manager_handle.clone();
+        let dashboard_handle_local = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+        move |type_, name, desc, price, dur, sch| {
+            if let Some(ui) = bm_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            let dash_handle_inner = dashboard_handle_local.clone();
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = ohc::orchestration::growth_service_client::GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
+                    if let Ok(resp) = resp {
+                        let quota = resp.into_inner();
+                        let used = quota.used;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(dash) = dash_handle_inner.upgrade() {
+                                if used >= 10 { // Free tier limit
+                                    dash.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                                    dash.set_show_upgrade_prompt(true);
+                                }
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+        }
+    });
+
+    let bm_handle_for_close = business_manager_handle.clone();
+    business_manager_ui.on_close(move || {
+        if let Some(ui) = bm_handle_for_close.upgrade() {
+            let _ = ui.hide();
+        }
+    });
+
     Box::leak(Box::new(business_manager_ui));
 
     let em_handle_for_gb = email_marketing_handle.clone();
