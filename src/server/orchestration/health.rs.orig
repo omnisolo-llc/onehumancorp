@@ -16,7 +16,7 @@ pub async fn run_health_monitor(
         match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_transport.get_active_agents()).await {
             Ok(Ok(agents)) => {
                 if agents.is_empty() {
-                    tracing::debug!("HEALTH MONITOR: No active agents found."); // Reduced noise
+                    tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -37,12 +37,12 @@ pub async fn run_health_monitor(
                     if *count >= 3 {
                         to_fire_now.push(agent_id.clone());
                     } else {
-                        tracing::debug!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
+                        tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k));
                 for agent_id in to_fire_now {
-                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::warn!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
