@@ -6,6 +6,7 @@ export struct UiAgentCost {
     cost: string,
     roi: string,
     efficiency: string,
+    storage_usage: string,
     pct: float,
 }
 
@@ -113,7 +114,10 @@ export component CostDashboard inherits Window {
                     HorizontalBox {
                         Text { text: "ROI: " + ac.roi; color: #64748b; font-size: 12px; }
                         Rectangle {}
-                        Text { text: "Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
+                        Text { text: "Token Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
+                    }
+                    HorizontalBox {
+                        Text { text: "Storage Usage: " + ac.storage_usage; color: #64748b; font-size: 12px; }
                     }
                     Rectangle {
                         height: 8px;

@@ -21,15 +21,12 @@ pub async fn tier_middleware(
 
     // Very simple placeholder: in a real system we might inspect the request path to determine the action cost
     // For this example, we just simulate a 1-action check for protected paths
+    let mut warning_msg = None;
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
                 if status.soft_limit_reached {
-                    let msg = status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
-                    return (
-                        StatusCode::PAYMENT_REQUIRED,
-                        Json(json!({ "error": "TierLimitExceeded", "message": msg })),
-                    ).into_response();
+                    warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
                 }
             }
             Err(e) => {
@@ -41,7 +38,13 @@ pub async fn tier_middleware(
         }
     }
 
-    next.run(req).await
+    let mut res = next.run(req).await;
+    if let Some(msg) = warning_msg {
+        if let Ok(header_value) = axum::http::HeaderValue::from_str(&msg) {
+            res.headers_mut().insert("x-ratelimit-warning", header_value);
+        }
+    }
+    res
 }
 
 #[cfg(test)]
@@ -114,7 +117,8 @@ mod tests {
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
+                assert_eq!(res2.status(), StatusCode::OK);
+                assert!(res2.headers().contains_key("x-ratelimit-warning"));
             }
         }
     }

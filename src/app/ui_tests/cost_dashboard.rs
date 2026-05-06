@@ -27,6 +27,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
         cost: format!("${}", i).into(),
         roi: "High".into(),
         efficiency: "Good".into(),
+        storage_usage: "0MB".into(),
         pct: (i % 100) as f32 / 100.0,
     }).collect();
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
@@ -42,6 +43,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
         cost: "$0.00".into(),
         roi: "0.00%".into(),
         efficiency: "0.00 tok/$".into(),
+        storage_usage: "0MB".into(),
         pct: 0.0,
     }];
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
@@ -63,6 +65,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
             cost: "$15.50".into(),
             roi: "150.00%".into(),
             efficiency: "32.50 tok/$".into(),
+            storage_usage: "0MB".into(),
             pct: 1.0,
         },
         app::UiAgentCost {
@@ -70,6 +73,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
             cost: "$0.00".into(),
             roi: "0.00%".into(),
             efficiency: "0.00 tok/$".into(),
+            storage_usage: "0MB".into(),
             pct: 0.0,
         }
     ];
@@ -97,6 +101,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
         cost: "$0.00".into(),
         roi: "0.00".into(), // Ensuring raw zero strings map directly
         efficiency: "0.00".into(),
+        storage_usage: "0MB".into(),
         pct: 0.0,
     }];
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
@@ -112,6 +117,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
         cost: "$0.00".into(),
         roi: "0.00".into(),
         efficiency: "0.00".into(),
+        storage_usage: "0MB".into(),
         pct: 0.0,
     }];
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());

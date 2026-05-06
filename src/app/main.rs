@@ -1555,6 +1555,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 cost: format!("${:.2}", ac.cost_usd).into(),
                                 roi: format!("{:.1}%", ac.roi).into(),
                                 efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                storage_usage: "0MB".into(),
                                 pct: ac.pct,
                             }
                         }).collect();
@@ -1597,6 +1598,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
                                     efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    storage_usage: "0MB".into(),
                                     pct: ac.pct,
                                 }
                             }).collect();
@@ -5961,11 +5963,13 @@ mod remaining_e2e_tests {
             app::UiAgentCost {
                 name: "Customer Support Agent".into(),
                 cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                storage_usage: "150MB".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
                 name: "Marketing Agent".into(),
                 cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                storage_usage: "2.1GB".into(),
                 pct: 0.45,
             }
         ]));
