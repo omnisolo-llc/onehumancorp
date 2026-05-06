@@ -36,7 +36,7 @@ mod additional_login_tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
         let ui = crate::app::Login::new().unwrap();
-        assert_eq!(ui.get_settings_button_text(), "App Settings");
+        assert_eq!(ui.get_settings_button_text(), "⚙ App Settings");
     }
 
     #[test]
