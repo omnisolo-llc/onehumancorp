@@ -1,5 +1,5 @@
 {
-  "ask_ai": "Ask your helper to do things for you.",
+  "ask_ai": "Ask the AI assistant for help or to perform tasks for your business.",
   "menu": "Open the main menu for more options.",
   "help_center": "Find answers and how-to guides.",
   "quick_actions_hint": "Things you can do right now.",
@@ -10,6 +10,6 @@
   "add_product": "Add a new product to your store.",
   "view_orders": "View and manage your recent orders.",
   "messages": "Check your customer messages.",
-  "api_docs": "Advanced: Connect other tools to your store.",
+  "api_docs": "Advanced: Connect other software to your store.",
   "advisory_hint": "Tips and advice from your business helper."
 }
