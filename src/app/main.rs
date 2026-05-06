@@ -1570,13 +1570,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = my_plan_handle_fetch.upgrade() {
                     ui.set_tier(format!("{} Tier", plan.current_plan).into());
                     ui.set_total_actions(plan.ai_actions_used.to_string().into());
-                    ui.set_action_limit(if plan.ai_actions_limit == 2147483647 { "Unlimited".into() } else { plan.ai_actions_limit.to_string().into() });
-                    ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
-                    if plan.storage_limit_bytes == 2147483647 * 1024 * 1024 {
-                        ui.set_limit_storage("Unlimited".into());
+
+                    if let Some(limit) = plan.ai_actions_limit {
+                        ui.set_action_limit(limit.to_string().into());
                     } else {
-                        ui.set_limit_storage(format!("{:.1} GB", plan.storage_limit_bytes as f64 / 1_073_741_824.0).into());
+                        ui.set_action_limit("Unlimited".into());
                     }
+
+                    ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
+
+                    if let Some(limit_bytes) = plan.storage_limit_bytes {
+                        ui.set_limit_storage(format!("{:.1} GB", limit_bytes as f64 / 1_073_741_824.0).into());
+                    } else {
+                        ui.set_limit_storage("Unlimited".into());
+                    }
+
                     ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
                 }
             }
