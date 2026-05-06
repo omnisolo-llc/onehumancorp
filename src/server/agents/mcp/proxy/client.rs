@@ -7,10 +7,13 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio::process::Command;
 use std::process::Stdio;
 use tracing::{info, warn, error};
+use super::blob::{create_blob_provider, BlobProvider};
+use std::sync::Arc;
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
     spiffe_id: String,
+    blob_provider: Arc<dyn BlobProvider>,
 }
 
 impl LocalProxyClient {
@@ -23,6 +26,7 @@ impl LocalProxyClient {
         Self {
             client: McpReverseTunnelServiceClient::new(channel),
             spiffe_id,
+            blob_provider: create_blob_provider(),
         }
     }
 
@@ -30,6 +34,7 @@ impl LocalProxyClient {
         Self {
             client,
             spiffe_id,
+            blob_provider: create_blob_provider(),
         }
     }
 
@@ -51,6 +56,7 @@ impl LocalProxyClient {
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();
+        let blob_provider = self.blob_provider.clone();
         tokio::spawn(async move {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
@@ -72,7 +78,7 @@ impl LocalProxyClient {
                                     }
                                 }
                                 "fs_read" => {
-                                    match tokio::fs::read_to_string(&req.params).await {
+                                    match blob_provider.read_blob(&req.params).await {
                                         Ok(content) => (true, content, "".to_string()),
                                         Err(e) => (false, "".to_string(), e.to_string()),
                                     }
@@ -80,7 +86,7 @@ impl LocalProxyClient {
                                 "fs_write" => {
                                     let parts: Vec<&str> = req.params.splitn(2, "||").collect();
                                     if parts.len() == 2 {
-                                        match tokio::fs::write(parts[0], parts[1]).await {
+                                        match blob_provider.write_blob(parts[0], parts[1]).await {
                                             Ok(_) => (true, "Successfully wrote file".to_string(), "".to_string()),
                                             Err(e) => (false, "".to_string(), e.to_string()),
                                         }
