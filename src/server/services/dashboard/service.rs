@@ -37,7 +37,7 @@ impl DashboardService for MyDashboardService {
             }),
             async {
                 let org_id = req.organization_id.clone();
-                let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price_cents, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -49,7 +49,7 @@ impl DashboardService for MyDashboardService {
                                     organization_id: r.try_get("organization_id").unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: "".to_string(),
-                                    price_cents: 0,
+                                    price_cents: r.try_get::<i64, _>("price_cents").unwrap_or_default(),
                                     currency: "USD".to_string(),
                                     fulfillment_strategy: "".to_string(),
                                     metadata_json: "".to_string(),
@@ -66,7 +66,7 @@ impl DashboardService for MyDashboardService {
                                     organization_id: r.try_get("organization_id").unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: "".to_string(),
-                                    price_cents: 0,
+                                    price_cents: r.try_get::<i64, _>("price_cents").unwrap_or_default(),
                                     currency: "USD".to_string(),
                                     fulfillment_strategy: "".to_string(),
                                     metadata_json: "".to_string(),
