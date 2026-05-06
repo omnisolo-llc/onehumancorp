@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: Teammate Mesh Communication Layer & Distributed Locks (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Teammate Mesh Communication Layer & Distributed Locks (#11313)
+
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
