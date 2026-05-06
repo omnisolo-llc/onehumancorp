@@ -14,7 +14,7 @@ pub async fn run_health_monitor(
         interval.tick().await;
 
         // Perform active probe
-        let ping_ok = match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_mesh.ping()).await {
+        let ping_ok = match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.ping()).await {
             Ok(Ok(_)) => true,
             _ => false,
         };
@@ -24,7 +24,7 @@ pub async fn run_health_monitor(
         }
 
         let mut to_fire_now: Vec<String> = Vec::new();
-        match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_mesh.get_active_agents()).await {
+        match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
                 if agents.is_empty() {
                     tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
