@@ -1,8 +1,25 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "kairos",
-    srcs = ["metrics.go"],
+    srcs = [
+        "metrics.go",
+        "orchestrator.go",
+    ],
     importpath = "github.com/onehumancorp/ohc-mono/srcs/server/orchestration/kairos",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "kairos_test",
+    srcs = ["orchestrator_test.go"],
+    embed = [":kairos"],
+    deps = [
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
 )
