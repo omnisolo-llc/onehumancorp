@@ -646,30 +646,32 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("DATABASE_URL") {
-        if db_url.starts_with("sqlite") {
-            match IpcTransport::new(&db_url).await {
-                Ok(t) => {
-                    let t_clone = t.clone();
-                    tokio::spawn(async move { t_clone.start_worker().await; });
-                    tracing::info!("Initialized IpcTransport (Standalone)");
-                    return Ok(Arc::new(t));
-                },
-                Err(e) => {
-                    tracing::warn!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+    if !is_cloud {
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            if db_url.starts_with("sqlite") {
+                match IpcTransport::new(&db_url).await {
+                    Ok(t) => {
+                        let t_clone = t.clone();
+                        tokio::spawn(async move { t_clone.start_worker().await; });
+                        tracing::info!("Initialized IpcTransport (Standalone)");
+                        return Ok(Arc::new(t));
+                    },
+                    Err(e) => {
+                        tracing::warn!("Failed to initialize IpcTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                    }
                 }
             }
         }
-    }
 
-    if let Some(url) = redis_url {
-        match RedisTransport::new(url).await {
-            Ok(t) => {
-                tracing::info!("Initialized RedisTransport (Standalone)");
-                return Ok(Arc::new(t));
-            },
-            Err(e) => {
-                tracing::warn!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+        if let Some(url) = redis_url {
+            match RedisTransport::new(url).await {
+                Ok(t) => {
+                    tracing::info!("Initialized RedisTransport (Standalone)");
+                    return Ok(Arc::new(t));
+                },
+                Err(e) => {
+                    tracing::warn!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                }
             }
         }
     }

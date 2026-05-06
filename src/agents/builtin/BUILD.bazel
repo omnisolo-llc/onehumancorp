@@ -45,7 +45,6 @@ rust_library(
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
-        "legacy_mesh.rs",
         "langgraph.rs",
         "masking_tests.rs",
         "lib.rs",

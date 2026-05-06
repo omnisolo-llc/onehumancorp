@@ -34,7 +34,7 @@ pub async fn run_health_monitor(
                 for agent_id in to_fire {
                     let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                     *count += 1;
-                    if *count >= 3 {
+                    if !is_cloud || *count >= 3 {
                         to_fire_now.push(agent_id.clone());
                     } else {
                         tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
