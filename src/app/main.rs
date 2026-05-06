@@ -6423,7 +6423,7 @@ fn test_business_share_flow() {
             assert_eq!(desc, "Talk to me");
             assert_eq!(price, "100.00");
             assert_eq!(dur, "30");
-            assert_eq!(sch, "{\"mon\":true}");
+            assert_eq!(sch, "e.g. Mon-Fri 9am-5pm");
             *submitted_clone.borrow_mut() = true;
         });
 
@@ -6434,9 +6434,10 @@ fn test_business_share_flow() {
         manager_ui.set_product_description("Talk to me".into());
         manager_ui.set_product_price("100.00".into());
         manager_ui.set_service_duration("30".into());
-        manager_ui.set_service_schedule("{\"mon\":true}".into());
+        // Set the schedule property explicitly to simulate user input
+        manager_ui.set_service_schedule("e.g. Mon-Fri 9am-5pm".into());
 
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into());
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "e.g. Mon-Fri 9am-5pm".into());
         assert!(*submitted.borrow());
     }
 
