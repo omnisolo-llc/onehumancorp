@@ -137,3 +137,22 @@ fn create_verify_step() {
 
     assert!(*called.borrow());
 }
+
+#[test] fn test_wizard_hire_onboarding_navigation_flow() {
+    let ui = create();
+
+    // Check initial state
+    assert_eq!(ui.get_step(), 0);
+    assert!(!ui.get_next_enabled());
+
+    ui.set_selected_role("Tester".into());
+    assert!(ui.get_next_enabled());
+    ui.set_agent_name("Test Agent".into());
+
+    // Ensure all steps can be visited
+    for step in 1..=6 {
+        ui.set_step(step);
+        assert_eq!(ui.get_step(), step);
+        assert!(ui.get_next_enabled());
+    }
+}
