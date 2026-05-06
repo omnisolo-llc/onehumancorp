@@ -50,7 +50,7 @@ pkg_deb(
     architecture = "amd64",
     maintainer = "One Human Corp <support@onehumancorp.com>",
     package = "ohc-app",
-    version = "0.4.27",
+    version = "0.4.28",
     description = "One Human Corp Desktop Application",
     section = "utils",
     priority = "optional",
@@ -60,7 +60,7 @@ pkg_deb(
 pkg_rpm(
     name = "app_rpm",
     package_name = "ohc-app",
-    version = "0.4.27",
+    version = "0.4.28",
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
