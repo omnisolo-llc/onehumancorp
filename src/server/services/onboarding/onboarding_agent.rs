@@ -24,13 +24,14 @@ impl OnboardingAgent {
 
         let req_first_product_name = req.first_product_name.clone();
         let req_first_product_price = req.first_product_price.clone();
+        let req_price_type = req.price_type.clone();
         let org_id_clone1 = org_id.clone();
         let org_id_clone2 = org_id.clone();
         let business_type_clone = business_type.clone();
 
         let product_future = async {
             if !req_first_product_name.is_empty() {
-                self.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &business_type_clone).await
+                self.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
             } else {
                 self.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
@@ -140,7 +141,7 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
@@ -155,7 +156,7 @@ impl OnboardingAgent {
             .bind("Added during onboarding")
             .bind(price_cents)
             .bind(strategy)
-            .bind(json!({}))
+            .bind(json!({"price_type": price_type}))
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -279,6 +280,7 @@ mod tests {
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
@@ -340,6 +342,7 @@ mod tests {
             first_product_name: "Consultation".to_string(),
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -376,6 +379,7 @@ mod tests {
             first_product_name: "Taco".to_string(),
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();
