@@ -1,5 +1,6 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct ChatMessage {
     sender: string,
@@ -67,9 +68,12 @@ export component AiHelpChat inherits Window {
                     placeholder-text: "Type your question here...";
                     text <=> user_input;
                 }
-                Button {
-                    text: "Send";
-                    clicked => { send_message(); }
+                TooltipElement {
+                    tooltip_id: "ai_chat_send";
+                    Button {
+                        text: "Send";
+                        clicked => { send_message(); }
+                    }
                 }
             }
         }

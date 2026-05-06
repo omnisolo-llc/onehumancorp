@@ -11,5 +11,9 @@
   "view_orders": "View and manage your recent orders.",
   "messages": "Check your customer messages.",
   "api_docs": "Advanced: Connect other tools to your store.",
-  "advisory_hint": "Tips and advice from your business helper."
+  "advisory_hint": "Tips and advice from your business helper.",
+  "api_test_button": "Test if your custom software connects to your store.",
+  "api_docs_advanced": "Show the technical details needed to connect custom software.",
+  "ai_chat_send": "Send your question to the helper.",
+  "help_floating_button": "Open help center for answers and guides."
 }
