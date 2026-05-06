@@ -6,6 +6,7 @@ export component FixAgent inherits Window {
     min-width: 375px;
     height: 600px;
     title: "Help Me Fix This";
+    out property <string> test_title: root.title;
 
     in-out property <int> step: 0;
     in-out property <bool> is_applying: false;
@@ -56,13 +57,13 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "Raw Error Log:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Technical Details:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             border-radius: 4px;
                             HorizontalLayout {
                                 padding: 8px;
-                                Text { text: "{\"error\": \"timeout\", \"service\": \"postgres\", \"latency_ms\": 5000}"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "The connection to the database timed out after 5 seconds."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                             }
                         }
                     }
@@ -81,13 +82,13 @@ export component FixAgent inherits Window {
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
                         Rectangle { height: 16px; }
-                        Text { text: "CLI Command:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "Action to take:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                         Rectangle {
                             background: rgba(0,0,0,0.5);
                             border-radius: 4px;
                             HorizontalLayout {
                                 padding: 8px;
-                                Text { text: "$ kubectl rollout restart deploy/agent-worker"; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                                Text { text: "Restarting the helper's connection..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                             }
                         }
                     }
@@ -126,6 +127,7 @@ export component Upgrade inherits Window {
     min-width: 375px;
     height: 600px;
     title: "Platform Upgrade";
+    out property <string> test_title: root.title;
 
     in-out property <int> progress: 0;
     in-out property <bool> is_upgrading: false;
@@ -194,8 +196,8 @@ export component Upgrade inherits Window {
                     }
                     if (is_advanced) : VerticalBox {
                         Rectangle { height: 16px; }
-                        Text { text: "> K8s pod rolling restart in progress..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
-                        Text { text: "> Migrating schemas..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "> Restarting services to apply the new version..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                        Text { text: "> Updating your data format securely..."; color: #a855f7; font-family: "Inter"; font-size: 12px; }
                     }
                 }
             }
@@ -267,9 +269,9 @@ export component Billing inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     Rectangle { height: 16px; }
-                    Text { text: "Token Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
-                    Text { text: "• gpt-4o: 1,245,000 tokens"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
-                    Text { text: "• gemini-pro: 450,000 tokens"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    Text { text: "Word Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
+                    Text { text: "• OpenAI Helper: 1,245,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    Text { text: "• Google Helper: 450,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
                 }
             }
         }

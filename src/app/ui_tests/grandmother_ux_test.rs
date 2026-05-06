@@ -90,3 +90,43 @@ fn test_ai_help_chat_title() {
     let ui = crate::app::AiHelpChat::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
 }
+
+#[test]
+fn test_kairos_orchestration_walkthrough_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::KairosOrchestrationWalkthrough::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("How Your Helpers Work Together"));
+}
+
+#[test]
+fn test_ongoing_management_fix_agent_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::FixAgent::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Help Me Fix This"));
+}
+
+#[test]
+fn test_ongoing_management_upgrade_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Upgrade::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Platform Upgrade"));
+}
+
+#[test]
+fn test_secure_agent_config_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::SecureAgentConfig::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Secure Agent Config"));
+}
+
+#[test]
+fn test_landing_title() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Landing::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("OneHumanCorp"));
+}

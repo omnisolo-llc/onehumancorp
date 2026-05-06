@@ -4,6 +4,7 @@ export component Landing inherits Window {
     width: 800px;
     height: 600px;
     title: "OneHumanCorp";
+    out property <string> test_title: root.title;
 
     in-out property <bool> is_variant_b: false;
 
@@ -22,7 +23,7 @@ export component Landing inherits Window {
         Text { text: "OneHumanCorp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
         
         Text { 
-            text: is_variant_b ? "The Cloud-Native Helper OS" : "The Hybrid Helper OS";
+            text: is_variant_b ? "The Cloud Helper System" : "The Flexible Helper System";
             font-size: 24px; 
             color: #a855f7; 
             horizontal-alignment: center; 
@@ -30,8 +31,8 @@ export component Landing inherits Window {
 
         Text {
             text: is_variant_b ? 
-                "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
-                "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
+                "Grow your business with seamless cloud convenience. Collaborate instantly with your team from anywhere in the world." :
+                "Grow your business while keeping your ideas safe. Experience the gold standard for privacy with our local desktop app.";
             color: #64748b;
             horizontal-alignment: center;
             wrap: word-wrap;
@@ -46,8 +47,8 @@ export component Landing inherits Window {
                 background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Global Performance"; font-weight: 700; }
-                    Text { text: "Deploy agents in a horizontally scalable multi-tenant environment."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Always Online"; font-weight: 700; }
+                    Text { text: "Your helpers are always awake, replying to customers and taking orders while you sleep."; color: #64748b; wrap: word-wrap; }
                 }
             }
             if (is_variant_b) : Rectangle {
@@ -63,16 +64,16 @@ export component Landing inherits Window {
                 background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Zero Data Leakage"; font-weight: 700; }
-                    Text { text: "All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Complete Privacy"; font-weight: 700; }
+                    Text { text: "All helpers run entirely on your computer. Your business data never leaves your device."; color: #64748b; wrap: word-wrap; }
                 }
             }
             if (!is_variant_b) : Rectangle {
                 background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Air-Gapped Autonomy"; font-weight: 700; }
-                    Text { text: "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Works Offline"; font-weight: 700; }
+                    Text { text: "No internet? No problem. Continue managing your business without a connection."; color: #64748b; wrap: word-wrap; }
                 }
             }
         }
