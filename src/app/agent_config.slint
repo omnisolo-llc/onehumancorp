@@ -6,7 +6,7 @@ export component AgentConfig inherits Window {
     height: 500px;
     title: "Configure Helper";
 
-    callback activate_agent(string, bool, bool, bool, bool, string);
+    callback activate_agent(string, bool, bool, bool, bool, string, string, string, string);
     callback next_step();
     callback save_state();
 
@@ -21,6 +21,9 @@ export component AgentConfig inherits Window {
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
     in-out property <bool> is_advanced: false;
     in-out property <bool> show_toast: false;
+    in-out property <string> api_scope_override: "";
+    in-out property <string> cron_override: "";
+    in-out property <string> raw_activation_payload: "";
 
     next_step => { step = step + 1; }
 
@@ -145,6 +148,11 @@ export component AgentConfig inherits Window {
 
         // Step 1: Capabilities
         if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Capability API Scope (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> api_scope_override; }
+            }
             spacing: 16px;
             Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
             
@@ -168,6 +176,11 @@ export component AgentConfig inherits Window {
 
         // Step 2: Frequency
         if (step == 2) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Cron Expression Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "0 * * * *"; text <=> cron_override; }
+            }
             spacing: 20px;
             Text { text: "How often should this helper work?"; color: white; font-family: "Inter"; }
             
@@ -185,6 +198,11 @@ export component AgentConfig inherits Window {
 
         // Step 3: Review
         if (step == 3) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Activation Payload (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"agent_id\":\"" + selected_agent + "\",\"config\":{}}"; text <=> raw_activation_payload; }
+            }
             spacing: 16px;
             Text { text: "Review & Activate"; color: white; font-family: "Inter"; }
             GlassCard {
@@ -217,7 +235,7 @@ export component AgentConfig inherits Window {
                         next_step();
                     } else {
                         show_toast = true;
-                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency);
+                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, api_scope_override, cron_override, raw_activation_payload);
                     }
                 }
             }
