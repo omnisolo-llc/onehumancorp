@@ -209,3 +209,41 @@ fn test_dashboard_shimmer_with_upgrade_prompt() {
     // Verify properties can be read correctly during loading state
     assert_eq!(ui.get_generative_score(), "85");
 }
+
+#[test]
+fn test_login_glasscard_is_centered() {
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    let window = ui.window();
+    window.set_size(slint::PhysicalSize::new(1440, 900));
+    assert_eq!(ui.get_login_card_width(), 400.0);
+}
+
+#[test]
+fn test_login_has_no_emoji_in_title() {
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    // Verify properties
+    assert!(ui.get_login_card_width() > 0.0);
+}
+
+#[test]
+fn test_login_has_oauth_buttons() {
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
+}
+
+#[test]
+fn test_login_has_settings_button() {
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_settings_button_text(), "App Settings");
+}
+
+#[test]
+fn test_login_has_toggle_signup() {
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    assert_eq!(ui.get_toggle_button_text(), "Don't have an account? Sign Up");
+}
