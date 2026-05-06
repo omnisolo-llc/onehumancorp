@@ -2015,6 +2015,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
                     app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
                     app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                    app::HelpArticle { category: "Troubleshooting".into(), title: "App is running slow".into(), description: "Learn how to clear your cache and speed up the app.".into() },
                     app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
                 ];
                 let all_articles_rc = std::rc::Rc::new(all_articles.clone());
