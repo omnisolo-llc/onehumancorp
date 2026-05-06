@@ -2542,7 +2542,47 @@ mod growth_e2e_tests {
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
     }
 
-    #[test] fn test_e2e_first_login_auto_launch_setup_wizard() {
+    #[test]
+    fn test_e2e_help_center_categorization() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::HelpCenter::new().unwrap();
+        use slint::Model;
+        let articles = ui.get_articles();
+        let mut categories = std::collections::HashSet::new();
+        for i in 0..articles.row_count() {
+            categories.insert(articles.row_data(i).unwrap().category.to_string());
+        }
+        assert!(categories.contains("Getting Started"));
+        assert!(categories.contains("My Store"));
+        assert!(categories.contains("Payments"));
+        assert!(categories.contains("AI Helpers"));
+        assert!(categories.contains("Marketing"));
+        assert!(categories.contains("Account & Billing"));
+    }
+
+    #[test]
+    fn test_e2e_tooltip_registry_full_integration() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let dashboard = app::Dashboard::new().unwrap();
+        let tr = dashboard.global::<app::TooltipRegistry>();
+
+        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+            if id == "mark_order_ready" {
+                "Let your customer know their order is ready for pickup or shipping.".into()
+            } else {
+                "".into()
+            }
+        });
+
+        tr.invoke_show_tooltip("mark_order_ready".into(), 100.0, 200.0);
+        assert!(tr.get_is_visible());
+        assert_eq!(tr.get_active_text(), "Let your customer know their order is ready for pickup or shipping.");
+    }
+
+    #[test]
+    fn test_e2e_first_login_auto_launch_setup_wizard() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
         let login_ui = app::Login::new().unwrap();
