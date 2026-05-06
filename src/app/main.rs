@@ -1887,29 +1887,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
-                let all_articles = vec![
-                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
-                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
-                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
-                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
-                ];
-                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
-
-                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
+                let hc_weak_for_init = help_center_ui.as_weak();
+                let client_clone = client.clone();
+                slint::spawn_local(async move {
+                    if let Some(ui) = hc_weak_for_init.upgrade() {
+                        let mut req = crate::ohc::GetHelpArticlesRequest::default();
+                        req.query = ui.get_search_query().to_string();
+                        if let Ok(resp) = client_clone.get_help_articles(req).await {
+                            let articles: Vec<app::HelpArticle> = resp.articles.into_iter().map(|a| app::HelpArticle {
+                                category: a.category.into(),
+                                title: a.title.into(),
+                                description: a.description.into(),
+                            }).collect();
+                            ui.set_articles(slint::ModelRc::new(slint::VecModel::from(articles)));
+                        }
+                    }
+                }).unwrap();
 
                 let hc_weak_for_search = help_center_ui.as_weak();
-                let articles_for_search = all_articles_rc.clone();
+                let client_clone = client.clone();
                 help_center_ui.on_execute_search(move || {
                     if let Some(ui) = hc_weak_for_search.upgrade() {
-                        let query = ui.get_search_query().to_string().to_lowercase();
-                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
-                            a.title.to_lowercase().contains(&query) ||
-                            a.description.to_lowercase().contains(&query) ||
-                            a.category.to_lowercase().contains(&query)
-                        }).cloned().collect();
-                        ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
+                        let hc_weak_inner = hc_weak_for_search.clone();
+                        let client_inner = client_clone.clone();
+                        slint::spawn_local(async move {
+                            if let Some(ui_inner) = hc_weak_inner.upgrade() {
+                                let mut req = crate::ohc::GetHelpArticlesRequest::default();
+                                req.query = ui_inner.get_search_query().to_string();
+                                if let Ok(resp) = client_inner.get_help_articles(req).await {
+                                    let articles: Vec<app::HelpArticle> = resp.articles.into_iter().map(|a| app::HelpArticle {
+                                        category: a.category.into(),
+                                        title: a.title.into(),
+                                        description: a.description.into(),
+                                    }).collect();
+                                    ui_inner.set_articles(slint::ModelRc::new(slint::VecModel::from(articles)));
+                                }
+                            }
+                        }).unwrap();
                     }
                 });
 
