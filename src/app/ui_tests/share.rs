@@ -29,29 +29,29 @@ fn create() -> app::BusinessShare { crate::ui_tests::init(); app::BusinessShare:
 
 #[test] fn share_flow_copy_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_copy_link(move || { *c.borrow_mut() = true; });
+    ui.on_copy_link(move || { *c.lock().unwrap() = true; });
     ui.invoke_copy_link();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 #[test] fn share_flow_insta_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_share_to_instagram(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_instagram(move || { *c.lock().unwrap() = true; });
     ui.invoke_share_to_instagram();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 #[test] fn share_flow_x_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_share_to_x(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_x(move || { *c.lock().unwrap() = true; });
     ui.invoke_share_to_x();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 // --- Unique Scenarios with Verification ---
@@ -93,11 +93,11 @@ fn create_verify_share_link() {
 
 #[test] fn share_flow_whatsapp_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_share_to_whatsapp(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_whatsapp(move || { *c.lock().unwrap() = true; });
     ui.invoke_share_to_whatsapp();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 #[test] fn share_flow_close_callback() {

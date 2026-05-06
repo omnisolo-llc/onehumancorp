@@ -27,18 +27,18 @@ fn create() -> app::Scaling { crate::ui_tests::init(); app::Scaling::new().unwra
 
 #[test] fn scaling_flow_callback_trigger() {
     let ui = create();
-    let called_role = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-    let called_count = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let called_role = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called_count = std::sync::Arc::new(std::sync::Mutex::new(0));
     let c1 = called_role.clone();
     let c2 = called_count.clone();
     ui.on_scale_agents(move |role, count| {
-        *c1.borrow_mut() = role.to_string();
-        *c2.borrow_mut() = count;
+        *c1.lock().unwrap() = role.to_string();
+        *c2.lock().unwrap() = count;
     });
     
     ui.invoke_scale_agents("DEVOPS".into(), 5);
-    assert_eq!(*called_role.borrow(), "DEVOPS");
-    assert_eq!(*called_count.borrow(), 5);
+    assert_eq!(*called_role.lock().unwrap(), "DEVOPS");
+    assert_eq!(*called_count.lock().unwrap(), 5);
 }
 
 #[test] fn scaling_flow_rapid_count_change() {

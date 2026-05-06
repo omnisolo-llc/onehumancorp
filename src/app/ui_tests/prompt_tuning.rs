@@ -36,17 +36,17 @@ fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::n
 
 #[test] fn prompt_flow_callbacks() {
     let ui = create();
-    let c1 = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let c2 = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let c3 = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c1 = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let c2 = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let c3 = std::sync::Arc::new(std::sync::Mutex::new(false));
     
-    let w1 = c1.clone(); ui.on_add_example(move || { *w1.borrow_mut() = true; });
-    let w2 = c2.clone(); ui.on_save_prompt(move || { *w2.borrow_mut() = true; });
-    let w3 = c3.clone(); ui.on_save_state(move || { *w3.borrow_mut() = true; });
+    let w1 = c1.clone(); ui.on_add_example(move || { *w1.lock().unwrap() = true; });
+    let w2 = c2.clone(); ui.on_save_prompt(move || { *w2.lock().unwrap() = true; });
+    let w3 = c3.clone(); ui.on_save_state(move || { *w3.lock().unwrap() = true; });
     
-    ui.invoke_add_example(); assert!(*c1.borrow());
-    ui.invoke_save_prompt(); assert!(*c2.borrow());
-    ui.invoke_save_state(); assert!(*c3.borrow());
+    ui.invoke_add_example(); assert!(*c1.lock().unwrap());
+    ui.invoke_save_prompt(); assert!(*c2.lock().unwrap());
+    ui.invoke_save_state(); assert!(*c3.lock().unwrap());
 }
 
 #[test] fn prompt_flow_step_logic() {
