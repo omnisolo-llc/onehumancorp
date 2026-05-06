@@ -550,7 +550,8 @@ impl DB {
                         last_synced_at TIMESTAMP,
                         synced_to_cloud BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        mission_log TEXT
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
