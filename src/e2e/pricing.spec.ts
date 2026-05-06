@@ -225,7 +225,7 @@ test.describe('My Plan Page', () => {
     await expect(page.locator('text=Dashboard').first()).toBeVisible();
 
     // Navigate to Billing / My Plan
-    await page.click('text=Billing');
+    await page.click('button:has-text("Billing")');
 
     // Wait for My Plan page
     await expect(page.locator('text=/my.*plan|current.*plan/i').first()).toBeVisible();
