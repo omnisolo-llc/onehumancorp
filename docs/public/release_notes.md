@@ -1,5 +1,12 @@
 # release_notes.md
 
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Cleaner: Fixed power sync orchestrator initialization bug relying on static standalone config rather than dynamic is_cloud state (#11312)
+
+### Privacy/Offline Improvements
+- 🧹 Cleaner: Added PII payload redaction unit testing and ensured telemetry data is correctly redacted (#11312)
+
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
