@@ -333,7 +333,7 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .expect("Failed to initialize database");
-        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
@@ -407,7 +407,7 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .expect("Failed to initialize database");
-        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });

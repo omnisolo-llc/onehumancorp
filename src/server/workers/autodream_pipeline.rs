@@ -114,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_autodream_pipeline_sqlite() {
         // Mock to make it cover
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap();
         let db_mock = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()) });
         let _pipe = AutoDreamPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
         assert!(true);
@@ -128,7 +128,7 @@ mod tests {
             .await
             .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| panic!("Failed lazy"));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| panic!("Failed lazy"));
         let db = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(pool.clone()) });
 
         // Initialize schema
