@@ -1103,7 +1103,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
-        .with_state(mesh_transport);
+        .with_state(mesh_transport)
+        .nest("/api/v1/agent_departments", crate::api::agent_department::router(agent_dept_service));
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
