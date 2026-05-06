@@ -3112,6 +3112,7 @@ mod e2e_tests {
 
         // Step 4: Payments -> Step 5
         ui.invoke_select_payment_pref("online".into());
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 5);
 
         // Step 5: Admin -> Step 6
@@ -6092,6 +6093,7 @@ mod e2e_hybrid_blob_tests {
 
         // Step 6: Choose a Template
         ui.invoke_select_template("Modern".into());
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 7);
 
         // Step 7: Add your first product
@@ -6102,6 +6104,7 @@ mod e2e_hybrid_blob_tests {
 
         // Step 8: Choose a Domain
         ui.invoke_select_domain("custom".into());
+        ui.invoke_next_step();
         assert_eq!(ui.get_step(), 9);
 
         // In a real E2E environment we would click through all the UI buttons
