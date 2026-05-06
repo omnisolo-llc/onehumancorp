@@ -2,6 +2,7 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use crate::ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+use opentelemetry::trace::{Tracer, TraceContextExt};
 use std::sync::Arc;
 use async_trait::async_trait;
 use opentelemetry::KeyValue;
@@ -43,6 +44,8 @@ impl CentrifugeNode {
 #[async_trait]
 impl TeammateMesh for CentrifugeNode {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        let tracer = global::tracer("ohc.orchestration.mesh");
+        let _span = tracer.start("publish");
         self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
         self.transport.publish(topic, TeammateMeshEvent {
             agent_id: "sys".to_string(),
