@@ -296,7 +296,7 @@ fn test_login_sso_button_text() {
 #[test]
 fn test_login_settings_button_text() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "App Settings");
+    assert_eq!(ui.get_settings_button_text(), "⚙ App Settings");
 }
 
 #[test]
