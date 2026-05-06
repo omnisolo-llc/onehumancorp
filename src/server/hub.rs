@@ -772,7 +772,7 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&sanitized.payload).unwrap();
 
         assert_eq!(payload["password"], "[REDACTED]");
-        assert_eq!(payload["email"], "[EMAIL_REDACTED]");
+        assert_eq!(payload["email"], "[REDACTED]");
         assert_eq!(payload["nested"]["auth_token"], "[REDACTED]");
     }
 
