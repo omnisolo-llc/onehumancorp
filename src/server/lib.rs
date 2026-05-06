@@ -675,24 +675,8 @@ impl HubService for MyHubService {
             description: task.description.unwrap_or_default(),
             status: task.status,
             assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-            priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+            priority: task.priority,
+            payload: task.payload,
             locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
             created_at_unix: task.created_at.timestamp(),
             updated_at_unix: task.updated_at.timestamp(),
@@ -725,24 +709,8 @@ impl HubService for MyHubService {
                 description: task.description.unwrap_or_default(),
                 status: task.status,
                 assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+                priority: task.priority,
+                payload: task.payload,
                 locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
@@ -815,24 +783,8 @@ impl HubService for MyHubService {
                 description: task.description.unwrap_or_default(),
                 status: task.status,
                 assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+                priority: task.priority,
+                payload: task.payload,
                 locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
@@ -1281,6 +1233,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::orchestration::health::run_health_monitor(
             monitor_transport,
             monitor_hub,
+            is_cloud,
             std::time::Duration::from_secs(30)
         ).await;
     });

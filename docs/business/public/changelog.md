@@ -1,15 +1,5 @@
 # OHC Hybrid Agentic OS Changelog
 
-## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
-
-### Cloud Scaling Improvements
-
-- Formalized multi-tenant K8s deployment pipelines to ensure isolated workload execution per tenant and resilient agent auto-scaling under heavy traffic.
-
-### Privacy and Offline Improvements
-
-- Engineered a fully encapsulated desktop binary wrapper enforcing strict local data residency via SQLite, completely bypassing external cloud services for maximum data privacy.
-
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 
 ### Cloud Scaling Improvements
