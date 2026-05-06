@@ -31,7 +31,6 @@ pub async fn run_health_monitor(
                     }
                 }
                 for agent_id in to_fire {
-                    let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
                     if is_cloud {
                         let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                         *count += 1;
