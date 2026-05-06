@@ -1,6 +1,7 @@
 use serde_json::json;
 use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
+#[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
 }
@@ -29,18 +30,23 @@ impl OnboardingAgent {
         let org_id_clone2 = org_id.clone();
         let business_type_clone = business_type.clone();
 
-        let product_future = async {
+        let agent_clone_product = self.clone();
+        let product_future = tokio::task::spawn(async move {
             if !req_first_product_name.is_empty() {
-                self.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
             } else {
-                self.generate_initial_products(&org_id_clone1, &business_type_clone).await
+                agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
-        };
+        });
 
-        let seed_future = self.seed_default_agents(&org_id_clone2);
+        let agent_clone_seed = self.clone();
+        let seed_future = tokio::task::spawn(async move {
+            agent_clone_seed.seed_default_agents(&org_id_clone2).await
+        });
 
         let org_id_clone3 = org_id.clone();
-        let publish_events_future = async move {
+        let pool = self.db.pool.clone();
+        let publish_events_future = tokio::task::spawn(async move {
             // Subscribe default AI Agents to specific tenant events dynamically
             let event_topics = vec![
                 ("The Manager", "tenant.booking.created"),
@@ -58,13 +64,13 @@ impl OnboardingAgent {
                     .bind(&org_id_clone3)
                     .bind(agent_role)
                     .bind(topic)
-                    .execute(&self.db.pool)
+                    .execute(&pool)
                     .await;
             }
             Ok::<(), String>(())
-        };
+        });
 
-        let hash_future = async {
+        let hash_future = tokio::task::spawn(async move {
             if !password.is_empty() {
                 tokio::task::spawn_blocking(move || {
                     bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
@@ -72,9 +78,13 @@ impl OnboardingAgent {
             } else {
                 Ok("".to_string())
             }
-        };
+        });
 
-        let (product_res, seed_res, _events_res, hash_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+
+        let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
+        let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
+        let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
 
         product_res?;
         seed_res?;
