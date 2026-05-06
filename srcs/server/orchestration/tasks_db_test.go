@@ -417,3 +417,517 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
     require.NoError(t, err)
     assert.Equal(t, task.Payload, savedTask.Payload)
 }
+
+func TestPostgresTaskStore_GetTasksByOrganization(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	).AddRow(
+		"task-2", "org-1", "title-2", "desc-2", "ASSIGNED", "agent-1", "P1",
+		`{"key":"value"}`, "plan-1", `["dep-1"]`, time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectCommit()
+
+	tasks, err := store.GetTasksByOrganization(context.Background(), orgID)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 2)
+
+	assert.Equal(t, "task-1", tasks[0].ID)
+	assert.Equal(t, "org-1", tasks[0].OrganizationID)
+	assert.Equal(t, "title-1", tasks[0].Title)
+
+	assert.Equal(t, "task-2", tasks[1].ID)
+	assert.Equal(t, "org-1", tasks[1].OrganizationID)
+	assert.Equal(t, "title-2", tasks[1].Title)
+	assert.Equal(t, "ASSIGNED", tasks[1].Status)
+	assert.NotNil(t, tasks[1].AgentID)
+	assert.Equal(t, "agent-1", *tasks[1].AgentID)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_GetTasksByOrganization(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	task1 := &SharedTask{
+		ID:             "task-1",
+		OrganizationID: "org-1",
+		Title:          "title-1",
+		Status:         "PENDING",
+		Priority:       "P2",
+	}
+
+	task2 := &SharedTask{
+		ID:             "task-2",
+		OrganizationID: "org-1",
+		Title:          "title-2",
+		Status:         "ASSIGNED",
+		Priority:       "P1",
+	}
+
+	task3 := &SharedTask{
+		ID:             "task-3",
+		OrganizationID: "org-2",
+		Title:          "title-3",
+		Status:         "PENDING",
+		Priority:       "P2",
+	}
+
+	err := store.CreateTask(ctx, task1)
+	require.NoError(t, err)
+	err = store.CreateTask(ctx, task2)
+	require.NoError(t, err)
+	err = store.CreateTask(ctx, task3)
+	require.NoError(t, err)
+
+	tasks, err := store.GetTasksByOrganization(ctx, "org-1")
+	require.NoError(t, err)
+	assert.Len(t, tasks, 2)
+
+	foundTask1 := false
+	foundTask2 := false
+	for _, task := range tasks {
+		if task.ID == "task-1" {
+			foundTask1 = true
+			assert.Equal(t, "org-1", task.OrganizationID)
+			assert.Equal(t, "title-1", task.Title)
+		} else if task.ID == "task-2" {
+			foundTask2 = true
+			assert.Equal(t, "org-1", task.OrganizationID)
+			assert.Equal(t, "title-2", task.Title)
+		}
+	}
+	assert.True(t, foundTask1)
+	assert.True(t, foundTask2)
+
+	tasksOrg2, err := store.GetTasksByOrganization(ctx, "org-2")
+	require.NoError(t, err)
+	assert.Len(t, tasksOrg2, 1)
+	assert.Equal(t, "task-3", tasksOrg2[0].ID)
+}
+
+func TestPostgresTaskStore_GetTasksByOrganization_Errors(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin().WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresTaskStore_GetTask_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnError(sql.ErrNoRows)
+
+	_, err = store.GetTask(context.Background(), "task-1")
+	assert.Error(t, err)
+	assert.Equal(t, "task not found", err.Error())
+}
+
+func TestPostgresTaskStore_CreateTask_TxBeginError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin().WillReturnError(sql.ErrConnDone)
+
+	err = store.CreateTask(context.Background(), &SharedTask{ID: "t"})
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_GetTask_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnRows(rows)
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTask(context.Background(), "task-1")
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_ClaimTask_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_GetTasksByOrganization_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_GetTasksByOrganization_SetConfigError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_UpdateTaskStatus_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE shared_tasks SET status = \\$1").WithArgs("DONE", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	err = store.UpdateTaskStatus(context.Background(), "task-1", "DONE")
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_ClaimTask_CommitError(t *testing.T) {
+    db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_GetTasksByOrganization_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_GetTasksByOrganization_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	orgID := "org-1"
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id",
+	}).AddRow(
+		"task-1", "org-1", // Too few columns
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_GetTasksByOrganization_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_GetTasksByOrganization_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	orgID := "org-1"
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id",
+	}).AddRow(
+		"task-1", "org-1", // Too few columns
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+
+	_, err = store.GetTasksByOrganization(context.Background(), orgID)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_CreateTask_ExecError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO shared_tasks").WillReturnError(sql.ErrConnDone)
+
+	err = store.CreateTask(context.Background(), &SharedTask{ID: "t"})
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_UpdateTaskStatus_ExecError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE shared_tasks SET status = \\$1").WithArgs("DONE", "task-1").WillReturnError(sql.ErrConnDone)
+
+	err = store.UpdateTaskStatus(context.Background(), "task-1", "DONE")
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_ClaimTask_UpdateError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
+
+	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_ClaimTask_UpdateError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
+
+	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_UpdateTaskStatus_BeginError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin().WillReturnError(sql.ErrConnDone)
+
+	err = store.UpdateTaskStatus(context.Background(), "task-1", "DONE")
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_CreateTask_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO shared_tasks").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
+
+	err = store.CreateTask(context.Background(), &SharedTask{ID: "t"})
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_ClaimTask_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id",
+	}).AddRow(
+		"task-1", "org-1", // Too few columns
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+
+	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
+	assert.Error(t, err)
+}
+
+func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	orgID := "org-1"
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", "invalid-date", "invalid-date",
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+
+	tasks, err := store.GetTasksByOrganization(context.Background(), orgID)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 1)
+	// fallback parsing should leave it empty/default or ignore
+	assert.True(t, tasks[0].CreatedAt.IsZero())
+	assert.True(t, tasks[0].UpdatedAt.IsZero())
+}
