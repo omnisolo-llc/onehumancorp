@@ -50,7 +50,7 @@ func TestAutoDreamDaemon(t *testing.T) {
 
 	// Setup mock expectations
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config").WithArgs("org-123").WillReturnResult(sqlmock.NewResult(0, 0))
 	// Vector format comes from json marshal
 	expectedEmbedding := "[0.1,0.2,0.3]"
 	mock.ExpectExec("INSERT INTO autodream_memories").
