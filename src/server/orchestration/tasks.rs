@@ -91,11 +91,21 @@ impl TaskDecompositionService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
-        let now = Utc::now();
-        let claim_future = self.claim_task_inner(agent_id, now);
-        match tokio::time::timeout(std::time::Duration::from_secs(60), claim_future).await {
-            Ok(res) => res,
-            Err(_) => Err("Timeout claiming task (ML-Resilience 60s boundary)".to_string()),
+        let mut attempt = 0;
+        let max_attempts = 3;
+
+        loop {
+            attempt += 1;
+            let now = Utc::now();
+            let claim_future = self.claim_task_inner(agent_id, now);
+            match tokio::time::timeout(std::time::Duration::from_secs(60), claim_future).await {
+                Ok(res) => return res,
+                Err(_) => {
+                    if attempt >= max_attempts {
+                        return Err("Timeout claiming task (ML-Resilience 60s boundary)".to_string());
+                    }
+                }
+            }
         }
     }
 
