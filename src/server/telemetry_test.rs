@@ -261,6 +261,7 @@ mod tests {
                            lower_line.contains("tracing::")
                         {
                             if lower_line.contains("tenant_id") ||
+                               lower_line.contains("organization_id") ||
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
                                lower_line.contains("session_id") ||
