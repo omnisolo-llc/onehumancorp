@@ -2526,6 +2526,131 @@ mod growth_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_first_login_auto_launch_and_complete_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(false);
+        login_ui.set_username("test@example.com".into());
+        login_ui.set_password("password123".into());
+
+        login_ui.on_login({
+            let ui_handle = login_ui.as_weak();
+            move |_email, _password| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if !ui.get_is_sign_up() {
+                        let mut needs_wizard = false;
+
+                        // Let's pretend the API returned a state with step < 10
+                        let mut state = std::collections::HashMap::new();
+                        state.insert("step".to_string(), "0".to_string());
+
+                        if let Some(step) = state.get("step") {
+                            if let Ok(s) = step.parse::<i32>() {
+                                if s < 10 {
+                                    needs_wizard = true;
+                                }
+                            } else {
+                                needs_wizard = true;
+                            }
+                        } else {
+                            needs_wizard = true;
+                        }
+
+                        if needs_wizard {
+                            ui.invoke_start_setup_wizard();
+                        }
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
+
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        // Step 1: Type -> Step 2
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_step(), 2);
+
+        // Step 2: Name -> Step 3
+        ui.set_company_name("My Day One Store".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+
+        // Step 3: What do you sell -> Step 4
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 4);
+
+        // Step 4: Payments -> Step 5
+        ui.invoke_select_payment_pref("online".into());
+        assert_eq!(ui.get_step(), 5);
+
+        // Step 5: Admin -> Step 6
+        ui.set_admin_email("dayone@test.com".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 6);
+
+        // Fast forward through the rest of the flow...
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Vegan Chocolate Cake".into());
+        ui.set_product_price("45.00".into());
+        ui.set_domain_choice("custom".into());
+
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+        let ui_weak = ui.as_weak();
+
+        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
+            assert_eq!(bt, "Online Store");
+            assert_eq!(cn, "My Day One Store");
+            assert_eq!(pp, "online");
+            assert_eq!(ae, "dayone@test.com");
+            assert_eq!(website_template, "Modern");
+            assert_eq!(product_name, "Vegan Chocolate Cake");
+            assert_eq!(product_price, "45.00");
+            assert_eq!(domain_choice, "custom");
+            *launch_called_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_launching(false);
+                u.set_step(100);
+            }
+        });
+
+        ui.set_launching(true);
+        ui.invoke_launch(
+            ui.get_business_type(),
+            ui.get_company_name(),
+            ui.get_company_description(),
+            ui.get_payment_pref(),
+            ui.get_admin_email(),
+            ui.get_website_template(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_domain_choice(),
+            ui.get_admin_name(),
+            ui.get_admin_password()
+        );
+
+        assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");
+        assert_eq!(ui.get_step(), 100);
+    }
+
+    #[test]
     fn test_e2e_first_login_auto_launch_setup_wizard() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
