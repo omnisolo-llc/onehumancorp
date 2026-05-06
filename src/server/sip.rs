@@ -19,15 +19,26 @@ impl SipDB {
         }
     }
 
+    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
+        sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'blocked',
+                 mission_log = COALESCE(mission_log, '') || '\n' || $1,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2 AND organization_id = $3"
+        )
+        .bind(blockers)
+        .bind(mission_id)
+        .bind(&self.org_id)
+        .execute(&mut *tx)
+        .await?;
 
-
-
-
-
-
-
-
+        tx.commit().await?;
+        Ok(())
+    }
 
     pub fn with_context_root(mut self, root: String) -> Self {
         self.context_root = Some(root);
