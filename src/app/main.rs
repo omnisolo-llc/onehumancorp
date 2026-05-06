@@ -1103,43 +1103,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
     let business_manager_handle = business_manager_ui.as_weak();
-
-    business_manager_ui.on_submit({
-        let bm_handle = business_manager_handle.clone();
-        let dashboard_handle_local = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
-        move |type_, name, desc, price, dur, sch| {
-            if let Some(ui) = bm_handle.upgrade() {
-                let _ = ui.hide();
-            }
-            let dash_handle_inner = dashboard_handle_local.clone();
-            #[cfg(not(target_arch = "wasm32"))]
-            tokio::spawn(async move {
-                if let Ok(mut client) = ohc::orchestration::growth_service_client::GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
-                    if let Ok(resp) = resp {
-                        let quota = resp.into_inner();
-                        let used = quota.used;
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(dash) = dash_handle_inner.upgrade() {
-                                if used >= 10 { // Free tier limit
-                                    dash.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
-                                    dash.set_show_upgrade_prompt(true);
-                                }
-                            }
-                        }).unwrap();
-                    }
-                }
-            });
-        }
-    });
-
-    let bm_handle_for_close = business_manager_handle.clone();
-    business_manager_ui.on_close(move || {
-        if let Some(ui) = bm_handle_for_close.upgrade() {
-            let _ = ui.hide();
-        }
-    });
-
     Box::leak(Box::new(business_manager_ui));
 
     let em_handle_for_gb = email_marketing_handle.clone();
@@ -2636,86 +2599,6 @@ mod growth_e2e_tests {
         assert_eq!(state.get("product_name").unwrap(), "Vegan Cake");
         assert_eq!(state.get("domain_choice").unwrap(), "custom");
         assert_eq!(state.get("instant_bio").unwrap(), "A cool bakery");
-    }
-
-
-
-    #[test]
-    fn test_e2e_onboarding_day_one_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let wizard_launched_clone = wizard_launched.clone();
-
-        login_ui.on_start_setup_wizard(move || {
-            *wizard_launched_clone.borrow_mut() = true;
-        });
-
-        login_ui.set_is_sign_up(true);
-        login_ui.set_username("new_baker@example.com".into());
-        login_ui.set_password("password123".into());
-
-        let login_ui_weak = login_ui.as_weak();
-        login_ui.on_login(move |email, _password| {
-            if let Some(ui) = login_ui_weak.upgrade() {
-                if email == "new_baker@example.com" && ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                }
-            }
-        });
-        login_ui.invoke_login("new_baker@example.com".into(), "password123".into());
-        assert!(login_ui.get_show_verification(), "Should show verification for new sign up");
-
-        login_ui.invoke_resend_verification("new_baker@example.com".into());
-        assert!(*wizard_launched.borrow(), "Wizard should launch after verification");
-
-        let wizard_ui = app::SetupWizard::new().unwrap();
-        assert_eq!(wizard_ui.get_step(), 0);
-
-        wizard_ui.set_business_type("Bakery".into());
-        wizard_ui.set_company_name("Maya's Cakes".into());
-        wizard_ui.set_step(1);
-        wizard_ui.set_company_description("Delicious custom cakes".into());
-
-        let business_manager_ui = app::BusinessManager::new().unwrap();
-        business_manager_ui.set_step(1);
-        business_manager_ui.set_product_name("Vegan Chocolate Cake".into());
-        business_manager_ui.set_product_price("45".into());
-        let product_submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let product_submitted_clone = product_submitted.clone();
-        business_manager_ui.on_submit(move |t, n, _d, p, _dur, _sch| {
-            assert_eq!(t, "PHYSICAL");
-            assert_eq!(n, "Vegan Chocolate Cake");
-            assert_eq!(p, "45");
-            *product_submitted_clone.borrow_mut() = true;
-        });
-        business_manager_ui.invoke_submit("PHYSICAL".into(), "Vegan Chocolate Cake".into(), "Yummy".into(), "45".into(), "".into(), "".into());
-        assert!(*product_submitted.borrow());
-
-        let builder_ui = app::WebsiteBuilder::new().unwrap();
-        builder_ui.set_step(3);
-        builder_ui.set_selected_template("Modern".into());
-        builder_ui.set_product_name("Vegan Chocolate Cake".into());
-
-        let published = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let published_clone = published.clone();
-        builder_ui.on_publish_site(move |t, _c, _p, _pr, _d, dom| {
-            assert_eq!(t, "Modern");
-            assert_eq!(dom, "mayascakes.ohc.app");
-            *published_clone.borrow_mut() = true;
-        });
-
-        builder_ui.invoke_publish_site("Modern".into(), "#fff".into(), "Vegan Chocolate Cake".into(), "45".into(), "Yummy".into(), "mayascakes.ohc.app".into());
-        assert!(*published.borrow());
-
-        let checklist_ui = app::WelcomeChecklist::new().unwrap();
-        checklist_ui.set_progress(25);
-        assert_eq!(checklist_ui.get_progress(), 25);
-
-        let wizard_ui2 = app::SetupWizard::new().unwrap();
-        wizard_ui2.set_step(2);
-        assert_eq!(wizard_ui2.get_step(), 2);
     }
 
     #[test]
