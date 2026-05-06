@@ -1027,9 +1027,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let step = ui.get_step().to_string();
             let state = std::collections::HashMap::from([
-                ("step".to_string(), step.clone()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
