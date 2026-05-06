@@ -18,10 +18,14 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
 
     // We instantiate nats as a placeholder, without making actual network connection
     // since this is used in synchronous `new()` of registry
-    let nats_provider = crate::integrations::nats::provider::NatsProvider::with_client(
-        std::sync::Arc::new(crate::integrations::nats::client::RealNatsClient::dummy()),
-        "nats://localhost:4222"
-    ).into_integration_provider();
+    let nats_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "nats".to_string(),
+            name: "NATS Event Mesh".to_string(),
+            category: "event_mesh".to_string(),
+            base_url: "nats://localhost:4222".to_string(),
+        }
+    };
     catalog.push(nats_provider);
 
     // We avoid initializing a real TwilioProvider client here just for metadata
