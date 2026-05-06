@@ -979,7 +979,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(e) => panic!("Failed to connect to sqlite memory db: {:?}", e),
         };
 
         let _ = sqlx::query(
@@ -1125,7 +1125,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(e) => panic!("Failed to connect to sqlite memory db: {:?}", e),
         };
 
         let _ = sqlx::query(
@@ -1205,7 +1205,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(e) => panic!("Failed to connect to sqlite memory db: {:?}", e),
         };
 
         let _ = sqlx::query(
@@ -1289,5 +1289,94 @@ mod anthropic_memory_tests {
 
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
+    }
+}
+
+#[cfg(test)]
+mod additional_memory_tests {
+    use super::*;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_conflict_resolution_parity_with_override() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+            .unwrap()
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+        let pool = match SqlitePoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(10)).connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(e) => panic!("Failed to connect to sqlite memory db: {:?}", e),
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let override_record = EmbeddingRecord {
+            id: "rec_override".to_string(),
+            tenant_id: "org_override".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $55 (overridden)".to_string(),
+            embedding: vec![0.8, 0.8, 0.8],
+            source_type: "MANUAL_ENTRY".to_string(),
+            created_at: now - chrono::Duration::days(10), // Older, but overridden
+            last_referenced_at: now,
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: true, // This should win
+            metadata: None,
+        };
+
+        let newer_record = EmbeddingRecord {
+            id: "rec_newer".to_string(),
+            tenant_id: "org_override".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $60".to_string(),
+            embedding: vec![0.8, 0.8, 0.8], // Same embedding = conflict
+            source_type: "CHAT_INFERENCE".to_string(),
+            created_at: now, // Newer
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&override_record).await.unwrap();
+        repo.upsert(&newer_record).await.unwrap();
+
+        // Run conflict resolution
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        // Verify the overridden record won
+        let query = "SELECT id, owner_override, content FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Only one record should remain after conflict resolution");
+
+        let id: String = rows[0].get("id");
+        let content: String = rows[0].get("content");
+        let is_overridden: bool = rows[0].get("owner_override");
+
+        assert_eq!(id, "rec_override");
+        assert_eq!(content, "Maya's cake price is $55 (overridden)");
+        assert!(is_overridden);
     }
 }
