@@ -188,8 +188,8 @@ impl HubService for MyHubService {
             crate::pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
 
-        let ai_limit = tier.monthly_action_limit().unwrap_or(2147483647); // Int32 max for unlimited
-        let storage_limit = (tier.storage_limit_mb().unwrap_or(2147483647) as i64) * 1024 * 1024; // Convert MB to bytes
+        let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
+        let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
         let next_bill_estimated = match tier {
             crate::pricing::rate_limit::PlanTier::Free => 0,
@@ -201,7 +201,7 @@ impl HubService for MyHubService {
         Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
-            ai_actions_limit: ai_limit as i32,
+            ai_actions_limit: ai_limit,
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
