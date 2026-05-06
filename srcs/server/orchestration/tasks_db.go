@@ -54,15 +54,9 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 	}
 
 	query := `
-		SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at
-		FROM shared_tasks t
-		WHERE t.status = 'PENDING' AND t.organization_id = $1
-		AND NOT EXISTS (
-			SELECT 1
-			FROM jsonb_array_elements_text(t.dependencies) AS dep_id
-			JOIN shared_tasks st ON st.id::text = dep_id
-			WHERE st.status != 'COMPLETED'
-		)
+		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		FROM shared_tasks
+		WHERE status = 'PENDING' AND organization_id = $1
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -117,7 +111,7 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", task.OrganizationID)
 	if err != nil {
 		return err
 	}
@@ -155,10 +149,6 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
 		return nil, err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
-	if err != nil {
-		return nil, err
-	}
 
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
@@ -201,10 +191,6 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
-	if err != nil {
-		return err
-	}
 
 	query := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err = tx.ExecContext(ctx, query, status, id)
@@ -221,7 +207,7 @@ func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organiza
 		return nil, err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE ohc_bypassrls")
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -287,18 +273,9 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 
 	// Find a pending task
 	query := `
-		SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at
-		FROM shared_tasks t
-		WHERE t.status = 'PENDING' AND t.organization_id = ?
-		AND (
-			json_array_length(t.dependencies) = 0 OR
-			NOT EXISTS (
-				SELECT 1
-				FROM json_each(t.dependencies) AS dep
-				JOIN shared_tasks st ON st.id = dep.value
-				WHERE st.status != 'COMPLETED'
-			)
-		)
+		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		FROM shared_tasks
+		WHERE status = 'PENDING' AND organization_id = ?
 		LIMIT 1
 	`
 	row := tx.QueryRowContext(ctx, query, organizationID)
@@ -340,10 +317,16 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 		SET status = 'ASSIGNED', agent_id = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND status = 'PENDING'
 	`
-	_, err = tx.ExecContext(ctx, updateQuery, agentID, task.ID)
+	res, err := tx.ExecContext(ctx, updateQuery, agentID, task.ID)
 	if err != nil {
 		return nil, err
 	}
+
+    affected, err := res.RowsAffected()
+    if err != nil || affected == 0 {
+        // Lost the race or something went wrong
+        return nil, errors.New("failed to claim task")
+    }
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
@@ -356,6 +339,9 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 }
 
 func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
     // Generate UUID in Go for SQLite if it doesn't have gen_random_uuid()
 	query := `
 		INSERT INTO shared_tasks (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at)

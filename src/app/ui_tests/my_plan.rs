@@ -29,20 +29,20 @@ fn create() -> app::MyPlan { crate::ui_tests::init(); app::MyPlan::new().unwrap(
 
 #[test] fn myplan_flow_upgrade_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_upgrade(move || { *c.lock().unwrap() = true; });
+    ui.on_upgrade(move || { *c.borrow_mut() = true; });
     ui.invoke_upgrade();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn myplan_flow_cancel_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_cancel_subscription(move || { *c.lock().unwrap() = true; });
+    ui.on_cancel_subscription(move || { *c.borrow_mut() = true; });
     ui.invoke_cancel_subscription();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 // --- Unique Scenarios with Verification ---

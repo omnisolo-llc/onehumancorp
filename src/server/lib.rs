@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod builder;
+use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
     pub mod dashboard;
@@ -187,8 +188,15 @@ impl HubService for MyHubService {
             crate::pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
 
-        let ai_limit = tier.monthly_action_limit().unwrap_or(1000000); // Using a large number for unlimited or 0
-        let storage_limit = (tier.storage_limit_mb().unwrap_or(1000000) as i64) * 1024 * 1024; // Convert MB to bytes
+        let ai_limit = tier.monthly_action_limit().unwrap_or(2147483647); // Int32 max for unlimited
+        let storage_limit = (tier.storage_limit_mb().unwrap_or(2147483647) as i64) * 1024 * 1024; // Convert MB to bytes
+
+        let next_bill_estimated = match tier {
+            crate::pricing::rate_limit::PlanTier::Free => 0,
+            crate::pricing::rate_limit::PlanTier::Starter => 9,
+            crate::pricing::rate_limit::PlanTier::Pro => 29,
+            crate::pricing::rate_limit::PlanTier::Business => 79,
+        };
 
         Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
@@ -196,7 +204,7 @@ impl HubService for MyHubService {
             ai_actions_limit: ai_limit as i32,
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
-            next_bill_estimated: 0,
+            next_bill_estimated: next_bill_estimated,
         }))
     }
 
@@ -242,7 +250,7 @@ impl HubService for MyHubService {
         let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
         if savings > 0.0 {
-            println!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
+            tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
         let url = client.create_checkout_session(&req.plan_id, &tenant_id, Some(optimal_pm)).await
@@ -675,24 +683,8 @@ impl HubService for MyHubService {
             description: task.description.unwrap_or_default(),
             status: task.status,
             assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-            priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+            priority: task.priority,
+            payload: task.payload,
             locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
             created_at_unix: task.created_at.timestamp(),
             updated_at_unix: task.updated_at.timestamp(),
@@ -725,24 +717,8 @@ impl HubService for MyHubService {
                 description: task.description.unwrap_or_default(),
                 status: task.status,
                 assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+                priority: task.priority,
+                payload: task.payload,
                 locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
@@ -815,24 +791,8 @@ impl HubService for MyHubService {
                 description: task.description.unwrap_or_default(),
                 status: task.status,
                 assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                priority: task.priority,                payload: {
-                    let mut task_payload = crate::ohc::orchestration::TaskPayload::default();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&task.payload) {
-                        if let Some(sp) = json.get("system_prompt").and_then(|v| v.as_str()) {
-                            task_payload.system_prompt = sp.to_string();
-                        }
-                        if let Some(dep) = json.get("department").and_then(|v| v.as_str()) {
-                            task_payload.department = dep.to_string();
-                        }
-                        if let Some(model) = json.get("model").and_then(|v| v.as_str()) {
-                            task_payload.model = model.to_string();
-                        }
-                    }
-                    use prost::Message;
-                    let mut payload_bytes = Vec::new();
-                    let _ = task_payload.encode(&mut payload_bytes);
-                    payload_bytes
-                },
+                priority: task.priority,
+                payload: task.payload,
                 locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
@@ -1265,7 +1225,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
-        handoff_mesh,
+        handoff_mesh.clone(),
         db.clone(),
         is_cloud
     );
@@ -1275,18 +1235,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // Start Cross-Mode Health Monitor
-    let monitor_transport = mesh_transport.clone();
+    let monitor_mesh = handoff_mesh.clone();
     let monitor_hub = hub.clone();
     tokio::spawn(async move {
         crate::orchestration::health::run_health_monitor(
-            monitor_transport,
+            monitor_mesh,
             monitor_hub,
+            is_cloud,
             std::time::Duration::from_secs(30)
         ).await;
     });
 
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
+    let builtin_mesh = handoff_mesh.clone();
     tokio::spawn(async move {
         let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
 
@@ -1302,6 +1264,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
+
+        let _health_cancel = builtin_mesh.start_health_responder().await;
 
         let cfg = ohc_builtin_agent::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
@@ -1383,8 +1347,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
-    // Start Telemetry Sync Daemon (if NOT in standalone mode)
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" && crate::config::get().telemetry_enabled {
+    // Start Telemetry Sync Daemon (if telemetry is enabled)
+    if crate::config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();

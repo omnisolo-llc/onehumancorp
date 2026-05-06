@@ -7,6 +7,16 @@ use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 
+pub fn get_deployment_mode() -> &'static str {
+    static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
+    DEPLOYMENT_MODE.get_or_init(|| {
+        if std::env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true" {
+            "Cloud".to_string()
+        } else {
+            "Standalone".to_string()
+        }
+    })
+}
 pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
     SUB_AGENT_QUEUE_LENGTH_GAUGE.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
@@ -54,9 +64,11 @@ pub async fn record_sqlite_retry_exhausted(pool: &PgPool, operation: &str) -> Re
 }
 
 pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dyn std::error::Error>> {
-    get_queue_length_gauge().add(delta as i64, &[]);
+    let deployment_mode = get_deployment_mode();
 
-    let payload = serde_json::json!({ "delta": delta });
+    get_queue_length_gauge().add(delta as i64, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode)]);
+    let payload = serde_json::json!({ "delta": delta, "deployment_mode": deployment_mode });
+
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
 
@@ -134,11 +146,10 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In standalone mode, do not sync telemetry to cloud
-    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
     let is_telemetry_enabled = crate::config::get().telemetry_enabled;
 
-    if is_standalone || !is_telemetry_enabled {
+    if !is_telemetry_enabled {
         return Ok(());
     }
 

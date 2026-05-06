@@ -38,6 +38,31 @@ impl OnboardingAgent {
 
         let seed_future = self.seed_default_agents(&org_id_clone2);
 
+        let org_id_clone3 = org_id.clone();
+        let publish_events_future = async move {
+            // Subscribe default AI Agents to specific tenant events dynamically
+            let event_topics = vec![
+                ("The Manager", "tenant.booking.created"),
+                ("The Manager", "tenant.order.placed"),
+                ("The Promoter", "tenant.product.created"),
+                ("The Salesperson", "tenant.lead.created"),
+                ("The Ambassador", "tenant.message.received"),
+                ("The Accountant", "tenant.payment.success"),
+                ("The Protector", "tenant.contract.signed"),
+                ("The Advisor", "tenant.report.generated"),
+            ];
+
+            for (agent_role, topic) in event_topics {
+                let _ = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                    .bind(&org_id_clone3)
+                    .bind(agent_role)
+                    .bind(topic)
+                    .execute(&self.db.pool)
+                    .await;
+            }
+            Ok::<(), String>(())
+        };
+
         let hash_future = async {
             if !password.is_empty() {
                 tokio::task::spawn_blocking(move || {
@@ -48,7 +73,7 @@ impl OnboardingAgent {
             }
         };
 
-        let (product_res, seed_res, hash_res) = tokio::join!(product_future, seed_future, hash_future);
+        let (product_res, seed_res, _events_res, hash_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
 
         product_res?;
         seed_res?;
@@ -80,11 +105,18 @@ impl OnboardingAgent {
 
         // Extract feature flags logic
         let mut flags = serde_json::Map::new();
-        if business_type == "Service Business" || business_type == "Service" {
-            flags.insert("enable_booking".to_string(), json!(true));
+        if business_type == "Service Business" || business_type == "Service" || req.selling_categories.contains(&"services".to_string()) {
+            flags.insert("enable_booking".to_string(), serde_json::json!(true));
         }
-        if business_type == "Food Cart" {
-            flags.insert("enable_menu".to_string(), json!(true));
+        if business_type == "Restaurant / Food" || business_type == "Food Cart" || req.selling_categories.contains(&"food".to_string()) {
+            flags.insert("enable_menu".to_string(), serde_json::json!(true));
+            flags.insert("enable_pre_order".to_string(), serde_json::json!(true));
+        }
+        if req.selling_categories.contains(&"physical".to_string()) || req.selling_categories.contains(&"digital".to_string()) {
+            flags.insert("enable_ecommerce".to_string(), serde_json::json!(true));
+        }
+        if req.selling_categories.contains(&"subscriptions".to_string()) {
+            flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
         let flags_json = serde_json::Value::Object(flags);

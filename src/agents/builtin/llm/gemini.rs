@@ -139,6 +139,8 @@ struct GeminiResponsePart {
 struct GeminiUsageMetadata {
     prompt_token_count: i32,
     candidates_token_count: i32,
+    #[serde(default)]
+    cached_content_token_count: Option<i32>,
 }
 
 #[async_trait]
@@ -233,9 +235,11 @@ impl LlmClient for GeminiClient {
 
         let usage = result
             .usage_metadata
-            .map(|u| Usage {
+                        .map(|u| Usage {
                 input_tokens: u.prompt_token_count,
                 output_tokens: u.candidates_token_count,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: u.cached_content_token_count.unwrap_or(0),
             })
             .unwrap_or_default();
 

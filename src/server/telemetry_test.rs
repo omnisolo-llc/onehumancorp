@@ -267,7 +267,9 @@ mod tests {
                                lower_line.contains("payload") ||
                                lower_line.contains("email") ||
                                lower_line.contains("password") ||
-                               lower_line.contains("pii") {
+                               lower_line.contains("pii") ||
+                               lower_line.contains("api_key") ||
+                               lower_line.contains("secret_key") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
@@ -333,4 +335,26 @@ mod tests {
 async fn test_queue_length_gauge_initialization() {
     let gauge = crate::telemetry::get_queue_length_gauge();
     gauge.add(1, &[]);
+}
+
+#[tokio::test]
+async fn test_record_queue_length_with_deployment_mode() {
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
+
+    let res = crate::telemetry::record_queue_length(&pool, 5).await;
+    assert!(res.is_ok());
+
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+    use sqlx::Row;
+    let labels_json: String = row.get("labels_json");
+    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
+    assert!(parsed.get("deployment_mode").is_some());
 }

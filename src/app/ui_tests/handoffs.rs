@@ -58,18 +58,18 @@ fn create() -> app::Handoffs { crate::ui_tests::init(); app::Handoffs::new().unw
 
 #[test] fn handoffs_flow_resolve_callback() {
     let ui = create();
-    let called_id = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-    let called_action = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called_id = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let called_action = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c1 = called_id.clone();
     let c2 = called_action.clone();
     ui.on_resolve_handoff(move |id, action| {
-        *c1.lock().unwrap() = id.to_string();
-        *c2.lock().unwrap() = action.to_string();
+        *c1.borrow_mut() = id.to_string();
+        *c2.borrow_mut() = action.to_string();
     });
     
     ui.invoke_resolve_handoff("H123".into(), "approve".into());
-    assert_eq!(*called_id.lock().unwrap(), "H123");
-    assert_eq!(*called_action.lock().unwrap(), "approve");
+    assert_eq!(*called_id.borrow(), "H123");
+    assert_eq!(*called_action.borrow(), "approve");
 }
 
 // --- Unique Scenarios with Verification ---

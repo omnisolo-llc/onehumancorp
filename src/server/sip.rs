@@ -63,6 +63,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
+                // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
                 sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
@@ -127,28 +128,37 @@ impl SipDB {
 
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
-        self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
+
+        let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
+        }).await;
+
+        match res {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(err)) => Err(err),
+            Err(timeout_err) => Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err))),
+        }
     }
 
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let mut attempt = 0;
-        let max_attempts = 10;
+        let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = async {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut tx = self.pool.begin().await?;
                 crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
                 self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
-            }.await;
+            }).await;
 
             match res {
-                Ok(_) => return Ok(()),
-                Err(err) => {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") {
+                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
                         if attempt >= max_attempts {
                             return Err(err);
@@ -158,6 +168,14 @@ impl SipDB {
                     } else {
                         return Err(err);
                     }
+                }
+                Err(timeout_err) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
                 }
             }
         }
@@ -224,7 +242,7 @@ mod tests {
     async fn setup_dummy_pool() -> PgPool {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap()

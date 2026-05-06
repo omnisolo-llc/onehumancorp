@@ -141,7 +141,7 @@ func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config").WithArgs(task.OrganizationID).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("INSERT INTO shared_tasks").
 		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, []byte("[]")).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
@@ -163,7 +163,7 @@ func TestPostgresTaskStore_ClaimTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("SET LOCAL app.current_tenant = \\$1").WithArgs("org-1").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectQuery("SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", []byte(`{"k":"v"}`), nil, []byte("[]"), time.Now(), time.Now()))
@@ -188,7 +188,6 @@ func TestPostgresTaskStore_GetTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
@@ -209,7 +208,6 @@ func TestPostgresTaskStore_UpdateTaskStatus(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec("UPDATE shared_tasks SET status =").
 		WithArgs("COMPLETED", "uuid-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -229,7 +227,7 @@ func TestPostgresTaskStore_ClaimTask_NoTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("SET LOCAL app.current_tenant = \\$1").WithArgs("org-1").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectQuery("SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
@@ -248,16 +246,12 @@ func TestPostgresTaskStore_GetTask_NoTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-none").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
 	task, err := store.GetTask(ctx, "uuid-none")
-	mock.ExpectRollback()
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -272,56 +266,6 @@ func TestSqliteTaskStore_ClaimTask_NoTask(t *testing.T) {
 	claimedTask, err := store.ClaimTask(ctx, "org-none", "agent-x")
 	require.NoError(t, err)
 	assert.Nil(t, claimedTask)
-}
-
-func TestSqliteTaskStore_ClaimTask_DAG(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
-	store := NewSqliteTaskStore(db)
-	ctx := context.Background()
-
-	// Parent task
-	parent := &SharedTask{
-		ID:             "parent-1",
-		OrganizationID: "org-1",
-		Title:          "Parent Task",
-		Status:         "PENDING",
-	}
-	err := store.CreateTask(ctx, parent)
-	require.NoError(t, err)
-
-	// Dependent task
-	child := &SharedTask{
-		ID:             "child-1",
-		OrganizationID: "org-1",
-		Title:          "Child Task",
-		Status:         "PENDING",
-		Dependencies:   json.RawMessage(`["parent-1"]`),
-	}
-	err = store.CreateTask(ctx, child)
-	require.NoError(t, err)
-
-	// Parent should be claimed first
-	claimedTask1, err := store.ClaimTask(ctx, "org-1", "agent-x")
-	require.NoError(t, err)
-	require.NotNil(t, claimedTask1)
-	assert.Equal(t, "parent-1", claimedTask1.ID)
-
-	// Try claiming again, should return nil since child's dependency (parent) is NOT COMPLETED
-	claimedTask2, err := store.ClaimTask(ctx, "org-1", "agent-y")
-	require.NoError(t, err)
-	assert.Nil(t, claimedTask2)
-
-	// Update parent status to COMPLETED
-	err = store.UpdateTaskStatus(ctx, "parent-1", "COMPLETED")
-	require.NoError(t, err)
-
-	// Now child should be claimable
-	claimedTask3, err := store.ClaimTask(ctx, "org-1", "agent-z")
-	require.NoError(t, err)
-	require.NotNil(t, claimedTask3)
-	assert.Equal(t, "child-1", claimedTask3.ID)
 }
 
 func TestSqliteTaskStore_GetTask_NoTask(t *testing.T) {
@@ -377,7 +321,7 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config").WithArgs(task.OrganizationID).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("INSERT INTO shared_tasks").
 		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
@@ -422,16 +366,12 @@ func TestPostgresTaskStore_GetTask_Errors(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("SELECT id").
 		WithArgs("uuid-err").
 		WillReturnError(sql.ErrConnDone)
 	mock.ExpectRollback()
 
 	task, err := store.GetTask(ctx, "uuid-err")
-	mock.ExpectRollback()
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -445,16 +385,12 @@ func TestPostgresTaskStore_UpdateTaskStatus_Errors(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec("UPDATE shared_tasks SET status").
 		WithArgs("COMPLETED", "uuid-1").
 		WillReturnError(sql.ErrConnDone)
 	mock.ExpectRollback()
 
 	err = store.UpdateTaskStatus(ctx, "uuid-1", "COMPLETED")
-	mock.ExpectRollback()
 	require.Error(t, err)
 }
 

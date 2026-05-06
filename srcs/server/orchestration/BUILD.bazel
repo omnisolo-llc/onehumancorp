@@ -3,9 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+        "autodream.go",
         "mesh.go",
         "tasks_db.go",
-        "sip.go",
     ],
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -14,9 +14,9 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "autodream_test.go",
         "mesh_test.go",
         "tasks_db_test.go",
-        "sip_test.go",
     ],
     embed = [":orchestration"],
     deps = [

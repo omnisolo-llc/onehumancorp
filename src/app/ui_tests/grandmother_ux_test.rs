@@ -39,13 +39,13 @@ fn test_login_sign_in_button() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
-    let clicked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let clicked_clone = clicked.clone();
     ui.on_login(move |_u, _p| {
-        *clicked_clone.lock().unwrap() = true;
+        *clicked_clone.borrow_mut() = true;
     });
     ui.invoke_login("u".into(), "p".into());
-    assert!(*clicked.lock().unwrap(), "Sign in button callback should trigger");
+    assert!(*clicked.borrow(), "Sign in button callback should trigger");
 }
 
 #[test]
@@ -92,129 +92,41 @@ fn test_ai_help_chat_title() {
 }
 
 #[test]
-fn test_e2e_business_manager_schedule_plain_language_1() {
+fn test_kairos_orchestration_walkthrough_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-
-    let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let business_manager_opened_clone = business_manager_opened.clone();
-
-    dashboard_ui.on_action_add_product(move || {
-        *business_manager_opened_clone.borrow_mut() = true;
-    });
-
-    dashboard_ui.invoke_action_add_product();
-    assert!(*business_manager_opened.borrow(), "Business manager should be opened from Dashboard Add action");
-
-    let manager_ui = crate::app::BusinessManager::new().unwrap();
-    assert_eq!(manager_ui.get_service_schedule(), "");
+    let ui = crate::app::KairosOrchestrationWalkthrough::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("How Your Helpers Work Together"));
 }
 
 #[test]
-fn test_e2e_business_manager_schedule_plain_language_2() {
+fn test_ongoing_management_fix_agent_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-
-    let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.invoke_action_add_product();
-
-    let manager_ui = crate::app::BusinessManager::new().unwrap();
-    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let submitted_clone = submitted.clone();
-
-    manager_ui.on_submit(move |type_, _name, _desc, _price, _dur, sch| {
-        assert_eq!(type_, "SERVICE");
-        assert_eq!(sch, "Tuesdays 10am-2pm");
-        *submitted_clone.borrow_mut() = true;
-    });
-
-    manager_ui.invoke_select_type("SERVICE".into());
-    manager_ui.invoke_next_step();
-
-    manager_ui.set_service_schedule("Tuesdays 10am-2pm".into());
-    manager_ui.invoke_submit("SERVICE".into(), "".into(), "".into(), "".into(), "".into(), "Tuesdays 10am-2pm".into());
-
-    assert!(*submitted.borrow());
+    let ui = crate::app::FixAgent::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Help Me Fix This"));
 }
 
 #[test]
-fn test_e2e_business_manager_schedule_plain_language_5() {
+fn test_ongoing_management_upgrade_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-
-    let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.invoke_action_add_product();
-
-    let manager_ui = crate::app::BusinessManager::new().unwrap();
-    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let submitted_clone = submitted.clone();
-
-    manager_ui.on_submit(move |type_, _name, _desc, _price, _dur, sch| {
-        assert_eq!(type_, "SERVICE");
-        assert_eq!(sch, "By appointment");
-        *submitted_clone.borrow_mut() = true;
-    });
-
-    manager_ui.invoke_select_type("SERVICE".into());
-    manager_ui.invoke_next_step();
-
-    manager_ui.set_service_schedule("By appointment".into());
-    manager_ui.invoke_submit("SERVICE".into(), "".into(), "".into(), "".into(), "".into(), "By appointment".into());
-
-    assert!(*submitted.borrow());
+    let ui = crate::app::Upgrade::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Platform Upgrade"));
 }
 
 #[test]
-fn test_e2e_business_manager_schedule_plain_language_4() {
+fn test_secure_agent_config_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-
-    let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.invoke_action_add_product();
-
-    let manager_ui = crate::app::BusinessManager::new().unwrap();
-    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let submitted_clone = submitted.clone();
-
-    manager_ui.on_submit(move |type_, _name, _desc, _price, _dur, sch| {
-        assert_eq!(type_, "SERVICE");
-        assert_eq!(sch, "24/7");
-        *submitted_clone.borrow_mut() = true;
-    });
-
-    manager_ui.invoke_select_type("SERVICE".into());
-    manager_ui.invoke_next_step();
-
-    manager_ui.set_service_schedule("24/7".into());
-    manager_ui.invoke_submit("SERVICE".into(), "".into(), "".into(), "".into(), "".into(), "24/7".into());
-
-    assert!(*submitted.borrow());
+    let ui = crate::app::SecureAgentConfig::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Secure Agent Config"));
 }
 
 #[test]
-fn test_e2e_business_manager_schedule_plain_language_3() {
+fn test_landing_title() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-
-    let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.invoke_action_add_product();
-
-    let manager_ui = crate::app::BusinessManager::new().unwrap();
-    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let submitted_clone = submitted.clone();
-
-    manager_ui.on_submit(move |type_, _name, _desc, _price, _dur, sch| {
-        assert_eq!(type_, "SERVICE");
-        assert_eq!(sch, "Weekends only");
-        *submitted_clone.borrow_mut() = true;
-    });
-
-    manager_ui.invoke_select_type("SERVICE".into());
-    manager_ui.invoke_next_step();
-
-    manager_ui.set_service_schedule("Weekends only".into());
-    manager_ui.invoke_submit("SERVICE".into(), "".into(), "".into(), "".into(), "".into(), "Weekends only".into());
-
-    assert!(*submitted.borrow());
+    let ui = crate::app::Landing::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("OneHumanCorp"));
 }
