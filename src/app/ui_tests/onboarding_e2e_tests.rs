@@ -88,7 +88,7 @@ fn test_e2e_onboarding_domain_and_launch() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _an, _ap| {
+    ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _an, _ap, _pt| {
         assert_eq!(website_template, "Modern");
         assert_eq!(product_name, "Vegan Chocolate Cake");
         assert_eq!(product_price, "45.00");
@@ -103,7 +103,7 @@ fn test_e2e_onboarding_domain_and_launch() {
 
     ui.invoke_launch(
         "".into(), "".into(), "".into(), "".into(), "".into(),
-        ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice(), "".into(), "".into()
+        ui.get_website_template(), ui.get_product_name(), ui.get_product_price(), ui.get_domain_choice(), "".into(), "".into(), ui.get_price_type()
     );
 
     assert!(*launch_called.borrow(), "Launch should be called successfully");
