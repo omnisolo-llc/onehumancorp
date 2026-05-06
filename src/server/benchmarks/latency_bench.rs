@@ -12,9 +12,9 @@ pub async fn bench_queue_latency() {
 
     // 1. Cloud Mode - Postgres
     tracing::info!("--- Cloud Mode (Postgres) ---");
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy?statement_cache_capacity=0".to_string());
 
-    if database_url != "postgres://localhost/dummy" {
+    if database_url != "postgres://localhost/dummy?statement_cache_capacity=0" {
         let pool_res = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
@@ -39,9 +39,9 @@ pub async fn bench_dashboard_snapshot() {
     tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy?statement_cache_capacity=0".to_string());
 
-    if database_url == "postgres://localhost/dummy" {
+    if database_url == "postgres://localhost/dummy?statement_cache_capacity=0" {
 
         return;
     }

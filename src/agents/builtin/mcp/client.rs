@@ -174,7 +174,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_context_tool_success() {
         // This tests the success path if a database is actually available.
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         if let Ok(pool) = sqlx::PgPool::connect_lazy(&db_url) {
             // Check if connection is actually alive
             if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -200,7 +200,7 @@ mod tests {
         // We test with a dummy pool URL, expecting execution to attempt buffering
         // and return an error because the pool is disconnected/invalid.
         // This gives us 100% execution coverage on the tool's mapping logic.
-        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid?statement_cache_capacity=0").unwrap();
         let tool = HybridContextTool::new(pool);
 
         let args = json!({

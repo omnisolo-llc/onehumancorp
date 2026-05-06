@@ -103,7 +103,7 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_with_pool() {
         // To accurately test DB logic locally, try connecting to Postgres.
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0".to_string());
 
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,

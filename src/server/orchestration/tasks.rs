@@ -747,8 +747,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_tasks_dual_deployment() {
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let database_url = "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0";
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .max_connections(1)
             .connect_lazy(database_url)
@@ -844,8 +844,8 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
             .unwrap();
         let db = Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
         let mesh = Arc::new(ChaosMesh);
@@ -906,8 +906,8 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
             .unwrap();
         let db = Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
         let mesh = Arc::new(ChaosMesh);

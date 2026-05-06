@@ -16,10 +16,10 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
-        let pool = PgPoolOptions::new()
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://localhost/dummy")
+            .connect_lazy("postgres://localhost/dummy?statement_cache_capacity=0")
             .unwrap();
 
         let sip_db = SipDB::new(pool.clone(), "test_org".to_string());

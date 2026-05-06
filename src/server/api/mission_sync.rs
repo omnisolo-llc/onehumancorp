@@ -182,8 +182,8 @@ mod tests {
             return; // skip if db is unavailable
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
             .unwrap();
         let state = Arc::new(MissionSyncState { db: pool });
 

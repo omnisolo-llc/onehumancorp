@@ -29,12 +29,12 @@ impl DB {
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+                .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
             let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
@@ -796,7 +796,7 @@ mod tests {
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
         // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent?statement_cache_capacity=0") }
         let db = DB::new().await;
         assert!(db.is_err());
     }
@@ -812,7 +812,7 @@ mod autodream_db_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -834,7 +834,7 @@ mod autodream_db_tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -870,7 +870,7 @@ mod autodream_db_tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -963,7 +963,7 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0";
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))

@@ -12,8 +12,8 @@ async fn test_task_decomposition_service() {
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
-    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
         .unwrap();
     let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
 
@@ -178,8 +178,8 @@ async fn test_task_decomposition_dag_blocked() {
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
-    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
         .unwrap();
     let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
     match &db.store {
@@ -333,8 +333,8 @@ async fn test_task_decomposition_service_fail_task() {
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
-    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
         .unwrap();
     let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
     match &db.store {

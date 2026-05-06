@@ -174,10 +174,10 @@ mod tests {
     #[tokio::test]
     async fn bench_telemetry_sync_parallel() {
         // If we are in the Bazel sandbox without an active HTTP mock or DB, just exit cleanly to avoid timeouts
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy?statement_cache_capacity=0".to_string());
 
         // Fast fail for tests
-        if db_url.contains("dummy") || db_url == "postgres://localhost/dummy" {
+        if db_url.contains("dummy") || db_url == "postgres://localhost/dummy?statement_cache_capacity=0" {
             return;
         }
 

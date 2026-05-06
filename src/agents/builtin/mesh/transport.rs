@@ -137,7 +137,7 @@ pub struct PgTransport {
 impl PgTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::postgres::PgPoolOptions;
-        let pool = PgPoolOptions::new().connect(db_url).await.map_err(|e| e.to_string())?;
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(db_url).await.map_err(|e| e.to_string())?;
 
         // Initialize schema
         sqlx::query(
@@ -688,7 +688,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ipc_transport() {
-        let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
+        let db_url = "postgres://dummy:dummy@localhost:5432/dummy?statement_cache_capacity=0";
         let transport_res = PgTransport::new(&db_url).await;
         // In this test, we just ensure it handles the dummy DB gracefully without panicking if it times out
         if let Ok(transport) = transport_res {
@@ -726,7 +726,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ipc_transport_checkpoints() {
-        let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
+        let db_url = "postgres://dummy:dummy@localhost:5432/dummy?statement_cache_capacity=0";
         let transport_res = PgTransport::new(&db_url).await;
 
         if let Ok(transport) = transport_res {
@@ -755,7 +755,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ipc_transport_locking() {
-        let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
+        let db_url = "postgres://dummy:dummy@localhost:5432/dummy?statement_cache_capacity=0";
         let transport_res = PgTransport::new(&db_url).await;
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();

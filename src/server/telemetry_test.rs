@@ -51,7 +51,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -76,7 +76,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_metrics() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -91,7 +91,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_token_usage_forecast() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -116,7 +116,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_agent_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -143,7 +143,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_api_call_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -169,7 +169,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_swarm_job_latency_by_entity() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -195,7 +195,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_buffer_metric_respects_standalone() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -337,7 +337,7 @@ async fn test_queue_length_gauge_initialization() {
 
 #[tokio::test]
 async fn test_record_queue_length_with_deployment_mode() {
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc?statement_cache_capacity=0".to_string());
     let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
         Ok(Ok(p)) => p,
         _ => return, // Gracefully exit if DB is not available in sandbox or times out

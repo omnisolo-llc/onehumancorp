@@ -9,10 +9,10 @@ use tokio_stream::wrappers::TcpListenerStream;
 
 #[tokio::test]
 async fn test_proxy_tunnel() {
-    let pool = sqlx::postgres::PgPoolOptions::new()
+    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .max_connections(1)
         .acquire_timeout(std::time::Duration::from_millis(1))
-        .connect_lazy("postgres://invalid:invalid@localhost:1/test")
+        .connect_lazy("postgres://invalid:invalid@localhost:1/test?statement_cache_capacity=0")
         .unwrap();
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

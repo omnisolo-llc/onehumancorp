@@ -91,8 +91,8 @@ async fn test_shared_task_orchestrator_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres?statement_cache_capacity=0")
         .unwrap();
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };

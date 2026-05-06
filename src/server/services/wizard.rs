@@ -259,7 +259,7 @@ mod tests {
         let old_db_url = std::env::var("DATABASE_URL").ok();
 
         unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db"); }
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db?statement_cache_capacity=0"); }
 
         let service = MyWizardService::new();
         let request = Request::new(EmptyRequest {});

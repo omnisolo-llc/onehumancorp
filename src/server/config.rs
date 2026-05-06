@@ -187,12 +187,12 @@ mod tests {
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
             env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("DATABASE_URL", "postgres://localhost/testdb");
+            env::set_var("DATABASE_URL", "postgres://localhost/testdb?statement_cache_capacity=0");
         }
 
         let cfg = load().unwrap();
         assert_eq!(cfg.listen_addr, ":9999");
-        assert_eq!(cfg.database_url.unwrap(), "postgres://localhost/testdb");
+        assert_eq!(cfg.database_url.unwrap(), "postgres://localhost/testdb?statement_cache_capacity=0");
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {

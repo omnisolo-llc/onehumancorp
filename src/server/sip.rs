@@ -263,7 +263,7 @@ mod tests {
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy?statement_cache_capacity=0".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -371,10 +371,10 @@ mod tests {
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // Just verify it doesn't crash on execution with a valid pool.
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
+            .connect_lazy("postgres://localhost/dummy?statement_cache_capacity=0")
             .unwrap();
 
         let sip_db = SipDB::new(pool, "test_org".to_string());

@@ -164,8 +164,8 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().max_connections(1)
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
             .unwrap();
 
         let db = Arc::new(DB {
