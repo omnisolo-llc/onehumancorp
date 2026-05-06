@@ -62,11 +62,11 @@ fn create() -> app::UserManagement { crate::ui_tests::init(); app::UserManagemen
 
 #[test] fn users_flow_delete_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let c = called.clone();
-    ui.on_delete_user(move |id| { *c.borrow_mut() = id.to_string(); });
+    ui.on_delete_user(move |id| { *c.lock().unwrap() = id.to_string(); });
     ui.invoke_delete_user("user-99".into());
-    assert_eq!(*called.borrow(), "user-99");
+    assert_eq!(*called.lock().unwrap(), "user-99");
 }
 
 // --- Referral Widget UI Tests ---
@@ -85,22 +85,22 @@ fn create() -> app::UserManagement { crate::ui_tests::init(); app::UserManagemen
 
 #[test] fn e2e_referral_widget_invite_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_invite_user(move || { *c.borrow_mut() = true; });
+    ui.on_invite_user(move || { *c.lock().unwrap() = true; });
     ui.invoke_invite_user();
-    assert_eq!(*called.borrow(), true);
+    assert_eq!(*called.lock().unwrap(), true);
 }
 
 #[test] fn e2e_referral_widget_mobile_scale_state() {
     let ui = create();
     // Simulate mobile viewport where UI must be tested for responsiveness
     ui.window().set_size(slint::PhysicalSize::new(375, 667));
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_invite_user(move || { *c.borrow_mut() = true; });
+    ui.on_invite_user(move || { *c.lock().unwrap() = true; });
     ui.invoke_invite_user();
-    assert_eq!(*called.borrow(), true);
+    assert_eq!(*called.lock().unwrap(), true);
 }
 
 #[test] fn e2e_referral_widget_render_users_present() {

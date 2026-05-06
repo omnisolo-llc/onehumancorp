@@ -51,11 +51,11 @@ fn create() -> app::Channels { crate::ui_tests::init(); app::Channels::new().unw
 
 #[test] fn channels_flow_add_callback() {
     let ui = create();
-    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
     let c = called.clone();
-    ui.on_add_channel(move || { *c.borrow_mut() = true; });
+    ui.on_add_channel(move || { *c.lock().unwrap() = true; });
     ui.invoke_add_channel();
-    assert!(*called.borrow());
+    assert!(*called.lock().unwrap());
 }
 
 // --- Unique Scenarios with Verification ---
