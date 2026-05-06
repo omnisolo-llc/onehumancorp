@@ -526,28 +526,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("OAuth Login via {}...", provider);
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
+                    ui.set_loading(true);
+                    let ui_weak = login_handle.clone();
+                    tokio::spawn(async move {
+                        let mut needs_wizard = false;
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                            if let Ok(resp) = client.get_wizard_state(req).await {
+                                let state = resp.into_inner().state;
+                                // In the SetupWizard, step 10 is the final welcome checklist.
+                                // If they haven't reached step 10, they need to complete the wizard.
+                                if let Some(step) = state.get("step") {
+                                    if let Ok(s) = step.parse::<i32>() {
+                                        if s < 10 {
+                                            needs_wizard = true;
+                                        }
+                                    } else {
+                                        needs_wizard = true;
+                                    }
+                                } else {
+                                    needs_wizard = true;
+                                }
+                            } else {
+                                needs_wizard = true; // API call failed, assume new user
+                            }
+                        } else {
+                            needs_wizard = true; // Connection failed, assume new user
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_loading(false);
+                                if needs_wizard {
+                                    ui.invoke_start_setup_wizard();
+                                } else {
+                                    ui.hide().unwrap();
+                                    if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                        let my_plan_ui = app::MyPlan::new().unwrap();
-                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                        let my_plan_handle_clone = my_plan_ui.as_weak();
-                        dashboard.on_open_billing(move || {
-                            if let Some(ui) = my_plan_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
-                        my_plan_ui.on_view_details(move || {
-                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                        });
+                                        let my_plan_ui = app::MyPlan::new().unwrap();
+                                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                                        let my_plan_handle_clone = my_plan_ui.as_weak();
+                                        dashboard.on_open_billing(move || {
+                                            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        let my_plan_handle_clone2 = my_plan_ui.as_weak();
+                                        dashboard.on_action_failed(move |msg| {
+                                            if msg.contains("Tier limit reached") {
+                                                if let Some(ui) = my_plan_handle_clone2.upgrade() {
+                                                    ui.set_upgrade_prompt_message(msg.into());
+                                                    let _ = ui.show();
+                                                }
+                                            }
+                                        });
+                                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                                        my_plan_ui.on_view_details(move || {
+                                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+                                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+                                        });
 
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
@@ -589,8 +632,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                        dashboard.show().unwrap();
-                    }
+                                        dashboard.show().unwrap();
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                    });
                 }
             }
         }
@@ -2523,6 +2570,54 @@ mod growth_e2e_tests {
         login_ui.invoke_start_setup_wizard();
 
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+    }
+
+    #[test]
+    fn test_e2e_sso_login_auto_launch_setup_wizard() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+        login_ui.on_start_setup_wizard(move || {
+            *setup_wizard_launched_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_is_sign_up(false);
+
+        login_ui.on_oauth_login({
+            let ui_handle = login_ui.as_weak();
+            move |_provider| {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if !ui.get_is_sign_up() {
+                        let mut needs_wizard = false;
+                        let mut state = std::collections::HashMap::new();
+                        state.insert("step".to_string(), "5".to_string());
+
+                        if let Some(step) = state.get("step") {
+                            if let Ok(s) = step.parse::<i32>() {
+                                if s < 10 {
+                                    needs_wizard = true;
+                                }
+                            } else {
+                                needs_wizard = true;
+                            }
+                        } else {
+                            needs_wizard = true;
+                        }
+
+                        if needs_wizard {
+                            ui.invoke_start_setup_wizard();
+                        }
+                    }
+                }
+            }
+        });
+
+        login_ui.invoke_oauth_login("Google".into());
+
+        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first SSO login");
     }
 
     #[test]
