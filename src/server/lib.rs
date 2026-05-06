@@ -1360,7 +1360,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         telemetry_daemon.start();
     }
 
-    if !crate::config::get().standalone {
+    if is_cloud {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
         power_sync_orchestrator.start().await;
