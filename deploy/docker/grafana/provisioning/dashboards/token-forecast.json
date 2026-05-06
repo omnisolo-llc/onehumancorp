@@ -65,7 +65,8 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "schemaVersion": 38,
