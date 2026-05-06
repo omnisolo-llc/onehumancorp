@@ -24,6 +24,14 @@ fn create() -> app::HelpCenter { crate::ui_tests::init(); app::HelpCenter::new()
     assert_eq!(ui.get_search_query(), inj);
 }
 
+#[test] fn help_flow_clear_search_query() {
+    let ui = create();
+    ui.set_search_query("some query".into());
+    assert_eq!(ui.get_search_query(), "some query");
+    ui.set_search_query("".into());
+    assert_eq!(ui.get_search_query(), "");
+}
+
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---
