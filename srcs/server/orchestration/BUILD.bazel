@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "mesh.go",
         "tasks_db.go",
+        "sip.go",
     ],
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -15,6 +16,7 @@ go_test(
     srcs = [
         "mesh_test.go",
         "tasks_db_test.go",
+        "sip_test.go",
     ],
     embed = [":orchestration"],
     deps = [
