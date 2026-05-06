@@ -14,6 +14,7 @@ fn test_scribe_help_center_content() {
     let mut found_ai_helpers = false;
     let mut found_marketing = false;
     let mut found_account = false;
+    let mut found_troubleshooting = false;
 
     for i in 0..articles.row_count() {
         let article = articles.row_data(i).unwrap();
@@ -24,6 +25,7 @@ fn test_scribe_help_center_content() {
             "AI Helpers" => found_ai_helpers = true,
             "Marketing" => found_marketing = true,
             "Account & Billing" => found_account = true,
+            "Troubleshooting" => found_troubleshooting = true,
             _ => {}
         }
     }
@@ -34,6 +36,7 @@ fn test_scribe_help_center_content() {
     assert!(found_ai_helpers, "Missing AI Helpers");
     assert!(found_marketing, "Missing Marketing");
     assert!(found_account, "Missing Account & Billing");
+    assert!(found_troubleshooting, "Missing Troubleshooting");
 }
 
 #[test]
@@ -135,4 +138,27 @@ fn test_scribe_release_notes() {
     // We remove get_test_title() because ReleaseNotes doesn't expose test_title.
     ui.set_show_latest_only(true);
     assert!(ui.get_show_latest_only(), "Show latest only toggle should work");
+}
+
+
+#[test]
+fn test_scribe_help_center_search() {
+    crate::ui_tests::init();
+    let ui = crate::app::HelpCenter::new().unwrap();
+
+    // Test searching
+    ui.set_search_query("promotion".into());
+    // Normally search filters the model, but the slint file just exposes execute_search
+    // In actual implementation, we invoke execute_search. Since it's pure UI,
+    // let's just verify the property changes.
+    assert_eq!(ui.get_search_query(), slint::SharedString::from("promotion"));
+
+    let search_executed = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let search_executed_clone = search_executed.clone();
+    ui.on_execute_search(move || {
+        *search_executed_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_execute_search();
+    assert!(*search_executed.borrow(), "Search callback should be triggered");
 }
