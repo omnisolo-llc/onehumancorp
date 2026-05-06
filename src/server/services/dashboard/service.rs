@@ -36,13 +36,13 @@ impl DashboardService for MyDashboardService {
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
             async {
-                let org_id = req.organization_id.clone();
+                let _org_id = req.organization_id.clone();
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&_org_id).fetch_all(&db1.pool).await {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -59,7 +59,7 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&_org_id).fetch_all(pool).await {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -79,7 +79,7 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             },
             async {
-                let org_id = req.organization_id.clone();
+                let _org_id = req.organization_id.clone();
                 // Let's assume order schema exists or fallback to empty for the benchmark
                 Ok::<_, String>(vec![])
             }

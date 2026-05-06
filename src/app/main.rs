@@ -6999,3 +6999,45 @@ mod additional_smart_blocks_tests {
         assert_eq!(ui.get_product_name(), "Int Product");
     }
 }
+
+#[cfg(test)]
+mod booking_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_booking_flow_1() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login = app::Login::new().unwrap();
+        let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let logged_in_clone = logged_in.clone();
+        login.on_login(move |_, _| *logged_in_clone.borrow_mut() = true);
+        login.invoke_login("test@ohc.com".into(), "password".into());
+        assert!(*logged_in.borrow());
+
+        let manager = app::BusinessManager::new().unwrap();
+
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let submitted_clone = submitted.clone();
+        manager.on_submit(move |type_, name, desc, price, dur, sch| {
+            assert_eq!(type_, "SERVICE");
+            assert_eq!(name, "Handyman Consulting");
+            assert_eq!(desc, "Talk to me about fixing stuff");
+            assert_eq!(price, "100.00");
+            assert_eq!(dur, "60");
+            assert_eq!(sch, "Mon-Fri 9am-5pm");
+            *submitted_clone.borrow_mut() = true;
+        });
+
+        manager.invoke_submit(
+            "SERVICE".into(),
+            "Handyman Consulting".into(),
+            "Talk to me about fixing stuff".into(),
+            "100.00".into(),
+            "60".into(),
+            "Mon-Fri 9am-5pm".into()
+        );
+
+        assert!(*submitted.borrow());
+    }
+}

@@ -31,7 +31,7 @@ pub async fn run_health_monitor(
                     }
                 }
                 for agent_id in to_fire {
-                    if is_cloud {
+                    if true {
                         let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                         *count += 1;
                         if *count >= 3 {
