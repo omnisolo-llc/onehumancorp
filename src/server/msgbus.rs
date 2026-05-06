@@ -13,7 +13,6 @@ pub struct Message {
     pub payload: Vec<u8>,
 }
 
-
 #[async_trait]
 pub trait DistributedLock: Send + Sync {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
@@ -349,7 +348,6 @@ impl Bus for IpcBus {
     }
 }
 
-
 #[allow(dead_code)]
 pub struct NatsBus {
     client: async_nats::Client,
@@ -458,7 +456,6 @@ impl DistributedLock for NatsBus {
     }
 }
 
-
 #[async_trait]
 impl DistributedLock for RedisBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -519,7 +516,6 @@ impl DistributedLock for IpcBus {
         Ok(())
     }
 }
-
 
 #[allow(dead_code)]
 pub struct StateHandoffManager {
@@ -659,5 +655,93 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst));
         cancel();
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_ping() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let monitor = HealthMonitor::new(bus.clone());
+
+        let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:health_ping" {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        });
+
+        let cancel = bus.subscribe("system:health_ping".to_string(), handler).await.unwrap();
+
+        monitor.ping().await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_state_handoff_trigger() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let manager = StateHandoffManager::new(bus.clone());
+
+        let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let payload_data = vec![1, 2, 3, 4];
+        let payload_clone = payload_data.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:state_handoff" && msg.payload == payload_clone {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        });
+
+        let cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+
+        manager.trigger_handoff(payload_data).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_memory_bus_distributed_lock() {
+        let bus = MemoryBus::new();
+        let resource = "test_resource";
+        let owner1 = "owner1";
+        let owner2 = "owner2";
+
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+
+        bus.release_lock(resource, owner1).await.unwrap();
+        assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_ipc_bus_distributed_lock() {
+        let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/test_ipc_lock_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let db_url = format!("sqlite://{}", db_path);
+
+        let bus = IpcBus::new(&db_url).await.unwrap();
+        let resource = "test_ipc_resource";
+        let owner1 = "owner1";
+        let owner2 = "owner2";
+
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
+
+        // Allow lock to expire
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
+
+        bus.release_lock(resource, owner2).await.unwrap();
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
     }
 }
