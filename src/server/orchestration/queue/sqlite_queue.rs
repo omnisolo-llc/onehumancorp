@@ -11,6 +11,16 @@ impl SQLiteTaskQueue {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
         Self { pool }
     }
+
+    pub async fn prune_stuck_jobs(&self) -> Result<(), String> {
+        let stuck_threshold = chrono::Utc::now() - chrono::Duration::hours(1);
+        sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED' WHERE status = 'RUNNING' AND updated_at < ?")
+            .bind(stuck_threshold)
+            .execute(&*self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 #[async_trait]

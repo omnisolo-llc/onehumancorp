@@ -13,9 +13,16 @@ pub async fn run_health_monitor(
     loop {
         interval.tick().await;
         let mut to_fire_now: Vec<String> = Vec::new();
-        match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_transport.get_active_agents()).await {
+
+        let timeout_duration = if is_cloud {
+            std::time::Duration::from_secs(10)
+        } else {
+            std::time::Duration::from_secs(5)
+        };
+
+        match tokio::time::timeout(timeout_duration, monitor_transport.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+                let actual_is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
                     tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
@@ -36,7 +43,10 @@ pub async fn run_health_monitor(
                 for agent_id in to_fire {
                     let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                     *count += 1;
-                    if *count >= 3 {
+
+                    let threshold = if actual_is_cloud { 3 } else { 1 };
+
+                    if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
                         tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
@@ -114,12 +124,18 @@ mod tests {
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
         let monitor_hub = hub.clone();
 
-        let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, false, std::time::Duration::from_millis(10)).await;
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = temp_env::with_var("STANDALONE_MODE", Some("true"), || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async move {
+                    let handle = tokio::spawn(run_health_monitor(monitor_transport, monitor_hub, false, std::time::Duration::from_millis(10)));
+                    let _ = tokio::time::timeout(tokio::time::Duration::from_millis(50), handle).await;
+                });
+            });
+            tx.send(()).unwrap();
         });
-
-        // Let the monitor loop run once
-        let _ = tokio::time::timeout(tokio::time::Duration::from_millis(50), handle).await;
+        rx.recv().unwrap();
 
         // Both agents should be fired (removed) immediately in standalone mode
         assert!(hub.get_agent("agent_idle").is_none());
@@ -157,12 +173,20 @@ mod tests {
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
         let monitor_hub = hub.clone();
 
-        let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = temp_env::with_var("STANDALONE_MODE", Some("false"), || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async move {
+                    let handle = tokio::spawn(run_health_monitor(monitor_transport, monitor_hub, true, std::time::Duration::from_millis(10)));
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    handle.abort();
+                });
+            });
+            tx.send(()).unwrap();
         });
+        rx.recv().unwrap();
 
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
-        handle.abort();
     }
 }
