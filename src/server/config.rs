@@ -166,60 +166,41 @@ mod tests {
     #[test]
     fn test_load_defaults() {
         let _lock = ENV_MUTEX.lock().unwrap();
-        // Ensure environment doesn't interfere
-        // SAFETY: Test-only code removing environment variables
-        unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
-        }
-
-        let cfg = load().unwrap();
-        assert_eq!(cfg.listen_addr, ":8080");
-        assert_eq!(cfg.max_tokens, 2048);
-        assert_eq!(cfg.s3_bucket_blobs, "ohc-blobs");
+        temp_env::with_vars([
+            ("OHC_LISTEN_ADDR", None::<&str>),
+            ("DATABASE_URL", None::<&str>)
+        ], || {
+            let cfg = load().unwrap();
+            assert_eq!(cfg.listen_addr, ":8080");
+            assert_eq!(cfg.max_tokens, 2048);
+            assert_eq!(cfg.s3_bucket_blobs, "ohc-blobs");
+        });
     }
 
     #[test]
     fn test_load_env_vars() {
         let _lock = ENV_MUTEX.lock().unwrap();
-        // SAFETY: Test-only code setting/removing environment variables
-        unsafe {
-            env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("DATABASE_URL", "postgres://localhost/testdb");
-        }
-
-        let cfg = load().unwrap();
-        assert_eq!(cfg.listen_addr, ":9999");
-        assert_eq!(cfg.database_url.unwrap(), "postgres://localhost/testdb");
-
-        // SAFETY: Test-only code setting/removing environment variables
-        unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
-        }
+        temp_env::with_vars([
+            ("OHC_LISTEN_ADDR", Some(":9999")),
+            ("DATABASE_URL", Some("postgres://localhost/testdb"))
+        ], || {
+            let cfg = load().unwrap();
+            assert_eq!(cfg.listen_addr, ":9999");
+            assert_eq!(cfg.database_url.unwrap(), "postgres://localhost/testdb");
+        });
     }
 
     #[test]
     fn test_telemetry_enabled_override() {
         let _lock = ENV_MUTEX.lock().unwrap();
-        // SAFETY: Test-only code setting environment variables
-        unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "true");
-        }
+        temp_env::with_vars([("OHC_TELEMETRY_ENABLED", Some("true"))], || {
+            let cfg = load().unwrap();
+            assert_eq!(cfg.telemetry_enabled, true);
+        });
 
-        let cfg = load().unwrap();
-        assert_eq!(cfg.telemetry_enabled, true);
-
-        // SAFETY: Test-only code setting/removing environment variables
-        unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "false");
-        }
-
-        let cfg2 = load().unwrap();
-        assert_eq!(cfg2.telemetry_enabled, false);
-
-        unsafe {
-            env::remove_var("OHC_TELEMETRY_ENABLED");
-        }
+        temp_env::with_vars([("OHC_TELEMETRY_ENABLED", Some("false"))], || {
+            let cfg2 = load().unwrap();
+            assert_eq!(cfg2.telemetry_enabled, false);
+        });
     }
 }

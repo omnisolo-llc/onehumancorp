@@ -230,12 +230,15 @@ mod tests {
         assert_eq!(res.unwrap_err(), "invalid scheme");
     }
 
-    #[tokio::test]
-    async fn test_validate_url_and_get_ip_blocked() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("OHC_ALLOW_LOCAL_IPS", "false") }
-        let res = validate_url_and_get_ip("http://localhost").await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().contains("resolves to blocked IP"));
+    #[test]
+    fn test_validate_url_and_get_ip_blocked() {
+        temp_env::with_vars([("OHC_ALLOW_LOCAL_IPS", Some("false"))], || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            rt.block_on(async {
+                let res = validate_url_and_get_ip("http://localhost").await;
+                assert!(res.is_err());
+                assert!(res.unwrap_err().contains("resolves to blocked IP"));
+            });
+        });
     }
 }

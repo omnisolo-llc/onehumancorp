@@ -236,52 +236,52 @@ mod tests {
     // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
     // to 127.0.0.1:50051 which will fail in the sandboxed test environment unless mocked.
 
-    #[tokio::test]
-    async fn test_subagent_teammate_mode() {
+    #[test]
+    fn test_subagent_teammate_mode() {
         // We set the address to something invalid to quickly trigger connection failure for the background task
-        unsafe { std::env::set_var("OHC_AGENT_ADDRESS", "127.0.0.1:0"); }
+        temp_env::with_vars([("OHC_AGENT_ADDRESS", Some("127.0.0.1:0"))], || { tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+            let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+            let executor = SubagentExecutor { runner };
+            let args = json!({
+                "task": "Do this teammate task",
+                "mode": "teammate"
+            });
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = SubagentExecutor { runner };
-        let args = json!({
-            "task": "Do this teammate task",
-            "mode": "teammate"
-        });
+            let result = executor.execute(args).await;
+            assert!(result.is_ok(), "Expected Ok for teammate mode");
+            let msg = result.unwrap();
 
-        let result = executor.execute(args).await;
-        assert!(result.is_ok(), "Expected Ok for teammate mode");
-        let msg = result.unwrap();
+            assert!(msg.contains("Teammate subagent spawned. Communicate via"), "Message should contain success notification");
 
-        assert!(msg.contains("Teammate subagent spawned. Communicate via"), "Message should contain success notification");
+            let parts: Vec<&str> = msg.split("Communicate via ").collect();
+            assert_eq!(parts.len(), 2);
 
-        let parts: Vec<&str> = msg.split("Communicate via ").collect();
-        assert_eq!(parts.len(), 2);
+            let path_parts: Vec<&str> = parts[1].split(" and ").collect();
+            assert_eq!(path_parts.len(), 2);
 
-        let path_parts: Vec<&str> = parts[1].split(" and ").collect();
-        assert_eq!(path_parts.len(), 2);
+            let inbox_path = path_parts[0];
+            let outbox_path = path_parts[1];
 
-        let inbox_path = path_parts[0];
-        let outbox_path = path_parts[1];
+            assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
 
-        assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
-
-        // Mock command runner will return success default, no error.
-        let mut attempts = 0;
-        let mut found = false;
-        while attempts < 20 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
-                if content.contains("[System: Subagent Process Terminated]") {
-                    found = true;
-                    break;
+            // Mock command runner will return success default, no error.
+            let mut attempts = 0;
+            let mut found = false;
+            while attempts < 20 {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
+                    if content.contains("[System: Subagent Process Terminated]") {
+                        found = true;
+                        break;
+                    }
                 }
+                attempts += 1;
             }
-            attempts += 1;
-        }
 
-        assert!(found, "Background task should have written to outbox");
+            assert!(found, "Background task should have written to outbox");
 
-        let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
-        let _ = tokio::fs::remove_dir_all(parent_dir).await;
+            let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
+            let _ = tokio::fs::remove_dir_all(parent_dir).await;
+        }) });
     }
 }

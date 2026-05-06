@@ -60,6 +60,7 @@ rust_library(
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
         "@crates//:walkdir",
+        "@crates//:temp-env",
     ],
 )
 
@@ -155,6 +156,7 @@ rust_test(
         "@crates//:base64",
         "@crates//:hmac",
         "@crates//:sha2",
+        "@crates//:temp-env",
     ],
 )
 

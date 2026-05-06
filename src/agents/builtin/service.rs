@@ -957,27 +957,26 @@ pub async fn start_builtin_agent(
 mod memory_tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_anthropic_memory_initialization_and_accessor() {
-        unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
-            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
-        }
+    #[test]
+    fn test_anthropic_memory_initialization_and_accessor() {
+        temp_env::with_vars([
+            ("OHC_ENABLE_ANTHROPIC_MEMORY", Some("true")),
+            ("OHC_ANTHROPIC_MEMORY_DIR", Some(".test-agent-memory"))
+        ], || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            rt.block_on(async {
+                let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+                service.init_memory().await;
 
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
-        service.init_memory().await;
+                assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
+                let mem = service.anthropic_memory.as_ref().unwrap();
 
-        assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
-        let mem = service.anthropic_memory.as_ref().unwrap();
+                use crate::memory_store::LongTermMemory;
+                let accessor = mem.as_anthropic_accessor();
+                assert!(accessor.is_some(), "Should return the anthropic memory accessor");
 
-        use crate::memory_store::LongTermMemory;
-        let accessor = mem.as_anthropic_accessor();
-        assert!(accessor.is_some(), "Should return the anthropic memory accessor");
-
-        unsafe {
-            std::env::remove_var("OHC_ENABLE_ANTHROPIC_MEMORY");
-            std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
-        }
-        let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
+                let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
+            });
+        });
     }
 }

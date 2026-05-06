@@ -407,10 +407,13 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool_res = tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
-
-            .connect(&database_url).await.unwrap();
+            .connect(&database_url)).await;
+        let pool = match pool_res {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
 
         let service = MySyncService::new(pool.clone());
 

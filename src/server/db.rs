@@ -790,12 +790,15 @@ pub async fn insert_autodream_memory(
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_db_new_fails_without_server() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") }
-        let db = DB::new().await;
-        assert!(db.is_err());
+    #[test]
+    fn test_db_new_fails_without_server() {
+        temp_env::with_vars([("DATABASE_URL", Some("postgres://localhost:54321/nonexistent"))], || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            rt.block_on(async {
+                let db = DB::new().await;
+                assert!(db.is_err());
+            });
+        });
     }
 }
 
