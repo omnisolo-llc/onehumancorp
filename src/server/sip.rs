@@ -103,15 +103,24 @@ impl SipDB {
     pub async fn load_grounding_content(&self) -> Option<String> {
         if let Some(ref root) = self.context_root {
             let root_path = std::path::Path::new(root);
+            let mut contents = Vec::new();
 
-            let agents_path = root_path.join("AGENTS.md");
-            if let Ok(content) = tokio::fs::read_to_string(&agents_path).await {
-                return Some(content);
+            let files_to_check = [
+                "AGENTS.md",
+                "assistant_OHC.md",
+                "assistant.md",
+                "CLAUDE.md",
+            ];
+
+            for file in &files_to_check {
+                let file_path = root_path.join(file);
+                if let Ok(content) = tokio::fs::read_to_string(&file_path).await {
+                    contents.push(content);
+                }
             }
 
-            let claude_path = root_path.join("CLAUDE.md");
-            if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
-                return Some(content);
+            if !contents.is_empty() {
+                return Some(contents.join("\n"));
             }
         }
         None
@@ -288,7 +297,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_delegate_mission_tc4_grounding_priority() {
+    async fn test_delegate_mission_tc4_multiple_grounding_files() {
         let pool = setup_dummy_pool().await;
         let dir_str = create_temp_dir("tc4");
         let dir_path = std::path::Path::new(&dir_str);
@@ -301,13 +310,17 @@ mod tests {
         let mut file2 = File::create(&claude_path).unwrap();
         write!(file2, "CLAUDE rules.").unwrap();
 
+        let assistant_ohc_path = dir_path.join("assistant_OHC.md");
+        let mut file3 = File::create(&assistant_ohc_path).unwrap();
+        write!(file3, "OHC rules.").unwrap();
+
         let sip_db = SipDB::new(pool, "test_org".to_string())
             .with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        // Only AGENTS.md should be injected
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.");
+        // All files should be injected, in order
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.\nOHC rules.\nCLAUDE rules.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
