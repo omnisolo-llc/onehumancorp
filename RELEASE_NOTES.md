@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+- Scaling (Cloud): Fixed flaky timeouts in src/server:server_test by correctly specifying size="large" in BUILD.bazel. Verified agent_missions sanitization logic.
+- Privacy/Offline (Standalone): Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 - Scaling (Cloud): Fix IpcTransport races, gRPC UI Interceptor, and MaintenanceWorker fixes (#734b, #9cb3, #33a8).
 - Privacy/Offline (Standalone): Shield Sentry Chaos Resilience, Slint UI memory safety, PII leakage checks, and SQLite schema parity (#a137, #e295, #e930, #edc2).

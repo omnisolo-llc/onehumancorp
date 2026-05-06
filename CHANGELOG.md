@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+### Cloud Scaling Improvements
+- Fixed flaky timeouts in src/server:server_test by correctly specifying size="large" in BUILD.bazel to accommodate for test execution duration.
+- Verified agent_missions sanitization logic is properly handled within sip.rs and orchestration sync daemon.
+
+### Privacy/Offline Improvements
+- Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
