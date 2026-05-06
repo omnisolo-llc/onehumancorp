@@ -6,6 +6,7 @@ pub async fn run_health_monitor(
     monitor_transport: Arc<dyn MeshTransport>,
     monitor_hub: Arc<Hub>,
     tick_duration: std::time::Duration,
+    is_cloud: bool,
 ) {
     let mut interval = tokio::time::interval(tick_duration);
     let mut pending_fires: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
@@ -116,7 +117,7 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10), false).await;
         });
 
         // Let the monitor loop run once
@@ -162,7 +163,7 @@ mod tests {
         let monitor_hub = hub.clone();
 
         let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10), true).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(15)).await;

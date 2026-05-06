@@ -1277,11 +1277,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Cross-Mode Health Monitor
     let monitor_transport = mesh_transport.clone();
     let monitor_hub = hub.clone();
+    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) != "true";
     tokio::spawn(async move {
         crate::orchestration::health::run_health_monitor(
             monitor_transport,
             monitor_hub,
-            std::time::Duration::from_secs(30)
+            std::time::Duration::from_secs(30),
+            is_cloud,
         ).await;
     });
 

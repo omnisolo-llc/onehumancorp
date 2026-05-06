@@ -33,7 +33,7 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
@@ -120,7 +120,7 @@ impl DB {
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
             let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
                 .connect(&database_url)
@@ -834,7 +834,7 @@ mod autodream_db_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -856,7 +856,7 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -892,7 +892,7 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -999,6 +999,54 @@ mod security_tests_final {
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
+    async fn test_connection_pool_tenant_leakage_exploit() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        // 1. Acquire connection and set a malicious tenant state
+        {
+            let mut conn = pool.acquire().await.unwrap();
+            sqlx::query("SET app.current_tenant = 'tenant_vuln_1'")
+                .execute(&mut *conn)
+                .await
+                .unwrap();
+
+            let row: (String,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+                .fetch_one(&mut *conn)
+                .await
+                .unwrap();
+            assert_eq!(row.0, "tenant_vuln_1");
+            // Connection is dropped here, returned to the pool, triggering after_release
+        }
+
+        // 2. Acquire the same connection (forced by max_connections=1) and ensure state is cleared
+        {
+            let mut conn = pool.acquire().await.unwrap();
+            let row: (Option<String>,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+                .fetch_one(&mut *conn)
+                .await
+                .unwrap();
+            assert!(row.0.is_none() || row.0.as_deref() == Some(""));
+        }
+    }
+
+    #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
@@ -1006,7 +1054,7 @@ mod e2e_tenant_isolation_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let _pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1019,7 +1067,7 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {

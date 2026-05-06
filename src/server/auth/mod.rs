@@ -105,6 +105,16 @@ impl Store {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
                 tracing::warn!("falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
+                if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+                    let key = std::env::var("OHC_SQLITE_KEY").unwrap_or_default();
+                    if !key.is_empty() {
+                        use hmac::{Hmac, Mac};
+                        type HmacSha256 = Hmac<sha2::Sha256>;
+                        let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_secret_derivation").unwrap();
+                        mac.update(key.as_bytes());
+                        return mac.finalize().into_bytes().to_vec();
+                    }
+                }
                 random_bytes(32)
             });
 
@@ -994,5 +1004,31 @@ mod isolation_tests {
         if let Err(status) = res {
             assert!(status.code() == tonic::Code::InvalidArgument || status.code() == tonic::Code::Unauthenticated);
         }
+    }
+}
+
+#[cfg(test)]
+mod auth_standalone_tests {
+    use super::*;
+
+    #[test]
+    fn test_jwt_secret_derivation_standalone() {
+        temp_env::with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_SQLITE_KEY", Some("my-secret-key-123")),
+                ("JWT_SECRET", None),
+            ],
+            || {
+                let store = Store::new();
+                use sha2::Digest;
+                use hmac::{Hmac, Mac};
+                type HmacSha256 = Hmac<sha2::Sha256>;
+                let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_secret_derivation").unwrap();
+                mac.update(b"my-secret-key-123");
+                let expected = mac.finalize().into_bytes().to_vec();
+                assert_eq!(store.secret, expected);
+            },
+        );
     }
 }
