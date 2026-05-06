@@ -29,6 +29,10 @@ impl DashboardService for MyDashboardService {
         let db2 = self.db.clone();
         let db3 = self.db.clone();
 
+        let req_org_id_1 = req.organization_id.clone();
+        let req_org_id_2 = req.organization_id.clone();
+        let req_org_id_3 = req.organization_id.clone();
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
@@ -36,8 +40,8 @@ impl DashboardService for MyDashboardService {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
-            async {
-                let org_id = req.organization_id.clone();
+            tokio::spawn(async move {
+                let org_id = req_org_id_1;
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -78,9 +82,9 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(results)
-            },
-            async {
-                let org_id = req.organization_id.clone();
+            }),
+            tokio::spawn(async move {
+                let org_id = req_org_id_2;
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -119,9 +123,9 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(results)
-            },
-            async {
-                let org_id = req.organization_id.clone();
+            }),
+            tokio::spawn(async move {
+                let org_id = req_org_id_3;
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
@@ -156,15 +160,15 @@ impl DashboardService for MyDashboardService {
                     },
                 }
                 Ok::<_, String>(org)
-            }
+            })
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
