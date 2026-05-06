@@ -458,3 +458,70 @@ test.describe('Video Tutorials', () => {
     await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 });
   });
 });
+test.describe('API Documentation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display API documentation page', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("Connect Apps")').first().click()
+    ]);
+    await expect(page.locator('text=/Custom Integration/i')).toBeVisible();
+  });
+
+  test('should toggle advanced developer docs', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("Connect Apps")').first().click()
+    ]);
+    const advancedCheckbox = page.locator('text=/Show Advanced Developer Documentation/i').first();
+    await advancedCheckbox.click();
+    await expect(page.locator('text=/Read Product List/i')).toBeVisible();
+  });
+});
+
+test.describe('Release Notes', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display Release Notes page', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("Release Notes"), button:has-text("What\'s New")').first().click()
+    ]);
+    await expect(page.locator('text=/What\'s New in OHC/i')).toBeVisible();
+    await expect(page.locator('text=/Version 0.3.4/i')).toBeVisible();
+  });
+});
+
+test.describe('Contextual Tooltips', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should show contextual tooltips on hover', async ({ page }) => {
+    const askAiButton = page.locator('text="?"').first();
+    if (await askAiButton.isVisible()) {
+        await askAiButton.hover();
+        await expect(page.locator('text=/Find answers and how-to guides/i')).toBeVisible({ timeout: 3000 });
+    }
+  });
+});
