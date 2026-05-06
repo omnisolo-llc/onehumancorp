@@ -70,13 +70,13 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
 // E2E test requirement states we must simulate real clicks if we can't do playwright here.
 // Since it's a Slint unit test, we should verify that `invoke_configure_integration`
 // works for our new integrations, testing the underlying state binding.
-#[test] fn integr_flow_configure_manychat() {
+#[test] fn integr_flow_configure_chatwoot() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("ManyChat".into());
-    assert_eq!(*called.borrow(), "ManyChat");
+    ui.invoke_configure_integration("Chatwoot".into());
+    assert_eq!(*called.borrow(), "Chatwoot");
 }
 
 #[test] fn integr_flow_configure_calcom() {
