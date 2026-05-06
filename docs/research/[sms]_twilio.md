@@ -1,20 +1,33 @@
-## [SMS & Notifications] Issue Brief: High-Reliability SMS Alerts
+# Integrate Twilio for Global SMS Notifications
 
-**Title**: Scout 🔍: Integrate Twilio for Critical Order SMS Alerts
-**Problem Statement**:
-Users like Fatima (Food Cart Operator) work in fast-paced, noisy environments where they might not hear a standard push notification, or they may be in areas with poor internet connectivity. They need highly reliable SMS notifications when a new order arrives.
-**Research Report**:
-- **Tool**: Twilio Programmable SMS.
-- **Evaluation**: Twilio is the industry standard for SMS. It guarantees delivery and provides global carrier coverage.
-- **Ease of Use**: The user simply toggles "Send me SMS alerts for new orders" and verifies their phone number.
-- **Pricing**: ~$0.01 per message. Because of this cost, it should be restricted to Premium users or metered.
-- **Cloud vs. Standalone**: Cloud uses OHC's Twilio account. Standalone would require the user to configure their own Twilio SID and Auth Token.
-**Design Doc**:
-- "Notifications" setting panel.
-- User enters their phone number and verifies it via a one-time code.
-- When the backend processes a new paid order, an event is emitted.
-- The Notification worker picks up the event and dispatches an SMS via Twilio.
-**Implementation Prompt**:
-Integrate Twilio to send SMS notifications to the business owner when critical events occur (e.g., new pre-order received). Add a settings UI for the user to verify their phone number and opt-in. Ensure the backend handles Twilio rate limits and securely stores the business owner's verified phone number.
-**Priority**: P2
-**Estimated Scope**: Small
+## Problem Statement
+Many small businesses interact with clients who may not regularly check email or who lack high English proficiency (e.g., relying heavily on direct phone communication). For critical updates like appointment reminders, order confirmations, or urgent service changes, SMS is the most reliable channel. OHC needs a robust way to send automated SMS notifications globally.
+
+## Research Report
+**Findings & Data**: Twilio is a premier cloud communications platform providing programmable tools for making and receiving phone calls and text messages.
+**Ease of Use**: While the API is developer-focused, the end-user experience in OHC will be seamless. The business owner only needs to provide their Twilio credentials to enable the feature.
+**Features**: Exceptional global carrier coverage, high deliverability rates, and built-in compliance handling (e.g., handling "STOP" messages).
+**Pricing**: Pay-as-you-go pricing per message segment. Costs vary significantly by destination country but are generally very low for domestic messages.
+**Reputation**: Industry standard for programmable SMS. Highly reliable.
+
+## Design Doc
+**Integration flow**:
+1.  **Connection**: The user enters their Twilio Account SID, Auth Token, and Sender Phone Number into the OHC settings.
+2.  **Configuration**: The user toggles which OHC events should trigger an SMS (e.g., "Appointment Reminder 24h before", "Order Shipped").
+3.  **Execution**: When the defined event occurs, OHC formats a concise message and sends it via the Twilio API to the customer's registered phone number.
+4.  **Logging**: The SMS delivery status is logged in the customer's activity feed within OHC.
+
+## Implementation Prompt
+**User-Facing Outcome**: The business owner can input their Twilio credentials to unlock SMS capabilities. They can then enable automated SMS reminders for bookings or order updates, ensuring their customers receive critical information directly on their phones.
+**Acceptance Criteria**:
+- UI to configure Twilio API credentials.
+- Settings panel to toggle specific SMS notification triggers (e.g., booking reminders).
+- Background worker/process to dispatch the SMS via Twilio API at the correct time.
+- Basic formatting of SMS templates to ensure they are concise.
+- Works in both Cloud and Standalone modes.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
