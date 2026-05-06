@@ -541,6 +541,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
+                                        let dashboard_weak = dashboard.as_weak();
+                                        tokio::spawn(async move {
+                                            if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                                let req = tonic::Request::new(ohc::orchestration::GetPendingApprovalsRequest { organization_id: "default_org".into() });
+                                                if let Ok(resp) = client.get_pending_approvals(req).await {
+                                                    let tasks = resp.into_inner().tasks;
+                                                    slint::invoke_from_event_loop(move || {
+                                                        if let Some(ui) = dashboard_weak.upgrade() {
+                                                            let ui_tasks: Vec<app::UiPendingApproval> = tasks.into_iter().map(|t| {
+                                                                let helper = if t.title.contains("Restock") { "The Manager" } else { "The Ambassador" };
+                                                                app::UiPendingApproval {
+                                                                    task_id: t.id.into(),
+                                                                    title: t.title.into(),
+                                                                    proposed_content: t.proposed_content.into(),
+                                                                    helper_name: helper.into(),
+                                                                }
+                                                            }).collect();
+                                                            ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(ui_tasks)));
+                                                        }
+                                                    }).unwrap();
+                                                }
+                                            }
+                                        });
                                         dashboard.show().unwrap();
                                     }
                                 }
@@ -1251,6 +1274,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     current_tasks.push(app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
@@ -3272,6 +3296,7 @@ mod e2e_tests {
                         }
                     }
                     current_tasks.push(app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
@@ -3340,6 +3365,7 @@ mod e2e_tests {
 
         let pending_tasks = vec![
             app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                 task_id: "test-task-123".into(),
                 title: "Draft Confirmation for Maya".into(),
                 proposed_content: "Hi Maya, thank you for your custom order!".into(),
@@ -3405,6 +3431,7 @@ mod e2e_tests {
 
         let pending_tasks = vec![
             app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                 task_id: "test-task-123".into(),
                 title: "Draft Confirmation for Maya".into(),
                 proposed_content: "Hi Maya, thank you for your custom order!".into(),
@@ -5652,6 +5679,7 @@ mod remaining_e2e_tests {
 
         let pending_tasks = vec![
             app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                 task_id: "test-task-123".into(),
                 title: "Draft Confirmation for Maya".into(),
                 proposed_content: "Review the custom cake order details.".into(),
@@ -7170,6 +7198,7 @@ mod e2e_login_to_dashboard_tests {
 
         let pending_tasks = vec![
             app::UiPendingApproval {
+                        helper_name: "The Promoter".into(),
                 task_id: "t1".into(),
                 title: "Test Task".into(),
                 proposed_content: "Review this".into(),
