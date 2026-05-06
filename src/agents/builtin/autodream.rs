@@ -9,6 +9,7 @@ use chrono::Utc;
 
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+use opentelemetry::trace::{Tracer, TraceContextExt};
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -198,11 +199,15 @@ impl AutoDreamWorker {
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let tracer = global::tracer("ohc.autodream");
+        let _span = tracer.start("autodream_consolidate_epoch");
         debug!("AutoDream: consolidating epoch...");
         Ok(())
     }
 
     pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<crate::ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
+        let tracer = global::tracer("ohc.autodream");
+        let _span = tracer.start("autodream_search_memories");
         debug!("AutoDream: searching memories with limit {}", limit);
 
         let mut results = Vec::new();
@@ -489,9 +494,20 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-        let worker = AutoDreamWorker::new(db);
+        let worker = AutoDreamWorker::new(db.clone());
 
         assert!(worker.consolidate_epoch().await.is_ok());
+
+        let sqlite_url = "sqlite::memory:";
+        if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(sqlite_url).await
+        {
+            let db_sqlite = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool) });
+            let worker_sqlite = AutoDreamWorker::new(db_sqlite);
+            let result = worker_sqlite.consolidate_epoch().await;
+            assert!(result.is_ok());
+        }
     }
 }
 
