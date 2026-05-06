@@ -396,7 +396,7 @@ impl Agent {
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
                             let max_retries = 2;
-                            let mut final_res;
+                            let final_res;
 
                             loop {
                                 match tool.execute.execute(args.clone()).await {
@@ -474,7 +474,7 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let mut final_res;
+                        let final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -629,6 +629,47 @@ impl Agent {
     }
 
 
+    /// Output Parsing: Legacy RetryWithErrorOutputParser fallback mechanic
+    /// Feeds the original prompt, the failed completion, and the parsing error back to the model.
+    async fn parse_with_retry_fallback<T: serde::de::DeserializeOwned>(
+        &self,
+        req: ChatRequest,
+        max_retries: usize,
+    ) -> Result<T, String> {
+        let mut current_req = req.clone();
+        let mut last_error = String::new();
+        let mut last_output_ref = String::new();
+
+        for _attempt in 0..=max_retries {
+            let resp = self.llm.chat(current_req.clone()).await.map_err(|e| e.to_string())?;
+            let output_text = resp.message.content.trim()
+                .trim_start_matches("```json")
+                .trim_start_matches("```")
+                .trim_end_matches("```")
+                .trim()
+                .to_string();
+
+            match serde_json::from_str::<T>(&output_text) {
+                Ok(parsed) => return Ok(parsed),
+                Err(e) => {
+                    last_error = e.to_string();
+                    last_output_ref = output_text.clone();
+
+                    // Fallback mechanic: Legacy RetryWithErrorOutputParser
+                    current_req = req.clone();
+                    let error_prompt = format!(
+                        "Your previous output failed to parse as valid JSON.\n\nFailed Output:\n{}\n\nParsing Error: {}\n\nPlease fix the formatting and return valid JSON.",
+                        last_output_ref, last_error
+                    );
+                    current_req.messages.push(Message::assistant(&last_output_ref));
+                    current_req.messages.push(Message::user(&error_prompt));
+                }
+            }
+        }
+
+        Err(format!("Failed to parse output after {} retries. Last error: {}", max_retries, last_error))
+    }
+
     /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
     pub async fn run_plan_and_execute<F>(
@@ -665,12 +706,12 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-        let plan_resp = self.llm.chat(plan_req).await?;
-        let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+
+        let plan: Vec<serde_json::Value> = self.parse_with_retry_fallback(plan_req, 2)
+            .await
+            .map_err(|e| format!("Failed to parse planner output as JSON array: {}", e))?;
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
-
-        let plan: Vec<serde_json::Value> = serde_json::from_str(plan_json_text).map_err(|e| format!("Failed to parse planner output as JSON array: {} (Output: {})", e, plan_json_text))?;
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
@@ -1765,6 +1806,77 @@ mod tests {
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_retry_with_error_output_parser_mechanic() {
+        struct MockRetryClient {
+            pub attempts: tokio::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MockRetryClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut attempts = self.attempts.lock().await;
+                *attempts += 1;
+
+                if *attempts == 1 {
+                    // First attempt: return malformed JSON
+                    Ok(ChatResponse {
+                        message: Message::assistant("I am thinking...\n```json\n[{\"tool\": \"mock_read\", \"args\": { \"path\": \"file.txt\" } \n```"), // Missing closing bracket
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-1".to_string()),
+                    })
+                } else if req.messages.iter().any(|m| m.content.contains("Failed Output:")) {
+                    // Second attempt: we received the fallback prompt, return fixed JSON
+                    let plan = serde_json::json!([
+                        {
+                            "tool": "mock_read",
+                            "args": { "path": "file.txt" }
+                        }
+                    ]);
+                    Ok(ChatResponse {
+                        message: Message::assistant(&plan.to_string()),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-2".to_string()),
+                    })
+                } else {
+                    // Execution phase replier
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final plan executed."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-3".to_string()),
+                    })
+                }
+            }
+        }
+
+        let mock_tool = Tool {
+            name: "mock_read".to_string(),
+            description: "read".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string" }
+                },
+                "required": ["path"]
+            }),
+            execute: std::sync::Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(std::sync::Arc::new(MockRetryClient {
+            attempts: tokio::sync::Mutex::new(0),
+        }), vec![mock_tool.clone()]);
+
+        let mut events = vec![];
+        let mut on_event = |e| events.push(e);
+
+        let res = agent.run_plan_and_execute(&AgentRunConfig::default(), "Do a thing", &[mock_tool], &mut on_event).await;
+
+        assert!(res.is_ok(), "Agent should have successfully recovered from malformed JSON via retry fallback.");
     }
 
     #[tokio::test]
