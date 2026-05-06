@@ -342,6 +342,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 });
+
                 let _ = wizard.show();
                 if let Some(ui) = login_handle.upgrade() {
                     let _ = ui.hide();
@@ -437,11 +438,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let dash_weak = dashboard.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
-                                                let _ = ui.show();
+                                            if let Some(ui) = dash_weak.upgrade() {
+                                                ui.set_show_walkthrough(true);
+                                                ui.set_walkthrough_step(0);
                                             }
                                         });
 
@@ -591,11 +592,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let dash_weak = dashboard.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
-                                                let _ = ui.show();
+                                            if let Some(ui) = dash_weak.upgrade() {
+                                                ui.set_show_walkthrough(true);
+                                                ui.set_walkthrough_step(0);
                                             }
                                         });
 
@@ -1966,6 +1967,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let help_center_handle = help_center_ui.as_weak();
+                help_center_ui.on_close({
+                    let hc_handle = help_center_handle.clone();
+                    move || {
+                        if let Some(ui) = hc_handle.upgrade() {
+                            let _ = ui.hide();
+                        }
+                    }
+                });
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
@@ -1976,10 +1985,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-                let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                let video_metadata = vec![
+                    app::VideoMetadata {
+                        title: "How to add your first product".into(),
+                        description: "Learn how to list your items and go live.".into(),
+                        duration_sec: 60,
+                        url: "https://example.com/video1".into(),
+                        thumbnail_url: "".into(),
+                    },
+                    app::VideoMetadata {
+                        title: "Setting up your bank for payments".into(),
+                        description: "Connect your bank account to get paid securely.".into(),
+                        duration_sec: 90,
+                        url: "https://example.com/video2".into(),
+                        thumbnail_url: "".into(),
+                    },
+                    app::VideoMetadata {
+                        title: "Working with your AI Helper".into(),
+                        description: "Get the most out of your AI teammate.".into(),
+                        duration_sec: 120,
+                        url: "https://example.com/video3".into(),
+                        thumbnail_url: "".into(),
+                    },
+                ];
+                video_tutorials_ui.set_videos(slint::ModelRc::new(slint::VecModel::from(video_metadata)));
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
@@ -2015,8 +2046,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                 let release_notes_handle = release_notes_ui.as_weak();
 
+                                        let all_articles_for_chat = all_articles_rc.clone();
                 ai_chat_ui.on_send_message({
                     let chat_handle = ai_chat_handle.clone();
+                                            let articles = all_articles_for_chat.clone();
                     move || {
                         if let Some(ui) = chat_handle.upgrade() {
                             let input = ui.get_user_input();
@@ -2031,14 +2064,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs.clone())));
                             ui.set_user_input("".into());
 
-                            // Simulating a realistic backend response fulfilling substantive missing logic
-                            let response_text = format!("I found some information about '{}'. You can read the full guide in our Help Center.", input);
+                                                    let query = input.to_lowercase();
+                                                    let mut found_article = None;
+                                                    for article in articles.iter() {
+                                                        if article.title.to_lowercase().contains(&query) || article.description.to_lowercase().contains(&query) {
+                                                            found_article = Some(article);
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    let (response_text, link) = if let Some(article) = found_article {
+                                                        (format!("I found an article that might help: '{}'.", article.title), article.title.to_string())
+                                                    } else {
+                                                        ("I'm sorry, I couldn't find a specific article for that. Try asking something else or check our Help Center.".to_string(), "".to_string())
+                                                    };
+
                             msgs.push(app::ChatMessage {
                                 sender: "AI".into(),
                                 text: response_text.into(),
-                                article_link: "help_article_id".into(),
+                                                        article_link: link.into(),
                             });
                             ui.set_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                        }
+                    }
+                });
+
+                ai_chat_ui.on_open_article({
+                    let hc_handle = help_center_handle.clone();
+                    move |link| {
+                        if let Some(ui) = hc_handle.upgrade() {
+                            ui.set_search_query(link);
+                            ui.invoke_execute_search();
+                            ui.show().unwrap();
                         }
                     }
                 });
@@ -2062,9 +2119,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let dash_weak_wt = dashboard.as_weak();
                 dashboard.on_open_interactive_walkthrough(move || {
-                    if let Some(ui) = interactive_walkthrough_handle.upgrade() {
-                        let _ = ui.show();
+                    if let Some(ui) = dash_weak_wt.upgrade() {
+                        ui.set_show_walkthrough(true);
+                        ui.set_walkthrough_step(0);
                     }
                 });
 
@@ -2739,7 +2798,7 @@ mod growth_e2e_tests {
         let launch_called_clone = launch_called.clone();
         let ui_weak = ui.as_weak();
 
-        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
+        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
             assert_eq!(bt, "Online Store");
             assert_eq!(cn, "My Day One Store");
             assert_eq!(pp, "online");
@@ -2767,7 +2826,8 @@ mod growth_e2e_tests {
             ui.get_product_price(),
             ui.get_domain_choice(),
             ui.get_admin_name(),
-            ui.get_admin_password()
+            ui.get_admin_password(),
+            ui.get_price_type()
         );
 
         assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");

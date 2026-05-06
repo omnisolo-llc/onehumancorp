@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component Settings inherits Window {
@@ -77,7 +78,10 @@ export component Settings inherits Window {
         }
 
         HorizontalBox {
-            Text { text: "Work Offline"; color: #1e293b; }
+            TooltipElement {
+                tooltip_id: "offline_mode";
+                Text { text: "Work Offline"; color: #1e293b; }
+            }
             CheckBox {
                 checked: standalone_mode;
                 toggled => { standalone_mode = !standalone_mode; }
@@ -112,7 +116,10 @@ export component Settings inherits Window {
 
         // Other Settings
         HorizontalBox {
-            Text { text: "Advanced mode"; color: #1e293b; }
+            TooltipElement {
+                tooltip_id: "advanced_mode";
+                Text { text: "Advanced mode"; color: #1e293b; }
+            }
             CheckBox {
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; save_state(); }

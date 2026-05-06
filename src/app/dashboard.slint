@@ -1,3 +1,4 @@
+import { InteractiveWalkthroughOverlay } from "interactive_walkthrough.slint";
 import { TooltipElement } from "tooltip_element.slint";
 import { TooltipRegistry } from "tooltip_registry.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
@@ -77,6 +78,13 @@ export component Dashboard inherits Window {
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_menu: false;
+    in-out property <bool> show_walkthrough: false;
+    in-out property <int> walkthrough_step: 0;
+
+    if (show_walkthrough) : InteractiveWalkthroughOverlay {
+        current_step <=> walkthrough_step;
+        close => { show_walkthrough = false; }
+    }
 
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
@@ -146,10 +154,13 @@ export component Dashboard inherits Window {
 
                 Rectangle {}
 
-                Button {
-                    text: "Dismiss";
-                    height: 44px;
-                    clicked => { dismiss_milestone(); }
+                TooltipElement {
+                    tooltip_id: "dismiss_milestone";
+                    Button {
+                        text: "Dismiss";
+                        height: 44px;
+                        clicked => { dismiss_milestone(); }
+                    }
                 }
             }
         }
@@ -180,16 +191,16 @@ export component Dashboard inherits Window {
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                TooltipElement { tooltip_id: "todays_sales"; StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; } }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                    TooltipElement { tooltip_id: "orders_to_ship"; StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; } }
+                    TooltipElement { tooltip_id: "active_helpers"; StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; } }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    TooltipElement { tooltip_id: "active_help"; StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; } }
+                    TooltipElement { tooltip_id: "ai_helpfulness_score"; StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; } }
                 }
             }
         }
@@ -219,8 +230,8 @@ export component Dashboard inherits Window {
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "Business Advisory"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-                TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
+                TooltipElement { tooltip_id: "advisory_hint"; Text { text: "Business Advisory"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; } }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } }
             }
             GlassCard {
                 border-color: rgba(168, 85, 247, 0.5);
@@ -253,10 +264,13 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
-                if (new_orders_count > 0) : Button {
-                    text: "Mark Order Ready";
-                    height: 44px;
-                    clicked => { action_mark_order_ready(); }
+                if (new_orders_count > 0) : TooltipElement {
+                    tooltip_id: "mark_order_ready";
+                    Button {
+                        text: "Mark Order Ready";
+                        height: 44px;
+                        clicked => { action_mark_order_ready(); }
+                    }
                 }
             }
         }
@@ -279,11 +293,14 @@ export component Dashboard inherits Window {
                     HorizontalBox {
                         alignment: end;
                         spacing: 10px;
-                        Button { text: "Edit"; height: 44px; }
-                        Button {
-                            text: "Approve & Send";
-                            height: 44px;
-                            clicked => { approve_task(approval.task_id); }
+                        TooltipElement { tooltip_id: "edit_draft"; Button { text: "Edit"; height: 44px; } }
+                        TooltipElement {
+                            tooltip_id: "approve_draft";
+                            Button {
+                                text: "Approve & Send";
+                                height: 44px;
+                                clicked => { approve_task(approval.task_id); }
+                            }
                         }
                     }
                 }
@@ -306,9 +323,9 @@ export component Dashboard inherits Window {
                     padding: 16px;
                     Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
                     Rectangle {}
-                    Button { text: "-"; width: 44px; height: 44px; }
+                    TooltipElement { tooltip_id: "team_adjust"; Button { text: "-"; width: 44px; height: 44px; } }
                     Text { text: role_count.count; font-weight: 700; color: white; horizontal-alignment: center; }
-                    Button { text: "+"; width: 44px; height: 44px; }
+                    TooltipElement { tooltip_id: "team_adjust"; Button { text: "+"; width: 44px; height: 44px; } }
                 }
             }
         }

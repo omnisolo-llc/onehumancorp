@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
@@ -39,7 +40,7 @@ export component Agents inherits Window {
         HorizontalBox {
             Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Hire Helper"; clicked => { hire_agent(); } }
+            TooltipElement { tooltip_id: "hire_helper"; Button { text: "Hire Helper"; clicked => { hire_agent(); } } }
         }
 
         VerticalBox {
@@ -76,7 +77,7 @@ export component Agents inherits Window {
                             color: agent.is_running ? #10b981 : #ef4444; 
                             horizontal-alignment: center; 
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                        if (!agent.is_running) : TooltipElement { tooltip_id: "fix_helper"; Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } } }
                     }
                 }
             }

@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -36,7 +37,7 @@ export component BusinessManager inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            TooltipElement { tooltip_id: "add_offering"; Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; } }
             Rectangle {}
             Button { text: "Close"; clicked => { close(); } }
         }

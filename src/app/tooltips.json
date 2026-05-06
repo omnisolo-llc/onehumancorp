@@ -11,5 +11,21 @@
   "view_orders": "View and manage your recent orders.",
   "messages": "Check your customer messages.",
   "api_docs": "Advanced: Connect other tools to your store.",
-  "advisory_hint": "Tips and advice from your business helper."
+  "advisory_hint": "Tips and advice from your business helper.",
+  "todays_sales": "Total money made from sales today.",
+  "orders_to_ship": "Number of orders waiting to be sent to customers.",
+  "active_helpers": "AI Helpers currently working on your business.",
+  "ai_helpfulness_score": "A score showing how much your AI Helpers are assisting you.",
+  "offline_mode": "Run the app without internet. Your data stays on your device.",
+  "advanced_mode": "Show more technical settings for power users.",
+  "help_search": "Type keywords to find answers to your questions.",
+  "edit_draft": "Change the draft before sending it.",
+  "approve_draft": "Send this message to your customer now.",
+  "dismiss_milestone": "Hide this message from your dashboard.",
+  "team_adjust": "Add or remove help from this department.",
+  "active_help": "Tasks your AI Helpers are currently working on.",
+  "mark_order_ready": "Tell the customer their order is ready for pickup or shipping.",
+  "hire_helper": "Add a new AI teammate to your business.",
+  "fix_helper": "Get help fixing a problem with this AI teammate.",
+  "add_offering": "Add a new product or service to your business."
 }
