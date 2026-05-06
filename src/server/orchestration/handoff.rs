@@ -33,6 +33,13 @@ impl HandoffManager {
                 let mesh = mesh_clone.clone();
                 let msg_id_for_ack = msg.msg_id.clone();
 
+                // Send ACK immediately to prevent sender backoff/timeouts
+                let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
+                let mesh_ack = mesh_clone.clone();
+                tokio::spawn(async move {
+                    let _ = mesh_ack.publish(&ack_topic, vec![]).await;
+                });
+
                 tokio::spawn(async move {
                     let lock_key = format!("handoff:{}:{}:{}", handoff.entity_type, handoff.tenant_id, handoff.state_id);
                     if let Ok(true) = mesh.acquire_lock(&lock_key, "handoff_manager", 60).await {
@@ -106,11 +113,6 @@ impl HandoffManager {
                             }
                         }
                         let _ = mesh.release_lock(&lock_key, "handoff_manager").await;
-                    }
-
-                    if !msg_id_for_ack.is_empty() {
-                        let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
-                        let _ = mesh.publish(&ack_topic, vec![]).await;
                     }
                 });
             }
