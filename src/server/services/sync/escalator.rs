@@ -96,8 +96,7 @@ mod tests {
 
             tokio::time::sleep(Duration::from_millis(50)).await;
 
-            let _ = shutdown_tx.send(());
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            shutdown_tx.send(()).unwrap();
         }
     }
 }
