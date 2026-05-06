@@ -33,7 +33,7 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
     let c = called_agent.clone();
     ui.on_activate_agent(move |name, _, _, _, _, _| { *c.borrow_mut() = name.to_string(); });
 
-    ui.set_selected_agent("Robot".into());
+    ui.set_selected_agent("SEO Booster".into());
     ui.invoke_activate_agent("Robot".into(), true, false, false, false, "Daily".into());
     assert_eq!(*called_agent.borrow(), "Robot");
 }
@@ -53,12 +53,12 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 #[test]
 fn create_verify_selected_agent() {
     let ui = create();
-    ui.set_selected_agent("Data Scientist".into());
-    assert_eq!(ui.get_selected_agent(), "Data Scientist");
-    ui.set_selected_agent("a11".into());
-    assert_eq!(ui.get_selected_agent(), "a11");
-    ui.set_selected_agent("a12".into());
-    assert_eq!(ui.get_selected_agent(), "a12");
+    ui.set_selected_agent("SEO Booster".into());
+    assert_eq!(ui.get_selected_agent(), "SEO Booster");
+    ui.set_selected_agent("SEO Booster".into());
+    assert_eq!(ui.get_selected_agent(), "SEO Booster");
+    ui.set_selected_agent("SEO Booster".into());
+    assert_eq!(ui.get_selected_agent(), "SEO Booster");
 }
 
 #[test]
