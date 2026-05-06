@@ -16,7 +16,7 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=Guided Setup →')).toBeVisible();
+    await expect(page.locator('text=Guided Setup')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
   });
 
@@ -25,49 +25,49 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show next button on welcome step', async ({ page }) => {
-    await expect(page.locator('text=Guided Setup →')).toBeVisible();
+    await expect(page.locator('text=Guided Setup')).toBeVisible();
   });
 
   test('should navigate to business type step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await expect(page.locator('text=/What kind of business are you building/i')).toBeVisible();
   });
 
   test('should show business type options', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await expect(page.locator('text=Online Store')).toBeVisible();
     await expect(page.locator('text=Service Business')).toBeVisible();
-    await expect(page.locator('text=Restaurant')).toBeVisible();
+    await expect(page.locator('text=Food & Drink')).toBeVisible();
   });
 
   test('should select online store option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.locator('text=Online Store').click();
     await expect(page.locator('text=Give your business a name')).toBeVisible();
   });
 
   test('should select service business option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.locator('text=Service Business').click();
   });
 
   test('should select restaurant option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
-    await page.locator('text=Restaurant').click();
+    await page.click('text=Guided Setup');
+    await page.locator('text=Food & Drink').click();
   });
 
   test('should select creative portfolio option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.locator('text=Creative').click();
   });
 
   test('should select local business option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.locator('text=Local Business').click();
   });
 
   test('should navigate through wizard steps', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -75,7 +75,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should allow going back', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     const backButton = page.locator('button:has-text("Back")');
     await expect(backButton).toBeVisible();
     await backButton.click();
@@ -83,13 +83,13 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show company name input', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]').first()).toBeVisible();
   });
 
   test('should show what you sell step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -97,7 +97,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show physical products option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -105,7 +105,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show digital products option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -113,7 +113,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show services option', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -121,7 +121,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show payments step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -131,7 +131,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show admin account step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -143,7 +143,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show template selection step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -159,7 +159,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show domain step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -180,7 +180,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show review and launch step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -203,7 +203,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show launch button on final step', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -226,7 +226,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show welcome checklist after successful launch', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -279,10 +279,10 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=Guided Setup →')).toBeVisible();
+    await expect(page.locator('text=Guided Setup')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
 
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
     await page.click('text=🛒 Online Store');
     await page.click('text=Next →');
@@ -328,7 +328,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should require business type selection', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     const nextBtn = page.locator('text=Next →');
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
@@ -337,14 +337,14 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should require company name', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.locator('text=Online Store').click();
     await page.click('text=Next →'); // To step 3
     await expect(page.locator('text=/required|name.*required/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -359,7 +359,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should validate password strength', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -374,7 +374,7 @@ test.describe('Business Setup Wizard Validation', () => {
 });
 
   test('should use Minimalist template and verify launch successfully triggers', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -402,7 +402,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should input specific product name "Custom Vegan Cookies" and advance to launch', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -430,7 +430,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should set product price "24.99" and verify launch', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -458,7 +458,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should use a "custom domain" option and validate launch step proceeds', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -488,7 +488,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should select "Use OHC subdomain" and successfully launch wizard', async ({ page }) => {
-    await page.click('text=Guided Setup →');
+    await page.click('text=Guided Setup');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -517,3 +517,191 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=Next →');
 
+
+test.describe('E2E Onboarding Persona Journeys', () => {
+
+  test('Persona: Maya - The Home Baker (Physical Products)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
+
+    // Choose business type
+    await page.locator('text=Food & Drink').click();
+    await page.click('text=Next →');
+
+    // Name
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Maya's Bakes");
+    await page.click('text=Next →');
+
+    // Selling category automatically narrowed, check that Digital Downloads is missing
+    await expect(page.locator('text=💾 Digital downloads')).not.toBeVisible();
+    await expect(page.locator('text=🍕 Food & beverages')).toBeVisible();
+
+    await page.locator('text=🍕 Food & beverages').click();
+    await page.click('text=Next →');
+
+    // Payment
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+
+    // Account
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Maya");
+    await page.fill('input[placeholder="you@email.com"]', "maya@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    // Template
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    // Product
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Custom Birthday Cake");
+    await page.fill('input[placeholder="e.g. 50.00"]', "120.00");
+    await page.click('text=Next →');
+
+    // Domain
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    // Review and launch
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Persona: Carlos - The Freelance Handyman (Services)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
+
+    await page.locator('text=Service Business').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Carlos Repairs");
+    await page.click('text=Next →');
+
+    // Check that physical/digital are missing, services is available
+    await expect(page.locator('text=📦 Physical products')).not.toBeVisible();
+    await expect(page.locator('text=📅 Services / appointments')).toBeVisible();
+
+    await page.locator('text=📅 Services / appointments').click();
+    await page.click('text=Next →');
+
+    await page.click('text=⏭️ Skip for now');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Carlos");
+    await page.fill('input[placeholder="you@email.com"]', "carlos@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=🔥 Bold');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Plumbing Fixes");
+    await page.click('text=Next →'); // Price can be left empty for Request Quote usually
+
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Persona: Priya - The Boutique Owner (Omnichannel)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await page.locator('text=Online Store').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Priya Boutique");
+    await page.click('text=Next →');
+
+    await page.locator('text=📦 Physical products').click();
+    await page.click('text=Next →');
+
+    await page.click('text=🌍 Both Online & In-person');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Priya");
+    await page.fill('input[placeholder="you@email.com"]', "priya@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Red Dress");
+    await page.fill('input[placeholder="e.g. 50.00"]', "49.99");
+    await page.click('text=Next →');
+
+    await page.click('text=🌍 Connect Custom Domain');
+    await page.fill('input[placeholder="target.ohc.app"]', "priya.com");
+    await page.click('text=Next →');
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Persona: Leo - The Music Tutor (Subscriptions)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await page.locator('text=Service Business').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Leo Music");
+    await page.click('text=Next →');
+
+    await page.locator('text=📅 Services / appointments').click();
+    await page.locator('text=🔁 Subscriptions').click();
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Leo");
+    await page.fill('input[placeholder="you@email.com"]', "leo@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=🔥 Bold');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Guitar Lessons");
+    await page.fill('input[placeholder="e.g. 50.00"]', "30.00");
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Persona: Fatima - The Food Cart (Pre-orders)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await page.locator('text=Food & Drink').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Fatima Cart");
+    await page.click('text=Next →');
+
+    await page.locator('text=🍕 Food & beverages').click();
+    await page.click('text=Next →');
+
+    await page.click('text=🤝 In-person (Take payments on your phone)');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Fatima");
+    await page.fill('input[placeholder="you@email.com"]', "fatima@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Falafel Platter");
+    await page.fill('input[placeholder="e.g. 50.00"]', "10.00");
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+});
