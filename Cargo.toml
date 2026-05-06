@@ -13,7 +13,7 @@ name = "ohc-builtin-agent"
 path = "src/agents/builtin/main.rs"
 
 [dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
 prost = { workspace = true }
