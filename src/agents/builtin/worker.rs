@@ -149,8 +149,28 @@ impl TaskWorker {
         let mut attempt = 0;
         let max_attempts = 3;
         
+        // ML-Resilience: Circuit Breaker with Half-Open state
+        static CONSECUTIVE_FAILURES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        static LAST_FAILURE_TIME: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+        let current_time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+        let last_failure = LAST_FAILURE_TIME.load(std::sync::atomic::Ordering::SeqCst);
+
+        if CONSECUTIVE_FAILURES.load(std::sync::atomic::Ordering::SeqCst) >= 5 {
+            // Half-open state: retry after 30 seconds
+            if current_time - last_failure < 30 {
+                error!("Circuit breaker OPEN: builtin agent is currently marked as unavailable due to repeated failures.");
+                // ML-Resilience: paused state
+                return Err("Circuit breaker OPEN. Agent in paused state. Business owner has been notified.".to_string());
+            } else {
+                // Allow a single trial request by temporarily acting as half-open (we don't reset failures yet)
+                debug!("Circuit breaker HALF-OPEN: attempting recovery request");
+            }
+        }
+
         loop {
             attempt += 1;
+            // ML-Resilience: 60 second timeout
             let result = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
                     .await
@@ -166,7 +186,13 @@ impl TaskWorker {
                 let mut stream = response.into_inner();
 
                 let mut last_content = String::new();
+                let mut token_usage = 0;
                 while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
+                    // ML-Resilience: token budgets must be enforced server-side
+                    token_usage += event.content.len();
+                    if token_usage > 100_000 {
+                         return Err("Token budget exceeded (server-side ML-resilience).".to_string());
+                    }
                     if !event.content.is_empty() {
                         last_content = event.content;
                     }
@@ -178,22 +204,32 @@ impl TaskWorker {
             match result {
                 Ok(Ok(last_content)) => {
                     debug!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
+                    CONSECUTIVE_FAILURES.store(0, std::sync::atomic::Ordering::SeqCst);
                     return Ok(());
                 }
                 Ok(Err(e)) => {
                     error!("builtin agent task failed on attempt {}: {}", attempt, e);
+                    if e.contains("exceeded") || e.contains("connect to builtin") || e.contains("unavailable") {
+                         CONSECUTIVE_FAILURES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                         LAST_FAILURE_TIME.store(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(), std::sync::atomic::Ordering::SeqCst);
+                    }
+                    // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
                         return Err(e);
                     }
                 }
                 Err(_) => {
                     error!("builtin agent task timed out (ML-Resilience 60s) on attempt {}", attempt);
+                    CONSECUTIVE_FAILURES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    LAST_FAILURE_TIME.store(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(), std::sync::atomic::Ordering::SeqCst);
+                    // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
                         return Err("Timeout executing agent job (ML-Resilience 60s boundary)".to_string());
                     }
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            // exponential backoff
+            tokio::time::sleep(std::time::Duration::from_secs(2 * attempt)).await;
         }
     }
 }

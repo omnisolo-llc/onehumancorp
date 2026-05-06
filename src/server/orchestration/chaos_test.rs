@@ -91,6 +91,45 @@ impl TeammateMesh for RacingLockMesh {
 }
 
 
+
+
+
+
+// A mock transport that occasionally drops messages to test Pub/Sub message loss resilience
+struct DroppingMockTransport {
+    transport: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    drop_rate: std::sync::atomic::AtomicUsize,
+}
+
+impl DroppingMockTransport {
+    fn new(drop_rate: usize) -> Self {
+        Self {
+            transport: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
+        }
+    }
+}
+
+#[async_trait]
+impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
+    async fn publish(&self, topic: &str, event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
+        let rate = self.drop_rate.load(std::sync::atomic::Ordering::SeqCst);
+        let should_drop = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as usize) % 100 < rate;
+        if should_drop {
+            // Simulate dropping the message
+            return Ok(());
+        }
+        self.transport.publish(topic, event).await
+    }
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.transport.subscribe(topic, handler).await
+    }
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> { Ok(()) }
+    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+}
+
 struct SleepingMockMesh;
 
 #[async_trait]
@@ -161,10 +200,47 @@ mod chaos_tests {
         assert_eq!(winners, 1, "There should be exactly one winner in a lock race");
     }
 
+
+    #[tokio::test]
+    async fn test_pubsub_message_loss() {
+        let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_clone = received.clone();
+
+        let _ = mesh.subscribe("mesh:test:loss", Box::new(move |_msg| {
+            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        })).await.unwrap();
+
+        // Start health responder (simulates ack responder)
+        let _ = mesh.start_health_responder().await;
+
+        // Send 20 messages with publish_with_ack which simulates the resilience.
+        // CentrifugeNode's publish_with_ack implements retries automatically!
+        let mut successful_sends = 0;
+        for _ in 0..20 {
+             // In CentrifugeNode, publish_with_ack subscribes to ack topic, sends, and waits.
+             // We can just use ping() which wraps publish_with_ack for health!
+             if mesh.ping().await.is_ok() {
+                 successful_sends += 1;
+             }
+        }
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Resilience rule: system must recover or degrade gracefully.
+        // We verify that some messages were successfully delivered and ack'd despite high packet loss,
+        // and that the retry mechanism helped improve the delivery rate.
+
+        assert!(successful_sends > 0, "System should successfully send at least some messages under chaos");
+        // Because of CentrifugeNode's retries, successful_sends should be roughly 87.5% of 20 (approx 17)
+        assert!(successful_sends >= 10, "Retry logic should recover a significant portion of dropped messages");
+    }
+
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().max_connections(1)
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 

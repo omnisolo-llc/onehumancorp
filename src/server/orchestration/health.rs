@@ -90,7 +90,7 @@ mod tests {
 
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
         // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 
@@ -151,7 +151,7 @@ mod tests {
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 
