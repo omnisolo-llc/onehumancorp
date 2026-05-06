@@ -181,6 +181,14 @@ struct OpenAIResponseFunction {
 struct OpenAIUsage {
     prompt_tokens: i32,
     completion_tokens: i32,
+    #[serde(default)]
+    prompt_tokens_details: Option<PromptTokensDetails>,
+}
+
+#[derive(Deserialize, Debug)]
+struct PromptTokensDetails {
+    #[serde(default)]
+    cached_tokens: i32,
 }
 
 #[async_trait]
@@ -337,9 +345,11 @@ impl LlmClient for OpenAIClient {
 
         let usage = result
             .usage
-            .map(|u| Usage {
+                        .map(|u| Usage {
                 input_tokens: u.prompt_tokens,
                 output_tokens: u.completion_tokens,
+                cache_read_input_tokens: u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0),
+                cache_creation_input_tokens: 0,
             })
             .unwrap_or_default();
 
