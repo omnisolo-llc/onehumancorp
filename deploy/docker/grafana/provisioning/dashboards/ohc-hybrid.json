@@ -237,7 +237,8 @@
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "schemaVersion": 38,
