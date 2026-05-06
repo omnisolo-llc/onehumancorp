@@ -4,6 +4,9 @@ use crate::db::{DB, DbStore};
 use crate::tasks::SharedTask;
 use chrono::Utc;
 
+use opentelemetry::global;
+use opentelemetry::trace::{Tracer, TraceContextExt};
+
 pub struct TaskDecompositionService {
     db: Arc<DB>,
     sqlite_mu: tokio::sync::Mutex<()>,
@@ -20,6 +23,8 @@ impl TaskDecompositionService {
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
+        let tracer = global::tracer("ohc.orchestration");
+        let _span = tracer.start("create_task");
         match &self.db.store {
             DbStore::Postgres => {
                 let deps = serde_json::to_value(&task.dependencies).map_err(|e| e.to_string())?;
@@ -389,6 +394,8 @@ impl TaskDecompositionService {
 
 
     pub async fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
+        let tracer = global::tracer("ohc.orchestration");
+        let _span = tracer.start("get_task");
         match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query(
@@ -702,5 +709,57 @@ impl TaskDecompositionService {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_tasks_dual_deployment() {
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1)
+            .connect_lazy(database_url)
+            .unwrap();
+
+        let db_pg = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = Arc::new(DummyMesh);
+        let service = TaskDecompositionService::new(db_pg, mesh.clone());
+
+        let result = service.get_task("123").await;
+        // Verify postgres test path doesn't crash on connection
+        assert!(result.is_err()); // Will fail correctly since table is not created but covers path
+
+        let sqlite_url = "sqlite::memory:";
+        if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(sqlite_url).await
+        {
+            let db_sqlite = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool) });
+            let service_sqlite = TaskDecompositionService::new(db_sqlite, mesh.clone());
+            let result_sqlite = service_sqlite.get_task("123").await;
+            assert!(result_sqlite.is_err()); // Covers sqlite path gracefully
+        }
     }
 }

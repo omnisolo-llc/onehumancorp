@@ -1821,7 +1821,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let em_handle_for_open = email_marketing_handle.clone();
+                                let em_handle_for_open = email_marketing_handle.clone();
                 dashboard.on_action_open_email_marketing(move || {
                     if let Some(ui) = em_handle_for_open.upgrade() {
                         let _ = ui.show();
@@ -1922,6 +1922,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
+
+                let kairos_handle_for_open = kairos_orchestration_walkthrough_handle.clone();
+                dashboard.on_action_open_kairos_orchestration(move || {
+                    if let Some(ui) = kairos_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
 
 
 
@@ -4350,25 +4357,101 @@ mod docs_tests {
     }
 
     #[test]
-    fn test_e2e_kairos_orchestration_walkthrough_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_1() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
-
         login_ui.on_login(move |email, password| {
             assert_eq!(email, "test@example.com");
             assert_eq!(password, "password123");
             *login_successful_clone.borrow_mut() = true;
         });
-
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
-
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_opened_clone = kairos_opened.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
-
         assert_eq!(ui.get_current_step(), 0);
+        ui.set_current_step(1);
+        assert_eq!(ui.get_current_step(), 1);
+    }
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_2() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_opened_clone = kairos_opened.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+        ui.set_current_step(2);
+        assert_eq!(ui.get_current_step(), 2);
+    }
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_3() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_opened_clone = kairos_opened.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+        ui.set_current_step(3);
+        assert_eq!(ui.get_current_step(), 3);
+    }
+
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_5() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_opened_clone = kairos_opened.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         ui.set_current_step(1);
         assert_eq!(ui.get_current_step(), 1);
         ui.set_current_step(2);
@@ -4376,6 +4459,33 @@ mod docs_tests {
         ui.set_current_step(3);
         assert_eq!(ui.get_current_step(), 3);
     }
+
+    #[test]
+    fn test_e2e_kairos_orchestration_walkthrough_flow_4() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let kairos_opened_clone = kairos_opened.clone();
+        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_action_open_kairos_orchestration();
+        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+        ui.set_current_step(3);
+        ui.set_current_step(0);
+        assert_eq!(ui.get_current_step(), 0);
+    }
+
+
 
 
     #[test]
