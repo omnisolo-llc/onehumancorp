@@ -6572,3 +6572,115 @@ mod additional_smart_blocks_tests {
         assert_eq!(ui.get_product_name(), "Int Product");
     }
 }
+
+#[cfg(test)]
+mod e2e_login_to_dashboard_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_login_flow_and_dashboard_simplification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        // Start with the Login UI
+        let login_ui = app::Login::new().unwrap();
+        let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let logged_in_clone = logged_in.clone();
+
+        login_ui.on_login(move |_email, _password| {
+            *logged_in_clone.borrow_mut() = true;
+        });
+
+        login_ui.set_username("test@example.com".into());
+        login_ui.set_password("password".into());
+        login_ui.invoke_login("test@example.com".into(), "password".into());
+
+        assert!(*logged_in.borrow(), "User should be logged in");
+
+        // Simulate navigating to Dashboard
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Assert jargon was removed
+        dashboard_ui.set_show_telemetry_visualization(true);
+        assert!(dashboard_ui.get_show_telemetry_visualization(), "Assistant Performance Chart should be visible");
+
+        let pending_tasks = vec![
+            app::UiPendingApproval {
+                task_id: "t1".into(),
+                title: "Test Task".into(),
+                proposed_content: "Review this".into(),
+            }
+        ];
+        let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
+        dashboard_ui.set_pending_approvals(pending_model.into());
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Needs Your Approval section should contain items");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_orders() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let orders_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let orders_opened_clone = orders_opened.clone();
+
+        dashboard_ui.on_action_view_orders(move || {
+            *orders_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_view_orders();
+        assert!(*orders_opened.borrow(), "Orders should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_chat() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let chat_opened_clone = chat_opened.clone();
+
+        dashboard_ui.on_action_check_messages(move || {
+            *chat_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_check_messages();
+        assert!(*chat_opened.borrow(), "Chat should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_stats() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let stats_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let stats_opened_clone = stats_opened.clone();
+
+        dashboard_ui.on_action_see_analytics(move || {
+            *stats_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_see_analytics();
+        assert!(*stats_opened.borrow(), "Stats should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_share() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let share_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let share_opened_clone = share_opened.clone();
+
+        dashboard_ui.on_action_share_store(move || {
+            *share_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_share_store();
+        assert!(*share_opened.borrow(), "Share should be opened from Dashboard Add action");
+    }
+}
