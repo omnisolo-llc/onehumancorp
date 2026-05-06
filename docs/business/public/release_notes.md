@@ -1,5 +1,14 @@
 # Release Notes
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔨 Forge: Add Unit Test for Mission Handover Protocol (#11345)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: Add Unit Test for Mission Handover Protocol (#11345)
+
+
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
 
 ### Cloud Scaling Improvements
