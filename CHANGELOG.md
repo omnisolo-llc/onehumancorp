@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
 
 ### Cloud Scaling Improvements
