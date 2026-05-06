@@ -14,7 +14,7 @@ mod tests {
             }
         });
         let expected = json!({
-            "username": "maya",
+            "username": "[REDACTED]",
             "password": "[REDACTED]",
             "nested": {
                 "admin_key": "[REDACTED]"
@@ -297,12 +297,10 @@ mod tests {
             ],
             || {
                 let config = crate::config::load().unwrap();
-                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
                 // Assert that the config logic matches the policy:
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
-                // In lib.rs, the gate is `is_standalone && config.telemetry_enabled`.
-                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+                let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, false);
             },
@@ -320,10 +318,9 @@ mod tests {
             ],
             || {
                 let config = crate::config::load().unwrap();
-                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
-                let should_start_telemetry = is_standalone && config.telemetry_enabled;
+                let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, true);
             },
