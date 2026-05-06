@@ -55,15 +55,19 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                tracing::error!("Failed to securely create DB directory: {}", e);
-                                return Err(e.into());
+                                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                                    tracing::error!("Failed to securely create DB directory: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                tracing::error!("Failed to create DB directory: {}", e);
-                                return Err(e.into());
+                                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                                    tracing::error!("Failed to create DB directory: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
                     }
@@ -101,26 +105,12 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") {
-                if let Some(key) = database_url.split("key=").nth(1) {
-                    let key = key.split('&').next().unwrap_or("").to_string();
-                    conn_opts = conn_opts.pragma("key", key.clone());
-                } else {
-                    let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-                    conn_opts = conn_opts.pragma("key", fallback_key);
-                }
-            } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
-                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-                conn_opts = conn_opts.pragma("key", fallback_key);
-            }
+
 
             // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") {
-                if let Some(key) = database_url.split("key=").nth(1) {
-                    let key = key.split('&').next().unwrap_or("").to_string();
-                    conn_opts = conn_opts.pragma("key", key.clone());
-                }
+            if database_url.contains("cipher=sqlcipher") || (std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test")) {
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                conn_opts = conn_opts.pragma("key", fallback_key);
             }
 
             let sqlite_pool = SqlitePoolOptions::new()
@@ -887,6 +877,27 @@ mod autodream_db_tests {
 
 #[cfg(test)]
 mod security_tests_final {
+
+    #[test]
+    fn test_standalone_mode_enforces_sqlite_key() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+
+        temp_env::with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_SQLITE_KEY", None),
+                ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ],
+            || {
+                let result = std::panic::catch_unwind(|| {
+                    let _ = tokio::runtime::Runtime::new().unwrap().block_on(DB::new());
+                });
+
+                assert!(result.is_err(), "DB::new should panic in standalone mode without OHC_SQLITE_KEY");
+            }
+        );
+    }
+
     use super::*;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
