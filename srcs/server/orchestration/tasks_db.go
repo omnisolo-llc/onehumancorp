@@ -54,9 +54,15 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 	}
 
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = $1
+		SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at
+		FROM shared_tasks t
+		WHERE t.status = 'PENDING' AND t.organization_id = $1
+		AND NOT EXISTS (
+			SELECT 1
+			FROM jsonb_array_elements_text(t.dependencies) AS dep_id
+			JOIN shared_tasks st ON st.id::text = dep_id
+			WHERE st.status != 'COMPLETED'
+		)
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -281,9 +287,18 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 
 	// Find a pending task
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = ?
+		SELECT t.id, t.organization_id, t.title, t.description, t.status, t.agent_id, t.priority, t.payload, t.parent_plan_id, t.dependencies, t.created_at, t.updated_at
+		FROM shared_tasks t
+		WHERE t.status = 'PENDING' AND t.organization_id = ?
+		AND (
+			json_array_length(t.dependencies) = 0 OR
+			NOT EXISTS (
+				SELECT 1
+				FROM json_each(t.dependencies) AS dep
+				JOIN shared_tasks st ON st.id = dep.value
+				WHERE st.status != 'COMPLETED'
+			)
+		)
 		LIMIT 1
 	`
 	row := tx.QueryRowContext(ctx, query, organizationID)
@@ -325,16 +340,10 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 		SET status = 'ASSIGNED', agent_id = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND status = 'PENDING'
 	`
-	res, err := tx.ExecContext(ctx, updateQuery, agentID, task.ID)
+	_, err = tx.ExecContext(ctx, updateQuery, agentID, task.ID)
 	if err != nil {
 		return nil, err
 	}
-
-    affected, err := res.RowsAffected()
-    if err != nil || affected == 0 {
-        // Lost the race or something went wrong
-        return nil, errors.New("failed to claim task")
-    }
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
