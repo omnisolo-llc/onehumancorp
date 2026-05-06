@@ -25,12 +25,16 @@ impl HybridBlobManager {
         let is_cloud = !s3_endpoint.is_empty();
 
         let local_dir = if !is_cloud {
-            let tmp_dir = env::var("OHC_BLOB_DIR").unwrap_or_else(|_| "/tmp/ohc_blobs".to_string());
-            let path = PathBuf::from(tmp_dir);
-            if let Err(e) = fs::create_dir_all(&path).await {
-                tracing::error!("Failed to create local blob directory: {}", e);
+            if let Ok(env_dir) = env::var("OHC_BLOB_DIR") {
+                let path = PathBuf::from(env_dir);
+                if let Err(e) = fs::create_dir_all(&path).await {
+                    tracing::error!("Failed to create local blob directory: {}", e);
+                }
+                Some(path)
+            } else {
+                let path = tempfile::tempdir().expect("Failed to create temporary directory for hybrid blobs").into_path();
+                Some(path)
             }
-            Some(path)
         } else {
             None
         };
@@ -175,13 +179,16 @@ pub fn hybrid_blob_tool() -> Tool {
     let is_cloud = !s3_endpoint.is_empty();
 
     let local_dir = if !is_cloud {
-        let tmp_dir = env::var("OHC_BLOB_DIR").unwrap_or_else(|_| "/tmp/ohc_blobs".to_string());
-        let path = PathBuf::from(tmp_dir);
-        // We do synchronous dir creation here since this is tool init
-        if let Err(e) = std::fs::create_dir_all(&path) {
-            tracing::error!("Failed to create tool local blob directory: {}", e);
+        if let Ok(env_dir) = env::var("OHC_BLOB_DIR") {
+            let path = PathBuf::from(env_dir);
+            if let Err(e) = std::fs::create_dir_all(&path) {
+                tracing::error!("Failed to create tool local blob directory: {}", e);
+            }
+            Some(path)
+        } else {
+            let path = tempfile::tempdir().expect("Failed to create temporary directory for hybrid blobs tool").into_path();
+            Some(path)
         }
-        Some(path)
     } else {
         None
     };

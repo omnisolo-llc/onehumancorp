@@ -58,26 +58,6 @@ impl OnboardingAgent {
         let now = chrono::Utc::now();
         let oidc_subject = "";
 
-        sqlx::query(
-            r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            "#
-        )
-        .bind(&user_id)
-        .bind(&username)
-        .bind(&email)
-        .bind(&password_hash)
-        .bind(&roles_json)
-        .bind(true)
-        .bind(&org_id)
-        .bind(&oidc_subject)
-        .bind(now)
-        .bind(now)
-        .execute(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
         // Extract feature flags logic
         let mut flags = serde_json::Map::new();
         if business_type == "Service Business" || business_type == "Service" {
@@ -86,20 +66,49 @@ impl OnboardingAgent {
         if business_type == "Food Cart" {
             flags.insert("enable_menu".to_string(), json!(true));
         }
-
         let flags_json = serde_json::Value::Object(flags);
 
-        sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
-        )
-        .bind(&org_id)
-        .bind(&org_id)
-        .bind(&user_id)
-        .bind(1)
-        .bind(flags_json)
-        .execute(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    "#
+                )
+                .bind(&user_id).bind(&username).bind(&email).bind(&password_hash).bind(&roles_json)
+                .bind(true).bind(&org_id).bind(&oidc_subject).bind(now).bind(now)
+                .execute(pool).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&org_id).bind(&org_id).bind(&user_id).bind(1).bind(&flags_json)
+                .execute(pool).await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    "#
+                )
+                .bind(&user_id).bind(&username).bind(&email).bind(&password_hash).bind(&roles_json)
+                .bind(true).bind(&org_id).bind(&oidc_subject).bind(now).bind(now)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&org_id).bind(&org_id).bind(&user_id).bind(1).bind(&flags_json)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
 
         Ok(StartOnboardingResponse {
             success: true,
@@ -116,17 +125,21 @@ impl OnboardingAgent {
         };
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
-        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-            .bind(id)
-            .bind(org_id)
-            .bind(name)
-            .bind("Added during onboarding")
-            .bind(price_cents)
-            .bind(strategy)
-            .bind(json!({}))
-            .execute(&self.db.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(id).bind(org_id).bind(name).bind("Added during onboarding").bind(price_cents).bind(strategy).bind(json!({}))
+                    .execute(pool).await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(id).bind(org_id).bind(name).bind("Added during onboarding").bind(price_cents).bind(strategy).bind(json!({}))
+                    .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
 
         Ok(())
     }
@@ -150,31 +163,23 @@ impl OnboardingAgent {
             ],
         };
 
-        let mut futures = vec![];
         for (name, desc, price, strategy) in products {
             let id = format!("prod-{}", uuid::Uuid::new_v4());
-            let org_id = org_id.to_string();
-            let name = name.to_string();
-            let desc = desc.to_string();
-            let strategy = strategy.to_string();
-            let pool = self.db.pool.clone();
-
-            futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(name)
-                    .bind(desc)
-                    .bind(price)
-                    .bind(strategy)
-                    .bind(json!({}))
-                    .execute(&pool)
-                    .await
-            }));
-        }
-
-        for f in futures {
-            f.await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
+            match &self.db.store {
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(id).bind(org_id).bind(name).bind(desc).bind(price).bind(strategy).bind(json!({}))
+                        .execute(pool).await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+                    sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(id).bind(org_id).bind(name).bind(desc).bind(price).bind(strategy).bind(json!({}))
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+            }
         }
 
         Ok(())
@@ -193,17 +198,21 @@ impl OnboardingAgent {
 
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
-                .bind(id)
-                .bind(name)
-                .bind(role)
-                .bind(org_id)
-                .bind("IDLE")
-                .bind("builtin")
-                .bind(true)
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
+            match &self.db.store {
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+                        .bind(&id).bind(name).bind(role).bind(org_id).bind("IDLE").bind("builtin").bind(true)
+                        .execute(pool).await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+                    sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+                        .bind(&id).bind(name).bind(role).bind(org_id).bind("IDLE").bind("builtin").bind(true)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+            }
         }
 
         Ok(())

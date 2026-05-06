@@ -172,25 +172,47 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
-            .bind(&org_id)
-            .fetch_optional(&self.db.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
 
-        if let Some(row) = res {
-            let state_json: serde_json::Value = row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
-            Ok(Response::new(GetOnboardingStateResponse {
-                state: Some(OnboardingState {
-                    organization_id: org_id,
-                    user_id: row.try_get("user_id").unwrap_or_default(),
-                    current_step: row.try_get("current_step").unwrap_or_default(),
-                    state_json: state_json.to_string(),
-                }),
-            }))
-        } else {
-            Err(Status::not_found("Onboarding state not found"))
-        }
+        let (user_id, current_step, state_json): (String, i32, serde_json::Value) = match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
+                    .bind(&org_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                if let Some(row) = res {
+                    (row.try_get("user_id").unwrap_or_default(), row.try_get("current_step").unwrap_or_default(), row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({})))
+                } else {
+                    return Err(Status::not_found("Onboarding state not found"));
+                }
+            }
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+                let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
+                    .bind(&org_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+                if let Some(row) = res {
+                    (row.try_get("user_id").unwrap_or_default(), row.try_get("current_step").unwrap_or_default(), row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({})))
+                } else {
+                    return Err(Status::not_found("Onboarding state not found"));
+                }
+            }
+        };
+
+        Ok(Response::new(GetOnboardingStateResponse {
+            state: Some(OnboardingState {
+                organization_id: org_id,
+                user_id,
+                current_step,
+                state_json: state_json.to_string(),
+            }),
+        }))
     }
 
     async fn get_video_tutorials(
@@ -234,15 +256,33 @@ impl DashboardService for MyDashboardService {
 
         let state_json_val: serde_json::Value = serde_json::from_str(&state.state_json).map_err(|e| Status::invalid_argument(e.to_string()))?;
 
-        sqlx::query(
-            "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
-        )
-        .bind(state.current_step)
-        .bind(state_json_val)
-        .bind(&state.organization_id)
-        .execute(&self.db.pool)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
+                )
+                .bind(state.current_step)
+                .bind(&state_json_val)
+                .bind(&state.organization_id)
+                .execute(pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+            }
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, &state.organization_id).await.map_err(|e| Status::internal(e.to_string()))?;
+                sqlx::query(
+                    "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
+                )
+                .bind(state.current_step)
+                .bind(&state_json_val)
+                .bind(&state.organization_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+            }
+        }
 
         Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
     }
