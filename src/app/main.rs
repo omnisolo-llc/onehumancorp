@@ -3938,6 +3938,8 @@ mod docs_tests {
         let walkthrough = app::InteractiveWalkthrough::new().unwrap();
         walkthrough.set_current_step(1);
         assert_eq!(walkthrough.get_current_step(), 1, "Walkthrough step should be updated");
+        walkthrough.set_current_step(3);
+        assert_eq!(walkthrough.get_current_step(), 3, "Walkthrough AI Support Agent step should be valid");
 
         let ai_chat = app::AiHelpChat::new().unwrap();
         ai_chat.set_user_input("How to add product".into());
@@ -3949,6 +3951,25 @@ mod docs_tests {
 
         let help_center = app::HelpCenter::new().unwrap();
         assert_eq!(help_center.get_search_query(), "");
+        use slint::Model;
+        assert_eq!(help_center.get_articles().row_count(), 6, "Help Center should initialize with exactly 6 articles");
+
+        let release_notes = app::ReleaseNotes::new().unwrap();
+        let release_notes_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let r_clone = release_notes_called.clone();
+        release_notes.on_open_full_changelog(move || {
+            *r_clone.borrow_mut() = true;
+        });
+        release_notes.invoke_open_full_changelog();
+        assert!(*release_notes_called.borrow(), "Release Notes open full changelog callback should be triggered");
+
+        let video_tutorials = app::VideoTutorials::new().unwrap();
+        video_tutorials.set_selected_video_title("How to configure payments".into());
+        assert_eq!(video_tutorials.get_selected_video_title(), "How to configure payments");
+
+        let api_docs = app::ApiDocs::new().unwrap();
+        api_docs.set_is_advanced(true);
+        assert_eq!(api_docs.get_is_advanced(), true);
     }
 
 
@@ -4131,7 +4152,7 @@ mod docs_tests {
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
         tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
         assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask the AI assistant for help or to perform tasks.");
+        assert_eq!(tr.get_active_text(), "Ask your helper to do things for you.");
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
 

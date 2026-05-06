@@ -10,6 +10,8 @@ export component ReleaseNotes inherits Window {
     in-out property <string> current_version: "v0.3.4";
     in-out property <bool> show_latest_only: false;
 
+    callback open_full_changelog();
+
     HorizontalBox {
         alignment: center;
         VerticalBox {
@@ -74,6 +76,14 @@ export component ReleaseNotes inherits Window {
                                 Text { text: "🔗 Faster Team Communication"; font-weight: 700; font-size: 18px; color: white; }
                                 Text { text: "We upgraded the behind-the-scenes system that lets your AI agents talk to each other in real-time. If you use the standalone app, they can now chat together seamlessly without needing an external internet server."; color: white; wrap: word-wrap; }
                             }
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: center;
+                        Button {
+                            text: "View Full Changelog on Website";
+                            clicked => { open_full_changelog(); }
                         }
                     }
                 }

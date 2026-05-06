@@ -41,3 +41,16 @@ fn create_verify_user_input() {
     ui.set_user_input("What is an AI agent?".into());
     assert_eq!(ui.get_user_input(), "What is an AI agent?");
 }
+
+#[test]
+fn chat_help_open_article_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_open_article(move |url| {
+        assert_eq!(url, "test_url");
+        *c.borrow_mut() = true;
+    });
+    ui.invoke_open_article("test_url".into());
+    assert!(*called.borrow());
+}

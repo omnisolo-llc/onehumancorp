@@ -17,12 +17,12 @@ export component InteractiveWalkthrough inherits Window {
             width: 100%;
             alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
             padding-top: current_step == 0 ? 100px : 0;
-            padding-bottom: current_step == 2 || current_step == 3 ? 100px : 0;
+            padding-bottom: current_step >= 2 ? 100px : 0;
 
             HorizontalBox {
                 alignment: current_step == 0 ? start : (current_step == 1 ? center : end);
                 padding-left: current_step == 0 ? 20px : 0;
-                padding-right: current_step == 2 || current_step == 3 ? 20px : 0;
+                padding-right: current_step >= 2 ? 20px : 0;
 
                 GlassCard {
                     width: 335px;
@@ -35,6 +35,7 @@ export component InteractiveWalkthrough inherits Window {
                             text: current_step == 0 ? "Welcome to your store!" :
                                   current_step == 1 ? "Add your first product" :
                                   current_step == 2 ? "Set up payments" :
+                                  current_step == 3 ? "Activate your AI Support Agent" :
                                   "You're all set!";
                             font-size: 20px;
                             font-family: "Outfit";
@@ -46,6 +47,7 @@ export component InteractiveWalkthrough inherits Window {
                             text: current_step == 0 ? "Let's take a quick tour to get you set up." :
                                   current_step == 1 ? "Click here to add photos and prices for what you sell." :
                                   current_step == 2 ? "Connect your bank so you can get paid by customers." :
+                                  current_step == 3 ? "Turn on your AI helper to automatically answer questions while you sleep." :
                                   "Your store is ready. You can always find more help in the Help Center.";
                             color: #94a3b8;
                             font-family: "Inter";
@@ -62,9 +64,9 @@ export component InteractiveWalkthrough inherits Window {
                             }
 
                             Button {
-                                text: current_step < 3 ? "Next" : "Done";
+                                text: current_step < 4 ? "Next" : "Done";
                                 clicked => {
-                                    if (current_step < 3) {
+                                    if (current_step < 4) {
                                         current_step += 1;
                                     } else {
                                         root.visible = false;

@@ -458,3 +458,93 @@ test.describe('Video Tutorials', () => {
     await expect(page.locator('text=/watched|completed/i')).toBeVisible({ timeout: 3000 });
   });
 });
+test.describe('API Documentation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display API documentation page', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("API Docs"), button:has-text("Connect Apps")').first().click()
+    ]);
+    await expect(page.locator('text=/API|Connect Custom Software/i')).toBeVisible();
+  });
+
+  test('should toggle advanced developer documentation', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("API Docs"), button:has-text("Connect Apps")').first().click()
+    ]);
+    const checkbox = page.locator('text=/Show Advanced Developer Documentation/i').first();
+    await expect(checkbox).toBeVisible({ timeout: 5000 });
+    await checkbox.click();
+    await expect(page.locator('text=/Read Product List/i')).toBeVisible({ timeout: 3000 });
+  });
+});
+
+test.describe('Contextual Tooltips', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display tooltip on hover', async ({ page }) => {
+    await page.waitForNavigation();
+
+    // Hover over the Ask AI button which has a tooltip
+    const askAiButton = page.locator('button:has-text("Ask AI")').first();
+    await expect(askAiButton).toBeVisible({ timeout: 5000 });
+    await askAiButton.hover();
+    // The tooltip registry should show the text "Ask your helper to do things for you."
+    await expect(page.locator('text=/Ask your helper to do things for you./i')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('should display help center tooltip on hover', async ({ page }) => {
+    await page.waitForNavigation();
+
+    const helpCenterButton = page.locator('button:has-text("Help Center")').first();
+    await expect(helpCenterButton).toBeVisible({ timeout: 5000 });
+    await helpCenterButton.hover();
+    await expect(page.locator('text=/Find answers and how-to guides./i')).toBeVisible({ timeout: 3000 });
+  });
+});
+
+test.describe('Release Notes & Changelog', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+  });
+
+  test('should display release notes page', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("Release Notes"), button:has-text("What\'s New")').first().click()
+    ]);
+    await expect(page.locator('text=/What\'s New in OHC/i')).toBeVisible();
+  });
+
+  test('should trigger full changelog on website', async ({ page }) => {
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('button:has-text("Menu")').first().click(),
+      page.locator('button:has-text("Release Notes"), button:has-text("What\'s New")').first().click()
+    ]);
+    const changelogBtn = page.locator('button:has-text("View Full Changelog on Website")').first();
+    await expect(changelogBtn).toBeVisible({ timeout: 5000 });
+    await changelogBtn.click();
+  });
+});

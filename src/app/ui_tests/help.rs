@@ -38,3 +38,11 @@ fn create_verify_search_query() {
     ui.set_search_query("payment methods".into());
     assert_eq!(ui.get_search_query(), "payment methods");
 }
+
+#[test]
+fn test_help_center_articles_populated() {
+    use slint::Model;
+    let ui = create();
+    let articles = ui.get_articles();
+    assert_eq!(articles.row_count(), 6);
+}
