@@ -27,11 +27,11 @@ fn create() -> app::Diagnostics { crate::ui_tests::init(); app::Diagnostics::new
 
 #[test] fn diag_flow_run_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_run_diagnostics(move || { *c.lock().unwrap() = true; });
+    ui.on_run_diagnostics(move || { *c.borrow_mut() = true; });
     ui.invoke_run_diagnostics();
-    assert!(*called.lock().unwrap());
+    assert!(*called.borrow());
 }
 
 #[test] fn diag_flow_status_update_loop() {

@@ -29,13 +29,13 @@ fn create() -> app::SecureAgentConfig { crate::ui_tests::init(); app::SecureAgen
 
 #[test] fn secure_flow_save_callback() {
     let ui = create();
-    let called_token = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called_token = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_token.clone();
-    ui.on_save_config(move |t| { *c.lock().unwrap() = t.to_string(); });
+    ui.on_save_config(move |t| { *c.borrow_mut() = t.to_string(); });
     
     ui.set_token("my-token".into());
     ui.invoke_save_config("my-token".into());
-    assert_eq!(*called_token.lock().unwrap(), "my-token");
+    assert_eq!(*called_token.borrow(), "my-token");
 }
 
 // --- Unique Scenarios with Verification ---

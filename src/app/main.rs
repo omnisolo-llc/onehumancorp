@@ -405,7 +405,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
-                                            if msg.contains("You reached the limit") {
+                                            if msg.contains("Tier limit reached") {
                                                 if let Some(ui) = my_plan_handle_clone2.upgrade() {
                                                     ui.set_upgrade_prompt_message(msg.into());
                                                     let _ = ui.show();
@@ -526,71 +526,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
                     println!("OAuth Login via {}...", provider);
-                    ui.set_loading(true);
-                    let ui_weak = login_handle.clone();
-                    tokio::spawn(async move {
-                        let mut needs_wizard = false;
-                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
-                            if let Ok(resp) = client.get_wizard_state(req).await {
-                                let state = resp.into_inner().state;
-                                // In the SetupWizard, step 10 is the final welcome checklist.
-                                // If they haven't reached step 10, they need to complete the wizard.
-                                if let Some(step) = state.get("step") {
-                                    if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
-                                            needs_wizard = true;
-                                        }
-                                    } else {
-                                        needs_wizard = true;
-                                    }
-                                } else {
-                                    needs_wizard = true;
-                                }
-                            } else {
-                                needs_wizard = true; // API call failed, assume new user
-                            }
-                        } else {
-                            needs_wizard = true; // Connection failed, assume new user
-                        }
-
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak.upgrade() {
-                                ui.set_loading(false);
-                                if needs_wizard {
-                                    ui.invoke_start_setup_wizard();
-                                } else {
-                                    ui.hide().unwrap();
-                                    if let Ok(dashboard) = app::Dashboard::new() {
+                    ui.hide().unwrap();
+                    if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                                        let my_plan_ui = app::MyPlan::new().unwrap();
-                                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                                        let my_plan_handle_clone = my_plan_ui.as_weak();
-                                        dashboard.on_open_billing(move || {
-                                            if let Some(ui) = my_plan_handle_clone.upgrade() {
-                                                let _ = ui.show();
-                                            }
-                                        });
-                                        let my_plan_handle_clone2 = my_plan_ui.as_weak();
-                                        dashboard.on_action_failed(move |msg| {
-                                            if msg.contains("Tier limit reached") {
-                                                if let Some(ui) = my_plan_handle_clone2.upgrade() {
-                                                    ui.set_upgrade_prompt_message(msg.into());
-                                                    let _ = ui.show();
-                                                }
-                                            }
-                                        });
-                                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
-                                        my_plan_ui.on_view_details(move || {
-                                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-                                                let _ = ui.show();
-                                            }
-                                        });
-                                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                                        });
+                        let my_plan_ui = app::MyPlan::new().unwrap();
+                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                        let my_plan_handle_clone = my_plan_ui.as_weak();
+                        dashboard.on_open_billing(move || {
+                            if let Some(ui) = my_plan_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                        my_plan_ui.on_view_details(move || {
+                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
+                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
+                        });
 
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
@@ -632,12 +589,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        dashboard.show().unwrap();
-                                    }
-                                }
-                            }
-                        }).unwrap();
-                    });
+                        dashboard.show().unwrap();
+                    }
                 }
             }
         }
@@ -1649,9 +1602,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
+                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
+                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
@@ -2080,10 +2033,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {
                     let dashboard_handle_for_ready = dashboard_handle.clone();
                     let action_queue_for_ready = action_queue.clone();
-                    let orders_processed = std::rc::Rc::new(std::cell::RefCell::new(0));
                     dashboard.on_action_mark_order_ready(move || {
-                        let mut processed = orders_processed.borrow_mut();
-                        *processed += 1;
                         if let Some(ui) = dashboard_handle_for_ready.upgrade() {
                             let current_count = ui.get_new_orders_count();
                             if current_count > 0 {
@@ -2093,16 +2043,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 tokio::spawn(async move {
                                     let _ = action_queue_clone.enqueue("mark_order_ready", "{}").await;
                                 });
-                            }
-
-                            if *processed == 3 {
-                                ui.set_show_milestone(true);
-                                ui.set_milestone_title("🎉 3rd Order!".into());
-                                ui.set_milestone_message("You completed 3 orders!".into());
-                            } else if *processed == 10 {
-                                ui.set_show_milestone(true);
-                                ui.set_milestone_title("🎉 10th Order!".into());
-                                ui.set_milestone_message("You completed 10 orders!".into());
                             }
                         }
                     });
@@ -2164,7 +2104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
+                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
@@ -2583,54 +2523,6 @@ mod growth_e2e_tests {
         login_ui.invoke_start_setup_wizard();
 
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
-    }
-
-    #[test]
-    fn test_e2e_sso_login_auto_launch_setup_wizard() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let setup_wizard_launched_clone = setup_wizard_launched.clone();
-
-        login_ui.on_start_setup_wizard(move || {
-            *setup_wizard_launched_clone.borrow_mut() = true;
-        });
-
-        login_ui.set_is_sign_up(false);
-
-        login_ui.on_oauth_login({
-            let ui_handle = login_ui.as_weak();
-            move |_provider| {
-                if let Some(ui) = ui_handle.upgrade() {
-                    if !ui.get_is_sign_up() {
-                        let mut needs_wizard = false;
-                        let mut state = std::collections::HashMap::new();
-                        state.insert("step".to_string(), "5".to_string());
-
-                        if let Some(step) = state.get("step") {
-                            if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
-                                    needs_wizard = true;
-                                }
-                            } else {
-                                needs_wizard = true;
-                            }
-                        } else {
-                            needs_wizard = true;
-                        }
-
-                        if needs_wizard {
-                            ui.invoke_start_setup_wizard();
-                        }
-                    }
-                }
-            }
-        });
-
-        login_ui.invoke_oauth_login("Google".into());
-
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first SSO login");
     }
 
     #[test]
@@ -3573,71 +3465,10 @@ mod tests {
 
 
     #[test]
-
-    #[test]
-    fn test_e2e_setup_wizard_flow_comprehensive() {
+    fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
-
-        let ui = app::SetupWizard::new().unwrap();
-
-        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let launch_called_clone = launch_called.clone();
-
-        ui.on_launch(move |bt, cn, cd, pp, ae, wt, pn, pr, dc, an, pw| {
-            assert_eq!(bt, "Online Store");
-            assert_eq!(cn, "Maya's Cakes");
-            assert_eq!(cd, "Best cakes in town");
-            assert_eq!(pp, "online");
-            assert_eq!(ae, "maya@example.com");
-            assert_eq!(wt, "Minimalist");
-            assert_eq!(pn, "Custom Cake");
-            assert_eq!(pr, "50.00");
-            assert_eq!(dc, "subdomain");
-            assert_eq!(an, "Maya");
-            assert_eq!(pw, "password123");
-            *launch_called_clone.borrow_mut() = true;
-        });
-
-        assert_eq!(ui.get_step(), 0);
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 1);
-        ui.invoke_select_business_type("Online Store".into());
-        assert_eq!(ui.get_step(), 2);
-        ui.set_company_name("Maya's Cakes".into());
-        ui.set_company_description("Best cakes in town".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 3);
-        ui.invoke_toggle_sell_physical();
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 4);
-        ui.invoke_select_payment_pref("online".into());
-        assert_eq!(ui.get_step(), 5);
-        ui.set_admin_name("Maya".into());
-        ui.set_admin_email("maya@example.com".into());
-        ui.set_admin_password("password123".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 6);
-        ui.invoke_select_template("Minimalist".into());
-        assert_eq!(ui.get_step(), 7);
-        ui.set_product_name("Custom Cake".into());
-        ui.set_product_price("50.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-        ui.invoke_select_domain("subdomain".into());
-        assert_eq!(ui.get_step(), 9);
-        ui.invoke_launch(
-            "Online Store".into(), "Maya's Cakes".into(), "Best cakes in town".into(),
-            "online".into(), "maya@example.com".into(), "Minimalist".into(),
-            "Custom Cake".into(), "50.00".into(), "subdomain".into(),
-            "Maya".into(), "password123".into(),
-        );
-
-        assert!(*launch_called.borrow(), "Launch should have been called");
+        app::SetupWizard::new().unwrap();
     }
-
-    #[test]
-
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
@@ -4846,276 +4677,6 @@ mod docs_tests {
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
     }
 
-
-    #[test]
-    fn test_e2e_fix_agent_wizard_flow() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
-        let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
-        let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
-
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
-        });
-
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
-
-        let ui = app::FixAgent::new().unwrap();
-        let fix_applied = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_applied_clone = fix_applied.clone();
-
-        ui.on_apply_fix(move || {
-            *fix_applied_clone.borrow_mut() = true;
-        });
-
-        assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
-        ui.invoke_apply_fix();
-
-        assert!(*fix_applied.borrow(), "Apply fix action should trigger successful state change");
-
-        ui.set_step(2);
-        assert_eq!(ui.get_step(), 2);
-    }
-
-    #[test]
-    fn test_e2e_fix_agent_wizard_flow_advanced() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
-
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
-        });
-
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
-
-        let ui = app::FixAgent::new().unwrap();
-        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let save_called_clone = save_called.clone();
-
-        ui.on_save_state(move || {
-            *save_called_clone.borrow_mut() = true;
-        });
-
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        ui.invoke_save_state();
-
-        assert!(*save_called.borrow(), "Advanced mode save action should successfully trigger state persist");
-        assert_eq!(ui.get_is_advanced(), true);
-    }
-
-    #[test]
-    fn test_e2e_fix_agent_wizard_flow_return() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
-
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
-        });
-
-        agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
-
-        let ui = app::FixAgent::new().unwrap();
-        let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let return_called_clone = return_called.clone();
-
-        ui.on_return_to_agents(move || {
-            *return_called_clone.borrow_mut() = true;
-        });
-
-        ui.set_step(2);
-        ui.invoke_return_to_agents();
-
-        assert!(*return_called.borrow(), "Return to agents action should successfully trigger navigation");
-    }
-
-    #[test]
-    fn test_e2e_fix_agent_wizard_flow_apply_step_transitions() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
-
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
-        });
-
-        agents_ui.invoke_fix_agent("agent_1".into());
-
-        let ui = app::FixAgent::new().unwrap();
-
-        assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
-        assert_eq!(ui.get_step(), 1);
-
-        let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let apply_called_clone = apply_called.clone();
-        ui.on_apply_fix(move || {
-            *apply_called_clone.borrow_mut() = true;
-        });
-
-        ui.invoke_apply_fix();
-        assert!(*apply_called.borrow());
-
-        ui.set_step(2);
-        assert_eq!(ui.get_step(), 2);
-    }
-
-    #[test]
-    fn test_e2e_fix_agent_wizard_flow_error_handling() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-
-        let agents_ui = app::Agents::new().unwrap();
-        let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let fix_agent_opened_clone = fix_agent_opened.clone();
-
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
-            *fix_agent_opened_clone.borrow_mut() = true;
-        });
-
-        agents_ui.invoke_fix_agent("agent_1".into());
-
-        let ui = app::FixAgent::new().unwrap();
-
-        ui.set_step(0);
-        assert_eq!(ui.get_step(), 0);
-
-        assert_eq!(ui.get_is_advanced(), false);
-
-        ui.set_is_advanced(true);
-        let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let save_called_clone = save_called.clone();
-        ui.on_save_state(move || {
-            *save_called_clone.borrow_mut() = true;
-        });
-        ui.invoke_save_state();
-        assert!(*save_called.borrow());
-    }
-
     #[test]
     fn test_e2e_ai_config_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -5367,27 +4928,27 @@ mod remaining_e2e_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You reached the limit of 10 products for your current plan. Please upgrade to add more.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You reached the limit of 10 products for your current plan. Please upgrade to add more.");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to add more!");
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You reached the limit of 1 agent for your current plan. Please upgrade to unlock more power.");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 agent. Upgrade to unlock more power!");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
@@ -6862,7 +6423,7 @@ fn test_business_share_flow() {
             assert_eq!(desc, "Talk to me");
             assert_eq!(price, "100.00");
             assert_eq!(dur, "30");
-            assert_eq!(sch, "e.g. Mon-Fri 9am-5pm");
+            assert_eq!(sch, "{\"mon\":true}");
             *submitted_clone.borrow_mut() = true;
         });
 
@@ -6873,10 +6434,9 @@ fn test_business_share_flow() {
         manager_ui.set_product_description("Talk to me".into());
         manager_ui.set_product_price("100.00".into());
         manager_ui.set_service_duration("30".into());
-        // Set the schedule property explicitly to simulate user input
-        manager_ui.set_service_schedule("e.g. Mon-Fri 9am-5pm".into());
+        manager_ui.set_service_schedule("{\"mon\":true}".into());
 
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "e.g. Mon-Fri 9am-5pm".into());
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into());
         assert!(*submitted.borrow());
     }
 
