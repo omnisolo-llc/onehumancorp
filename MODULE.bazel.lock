@@ -502,28 +502,6 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "//bazel/rules:extensions.bzl%proto_deps_extension": {
-      "general": {
-        "bzlTransitiveDigest": "dT/cKtXRfZtxQ48vsOJmeSMAAHSK5f2d62klO41LMQQ=",
-        "usagesDigest": "XKgS5QDL3dEqhoRoU6/duYZIciZneUOCO72ghDtrJWU=",
-        "recordedInputs": [
-          "REPO_MAPPING:,bazel_tools bazel_tools"
-        ],
-        "generatedRepoSpecs": {
-          "google_protobuf_dart": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "sha256": "cae253935cb6d372a3df34bbbe82c3044f067e088d5216ac1f645c36b596a6ad",
-              "strip_prefix": "protobuf.dart-protoc_plugin-v25.0.0/protoc_plugin",
-              "urls": [
-                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v25.0.0.tar.gz"
-              ],
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\n# Compile the protoc-gen-dart plugin using the hermetic Dart SDK from\n# @flutter_sdk//:dart.  The formatter stub avoids pulling dart_style and\n# pub_semver into the sandbox while still producing valid generated code.\ngenrule(\n    name = \"protoc_plugin_bin\",\n    srcs = [\n        \":protoc_plugin_srcs\",\n        \"bin/protoc_plugin.dart\",\n        \"@pub_collection//:collection_files\",\n        \"@pub_fixnum//:fixnum_files\",\n        \"@pub_meta//:meta_files\",\n        \"@pub_path//:path_files\",\n        \"@pub_protobuf_v6//:protobuf_files\",\n    ],\n    outs = [\"protoc-gen-dart\"],\n    cmd = \"export HOME=/tmp && \" +\n          \"SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && \" +\n          \"WORK_REPO=google_protobuf_dart.work && \" +\n          \"rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && \" +\n          \"mkdir -p $$WORK_REPO/.dart_tool && \" +\n          \"printf 'String format(String source) => source;\\n' > $$WORK_REPO/lib/src/formatter.dart && \" +\n          \"echo '{\\\"configVersion\\\": 2,\\\"packages\\\": [\" +\n          \"{\\\"name\\\": \\\"protoc_plugin\\\", \\\"rootUri\\\": \\\"../\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"collection\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_collection\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"fixnum\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_fixnum\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"meta\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_meta\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"path\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_path\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"protobuf\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_protobuf_v6\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"}\" +\n          \"]}' > $$WORK_REPO/.dart_tool/package_config.json && \" +\n          \"$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@\",\n    executable = True,\n    tools = [\"@flutter_sdk//:dart\"],\n)"
-            }
-          }
-        }
-      }
-    },
     "@@aspect_tools_telemetry+//:extension.bzl%telemetry": {
       "general": {
         "bzlTransitiveDigest": "cl5A2O84vDL6Tt+Qga8FCj1DUDGqn+e7ly5rZ+4xvcc=",
