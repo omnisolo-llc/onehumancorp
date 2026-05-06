@@ -3,7 +3,7 @@
 ## Phase 1: Audit
 -   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions in `.agent-task/missions/`.
 ## Phase 2: Hygiene
--   Sanitized the mission backlog by permanently archiving `IN_PROGRESS` and `BLOCKED` missions to `.agent-task/archive/` to ensure no stuck missions persist.
+-   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
 ## Phase 3: Architectural Audit
 -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
 ## Phase 4: Verify
@@ -11,5 +11,5 @@
 ## Health Status
 -   **Status:** Clean
 -   **Debt Level:** Low
--   **Action Taken:** Moved 15 blocked or stuck missions to the archive.
+-   **Action Taken:** Moved stuck missions to FAILED to resolve circular retry state.
 </div>
