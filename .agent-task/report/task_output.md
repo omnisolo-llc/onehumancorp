@@ -1,119 +1,151 @@
-# Scout: Tool Integration Research Q2
+# Scout 🔍: Tool Integration Research Q3
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+## [Social Media] Issue Brief: Meta API for Unified Inbox
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
+**Title**: Scout 🔍: Integrate Meta Graph API for Unified Direct Messages
+**Problem Statement**:
+Small business owners receive customer inquiries across multiple platforms (Instagram, Facebook Messenger, WhatsApp). Managing these separately causes missed messages, delayed responses, and lost sales. A unified inbox with AI assistance would solve this.
 **Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
+- **Tool**: Meta Graph API (Instagram Direct & Messenger) or a managed wrapper like ManyChat.
+- **Evaluation**: The Meta API allows full programmatic access to read and reply to DMs. By integrating this, OHC's "Customer Success" AI agent can draft and send replies based on the business's existing catalog, FAQs, and business hours.
+- **Ease of Use**: Very easy for the user. They simply click "Log in with Facebook/Instagram" to grant permissions. No API keys to manage.
+- **Pricing**: Free to use the Meta API, though WhatsApp integration has per-conversation pricing.
+- **Cloud vs. Standalone**: Works perfectly in Cloud mode (OHC manages the Meta App and Webhooks). In Standalone mode, it would be complex as the user would need to create their own Meta App.
 **Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
+- The user navigates to a "Social Inbox" tab and clicks "Connect Instagram".
+- Uses OAuth to grant OHC permission to read/write messages.
+- OHC registers a centralized webhook for the tenant.
+- Incoming messages are routed to the AI Agent (Customer Success).
+- The agent formulates a response based on the tenant's context (products, availability) and sends it back via the Meta API.
+**Implementation Prompt**:
+Implement the Instagram/Messenger integration. Provide a UI for the user to connect their Meta account. Set up a secure webhook endpoint to receive incoming DMs, route them to the LLM with the user's business context, and send the generated reply back to the customer. Ensure the user can toggle the AI on/off or set it to "draft only" mode.
 **Priority**: P1
-**Estimated Scope**: Large
-
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
 **Estimated Scope**: Medium
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
+## [Calendar & Scheduling] Issue Brief: Native Booking Engine & Google Calendar Sync
+
+**Title**: Scout 🔍: Integrate Cal.com API for Conflict-Free Booking
+**Problem Statement**:
+Service providers like Leo (Music Tutor) and Carlos (Handyman) need clients to book their time. Doing this manually via text or email leads to double-booking and timezone confusion. They need a simple booking widget that automatically respects their personal calendar availability.
 **Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
+- **Tool**: Cal.com API (or direct Google Calendar API).
+- **Evaluation**: Cal.com offers an open-source, API-first scheduling infrastructure. It handles timezone math, calendar conflict checks, and event generation seamlessly.
+- **Ease of Use**: High. The business owner connects their Google/Outlook calendar with one click, sets their working hours (e.g., 9 AM - 5 PM), and the platform generates a beautiful booking interface.
+- **Pricing**: Cal.com API is highly scalable; basic usage can be very cheap or self-hosted. Direct Google Calendar API is free but requires more engineering effort to handle timezone and scheduling logic.
+- **Cloud vs. Standalone**: Cal.com works well in Cloud. For Standalone, direct Google Calendar OAuth is more appropriate to avoid third-party API dependencies.
 **Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
+- A new "Booking & Schedule" module in the OHC platform.
+- User sets "Service Types" (e.g., 1-hour lesson).
+- User connects external calendars to block out busy times.
+- The storefront displays available time slots to the end customer.
+- Upon booking, an event is created in the user's calendar.
+**Implementation Prompt**:
+Build a booking system that allows business owners to define services with durations and prices. Integrate with Google Calendar via OAuth to check for conflicts before displaying available times to the customer. When a customer books, automatically add the event to the business owner's calendar and send a confirmation email.
+**Priority**: P0
+**Estimated Scope**: Large
+
+## [Email Marketing] Issue Brief: AI-Generated Customer Broadcasts
+
+**Title**: Scout 🔍: Integrate Resend for AI-Powered Email Marketing
+**Problem Statement**:
+Business owners like Priya want to notify their existing customers about new stock or holiday sales. Traditional tools like Mailchimp are too complex and require manual template design, list management, and campaign scheduling.
+**Research Report**:
+- **Tool**: Resend.
+- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OHC can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
+- **Ease of Use**: Zero-friction. The user types "Tell my customers about the new summer dress collection," and the AI generates the subject line, body, and inserts product photos automatically.
+- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OHC premium tier.
+- **Cloud vs. Standalone**: Cloud mode uses OHC's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
+**Design Doc**:
+- "Marketing" tab -> "Send a Broadcast".
+- User provides a 1-sentence prompt.
+- The AI Agent generates a responsive HTML email preview.
+- User clicks "Send to all customers".
+- The system chunks the customer list and sends via the Resend API.
+**Implementation Prompt**:
+Create a feature where the user can prompt the AI to draft an email blast. Use the business's product catalog to enrich the email. Provide a preview UI. Once approved, queue the emails to be sent out via the Resend API to all opted-in customers, handling rate limits and basic bounce tracking.
 **Priority**: P2
 **Estimated Scope**: Medium
 
-## 4. Payment Processing
-**Title**: Expand Payments with Mercado Pago for LATAM Users
-**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
-**Research Report**:
-- Mercado Pago is the dominant payment gateway in LATAM.
-- Supports local payment methods which are critical for conversion (often >50% of transactions).
-- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
-- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
-**Design Doc**:
-- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
-- Setup involves standard OAuth flow or API key drop-in.
-- Supports one-off payments and split payments for the eventual marketplace feature.
-**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
-**Priority**: P1
-**Estimated Scope**: Large
+## [Payment Processing] Issue Brief: Localized Payments for LATAM
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
+**Title**: Scout 🔍: Integrate Mercado Pago for LATAM Market Expansion
+**Problem Statement**:
+While Stripe is fantastic for the US/EU, it is not the dominant or most accessible payment method in Latin America. Business owners in LATAM need to accept local payment methods like PIX (Brazil), Boleto, and local credit cards to effectively run their businesses.
 **Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
+- **Tool**: Mercado Pago API.
+- **Evaluation**: Mercado Pago is the standard in LATAM. Integrating it allows OHC to serve a massive demographic of small businesses in South and Central America.
+- **Ease of Use**: Similar to Stripe, the user connects their Mercado Pago account via an OAuth flow or by pasting their secure keys.
+- **Pricing**: Standard payment gateway fees per transaction (~3-4%), no monthly cost to OHC.
+- **Cloud vs. Standalone**: Works natively in both Cloud and Standalone modes.
 **Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
+- "Settings" -> "Payments".
+- Add a "Connect Mercado Pago" button alongside Stripe.
+- On the storefront checkout page, dynamically display Mercado Pago if configured.
+- Handle Mercado Pago webhooks for asynchronous payment confirmations (e.g., when a user pays a Boleto offline).
+**Implementation Prompt**:
+Implement an alternative payment gateway using Mercado Pago. Allow users to connect their account. Update the checkout flow to support Mercado Pago's hosted checkout or API-based payment intents. Ensure the order status accurately reflects asynchronous payment settlements via webhooks.
 **Priority**: P1
 **Estimated Scope**: Medium
 
-## 6. SMS & Notifications
-**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
-**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
+## [Shipping & Logistics] Issue Brief: Automated Label Generation
+
+**Title**: Scout 🔍: Integrate Shippo for 1-Click Shipping Labels
+**Problem Statement**:
+Sellers of physical goods (like Maya shipping cookies or Priya shipping clothes) spend too much time calculating postage, going to the post office, and manually entering tracking numbers. They need to print labels directly from their phone.
 **Research Report**:
-- Twilio is the industry standard for SMS and WhatsApp messaging globally.
-- Reliable delivery, deep global coverage.
-- Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Go backend.
-- Costs per message, can be passed to the tenant or subsidized in premium tiers.
+- **Tool**: Shippo API (or EasyPost).
+- **Evaluation**: Shippo aggregates multiple carriers (USPS, UPS, FedEx) and provides discounted rates without the user needing to negotiate their own carrier accounts.
+- **Ease of Use**: Very easy. On the order details screen, the user clicks "Buy Label", confirms the box weight, and gets a PDF label to print.
+- **Pricing**: 5¢ per label + the actual cost of postage.
+- **Cloud vs. Standalone**: Cloud-friendly using a master Shippo account with sub-accounts. Standalone would require the user to create their own Shippo account and provide an API key.
 **Design Doc**:
-- Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
-- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
-**Priority**: P0
+- In the "Orders" view, add a "Fulfill & Ship" flow.
+- Call Shippo API to get live rates based on the customer's shipping address.
+- Business owner selects a rate and purchases the label.
+- OHC automatically emails the tracking number to the customer.
+**Implementation Prompt**:
+Integrate the Shippo API to allow users to purchase and generate shipping labels directly from an order page. The flow should fetch rates, capture payment for the label (either via OHC billing or direct), generate the PDF label, and automatically update the order status with the tracking URL.
+**Priority**: P1
+**Estimated Scope**: Medium
+
+## [SMS & Notifications] Issue Brief: High-Reliability SMS Alerts
+
+**Title**: Scout 🔍: Integrate Twilio for Critical Order SMS Alerts
+**Problem Statement**:
+Users like Fatima (Food Cart Operator) work in fast-paced, noisy environments where they might not hear a standard push notification, or they may be in areas with poor internet connectivity. They need highly reliable SMS notifications when a new order arrives.
+**Research Report**:
+- **Tool**: Twilio Programmable SMS.
+- **Evaluation**: Twilio is the industry standard for SMS. It guarantees delivery and provides global carrier coverage.
+- **Ease of Use**: The user simply toggles "Send me SMS alerts for new orders" and verifies their phone number.
+- **Pricing**: ~$0.01 per message. Because of this cost, it should be restricted to Premium users or metered.
+- **Cloud vs. Standalone**: Cloud uses OHC's Twilio account. Standalone would require the user to configure their own Twilio SID and Auth Token.
+**Design Doc**:
+- "Notifications" setting panel.
+- User enters their phone number and verifies it via a one-time code.
+- When the backend processes a new paid order, an event is emitted.
+- The Notification worker picks up the event and dispatches an SMS via Twilio.
+**Implementation Prompt**:
+Integrate Twilio to send SMS notifications to the business owner when critical events occur (e.g., new pre-order received). Add a settings UI for the user to verify their phone number and opt-in. Ensure the backend handles Twilio rate limits and securely stores the business owner's verified phone number.
+**Priority**: P2
 **Estimated Scope**: Small
 
-## 7. Video Conferencing
-**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
-**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
+## [Video Conferencing] Issue Brief: Auto-Generated Meeting Links
+
+**Title**: Scout 🔍: Integrate Google Meet for Automated Online Lessons
+**Problem Statement**:
+For digital service providers like Leo (Music Tutor), manually creating Zoom or Google Meet links for every booked lesson and emailing them to the student is prone to human error (e.g., forgetting to send the link or sending the wrong one).
 **Research Report**:
-- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
-- Requires no account for the student. Works natively in the browser and mobile.
-- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
-- Completely seamless integration with no technical setup required by the user.
+- **Tool**: Google Workspace API (Google Meet) or Zoom API.
+- **Evaluation**: Google Meet is often preferred as it can be automatically attached to any Google Calendar event created during the booking process. Zoom requires a separate OAuth flow.
+- **Ease of Use**: Zero extra effort if the user has already connected Google Calendar for availability syncing. The system automatically provisions the link.
+- **Pricing**: Free if using the user's existing Google Calendar/Meet integration.
+- **Cloud vs. Standalone**: Works natively in both.
 **Design Doc**:
-- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
-- The link is automatically added to the calendar invite and the customer's dashboard.
-- Users just click the link at the scheduled time to join the browser-based call.
-**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
-**Priority**: P2
+- When setting up a service, the user toggles "This is an online meeting".
+- When a customer books the service, the OHC backend creates a Google Calendar event.
+- The calendar event is configured to auto-generate a Google Meet conference link.
+- The confirmation email sent to the customer includes this generated Meet link.
+**Implementation Prompt**:
+Extend the calendar booking flow to support online meetings. When a service is marked as "online", ensure the Google Calendar event creation request includes the conference data parameters to auto-generate a Google Meet link. Extract this link from the response and include it in the customer's confirmation email and the business owner's dashboard.
+**Priority**: P1
 **Estimated Scope**: Small
