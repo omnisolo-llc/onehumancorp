@@ -4,6 +4,7 @@ pub mod wizard;
 pub mod dashboard;
 pub mod referrals;
 pub mod builder;
+pub mod scribe_e2e_tests;
 pub mod pricing;
 pub mod agents;
 pub mod settings;
