@@ -5,6 +5,7 @@ export component StatCard inherits GlassCard {
     in property <string> label;
     in property <string> value;
     in property <color> value_color: #a855f7;
+    in property <bool> is_loading: false;
 
     border-color: #e2e8f0;
     border-width: 1px;
@@ -22,6 +23,21 @@ export component StatCard inherits GlassCard {
                 color: #94a3b8;
                 font-family: "Inter";
                 font-size: 14px;
+                visible: !is_loading;
+            }
+            if (is_loading) : Rectangle {
+                height: 14px;
+                width: 60px;
+                background: #334155;
+                border-radius: 4px;
+
+                // Skeleton shimmer simulation
+                animate background {
+                    duration: 1000ms;
+                    iteration-count: -1;
+                    easing: ease-in-out;
+                }
+                init => { self.background = #475569; }
             }
             Text {
                 text: value;
@@ -29,6 +45,21 @@ export component StatCard inherits GlassCard {
                 font-family: "Outfit";
                 font-weight: 700;
                 color: value_color;
+                visible: !is_loading;
+            }
+            if (is_loading) : Rectangle {
+                height: 32px;
+                width: 100px;
+                background: #475569;
+                border-radius: 4px;
+
+                // Skeleton shimmer simulation
+                animate background {
+                    duration: 1000ms;
+                    iteration-count: -1;
+                    easing: ease-in-out;
+                }
+                init => { self.background = #64748b; }
             }
         }
     }

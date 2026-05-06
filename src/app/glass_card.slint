@@ -1,11 +1,14 @@
 import { VerticalBox } from "std-widgets.slint";
 
 export component GlassCard inherits Rectangle {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
-    drop-shadow-blur: 20px;
-    drop-shadow-color: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+    // Note: Slint currently supports drop-shadow to simulate depth
+    // Real glassmorphism often involves backdrop-filter which is applied by the renderer
+    drop-shadow-blur: 24px;
+    drop-shadow-color: rgba(0, 0, 0, 0.4);
+
     @children
 }

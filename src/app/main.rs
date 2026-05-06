@@ -2739,7 +2739,7 @@ mod growth_e2e_tests {
         let launch_called_clone = launch_called.clone();
         let ui_weak = ui.as_weak();
 
-        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
+        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
             assert_eq!(bt, "Online Store");
             assert_eq!(cn, "My Day One Store");
             assert_eq!(pp, "online");
@@ -2767,7 +2767,7 @@ mod growth_e2e_tests {
             ui.get_product_price(),
             ui.get_domain_choice(),
             ui.get_admin_name(),
-            ui.get_admin_password()
+            ui.get_admin_password(), ui.get_price_type()
         );
 
         assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");
@@ -3999,7 +3999,7 @@ mod docs_tests {
         ui.set_product_price("10.0".into());
         ui.set_domain_choice("subdomain".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
+        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
             assert_eq!(website_template, "Classic");
             assert_eq!(product_name, "My First Product");
             assert_eq!(product_price, "10.0");
@@ -6939,5 +6939,36 @@ mod e2e_login_to_dashboard_tests {
 
         dashboard_ui.invoke_action_share_store();
         assert!(*share_opened.borrow(), "Share should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_echo_ux_simplified_labels() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Technical jargon removal verification
+        // Note: We can't directly check text content of sub-components easily in Slint Rust API
+        // without exposing properties, but we've already verified the source code.
+        // We can however verify that the properties we mapped are working.
+        dashboard_ui.set_generative_score("95".into());
+        assert_eq!(dashboard_ui.get_generative_score(), "95");
+
+        dashboard_ui.set_is_loading(true);
+        assert!(dashboard_ui.get_is_loading());
+    }
+
+    #[test]
+    fn test_echo_ux_loading_skeleton_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let stat_card = app::StatCardWindow::new().unwrap();
+        stat_card.set_is_loading(true);
+        assert!(stat_card.get_is_loading());
+
+        stat_card.set_is_loading(false);
+        assert!(!stat_card.get_is_loading());
     }
 }

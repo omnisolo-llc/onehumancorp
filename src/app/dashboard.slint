@@ -103,8 +103,8 @@ export component Dashboard inherits Window {
                 }
             }
             Rectangle {} // Spacer
-            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask anything"; height: 44px; clicked => { open_ai_chat(); } } }
-            TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
+            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask anything"; min-width: 120px; height: 44px; clicked => { open_ai_chat(); } } }
+            TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; min-width: 80px; height: 44px; clicked => { show_menu = !show_menu; } } }
         }
 
         if (show_menu) : Rectangle {
@@ -116,13 +116,13 @@ export component Dashboard inherits Window {
                 padding: 16px;
                 spacing: 8px;
 
-                Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
-                Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
-                TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
-                Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
-                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
-                Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+                Button { text: "Help Center"; min-width: 44px; height: 44px; clicked => { open_help_center(); show_menu = false; } }
+                Button { text: "Billing"; min-width: 44px; height: 44px; clicked => { open_billing(); show_menu = false; } }
+                TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; min-width: 44px; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
+                Button { text: "Video Tutorials"; min-width: 44px; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
+                Button { text: "App Tour"; min-width: 44px; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "KAIROS Tour"; min-width: 44px; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "What's New"; min-width: 44px; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
 
@@ -148,6 +148,7 @@ export component Dashboard inherits Window {
 
                 Button {
                     text: "Dismiss";
+                    min-width: 80px;
                     height: 44px;
                     clicked => { dismiss_milestone(); }
                 }
@@ -163,53 +164,53 @@ export component Dashboard inherits Window {
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; is_loading: root.is_loading; }
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; is_loading: root.is_loading; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; is_loading: root.is_loading; }
+                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; is_loading: root.is_loading; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Helper Rating"; value: generative_score; value_color: #34d399; is_loading: root.is_loading; }
                 }
             }
 
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; is_loading: root.is_loading; }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; is_loading: root.is_loading; }
+                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; is_loading: root.is_loading; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; is_loading: root.is_loading; }
+                    StatCard { label: "Helper Rating"; value: generative_score; value_color: #34d399; is_loading: root.is_loading; }
                 }
             }
         }
 
-        // AI Assistant Health (Telemetry Visualization)
+        // Helper Performance (Telemetry Visualization)
         if (show_telemetry_visualization) : VerticalBox {
             spacing: 12px;
-            Text { text: "AI Assistant Health"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Helper Performance"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
             HorizontalBox {
                 spacing: 16px;
-                StatCard { label: "Quick Answers"; value: root.telemetry_cache_hits; value_color: #10b981; }
-                StatCard { label: "Thinking Time"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
+                StatCard { label: "Instant help"; value: root.telemetry_cache_hits; value_color: #10b981; is_loading: root.is_loading; }
+                StatCard { label: "Reply speed"; value: root.telemetry_rag_latency; value_color: #06b6d4; is_loading: root.is_loading; }
             }
 
             GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
                 height: 200px;
-                HorizontalBox { alignment: center; Text { text: "[ Assistant Performance Chart ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
+                HorizontalBox { alignment: center; Text { text: "[ Helper Activity ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
             }
         }
 
@@ -232,7 +233,7 @@ export component Dashboard inherits Window {
                     Text { text: "Tuesday was your busiest day. Want to run a promo?"; font-size: 16px; color: white; wrap: word-wrap; }
                     HorizontalBox {
                         alignment: end;
-                        Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
+                        Button { text: "Run Promo"; min-width: 100px; height: 44px; clicked => { action_grow_business(); } }
                     }
                 }
             }
@@ -250,11 +251,12 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
-                TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
-                TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
-                TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
+                TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; min-width: 120px; height: 44px; clicked => { action_grow_business(); } } }
+                TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; min-width: 100px; height: 44px; clicked => { action_open_referrals(); } } }
+                TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; min-width: 140px; height: 44px; clicked => { action_open_email_marketing(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
+                    min-width: 150px;
                     height: 44px;
                     clicked => { action_mark_order_ready(); }
                 }
@@ -279,9 +281,10 @@ export component Dashboard inherits Window {
                     HorizontalBox {
                         alignment: end;
                         spacing: 10px;
-                        Button { text: "Edit"; height: 44px; }
+                        Button { text: "Edit"; min-width: 80px; height: 44px; }
                         Button {
                             text: "Approve & Send";
+                            min-width: 140px;
                             height: 44px;
                             clicked => { approve_task(approval.task_id); }
                         }
@@ -321,7 +324,11 @@ export component Dashboard inherits Window {
         x: 0;
         width: parent.width;
         height: 80px;
-        background: #1e293b.transparentize(20%); // Glassmorphism backdrop
+        background: rgba(30, 41, 59, 0.7); // Glassmorphism backdrop
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.1);
+        drop-shadow-blur: 16px;
+        drop-shadow-color: rgba(0, 0, 0, 0.3);
 
         HorizontalBox {
             alignment: center;
