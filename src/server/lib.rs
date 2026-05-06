@@ -1215,6 +1215,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ).await;
     });
 
+    // Start Cross-Mode Health Monitor for hybrid mode switching and mission sync sanitization
+    let cross_mode_hub = hub.clone();
+    tokio::spawn(async move {
+        crate::orchestration::health::run_cross_mode_health_monitor(
+            cross_mode_hub,
+            is_cloud,
+            std::time::Duration::from_secs(60)
+        ).await;
+    });
+
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     tokio::spawn(async move {
