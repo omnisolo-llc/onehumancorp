@@ -30,8 +30,8 @@ impl DashboardService for MyDashboardService {
         let db3 = self.db.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            hub1.get_agents(),
+            hub2.get_meetings(),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
@@ -165,8 +165,8 @@ impl DashboardService for MyDashboardService {
             }
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res;
+        let _meetings = meetings_res;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
