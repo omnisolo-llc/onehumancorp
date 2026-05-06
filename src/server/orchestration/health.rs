@@ -14,6 +14,8 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_secs(5), monitor_transport.get_active_agents()).await {
             Ok(Ok(agents)) => {
+                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+
                 if agents.is_empty() {
                     tracing::warn!("HEALTH MONITOR: No active agents found. Alerting / initiating task reassignment.");
                 }
