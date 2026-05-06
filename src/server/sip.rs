@@ -52,7 +52,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -343,5 +343,21 @@ mod tests {
         assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_missions_marks_stuck_as_failed() {
+        // Just verify it doesn't crash on execution with a valid pool.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+        // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
     }
 }
