@@ -142,9 +142,22 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     validation.set_audience(&[&cfg.client_id]);
     validation.set_issuer(&[&cfg.issuer_url]);
     
-    let token_data = decode::<serde_json::Value>(token_str, &decoding_key, &validation).map_err(|e| e.to_string())?;
+    let token_data = decode::<serde_json::Value>(token_str, &decoding_key, &validation).map_err(|e| {
+        tracing::error!("OIDC token validation failed: {}", e);
+        e.to_string()
+    })?;
     
     let raw = token_data.claims;
+
+    // Securely check for token expiration before processing
+    let current_ts = Utc::now().timestamp();
+    if let Some(exp) = raw.get("exp").and_then(|v| v.as_i64()) {
+        if exp < current_ts {
+            return Err("OIDC token expired".to_string());
+        }
+    } else {
+        return Err("OIDC token missing expiration".to_string());
+    }
     
     let mut roles = Vec::new();
     if let Some(r) = raw.get("roles") {
