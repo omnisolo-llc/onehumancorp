@@ -5,6 +5,7 @@ use chrono::Utc;
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: std::time::Duration,
+    pub stale_days: i64,
 }
 
 impl MemoryConsolidationWorker {
@@ -12,17 +13,19 @@ impl MemoryConsolidationWorker {
         Self {
             repository,
             poll_interval: std::time::Duration::from_secs(3600), // 1 hour
+            stale_days: 180,
         }
     }
 
     pub fn start(&self) {
         let repository = self.repository.clone();
         let interval_duration = self.poll_interval;
+        let stale_days = self.stale_days;
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
-                let older_than = Utc::now() - chrono::Duration::days(180);
+                let older_than = Utc::now() - chrono::Duration::days(stale_days);
                 if let Err(e) = repository.prune_stale(older_than).await {
                     tracing::error!("Failed to prune stale context: {}", e);
                 }
@@ -67,5 +70,6 @@ mod tests {
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
+        assert_eq!(worker.stale_days, 180);
     }
 }

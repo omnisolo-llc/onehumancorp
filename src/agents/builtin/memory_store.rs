@@ -552,25 +552,6 @@ impl VectorRepository {
                         all_records.push(record);
                     }
 
-                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
-                        if a.len() != b.len() || a.is_empty() {
-                            return 1.0;
-                        }
-                        let mut dot_product = 0.0;
-                        let mut norm_a = 0.0;
-                        let mut norm_b = 0.0;
-                        for i in 0..a.len() {
-                            dot_product += a[i] * b[i];
-                            norm_a += a[i] * a[i];
-                            norm_b += b[i] * b[i];
-                        }
-                        if norm_a == 0.0 || norm_b == 0.0 {
-                            return 1.0;
-                        }
-                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
-                        1.0 - similarity
-                    }
-
                     let mut match_count = 0;
                     for i in 0..all_records.len() {
                         for j in (i + 1)..all_records.len() {
@@ -894,6 +875,25 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
         }
         Ok(results)
     }
+}
+
+fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() || a.is_empty() {
+        return 1.0;
+    }
+    let mut dot_product = 0.0;
+    let mut norm_a = 0.0;
+    let mut norm_b = 0.0;
+    for i in 0..a.len() {
+        dot_product += a[i] * b[i];
+        norm_a += a[i] * a[i];
+        norm_b += b[i] * b[i];
+    }
+    if norm_a == 0.0 || norm_b == 0.0 {
+        return 1.0;
+    }
+    let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+    1.0 - similarity
 }
 
 #[async_trait]
