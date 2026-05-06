@@ -1,0 +1,71 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -388,7 +388,7 @@
+                 let mut read_only_futures = Vec::new();
+                 for tc_val in read_only_calls {
+                     let tt_clone = tt.clone();
+-                    read_only_futures.push(async move {
++                    read_only_futures.push(tokio::task::spawn(async move {
+                         let name = tc_val["name"].as_str().unwrap();
+                         let args = tc_val["arguments"].clone();
+                         let id = tc_val["id"].as_str().unwrap().to_string();
+@@ -426,12 +426,13 @@
+                             // Unreachable if tool not found goes to mutating calls
+                             unreachable!()
+                         }
+-                    });
++                    }));
+                 }
+
+-                let ro_results = futures::future::join_all(read_only_futures).await;
++                let ro_results_joined = futures::future::join_all(read_only_futures).await;
+
+-                for (id, final_res) in ro_results {
++                for ro_result_wrapped in ro_results_joined {
++                    let (id, final_res) = ro_result_wrapped.unwrap();
+                     let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                     match final_res {
+                         Ok(res) => {
+@@ -1155,16 +1156,21 @@
+                 }
+                 let gating_res = Self::check_tool_gating(tc, true, cfg);
+                 let tc_clone = tc.clone();
+-                let session_tools_clone = session_tools.clone();
+-                let messages_clone = messages.clone();
+-                read_only_futures.push(async move {
++
++                // Replicate execute_tool logic instead of `self.execute_tool` to avoid lifetime issues
++                let tool = session_tools.iter().find(|t| t.name == tc_clone.name).unwrap().clone();
++                read_only_futures.push(tokio::task::spawn(async move {
+                     if let Err(e) = gating_res {
+                         return (tc_clone, Err(e));
+                     }
+                     let mut retry_count = 0;
+                     let max_retries = 2;
+                     loop {
+-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
++
++                        let args = tc_clone.arguments.clone();
++                        // simplified execute
++                        match tool.execute.execute(args).await {
+                             Ok(r) => {
+                                 return (tc_clone, Ok(r));
+                             }
+@@ -1183,13 +1189,14 @@
+                             }
+                         }
+                     }
+-                });
++                }));
+             }
+
+-            let ro_results = futures::future::join_all(read_only_futures).await;
++            let ro_results_joined = futures::future::join_all(read_only_futures).await;
+
+             // Emit events and collect results for read-only tools
+-            for (tc, res) in ro_results {
++            for ro_result_wrapped in ro_results_joined {
++                let (tc, res) = ro_result_wrapped.unwrap();
+                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                 match res {
+                     Ok(r) => {
