@@ -94,6 +94,18 @@ fn test_scribe_ai_help_chat() {
 
     ui.invoke_open_article("some_link".into());
     assert!(*link_opened.borrow(), "Article link opening should trigger callback");
+
+    ui.set_user_input("How do I add a product?".into());
+    assert_eq!(ui.get_user_input(), SharedString::from("How do I add a product?"));
+
+    let sent_message = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let sent_message_clone = sent_message.clone();
+    ui.on_send_message(move || {
+        *sent_message_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_send_message();
+    assert!(*sent_message.borrow(), "Send message callback should be triggered");
 }
 
 #[test]
@@ -106,6 +118,23 @@ fn test_scribe_video_tutorials() {
 
     ui.set_selected_video_title("Setting up your store".into());
     assert_eq!(ui.get_selected_video_title(), SharedString::from("Setting up your store"));
+
+    let custom_videos = vec![
+        crate::app::VideoMetadata {
+            title: "Test Video".into(),
+            description: "Test Desc".into(),
+            duration_sec: 120,
+            url: "http://example.com/video".into(),
+            thumbnail_url: "http://example.com/thumb".into(),
+        }
+    ];
+    let videos_model = slint::ModelRc::new(slint::VecModel::from(custom_videos));
+    ui.set_videos(videos_model.into());
+
+    let videos = ui.get_videos();
+    assert_eq!(videos.row_count(), 1, "Should have 1 video in the model");
+    let vid = videos.row_data(0).unwrap();
+    assert_eq!(vid.title, "Test Video");
 }
 
 #[test]
@@ -117,6 +146,18 @@ fn test_scribe_api_docs() {
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced(), "Advanced docs visible when toggled");
 
+    let custom_endpoints = vec![
+        crate::app::ApiEndpoint {
+            method: "GET".into(),
+            path: "/api/test".into(),
+            description: "Test endpoint".into(),
+        }
+    ];
+    let endpoints_model = slint::ModelRc::new(slint::VecModel::from(custom_endpoints));
+    ui.set_endpoints(endpoints_model.into());
+
+    assert_eq!(ui.get_endpoints().row_count(), 1);
+
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
     let endpoint_tested_clone = endpoint_tested.clone();
     ui.on_test_endpoint(move |_| {
@@ -125,6 +166,12 @@ fn test_scribe_api_docs() {
 
     ui.invoke_test_endpoint("/api/v1/store".into());
     assert!(*endpoint_tested.borrow(), "Endpoint test should trigger callback");
+
+    ui.set_api_response("{\"status\": \"success\"}".into());
+    assert_eq!(ui.get_api_response(), SharedString::from("{\"status\": \"success\"}"));
+
+    ui.set_active_endpoint("/api/v1/store".into());
+    assert_eq!(ui.get_active_endpoint(), SharedString::from("/api/v1/store"));
 }
 
 #[test]
@@ -132,7 +179,8 @@ fn test_scribe_release_notes() {
     crate::ui_tests::init();
     let ui = crate::app::ReleaseNotes::new().unwrap();
 
-    // We remove get_test_title() because ReleaseNotes doesn't expose test_title.
+    assert_eq!(ui.get_current_version(), SharedString::from("v0.3.4"));
+
     ui.set_show_latest_only(true);
     assert!(ui.get_show_latest_only(), "Show latest only toggle should work");
 }
