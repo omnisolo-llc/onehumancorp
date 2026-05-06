@@ -65,12 +65,12 @@ func TestSharedTaskOrchestrator_GetTask(t *testing.T) {
 	ctx := context.Background()
 
 	now := time.Now()
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id = \\$1 AND organization_id = \\$2").
-		WithArgs("my-id", "org-1").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id =").
+		WithArgs("my-id").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("my-id", "org-1", "Task Title", nil, "PENDING", nil, "P2", nil, nil, "[]", now, now))
 
-	task, err := o.GetTask(ctx, "my-id", "org-1")
+	task, err := o.GetTask(ctx, "my-id")
 	require.NoError(t, err)
 	assert.NotNil(t, task)
 	assert.Equal(t, "my-id", task.ID)
@@ -78,21 +78,21 @@ func TestSharedTaskOrchestrator_GetTask(t *testing.T) {
 	assert.Equal(t, "Task Title", task.Title)
 
 	// test not found
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id = \\$1 AND organization_id = \\$2").
-		WithArgs("non-existent", "org-1").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id =").
+		WithArgs("non-existent").
 		WillReturnError(sql.ErrNoRows)
 
-	task, err = o.GetTask(ctx, "non-existent", "org-1")
+	task, err = o.GetTask(ctx, "non-existent")
 	require.Error(t, err)
 	assert.Nil(t, task)
 	assert.Equal(t, "task not found", err.Error())
 
 	// test other error
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id = \\$1 AND organization_id = \\$2").
-		WithArgs("error-id", "org-1").
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at FROM shared_tasks_v4 WHERE id =").
+		WithArgs("error-id").
 		WillReturnError(sql.ErrConnDone)
 
-	task, err = o.GetTask(ctx, "error-id", "org-1")
+	task, err = o.GetTask(ctx, "error-id")
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -105,10 +105,10 @@ func TestSharedTaskOrchestrator_UpdateTaskStatus(t *testing.T) {
 	o := NewSharedTaskOrchestrator(db)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE shared_tasks_v4 SET status = \\$1, updated_at = CURRENT_TIMESTAMP WHERE id = \\$2 AND organization_id = \\$3").
-		WithArgs("COMPLETED", "my-id", "org-1").
+	mock.ExpectExec("UPDATE shared_tasks_v4 SET status = \\$1, updated_at = CURRENT_TIMESTAMP WHERE id = \\$2").
+		WithArgs("COMPLETED", "my-id").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = o.UpdateTaskStatus(ctx, "my-id", "org-1", "COMPLETED")
+	err = o.UpdateTaskStatus(ctx, "my-id", "COMPLETED")
 	require.NoError(t, err)
 }

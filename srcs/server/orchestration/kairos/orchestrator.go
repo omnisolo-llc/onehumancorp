@@ -70,20 +70,19 @@ func (o *SharedTaskOrchestrator) CreateTask(ctx context.Context, task *SharedTas
 	return err
 }
 
-// GetTask retrieves a task by its ID and OrganizationID.
-func (o *SharedTaskOrchestrator) GetTask(ctx context.Context, id string, organizationID string) (*SharedTaskV4, error) {
+// GetTask retrieves a task by its ID.
+func (o *SharedTaskOrchestrator) GetTask(ctx context.Context, id string) (*SharedTaskV4, error) {
 	query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks_v4
-        WHERE id = $1 AND organization_id = $2
+        WHERE id = $1
     `
-	row := o.db.QueryRowContext(ctx, query, id, organizationID)
+	row := o.db.QueryRowContext(ctx, query, id)
 
 	task := &SharedTaskV4{}
-    var desc, agent, payload, parent sql.NullString
 	err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status,
-		&agent, &task.Priority, &payload, &parent, &task.Dependencies,
+		&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
+		&task.AgentID, &task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies,
 		&task.CreatedAt, &task.UpdatedAt,
 	)
 
@@ -93,25 +92,12 @@ func (o *SharedTaskOrchestrator) GetTask(ctx context.Context, id string, organiz
 		return nil, err
 	}
 
-    if desc.Valid {
-        task.Description = &desc.String
-    }
-    if agent.Valid {
-        task.AgentID = &agent.String
-    }
-    if payload.Valid {
-        task.Payload = &payload.String
-    }
-    if parent.Valid {
-        task.ParentPlanID = &parent.String
-    }
-
 	return task, nil
 }
 
 // UpdateTaskStatus updates the status of a given task.
-func (o *SharedTaskOrchestrator) UpdateTaskStatus(ctx context.Context, id string, organizationID string, status string) error {
-	query := `UPDATE shared_tasks_v4 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3`
-	_, err := o.db.ExecContext(ctx, query, status, id, organizationID)
+func (o *SharedTaskOrchestrator) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	query := `UPDATE shared_tasks_v4 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := o.db.ExecContext(ctx, query, status, id)
 	return err
 }
