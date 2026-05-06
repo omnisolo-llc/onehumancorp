@@ -168,12 +168,12 @@ export component Dashboard inherits Window {
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
                 }
             }
 
@@ -184,12 +184,12 @@ export component Dashboard inherits Window {
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                    StatCard { label: "Active Helpers"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Active Help"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "AI Helpfulness Score"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
                 }
             }
         }
@@ -197,12 +197,12 @@ export component Dashboard inherits Window {
         // AI Assistant Health (Telemetry Visualization)
         if (show_telemetry_visualization) : VerticalBox {
             spacing: 12px;
-            Text { text: "AI Assistant Health"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "System Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
             HorizontalBox {
                 spacing: 16px;
-                StatCard { label: "Quick Answers"; value: root.telemetry_cache_hits; value_color: #10b981; }
-                StatCard { label: "Thinking Time"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
+                StatCard { label: "Saved Time"; value: root.telemetry_cache_hits; value_color: #10b981; }
+                StatCard { label: "Response Speed"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
             }
 
             GlassCard {
@@ -247,7 +247,7 @@ export component Dashboard inherits Window {
                 Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "quick_actions_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
             }
-            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            if (show_quick_actions_hint) : Text { text: "Tap here to quickly manage your store."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
