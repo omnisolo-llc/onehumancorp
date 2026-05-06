@@ -1131,6 +1131,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
+    let social_posting_ui = app::SocialPosting::new()?;
+    let social_posting_handle = social_posting_ui.as_weak();
+
+    social_posting_ui.on_connect_instagram({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_is_connected_instagram(true);
+            }
+        }
+    });
+
+    social_posting_ui.on_connect_facebook({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_is_connected_facebook(true);
+            }
+        }
+    });
+
+    social_posting_ui.on_generate_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_post_content("Check out our new products!".into());
+            }
+        }
+    });
+
+    social_posting_ui.on_schedule_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_post_content("Post scheduled for 10:00 AM.".into());
+            }
+        }
+    });
+
+    social_posting_ui.on_approve_post({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_post_content("Post approved!".into());
+            }
+        }
+    });
+
     let email_marketing_ui = app::EmailMarketing::new()?;
     let email_marketing_handle = email_marketing_ui.as_weak();
 
@@ -1656,7 +1704,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                                            ui.set_upgrade_prompt_message("Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.".into());
                                             ui.set_show_upgrade_prompt(true);
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
@@ -2301,7 +2349,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                                ui.set_upgrade_prompt_message("Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
@@ -5387,27 +5435,27 @@ mod remaining_e2e_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to add more!".into());
+                ui.set_upgrade_prompt_message("Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to add more!");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.");
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 agent. Upgrade to unlock more power!".into());
+                ui.set_upgrade_prompt_message("Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 agent. Upgrade to unlock more power!");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
