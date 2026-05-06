@@ -1,5 +1,4 @@
 use crate::app;
-use slint::{ComponentHandle, Model};
 
 fn create() -> app::BusinessManager { crate::ui_tests::init(); app::BusinessManager::new().unwrap() }
 
@@ -39,7 +38,7 @@ fn test_submit_callback() {
     let ui = create();
     let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
-    ui.on_submit(move |type_, name, _desc, _price, _dur, sched| {
+    ui.on_submit(move |type_, name, _desc, _price, _dur, _sched| {
         assert_eq!(type_, "SERVICE");
         assert_eq!(name, "Consultation");
         *invoked_clone.borrow_mut() = true;
