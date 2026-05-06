@@ -1425,10 +1425,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
                     }
 
-                    if let Some(ui) = my_plan_handle_fetch.upgrade() {
-                        ui.set_total_actions(format!("{}", summary.total_tokens).into()); // tokens as a proxy for actions for now
-                        ui.set_estimated_bill(format!("${:.2}", summary.projected_monthly_usd).into());
-                    }
                 }).unwrap();
             }
         }
@@ -1517,9 +1513,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = my_plan_handle_fetch.upgrade() {
                     ui.set_tier(format!("{} Tier", plan.current_plan).into());
                     ui.set_total_actions(plan.ai_actions_used.to_string().into());
-                    ui.set_action_limit(plan.ai_actions_limit.to_string().into());
+                    if plan.ai_actions_limit < 0 {
+                        ui.set_action_limit("Unlimited".into());
+                    } else {
+                        ui.set_action_limit(plan.ai_actions_limit.to_string().into());
+                    }
                     ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
-                    ui.set_limit_storage(format!("{:.1} GB", plan.storage_limit_bytes as f64 / 1_073_741_824.0).into());
+                    if plan.storage_limit_bytes < 0 {
+                        ui.set_limit_storage("Unlimited".into());
+                    } else {
+                        ui.set_limit_storage(format!("{:.1} GB", plan.storage_limit_bytes as f64 / 1_073_741_824.0).into());
+                    }
                     ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
                 }
             }

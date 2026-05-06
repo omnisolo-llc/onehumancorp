@@ -32,6 +32,14 @@ impl Tracker {
     }
 
 
+    pub async fn get_tenant_stats(&self, tenant_id: &str) -> Result<(crate::pricing::rate_limit::PlanTier, u32, i64), String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.get_tenant_stats(tenant_id).await
+        } else {
+            Ok((crate::pricing::rate_limit::PlanTier::Free, 0, 0))
+        }
+    }
+
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.check_storage_quota(tenant_id, delta_bytes).await

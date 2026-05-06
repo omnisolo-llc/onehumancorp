@@ -67,6 +67,24 @@ impl RedisRateLimiter {
         Self { client }
     }
 
+    pub async fn get_tenant_stats(&self, tenant_id: &str) -> Result<(PlanTier, u32, i64), String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+        let tier = self.get_tenant_tier(tenant_id).await?;
+
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+
+        let tenant_used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+        let tenant_used = tenant_used.unwrap_or(0);
+
+        let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+        let storage_used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+        let storage_used = storage_used.unwrap_or(0);
+
+        Ok((tier, tenant_used, storage_used))
+    }
+
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
@@ -270,6 +288,38 @@ impl RedisRateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_get_tenant_stats() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-stats";
+
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+                let _ : () = conn.del(&storage_key).await.unwrap_or(());
+
+                // Set tier to Starter
+                limiter.set_tenant_tier(tenant_id, PlanTier::Starter).await.unwrap();
+
+                // Increment usage
+                let _ : () = conn.set(&tenant_key, 42).await.unwrap();
+                let _ : () = conn.set(&storage_key, 1024 * 1024).await.unwrap(); // 1MB
+
+                let (tier, actions, storage) = limiter.get_tenant_stats(tenant_id).await.unwrap();
+
+                assert_eq!(tier, PlanTier::Starter);
+                assert_eq!(actions, 42);
+                assert_eq!(storage, 1024 * 1024);
+            }
+        }
+    }
 
     #[test]
     fn test_plan_tier_limits() {

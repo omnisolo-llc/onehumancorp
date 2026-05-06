@@ -175,22 +175,35 @@ impl HubService for MyHubService {
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
 
-        // Use the actual database connection to track metrics where possible
-        // Let's store cost tracking data in the Hub Redis connection
-        // For MyPlan we query PostgreSQL using the hub's db handle if it existed in the prompt
-        // We will do a generic calculation logic for tokens for cost transparency.
         let _pool = &self.hub.pool;
-        let plan_name = "Starter".to_string();
-        let ai_used = 42;
-        let ai_limit = 1000;
-        let storage_limit = 5368709120; // 5GB
+
+        let (tier, ai_used, storage_used) = self.hub.tracker().get_tenant_stats(_tenant_id).await.unwrap_or_else(|_| (
+            crate::pricing::rate_limit::PlanTier::Free, 0, 0
+        ));
+
+        let plan_name = match tier {
+            crate::pricing::rate_limit::PlanTier::Free => "Free".to_string(),
+            crate::pricing::rate_limit::PlanTier::Starter => "Starter".to_string(),
+            crate::pricing::rate_limit::PlanTier::Pro => "Pro".to_string(),
+            crate::pricing::rate_limit::PlanTier::Business => "Business".to_string(),
+        };
+
+        let ai_limit = match tier.monthly_action_limit() {
+            Some(l) => l as i32,
+            None => -1, // representing unlimited
+        };
+
+        let storage_limit_bytes = match tier.storage_limit_mb() {
+            Some(l) => (l as i64) * 1024 * 1024,
+            None => -1, // unlimited
+        };
 
         Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
-            ai_actions_used: ai_used,
+            ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
-            storage_used_bytes: 1024 * 1024 * 100, // Still mock storage
-            storage_limit_bytes: storage_limit,
+            storage_used_bytes: storage_used,
+            storage_limit_bytes: storage_limit_bytes,
             next_bill_estimated: 0,
         }))
     }
