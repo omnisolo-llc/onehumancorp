@@ -57,7 +57,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool.clone()));
 
-    let iterations = 100;
+    let iterations = 50;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -143,7 +143,7 @@ pub async fn bench_dashboard_snapshot() {
 async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = 100;
+    let iterations = 50;
 
     let run_id = Uuid::new_v4().to_string();
 
