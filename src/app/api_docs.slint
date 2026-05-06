@@ -1,5 +1,6 @@
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, CheckBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct ApiEndpoint {
     method: string,
@@ -38,14 +39,17 @@ export component ApiDocs inherits Window {
             }
 
             Text {
-                text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+                text: "Connect other tools to your store. This is an advanced feature for software developers. If you are not a developer, you don't need to use this page.";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
 
-            CheckBox {
-                text: "Show Advanced Developer Documentation";
-                checked <=> is_advanced;
+            TooltipElement {
+                tooltip_id: "api_docs_advanced";
+                CheckBox {
+                    text: "Show Advanced Developer Documentation";
+                    checked <=> is_advanced;
+                }
             }
 
             if (is_advanced): ScrollView {
@@ -67,9 +71,12 @@ export component ApiDocs inherits Window {
                                     Text { text: ep.path; font-weight: 700; color: white; }
                                 }
                                 Text { text: ep.description; color: #cbd5e1; wrap: word-wrap; }
-                                Button {
-                                    text: "Execute Test";
-                                    clicked => { root.test_endpoint(ep.path); root.active_endpoint = ep.path; }
+                                TooltipElement {
+                                    tooltip_id: "api_test_button";
+                                    Button {
+                                        text: "Run Test";
+                                        clicked => { root.test_endpoint(ep.path); root.active_endpoint = ep.path; }
+                                    }
                                 }
                                 if (root.active_endpoint == ep.path && root.api_response != "") : Rectangle {
                                     background: #1e293b;

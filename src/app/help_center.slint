@@ -1,6 +1,7 @@
 // Documentation fully implemented
 import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct HelpArticle {
     title: string,
@@ -71,21 +72,27 @@ export component HelpCenter inherits Window {
         }
     }
 
-    Rectangle {
+    TooltipElement {
+        tooltip_id: "help_floating_button";
         x: parent.width - self.width - 16px;
         y: parent.height - self.height - 16px;
         width: 56px;
         height: 56px;
-        border-radius: 28px;
-        background: #0ea5e9;
 
-        Text {
-            text: "?";
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            background: #0ea5e9;
+
+            Text {
+                text: "?";
+                color: white;
+                font-size: 24px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
         }
     }
 }
