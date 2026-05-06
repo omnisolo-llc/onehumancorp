@@ -4,3 +4,6 @@ details:
   - Fixed flaky timeouts in src/server:server_test by correctly specifying size="large" in BUILD.bazel to accommodate for test execution duration.
   - Verified codebase health and ensuring all tests pass successfully with bazelisk test //...
   - Verified agent_missions sanitization logic is properly handled within sip.rs and orchestration sync daemon.
+  - Updated db.rs cleanup_stagnant_missions to permanently archive IN_PROGRESS and BLOCKED stagnant missions to .agent-task/archive/{id}.json and subsequently delete them to ensure backlog hygiene.
+debt_report: |
+  Cleaned up logic to prevent stuck missions from filling the database over time.
