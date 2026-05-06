@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS Changelog
 
+## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
+
+### Cloud Scaling Improvements
+
+- 🎨 Canvas: Refactored the MCP LocalProxyClient to use an abstract BlobProvider with S3 support for cloud multitenant scaling.
+
+### Privacy and Offline Improvements
+
+- 🎨 Canvas: Added LocalBlobProvider implementation to ensure privacy and offline capabilities for the MCP proxy.
+
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 
 ### Cloud Scaling Improvements
