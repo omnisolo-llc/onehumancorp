@@ -58,6 +58,7 @@ pub struct AgentRunConfig {
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
 impl Default for AgentRunConfig {
@@ -95,6 +96,7 @@ impl Default for AgentRunConfig {
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            long_term_memory: None,
         }
     }
 }
@@ -595,6 +597,22 @@ impl Agent {
                 let last_msg = final_msgs.last().unwrap();
                 let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 _on_event(AgentEvent::TaskComplete { content: content.clone() });
+
+                // Cross-Department Memory Consolidation for LangGraph
+                if !content.is_empty() {
+                    if let Some(store) = &self.memory_store {
+                        let content_to_store = content.clone();
+                        let store_clone = store.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()]).await {
+                                tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
+                            } else {
+                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
+                            }
+                        });
+                    }
+                }
+
                 Ok(content)
             }
             Err(e) => {
@@ -723,8 +741,21 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut self_with_memory = self;
+        let owned_agent;
+        if let Some(ltm) = &cfg.long_term_memory {
+            owned_agent = Agent {
+                llm: self.llm.clone(),
+                tools: self.tools.clone(),
+                progress: self.progress.clone(),
+                memory_store: Some(ltm.clone()),
+                checkpointer: self.checkpointer.clone(),
+                observation_store: self.observation_store.clone(),
+            };
+            self_with_memory = &owned_agent;
+        }
 
-        let session_tools = self.tools.clone();
+        let session_tools = self_with_memory.tools.clone();
         if cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(cfg, initial_message, &session_tools, on_event).await;
         }
@@ -758,7 +789,7 @@ impl Agent {
         let mut last_checkpoint_id: Option<String> = None;
 
         if cfg.enable_langgraph_mechanic {
-            return self.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
+            return self_with_memory.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
@@ -807,7 +838,7 @@ impl Agent {
         let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
 
         // Long-Term Memory Retrieval
-        if let Some(store) = &self.memory_store {
+        if let Some(store) = &self_with_memory.memory_store {
             match store.retrieve(initial_message, 5).await {
                 Ok(memories) => {
                     if !memories.is_empty() {
@@ -1424,6 +1455,25 @@ impl Agent {
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
+                        });
+                    }
+                }
+            }
+
+            // Cross-Department Memory Consolidation: Auto-store task result if successful
+            if iteration == max_iterations - 1 || tool_calls.is_empty() {
+                // This is the last iteration or no more tool calls (terminal)
+                // We'll store the final thought in long-term memory if configured
+                if !last_assistant_content.is_empty() {
+                    if let Some(store) = &self_with_memory.memory_store {
+                        let content_to_store = last_assistant_content.clone();
+                        let store_clone = store.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()]).await {
+                                tracing::error!("Failed to auto-consolidate memory: {}", e);
+                            } else {
+                                tracing::debug!("Successfully auto-consolidated memory.");
+                            }
                         });
                     }
                 }
