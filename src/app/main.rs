@@ -181,11 +181,11 @@ pub fn setup_welcome_checklist_routing(
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("App starting...");
+
 
     // Start bundled server if in standalone mode
     if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
-        println!("Starting bundled server...");
+
         tokio::spawn(async move {
             if let Err(e) = server_lib::run_server().await {
                 eprintln!("Bundled server error: {}", e);
@@ -198,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
-                println!("Connected to server!");
+
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
                         id: "agent_1".into(),
@@ -210,12 +210,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }),
                 });
                 match client.register_agent(request).await {
-                    Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
+                    Ok(_response) => {}
+                    Err(e) => {}
                 }
             }
             Err(e) => {
-                println!("Could not connect to server: {:?}", e);
+
             }
         }
     });
@@ -373,7 +373,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
-                    println!("Login process started...");
+
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();
                     tokio::spawn(async move {
@@ -570,7 +570,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
                 } else {
-                    println!("OAuth Login via {}...", provider);
+
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
@@ -922,10 +922,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let integrations_ui = app::Integrations::new()?;
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
     integrations_ui.on_configure_integration(|id| {
-        let id_clone = id.to_string(); tokio::spawn(async move { println!("Configure integration requested for: {}", id_clone); });
+        let _id_clone = id.to_string(); tokio::spawn(async move { });
     });
     integrations_ui.on_invoke_tool(|id| {
-        let id_clone = id.to_string(); tokio::spawn(async move { println!("Invoke tool requested for: {}", id_clone); });
+        let _id_clone = id.to_string(); tokio::spawn(async move { });
     });
     Box::leak(Box::new(integrations_ui));
 
@@ -1249,7 +1249,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             current_tasks.push(item);
                         }
                     }
-                    println!("Growth Feature: Social Media Auto-Posting Connect Instagram executed via OHC UI");
+
                     current_tasks.push(app::UiPendingApproval {
                         task_id: "ig-post-1".into(),
                         title: "Drafted Instagram Post".into(),
@@ -1276,10 +1276,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let pre_filled_msg = format!("Share OHC with a friend, both get 1 month free Pro. {}", link);
             CLIPBOARD.with(|cb| {
                 if let Some(ctx) = cb.borrow_mut().as_mut() {
-                    if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
-                        println!("Failed to copy to clipboard: {:?}", e);
+                    if let Err(_e) = ctx.set_contents(pre_filled_msg.clone()) {
+
                     } else {
-                        println!("Invite message copied to clipboard: {}", pre_filled_msg);
+
                         if let Some(ui) = ui_handle.upgrade() {
                             ui.set_invite_copy_status("Invite message copied!".into());
 
@@ -1292,7 +1292,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 } else {
-                    println!("Clipboard not initialized, failed to copy invite message");
+
                 }
             });
         }
@@ -1355,7 +1355,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
                     }
-                    Err(e) => println!("Failed to connect for referrals: {:?}", e),
+                    Err(e) => {}
                 }
             });
         }
@@ -1368,10 +1368,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let link = ui.get_my_referral_link();
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
-                        if let Err(e) = ctx.set_contents(link.into()) {
-                            println!("Failed to copy to clipboard: {:?}", e);
+                        if let Err(_e) = ctx.set_contents(link.into()) {
+
                         } else {
-                            println!("Share link copied to clipboard");
+
                             ui.set_link_copy_status("Copied!".into());
                             let weak_ui = ui.as_weak();
                             slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
@@ -1381,7 +1381,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             });
                         }
                     } else {
-                        println!("Clipboard not initialized, failed to copy share link");
+
                     }
                 });
             }
@@ -1389,11 +1389,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     referrals_ui.on_export_data(|| {
-        println!("Exporting referral data...");
+
     });
 
     referrals_ui.on_view_history(|| {
-        println!("Viewing referral history...");
+
     });
 
     referrals_ui.on_share_link({
@@ -1404,13 +1404,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
-                        if let Err(e) = ctx.set_contents(pre_filled_msg.clone()) {
-                            println!("Failed to copy to clipboard: {:?}", e);
+                        if let Err(_e) = ctx.set_contents(pre_filled_msg.clone()) {
+
                         } else {
-                            println!("Share message copied to clipboard: {}", pre_filled_msg);
+
                         }
                     } else {
-                        println!("Clipboard not initialized, failed to copy share link");
+
                     }
                 });
             }
@@ -1439,7 +1439,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
                     }
-                    Err(e) => println!("Failed to create referral: {:?}", e),
+                    Err(e) => {}
                 }
             });
         }
@@ -1897,13 +1897,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                             CLIPBOARD.with(|cb| {
                                 if let Some(ctx) = cb.borrow_mut().as_mut() {
-                                    if let Err(e) = ctx.set_contents(link.to_string()) {
-                                        println!("Failed to copy to clipboard: {:?}", e);
+                                    if let Err(_e) = ctx.set_contents(link.to_string()) {
+
                                     } else {
-                                        println!("Shareable Store Link copied to clipboard: {}", link);
+
                                     }
                                 } else {
-                                    println!("Clipboard not initialized, failed to copy store link");
+
                                 }
                             });
                         }
@@ -2548,13 +2548,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.on_copy_link(|link| {
         CLIPBOARD.with(|cb| {
             if let Some(ctx) = cb.borrow_mut().as_mut() {
-                if let Err(e) = ctx.set_contents(link.to_string()) {
-                    println!("Failed to copy to clipboard: {:?}", e);
+                if let Err(_e) = ctx.set_contents(link.to_string()) {
+
                 } else {
-                    println!("Copied to clipboard: {}", link);
+
                 }
             } else {
-                println!("Clipboard context not available, fallback to console: {}", link);
+
             }
         });
     });
@@ -2666,11 +2666,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             state,
                         });
                         if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
+
                         }
                     }
                     Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
+
                     }
                 }
             });
