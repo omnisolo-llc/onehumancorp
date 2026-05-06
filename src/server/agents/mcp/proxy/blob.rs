@@ -2,7 +2,6 @@ use std::env;
 use std::sync::Arc;
 use tokio::fs;
 use std::path::{Path, PathBuf};
-use reqwest::Client;
 
 pub trait BlobProvider: Send + Sync {
     fn read_blob<'a>(&'a self, path: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>>;
@@ -54,7 +53,7 @@ impl BlobProvider for LocalBlobProvider {
 pub struct S3BlobProvider {
     bucket: String,
     endpoint: String,
-    client: Client,
+    client: reqwest::Client,
 }
 
 impl S3BlobProvider {
@@ -63,7 +62,7 @@ impl S3BlobProvider {
         Self {
             bucket: "ohc-multi-tenant-blobs".to_string(),
             endpoint,
-            client: Client::new(),
+            client: reqwest::Client::new(),
         }
     }
 }
@@ -110,10 +109,8 @@ pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
     use tempfile::tempdir;
-    use std::fs;
+    use mockito::Server;
 
     #[tokio::test]
     async fn test_local_blob_provider() {
@@ -134,34 +131,34 @@ mod tests {
         assert_eq!(err.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
     }
 
+
     #[tokio::test]
     async fn test_s3_blob_provider() {
-        let mock_server = MockServer::start().await;
+        let mut server = Server::new_async().await;
 
-        Mock::given(method("GET"))
-            .and(path("/ohc-multi-tenant-blobs/test_s3.txt"))
-            .respond_with(ResponseTemplate::new(200).set_body_string("s3 content"))
-            .mount(&mock_server)
-            .await;
+        let mock_get = server.mock("GET", "/ohc-multi-tenant-blobs/test_s3.txt")
+            .with_status(200)
+            .with_body("s3 content")
+            .create_async().await;
 
-        Mock::given(method("PUT"))
-            .and(path("/ohc-multi-tenant-blobs/test_s3_write.txt"))
-            .respond_with(ResponseTemplate::new(200))
-            .mount(&mock_server)
-            .await;
+        let mock_put = server.mock("PUT", "/ohc-multi-tenant-blobs/test_s3_write.txt")
+            .with_status(200)
+            .create_async().await;
 
         let provider = S3BlobProvider {
             bucket: "ohc-multi-tenant-blobs".to_string(),
-            endpoint: mock_server.uri(),
+            endpoint: server.url(),
             client: reqwest::Client::new(),
         };
 
         // Test reading
         let content = provider.read_blob("test_s3.txt").await.unwrap();
         assert_eq!(content, "s3 content");
+        mock_get.assert_async().await;
 
         // Test writing
         provider.write_blob("test_s3_write.txt", "new content").await.unwrap();
+        mock_put.assert_async().await;
     }
 
     #[test]
@@ -171,16 +168,14 @@ mod tests {
         env::remove_var("OHC_MULTITENANT");
 
         // Test default
-        let provider = create_blob_provider();
-        // Check if it's local
-        // Rust trait downcasting isn't trivial without Any, but we can just invoke it or trust logic
+        let _provider = create_blob_provider();
 
         // Test multitenant
         env::set_var("OHC_MULTITENANT", "true");
-        let provider_mt = create_blob_provider();
+        let _provider_mt = create_blob_provider();
 
         // Test standalone overrides multitenant
         env::set_var("OHC_STANDALONE", "true");
-        let provider_st = create_blob_provider();
+        let _provider_st = create_blob_provider();
     }
 }
