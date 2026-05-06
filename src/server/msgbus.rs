@@ -382,8 +382,19 @@ impl Bus for NatsBus {
         let mut buf = Vec::new();
         msg.encode(&mut buf).unwrap();
 
-        self.client.publish(msg.topic, buf.into()).await.map_err(|e| e.to_string())?;
-        Ok(())
+        let mut retries = 0;
+        loop {
+            match self.client.publish(msg.topic.clone(), buf.clone().into()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= 3 {
+                        return Err(e.to_string());
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
+                }
+            }
+        }
     }
 
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -461,16 +472,18 @@ impl DistributedLock for RedisBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
-        let res: Option<String> = redis::cmd("SET")
-            .arg(&key)
-            .arg(owner)
-            .arg("NX")
-            .arg("EX")
-            .arg(ttl_seconds)
-            .query_async(&mut *conn)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(res.is_some())
+        let script = redis::Script::new(r#"
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                redis.call("set", KEYS[1], ARGV[1], "EX", ARGV[2])
+                return 1
+            elseif redis.call("set", KEYS[1], ARGV[1], "NX", "EX", ARGV[2]) then
+                return 1
+            else
+                return 0
+            end
+        "#);
+        let res: i32 = script.key(&key).arg(owner).arg(ttl_seconds).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        Ok(res == 1)
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
@@ -493,7 +506,7 @@ impl DistributedLock for RedisBus {
 impl DistributedLock for IpcBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
-        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.expires_at < strftime('%s', 'now')")
+        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer)")
             .bind(resource)
             .bind(owner)
             .bind(expires_at)
@@ -743,5 +756,27 @@ mod tests {
 
         bus.release_lock(resource, owner2).await.unwrap();
         assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+
+        // Re-acquire by same owner to extend
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_redis_bus_distributed_lock() {
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
+        let bus = match RedisBus::new(&url).await {
+            Ok(b) => b,
+            Err(_) => return,
+        };
+        let resource = "test_redis_resource";
+        let owner1 = "owner1";
+        let owner2 = "owner2";
+
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+
+        bus.release_lock(resource, owner1).await.unwrap();
+        assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
     }
 }
