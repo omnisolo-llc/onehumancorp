@@ -84,7 +84,7 @@ func TestSyncLocalToCloud(t *testing.T) {
 	depsBytes := []byte("[]")
 
 	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE ohc_bypassrls").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").WithArgs(savedLocalMission.OrganizationID).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery(`INSERT INTO shared_tasks`).
 		WithArgs(
 			savedLocalMission.OrganizationID,

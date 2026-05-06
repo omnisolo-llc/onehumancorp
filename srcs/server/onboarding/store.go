@@ -9,6 +9,8 @@ import (
 
 type Tenant struct {
 	ID          string
+	OwnerEmail  string
+	Tier        string
 	Name        string
 	Category    string
 	Description string
@@ -39,8 +41,8 @@ func (s *PostgresTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) 
 	defer tx.Rollback()
 
 	query := `
-		INSERT INTO tenants (name, category, description, status)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO tenants (name, category, description, status, owner_email, tier)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -50,6 +52,7 @@ func (s *PostgresTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) 
 
 	err = tx.QueryRowContext(ctx, query,
 		tenant.Name, tenant.Category, tenant.Description, tenant.Status,
+		tenant.OwnerEmail, tenant.Tier,
 	).Scan(&tenant.ID, &tenant.CreatedAt, &tenant.UpdatedAt)
 
 	if err != nil {
@@ -66,7 +69,7 @@ func (s *PostgresTenantStore) GetTenant(ctx context.Context, id string) (*Tenant
 	defer tx.Rollback()
 
 	query := `
-		SELECT id, name, category, description, status, created_at, updated_at
+		SELECT id, name, category, description, status, created_at, updated_at, owner_email, tier
 		FROM tenants
 		WHERE id = $1
 	`
@@ -75,7 +78,7 @@ func (s *PostgresTenantStore) GetTenant(ctx context.Context, id string) (*Tenant
 	tenant := &Tenant{}
 	err = row.Scan(
 		&tenant.ID, &tenant.Name, &tenant.Category, &tenant.Description, &tenant.Status,
-		&tenant.CreatedAt, &tenant.UpdatedAt,
+		&tenant.CreatedAt, &tenant.UpdatedAt, &tenant.OwnerEmail, &tenant.Tier,
 	)
 
 	if err == sql.ErrNoRows {
@@ -115,8 +118,8 @@ func NewSqliteTenantStore(db *sql.DB) *SqliteTenantStore {
 
 func (s *SqliteTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) error {
 	query := `
-		INSERT INTO tenants (id, name, category, description, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO tenants (id, name, category, description, status, owner_email, tier, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 
 	if tenant.ID == "" {
@@ -128,6 +131,7 @@ func (s *SqliteTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) er
 
 	_, err := s.db.ExecContext(ctx, query,
 		tenant.ID, tenant.Name, tenant.Category, tenant.Description, tenant.Status,
+		tenant.OwnerEmail, tenant.Tier,
 	)
 
 	if err == nil {
@@ -140,7 +144,7 @@ func (s *SqliteTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) er
 
 func (s *SqliteTenantStore) GetTenant(ctx context.Context, id string) (*Tenant, error) {
 	query := `
-		SELECT id, name, category, description, status, created_at, updated_at
+		SELECT id, name, category, description, status, created_at, updated_at, owner_email, tier
 		FROM tenants
 		WHERE id = ?
 	`
@@ -150,7 +154,7 @@ func (s *SqliteTenantStore) GetTenant(ctx context.Context, id string) (*Tenant, 
 	var createdAtStr, updatedAtStr string
 	err := row.Scan(
 		&tenant.ID, &tenant.Name, &tenant.Category, &tenant.Description, &tenant.Status,
-		&createdAtStr, &updatedAtStr,
+		&createdAtStr, &updatedAtStr, &tenant.OwnerEmail, &tenant.Tier,
 	)
 
 	if err == sql.ErrNoRows {
