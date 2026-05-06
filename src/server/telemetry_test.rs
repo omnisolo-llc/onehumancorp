@@ -193,8 +193,10 @@ mod tests {
         assert_eq!(parsed["entity"], "test-entity-3");
     }
 
-    #[tokio::test]
-    async fn test_buffer_metric_respects_standalone() {
+    #[test]
+    fn test_buffer_metric_respects_standalone() {
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
@@ -202,7 +204,7 @@ mod tests {
         };
 
         // Ensure STANDALONE_MODE is true. Telemetry should be ignored
-        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
+
         let labels = json!({"user_id": "standalone_test"});
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
@@ -214,7 +216,9 @@ mod tests {
 
         use sqlx::Row;
         let count: i64 = row.get(0);
-        assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+                assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+            });
+        });
     }
 
     #[test]

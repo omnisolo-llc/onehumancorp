@@ -68,6 +68,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:temp-env",
         ":core",
         "//src/proto:agent_service_tonic",
         "//src/proto:common_prost",
