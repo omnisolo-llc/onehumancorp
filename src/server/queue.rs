@@ -2,108 +2,19 @@
 
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use dashmap::DashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
+use prost::Message;
+use prost::Message;
+use prost::Message;
 use sqlx::Row;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Job {
-    pub id: String,
-    pub tenant_id: String,
-    pub parent_task_id: String,
-    pub agent_role: String,
-    pub payload: String,
-    pub status: String,
-    pub attempts: i32,
-    pub max_attempts: i32,
-    pub run_after: DateTime<Utc>,
-    pub locked_until: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[async_trait]
-pub trait TaskQueue: Send + Sync {
-    async fn enqueue(&self, job: Job) -> Result<(), String>;
-    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
-        async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
-    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;
-    async fn requeue(&self, job: Job) -> Result<(), String>;
-}
-
-pub struct MemoryTaskQueue {
-    jobs: DashMap<String, Job>,
-}
-
-impl MemoryTaskQueue {
-    pub fn new() -> Self {
-        MemoryTaskQueue {
-            jobs: DashMap::new(),
-        }
-    }
-}
-
-#[async_trait]
-impl TaskQueue for MemoryTaskQueue {
-    async fn enqueue(&self, job: Job) -> Result<(), String> {
-        self.jobs.insert(job.id.clone(), job);
-        Ok(())
-    }
-
-    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        for mut job_ref in self.jobs.iter_mut() {
-            if job_ref.status == "PENDING" && roles.contains(&job_ref.agent_role) {
-                job_ref.status = "IN_PROGRESS".to_string();
-                job_ref.updated_at = Utc::now();
-                return Ok(Some(job_ref.clone()));
-            }
-        }
-        Ok(None)
-    }
-
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        if let Some(mut job) = self.jobs.get_mut(job_id) {
-            if job.tenant_id != tenant_id {
-                return Err("tenant mismatch".to_string());
-            }
-            job.status = "COMPLETED".to_string();
-            job.updated_at = Utc::now();
-            Ok(())
-        } else {
-            Err("job not found".to_string())
-        }
-    }
-
-    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
-        if let Some(mut job) = self.jobs.get_mut(job_id) {
-            if job.tenant_id != tenant_id {
-                return Err("tenant mismatch".to_string());
-            }
-            job.status = "FAILED".to_string();
-            job.payload = format!("{} (Reason: {})", job.payload, reason);
-            job.updated_at = Utc::now();
-            Ok(())
-        } else {
-            Err("job not found".to_string())
-        }
-    }
-
-    async fn requeue(&self, job: Job) -> Result<(), String> {
-        self.jobs.insert(job.id.clone(), job);
-        Ok(())
-    }
-}
-
-pub struct PostgresTaskQueue {
-    pool: sqlx::PgPool,
-}
-
 impl PostgresTaskQueue {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        PostgresTaskQueue { pool }
+    pub fn new(pool: Arc<sqlx::PgPool>) -> Self {
+        PostgresTaskQueue { pool: std::sync::Arc::new(pool) }
     }
 }
 
@@ -173,9 +84,10 @@ impl TaskQueue for PostgresTaskQueue {
             let parent_task_id: String = row.get("parent_task_id");
             let payload: String = row.get("payload");
             let status: String = row.get("status");
-            let scheduled_at: DateTime<Utc> = row.get("scheduled_at");
+            let scheduled_at: i64 = row.get("scheduled_at");
             
             let mut j = Job {
+                tenant_id: "system".to_string(),
                 id,
                 tenant_id: organization_id,
                 parent_task_id,
@@ -185,9 +97,9 @@ impl TaskQueue for PostgresTaskQueue {
                 attempts: 0,
                 max_attempts: 3,
                 run_after: scheduled_at,
-                locked_until: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                locked_until: 0,
+                created_at: chrono::Utc::now().timestamp(),
+                updated_at: chrono::Utc::now().timestamp(),
             };
             
             let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
@@ -277,7 +189,7 @@ impl Worker {
                                         let mut retry_job = job.clone();
                                         retry_job.attempts += 1;
                                         retry_job.status = "PENDING".to_string();
-                                        retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                        retry_job.run_after = chrono::Utc::now().timestamp() + 5;
                                         let _ = self.queue.requeue(retry_job).await;
                                     } else {
                                         let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
@@ -407,8 +319,8 @@ pub struct SubAgentJob {
     pub payload: serde_json::Value,
     pub status: String,
     pub worker_id: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 pub struct QueueManager {
@@ -416,8 +328,8 @@ pub struct QueueManager {
 }
 
 impl QueueManager {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        QueueManager { pool }
+    pub fn new(pool: Arc<sqlx::PgPool>) -> Self {
+        QueueManager { pool: std::sync::Arc::new(pool) }
     }
 
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
@@ -576,8 +488,8 @@ pub struct SharedTaskModel {
     pub assigned_agent: Option<String>,
     pub payload: serde_json::Value,
     pub dependencies: serde_json::Value,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 pub struct TaskQueueService {
@@ -585,8 +497,8 @@ pub struct TaskQueueService {
 }
 
 impl TaskQueueService {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        TaskQueueService { pool }
+    pub fn new(pool: Arc<sqlx::PgPool>) -> Self {
+        TaskQueueService { pool: std::sync::Arc::new(pool) }
     }
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
@@ -785,10 +697,10 @@ impl TaskQueue for SqliteTaskQueue {
                 status: "RUNNING".to_string(),
                 attempts: 1,
                 max_attempts: 3,
-                run_after: Utc::now(),
-                locked_until: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                run_after: chrono::Utc::now().timestamp(),
+                locked_until: 0,
+                created_at: chrono::Utc::now().timestamp(),
+                updated_at: chrono::Utc::now().timestamp(),
             }))
         } else {
             Ok(None)
@@ -851,12 +763,12 @@ impl RedisTaskQueue {
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+        let mut buf = Vec::new(); prost::Message::encode(&job, &mut buf).map_err(|e| e.to_string())?;
         
         // We use an RPUSH to the redis list
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
-            .arg(payload_json)
+            .arg(buf)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
@@ -868,15 +780,15 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         
         // Use BLPOP with 1 second timeout to avoid busy loop
-        let result: Option<(String, String)> = redis::cmd("BLPOP")
+        let result: Option<(String, Vec<u8>)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)
             .arg(1)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
             
-        if let Some((_, payload_json)) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+        if let Some((_, payload)) = result {
+            if let Ok(job) = prost::Message::decode(&payload[..]) {
                 if roles.contains(&job.agent_role) {
                     let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_json).query_async(&mut conn).await.map_err(|e| e.to_string())?;
                     return Ok(Some(job));
@@ -894,7 +806,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_json) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+            if let Ok(job) = prost::Message::decode(&payload[..]) {
                 if job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -910,7 +822,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_json) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+            if let Ok(job) = prost::Message::decode(&payload[..]) {
                 if job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -922,7 +834,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let payload_json = serde_json::to_string(&job).unwrap_or_default();
+        let mut buf = Vec::new(); prost::Message::encode(&job, &mut buf).unwrap();
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)

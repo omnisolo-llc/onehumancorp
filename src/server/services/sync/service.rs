@@ -319,7 +319,7 @@ impl SyncService for MySyncService {
                 continue;
             }
 
-            let job = crate::queue::Job {
+            let job = crate::ohc::orchestration::Job {
                 id: p.memory_id.clone(),
                 tenant_id: tenant_id.clone(),
                 parent_task_id: "escalation".to_string(),
@@ -328,13 +328,13 @@ impl SyncService for MySyncService {
                 status: "PENDING".to_string(),
                 attempts: 0,
                 max_attempts: 3,
-                run_after: chrono::Utc::now(),
-                locked_until: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                run_after: chrono::Utc::now().timestamp(),
+                locked_until: 0,
+                created_at: chrono::Utc::now().timestamp(),
+                updated_at: chrono::Utc::now().timestamp(),
             };
 
-            let q = crate::queue::PostgresTaskQueue::new(self.pool.clone());
+            let q = crate::queue::PostgresTaskQueue::new(std::sync::Arc::new(self.pool.clone()));
             
             match crate::queue::TaskQueue::enqueue(&q, job).await {
                 Ok(_) => {

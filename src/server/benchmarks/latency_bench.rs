@@ -1,4 +1,4 @@
-use tracing::{info};
+
 
 use std::time::Instant;
 use std::sync::Arc;
@@ -20,7 +20,7 @@ pub async fn bench_queue_latency() {
             .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
-            let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
+            let pg_queue = Arc::new(PostgresTaskQueue::new(std::sync::Arc::new(pg_pool)));
             bench_queue("Postgres", pg_queue).await;
         } else {
 
@@ -71,7 +71,7 @@ pub async fn bench_dashboard_snapshot() {
             to_agent_id: "all".to_string(),
             message_type: "chat".to_string(),
             content: "Hello world this is a test message".to_string(),
-            occurred_at_unix: Utc::now().timestamp(),
+            occurred_at_unix: chrono::Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
         let _ = hub.clone().publish(ohc_builtin_agent::proto::hub::Message {
@@ -166,10 +166,10 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
                 status: "PENDING".to_string(),
                 attempts: 0,
                 max_attempts: 3,
-                run_after: Utc::now(),
-                locked_until: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                run_after: chrono::Utc::now().timestamp(),
+                locked_until: 0,
+                created_at: chrono::Utc::now().timestamp(),
+                updated_at: chrono::Utc::now().timestamp(),
             };
 
             let start = Instant::now();

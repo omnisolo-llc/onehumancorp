@@ -1,5 +1,7 @@
-use super::queue::{Job, TaskQueue};
+use crate::ohc::orchestration::Job;
+use super::queue::TaskQueue;
 use async_trait::async_trait;
+use prost::Message;
 
 pub struct RedisTaskQueue {
     client: redis::Client,
@@ -20,11 +22,13 @@ impl RedisTaskQueue {
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+
+        let mut buf = Vec::new();
+        job.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
-            .arg(payload_json)
+            .arg(buf)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
@@ -35,15 +39,15 @@ impl TaskQueue for RedisTaskQueue {
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
 
-        let result: Option<(String, String)> = redis::cmd("BLPOP")
+        let result: Option<(String, Vec<u8>)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)
             .arg(1)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
 
-        if let Some((_, payload_json)) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+        if let Some((_, payload)) = result {
+            if let Ok(job) = Job::decode(&payload[..]) {
                 if roles.contains(&job.agent_role) {
                     return Ok(Some(job));
                 } else {
