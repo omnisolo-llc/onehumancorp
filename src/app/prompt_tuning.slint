@@ -9,7 +9,7 @@ export struct UiPromptExample {
 export component PromptTuning inherits Window {
     width: 700px;
     height: 500px;
-    title: "Tune Helper";
+    title: "Prompt Tuning";
 
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly";
@@ -171,7 +171,7 @@ export component PromptTuning inherits Window {
                 }
                 Rectangle {} // Spacer
                 Button {
-                    text: step == 3 ? "Save" : "Next";
+                    text: step == 3 ? "Save Configuration" : "Next";
                     clicked => {
                         if (step < 3) {
                             next_step();
@@ -244,7 +244,7 @@ export component PromptTuning inherits Window {
         VerticalBox {
             alignment: center;
             Text {
-                text: "Your agent has been updated ✓";
+                text: "Configuration Saved";
                 font-family: "Outfit";
                 font-size: 16px;
                 font-weight: 700;

@@ -768,6 +768,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     prompt_tuning_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let prompt_tuning_handle = prompt_tuning_ui.as_weak();
     let pt_ui_weak = prompt_tuning_handle.clone();
+    let pt_handle_for_ac = prompt_tuning_handle.clone();
+    agent_config_ui.on_open_prompt_tuning(move || {
+        if let Some(ui) = pt_handle_for_ac.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = pt_ui_weak.upgrade() {
             ui.set_is_advanced(val);
@@ -2008,6 +2015,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
                 let gb_handle_for_dashboard = grow_business_handle.clone();
+                let agent_config_handle_for_dash = agent_config_handle.clone();
+                dashboard.on_action_manage_agents(move || {
+                    if let Some(ui) = agent_config_handle_for_dash.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
                 dashboard.on_action_grow_business(move || {
                     if let Some(ui) = gb_handle_for_dashboard.upgrade() {
                         let _ = ui.show();

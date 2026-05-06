@@ -4,8 +4,9 @@ import { GlassCard } from "glass_card.slint";
 export component AgentConfig inherits Window {
     width: 600px;
     height: 500px;
-    title: "Configure Helper";
+    title: "Agent Configuration";
 
+    callback open_prompt_tuning();
     callback activate_agent(string, bool, bool, bool, bool, string);
     callback next_step();
     callback save_state();
@@ -31,11 +32,13 @@ export component AgentConfig inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Configure Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Agent Configuration"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
+                Button { text: "Tune Prompt"; clicked => { open_prompt_tuning(); } }
+                Rectangle { width: 10px; }
                 Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 TouchArea {
                     width: 20px;
@@ -76,11 +79,11 @@ export component AgentConfig inherits Window {
                             Text { text: "🎧"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "The Ambassador"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Customer Success — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "The Ambassador"; } }
+                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "Customer Support"; } }
                     }
                     GlassCard {
                         height: 90px;
@@ -149,7 +152,7 @@ export component AgentConfig inherits Window {
             Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
-                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
+                Text { text: "Can Reply to Messages"; color: white; font-family: "Inter"; }
                 CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
@@ -211,7 +214,7 @@ export component AgentConfig inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 3 ? "Activate" : "Next";
+                text: step == 3 ? "Activate Agent" : "Next";
                 clicked => {
                     if (step < 3) {
                         next_step();
@@ -233,7 +236,7 @@ export component AgentConfig inherits Window {
         VerticalBox {
             alignment: center;
             Text {
-                text: "Helper Activated ✓";
+                text: "Agent Activated";
                 font-family: "Outfit";
                 font-size: 16px;
                 font-weight: 700;

@@ -66,6 +66,7 @@ export component Dashboard inherits Window {
     callback action_open_referrals();
     callback action_open_email_marketing();
     callback action_grow_business();
+    callback action_manage_agents();
     callback action_mark_order_ready();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -244,6 +245,7 @@ export component Dashboard inherits Window {
             if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
+                TooltipElement { tooltip_id: "manage_agents"; Button { text: "Manage Agents"; height: 44px; clicked => { action_manage_agents(); } } }
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
