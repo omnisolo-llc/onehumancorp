@@ -222,7 +222,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; conn.execute("RESET ROLE").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
