@@ -32,8 +32,7 @@ impl DB {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
         if database_url.starts_with("sqlite") {
-            let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            let dummy_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1)
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
