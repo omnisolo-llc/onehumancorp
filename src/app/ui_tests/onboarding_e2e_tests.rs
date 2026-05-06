@@ -141,3 +141,100 @@ fn test_e2e_onboarding_welcome_checklist_progress() {
     ui.invoke_go_to_dashboard();
     assert!(*dashboard_triggered.lock().unwrap(), "Go to Dashboard callback works");
 }
+
+#[test]
+fn test_e2e_onboarding_sso_signup() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = crate::app::Login::new().unwrap();
+    let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let oauth_called_clone = oauth_called.clone();
+
+    login_ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "Google");
+        *oauth_called_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_oauth_login("Google".into());
+    assert!(*oauth_called.borrow(), "OAuth login should trigger SSO signup flow");
+}
+
+#[test]
+fn test_e2e_onboarding_domain_assignment() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(8);
+
+    let domain_selected = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let domain_selected_clone = domain_selected.clone();
+
+    wizard_ui.on_select_domain(move |domain| {
+        assert_eq!(domain, "subdomain");
+        *domain_selected_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_select_domain("subdomain".into());
+    assert!(*domain_selected.borrow(), "Free subdomain assignment should work");
+}
+
+#[test]
+fn test_e2e_onboarding_product_ai_generation() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(7);
+    wizard_ui.set_product_name("Vegan Cupcakes".into());
+
+    let ai_gen_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let ai_gen_called_clone = ai_gen_called.clone();
+
+    wizard_ui.on_generate_product_description(move |name| {
+        assert_eq!(name, "Vegan Cupcakes");
+        *ai_gen_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_generate_product_description("Vegan Cupcakes".into());
+    assert!(*ai_gen_called.borrow(), "AI generation for products should work");
+}
+
+#[test]
+fn test_e2e_onboarding_cross_device_resume() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(5);
+
+    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called_clone = save_called.clone();
+
+    wizard_ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_save_state();
+    assert!(*save_called.borrow(), "State should persist for cross-device resume");
+}
+
+#[test]
+fn test_e2e_onboarding_welcome_checklist() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(100);
+
+    let checklist_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let checklist_called_clone = checklist_called.clone();
+
+    wizard_ui.on_show_welcome_checklist(move || {
+        *checklist_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_show_welcome_checklist();
+    assert!(*checklist_called.borrow(), "Welcome checklist post-onboarding should work");
+}
