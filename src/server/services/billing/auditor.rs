@@ -151,6 +151,11 @@ impl CostAuditor {
         agent_output_tokens.values().sum()
     }
 
+    pub fn get_total_revenue(&self) -> f64 {
+        let agent_revenues = self.agent_revenues.lock().unwrap();
+        agent_revenues.values().sum()
+    }
+
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
     }
