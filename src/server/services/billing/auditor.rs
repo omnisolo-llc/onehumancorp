@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 use crate::pricing::calculator::{self, CostConfig};
+use opentelemetry::global;
+use opentelemetry::metrics::Counter;
+use opentelemetry::KeyValue;
 
 #[derive(Clone)]
 pub struct AuditEvent {
@@ -29,10 +32,18 @@ pub struct CostAuditor {
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
+    llm_cost_counter: Counter<f64>,
+    storage_savings_counter: Counter<f64>,
+    compute_cost_counter: Counter<f64>,
 }
 
 impl CostAuditor {
     pub fn new(config: CostConfig) -> Self {
+        let meter = global::meter("ohc.billing");
+        let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
+        let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
+        let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
+
         CostAuditor {
             config,
             agent_costs: Mutex::new(HashMap::new()),
@@ -45,6 +56,9 @@ impl CostAuditor {
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
             telemetry_tx: None,
+            llm_cost_counter,
+            storage_savings_counter,
+            compute_cost_counter,
         }
     }
 
@@ -71,6 +85,8 @@ impl CostAuditor {
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
+
+        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -118,6 +134,8 @@ impl CostAuditor {
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
+        self.storage_savings_counter.add(savings, &[]);
+
         savings
     }
 
@@ -185,6 +203,8 @@ impl CostAuditor {
         *total_cost += total;
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
+
+        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
