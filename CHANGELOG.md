@@ -2,10 +2,10 @@
 
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
-- ✍️ Scribe: Comprehensive Help Center & Tooltip Documentation System (#11267)
+- ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
 
 ### Privacy/Offline Improvements
-- ✍️ Scribe: Comprehensive Help Center & Tooltip Documentation System (#11267)
+- ✍️ Scribe: Enabled offline-first support for the Help Center & Tooltip Documentation System in standalone mode (#11267)
 
 ## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
 ### Cloud Scaling Improvements
