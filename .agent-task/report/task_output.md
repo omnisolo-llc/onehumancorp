@@ -20,25 +20,18 @@ This report synthesizes competitive analysis of leading ecommerce and website bu
 | **Square** | Local/Retail/Food | Fast for existing users | Basic | Strong | Free tier available | Limited design flexibility, tied to Square POS |
 | **Durable** | Service SMBs | < 1 min (website generation) | Generative builder | N/A | Subscription | Thin on actual business management/operations |
 
-### Top 10 SMB Pain Points & Persona Mappings
-Based on synthesized feedback channels (Reddit [https://www.reddit.com/r/smallbusiness], App Stores, Trustpilot [https://www.trustpilot.com/review/www.shopify.com]):
-1. **Initial Setup Paralysis:** 73% of struggling users cite confusion over where to start (domain, hosting, design). Source: Shopify Trustpilot Reviews. *Mapped Persona: Maya (baker)*
-2. **Mobile Unfriendliness for Creators:** Cannot easily build or manage the store entirely from a phone. Source: App Store reviews (Wix). *Mapped Persona: Maya (baker)*
-3. **Inventory Syncing:** Difficulty managing multi-channel inventory (e.g., in-store vs. online). Source: Reddit /r/ecommerce. *Mapped Persona: Priya (boutique owner)*
-4. **Booking/Scheduling Chaos:** Service businesses rely on manual texting/DMing instead of automated booking. Source: Reddit /r/smallbusiness. *Mapped Persona: Carlos (handyman), Leo (music tutor)*
-5. **Customer Communication Overload:** Missed leads due to inability to reply promptly to Instagram DMs or emails. Source: Reddit /r/smallbusiness. *Mapped Persona: Carlos (handyman)*
-6. **Payment/Stripe Complexity:** Confusing onboarding for merchant accounts. Source: Trustpilot (Squarespace). *Mapped Persona: Leo (music tutor)*
-7. **Marketing/SEO Ignorance:** Don't know how to write product descriptions or optimize for search. Source: YouTube top 10 creator videos. *Mapped Persona: Priya (boutique owner)*
-8. **High Cost of Add-ons:** Shopify users frequently complain about needing paid apps for basic features (e.g., reviews, subscriptions). Source: Shopify Trustpilot Reviews. *Mapped Persona: Maya (baker)*
-9. **Lack of Language Localization:** Non-English speakers struggle with complex admin interfaces. Source: App Store reviews (GoDaddy). *Mapped Persona: Fatima (food cart)*
-10. **Order Fulfillment Tracking:** Hard to manage pickup vs. shipping logistics. Source: Reddit /r/ecommerce. *Mapped Persona: Fatima (food cart)*
-
-### Persona-Specific Pain Point Summaries
-- **Maya (baker, 28):** Extremely overwhelmed by the complexity of setting up Shopify and the high cost of add-ons. Needs a mobile-first solution because she currently operates via Instagram DMs and doesn't own a laptop.
-- **Carlos (handyman, 42):** Struggles with manual quoting and misses leads because he doesn't have an automated booking system. Needs a solution that handles customer communications automatically.
-- **Priya (boutique owner, 35):** Needs seamless inventory syncing between her physical store and online presence. Currently struggles with SEO and marketing because she doesn't know how to write effective product descriptions.
-- **Leo (music tutor, 22):** Faces chaos with manual booking and lacks subscription billing options. Needs a simple way to schedule appointments and accept recurring payments.
-- **Fatima (food cart, 50, limited English):** Cannot find a platform that caters to her language needs and struggles with managing pre-orders for pickup. Needs mobile notifications for new orders.
+### Top 10 SMB Pain Points
+Based on synthesized feedback channels (Reddit, App Stores, Trustpilot):
+1. **Initial Setup Paralysis:** 73% of struggling users cite confusion over where to start (domain, hosting, design).
+2. **Mobile Unfriendliness for Creators:** Cannot easily build or manage the store entirely from a phone.
+3. **Inventory Syncing:** Difficulty managing multi-channel inventory (e.g., in-store vs. online).
+4. **Booking/Scheduling Chaos:** Service businesses rely on manual texting/DMing instead of automated booking.
+5. **Customer Communication Overload:** Missed leads due to inability to reply promptly to Instagram DMs or emails.
+6. **Payment/Stripe Complexity:** Confusing onboarding for merchant accounts.
+7. **Marketing/SEO Ignorance:** Don't know how to write product descriptions or optimize for search.
+8. **High Cost of Add-ons:** Shopify users frequently complain about needing paid apps for basic features (e.g., reviews, subscriptions).
+9. **Lack of Language Localization:** Non-English speakers struggle with complex admin interfaces.
+10. **Order Fulfillment Tracking:** Hard to manage pickup vs. shipping logistics.
 
 ### OHC AI Differentiation Manifesto
 To leapfrog competitors, OHC must shift from "AI Chatbots" to "Invisible Autonomous Agents". The top 5 AI automations OHC will implement:
@@ -49,7 +42,7 @@ To leapfrog competitors, OHC must shift from "AI Chatbots" to "Invisible Autonom
 5. **Business Insights Agent:** Delivers a simple, natural-language weekly summary ("Here is what sold well, and here is a suggestion for next week").
 
 ### Market Sizing & Strategy
-- **TAM:** Over 33 million small businesses in the US alone (Source: US Census Bureau); globally, hundreds of millions (Source: World Bank). A significant portion (especially service and local retail) still lack robust online operations.
+- **TAM:** Over 33 million small businesses in the US alone; globally, hundreds of millions. A significant portion (especially service and local retail) still lack robust online operations.
 - **Beachhead:** Service businesses (e.g., tutors, handymen) and single-channel sellers (e.g., Instagram bakers) represent the highest density of underserved users who need simple booking/selling without full ERP complexity.
 - **Geographic Focus:** Start English-first, but architect for rapid localization (Spanish, Portuguese, Hindi) where mobile-only SMBs are prevalent.
 - **Verticalization vs. Horizontal:** Launch horizontally with robust primitive modules (Booking, Products, Orders) and allow AI to "skin" the experience for specific verticals during onboarding.
