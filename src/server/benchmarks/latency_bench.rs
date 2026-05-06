@@ -1,3 +1,5 @@
+use tracing::{info};
+
 use std::time::Instant;
 use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
@@ -6,10 +8,10 @@ use uuid::Uuid;
 
 // Phase 1: Baseline / Phase 2: Parallel Fetching Optimization & Batching
 pub async fn bench_queue_latency() {
-    println!("Benchmarking Latency...");
+    tracing::info!("Benchmarking Latency...");
 
     // 1. Cloud Mode - Postgres
-    println!("--- Cloud Mode (Postgres) ---");
+    tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
@@ -28,13 +30,13 @@ pub async fn bench_queue_latency() {
     }
 
     // 2. Standalone Mode - Memory
-    println!("--- Standalone Mode (Memory) ---");
+    tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("Memory", mem_queue).await;
 }
 
 pub async fn bench_dashboard_snapshot() {
-    println!("Benchmarking Dashboard Snapshot Fetching...");
+    tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
@@ -117,7 +119,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     fetch_times.sort();
-    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
     // Test mobile optimized vs not optimized payload size
     let req_mobile = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
@@ -130,10 +132,10 @@ pub async fn bench_dashboard_snapshot() {
     let res_mobile = dashboard_service.get_dashboard(tonic::Request::new(req_mobile)).await.unwrap().into_inner();
     let res_desktop = dashboard_service.get_dashboard(tonic::Request::new(req_desktop)).await.unwrap().into_inner();
 
-    println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
+    tracing::info!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
     if !res_mobile.meetings.is_empty() {
-        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
-        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
+        tracing::info!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
+        tracing::info!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
@@ -199,8 +201,8 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = dequeue_times[(iterations as f32 * 0.95) as usize];
     let deq_p99 = dequeue_times[(iterations as f32 * 0.99) as usize];
 
-    println!("{}: Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
-    println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    tracing::info!("{}: Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
 #[cfg(test)]
