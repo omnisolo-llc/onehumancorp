@@ -1,4 +1,5 @@
 use sqlx::{Row, Executor};
+use crate::db::DB;
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Arc;
