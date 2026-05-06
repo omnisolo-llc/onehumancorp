@@ -116,7 +116,7 @@ impl HandoffManager {
             }
         });
 
-        self.mesh.subscribe("mesh:coordination:handoff", handler).await
+        self.mesh.subscribe("mesh:state:handoff", handler).await
     }
 
     pub async fn initiate_handoff(&self, tenant_id: &str, state_id: &str, state: Vec<u8>, entity_type: &str) -> Result<(), String> {
@@ -132,7 +132,7 @@ impl HandoffManager {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
 
-        self.mesh.publish_with_ack("mesh:coordination:handoff", buf).await
+        self.mesh.publish_with_ack("mesh:state:handoff", buf).await
     }
 }
 
@@ -241,7 +241,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf).await.unwrap();
+        mesh.publish("mesh:state:handoff", buf).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -265,7 +265,7 @@ mod tests {
         };
         let mut buf_older = Vec::new();
         older_handoff.encode(&mut buf_older).unwrap();
-        mesh.publish("mesh:coordination:handoff", buf_older).await.unwrap();
+        mesh.publish("mesh:state:handoff", buf_older).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -287,7 +287,7 @@ mod tests {
         };
         let mut buf_newer = Vec::new();
         newer_handoff.encode(&mut buf_newer).unwrap();
-        mesh.publish("mesh:coordination:handoff", buf_newer).await.unwrap();
+        mesh.publish("mesh:state:handoff", buf_newer).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -311,7 +311,7 @@ mod tests {
         let mut buf2 = Vec::new();
         handoff2.encode(&mut buf2).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf2).await.unwrap();
+        mesh.publish("mesh:state:handoff", buf2).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -390,7 +390,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        mesh.publish("mesh:coordination:handoff", buf).await.unwrap();
+        mesh.publish("mesh:state:handoff", buf).await.unwrap();
 
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
