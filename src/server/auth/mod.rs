@@ -79,8 +79,8 @@ pub trait UserRepository: Send + Sync {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
-    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>) -> Result<(), String>;
-    async fn is_revoked(&self, jti: &str) -> Result<bool, String>;
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String>;
+    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String>;
 }
 
 pub struct Store {
@@ -349,7 +349,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>) {
+    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
         
@@ -357,7 +357,7 @@ impl Store {
         revoked.retain(|_, v| *v > now);
     }
 
-    pub fn is_revoked(&self, jti: &str) -> bool {
+    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
@@ -420,7 +420,7 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti) {
+                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -518,7 +518,7 @@ impl AuthService for AuthServiceServerImpl {
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp);
+                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default());
                     }
                 }
             }
@@ -801,7 +801,7 @@ mod tests {
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24));
+        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "");
         
         assert!(s.validate_token(&token).await.is_err());
     }
