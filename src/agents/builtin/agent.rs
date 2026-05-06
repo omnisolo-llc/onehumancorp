@@ -346,17 +346,112 @@ impl Agent {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
-                let mut tool_results_json = vec![];
+                let mut read_only_calls = Vec::new();
+                let mut mutating_calls = Vec::new();
 
                 for tc_val in tool_calls {
                     let name = tc_val["name"].as_str().unwrap();
+                    let is_read_only = tt.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false);
+                    if is_read_only {
+                        read_only_calls.push(tc_val.clone());
+                    } else {
+                        mutating_calls.push(tc_val.clone());
+                    }
+                }
+
+                let mut tool_results_json = vec![serde_json::json!(null); tool_calls.len()];
+
+                // Execute read-only calls concurrently
+                let mut read_only_futures = Vec::new();
+                for tc_val in read_only_calls {
+                    let tt_clone = tt.clone();
+                    read_only_futures.push(async move {
+                        let name = tc_val["name"].as_str().unwrap();
+                        let args = tc_val["arguments"].clone();
+                        let id = tc_val["id"].as_str().unwrap().to_string();
+
+                        if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
+                            let mut retry_count = 0;
+                            let max_retries = 2;
+                            let mut final_res;
+
+                            loop {
+                                match tool.execute.execute(args.clone()).await {
+                                    Ok(res) => {
+                                        final_res = Ok(res);
+                                        break;
+                                    }
+                                    Err(crate::types::ToolError::Transient(msg)) => {
+                                        if retry_count < max_retries {
+                                            retry_count += 1;
+                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
+                                            tokio::time::sleep(backoff).await;
+                                            continue;
+                                        } else {
+                                            final_res = Err(crate::types::ToolError::Transient(msg));
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        final_res = Err(e);
+                                        break;
+                                    }
+                                }
+                            }
+                            (id, final_res)
+                        } else {
+                            // Unreachable if tool not found goes to mutating calls
+                            unreachable!()
+                        }
+                    });
+                }
+
+                let ro_results = futures::future::join_all(read_only_futures).await;
+
+                for (id, final_res) in ro_results {
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    match final_res {
+                        Ok(res) => {
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": res,
+                                "error": ""
+                            });
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": msg
+                            });
+                        }
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": format!("Transient error after retries: {}", msg)
+                            });
+                        }
+                        Err(crate::types::ToolError::UserFixable(msg)) => {
+                            return Err(format!("USER_FIXABLE:{}", msg));
+                        }
+                        Err(e) => {
+                            return Err(e.to_string());
+                        }
+                    }
+                }
+
+                // Execute mutating calls sequentially
+                for tc_val in mutating_calls {
+                    let name = tc_val["name"].as_str().unwrap();
                     let args = tc_val["arguments"].clone();
                     let id = tc_val["id"].as_str().unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
+                        let mut final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -384,42 +479,39 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
-                                tool_results_json.push(serde_json::json!({
+                                tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
                                     "error": ""
-                                }));
+                                });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                tool_results_json.push(serde_json::json!({
+                                tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
                                     "error": msg
-                                }));
+                                });
                             }
                             Err(crate::types::ToolError::Transient(msg)) => {
-                                // Failed after retries
-                                tool_results_json.push(serde_json::json!({
+                                tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
                                     "error": format!("Transient error after retries: {}", msg)
-                                }));
+                                });
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             Err(e) => {
-                                // For Fatal, Unexpected, HandoffRequested
-                                // we halt the graph execution
                                 return Err(e.to_string());
                             }
                         }
                     } else {
-                        tool_results_json.push(serde_json::json!({
+                        tool_results_json[idx] = serde_json::json!({
                             "tool_call_id": id,
                             "content": "",
                             "error": format!("Tool {} not found", name)
-                        }));
+                        });
                     }
                 }
 
