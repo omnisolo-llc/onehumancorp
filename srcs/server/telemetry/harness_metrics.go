@@ -14,6 +14,7 @@ var (
 	executionDurationHistogram metric.Float64Histogram
 	toolInvocationsCounter     metric.Int64Counter
 	violationsCounter          metric.Int64Counter
+	mcpToolCallsCounter        metric.Int64Counter
 )
 
 func init() {
@@ -41,12 +42,31 @@ func init() {
 	if err != nil {
 		log.Printf("Failed to create violationsCounter: %v", err)
 	}
+
+	mcpToolCallsCounter, err = meter.Int64Counter(
+		"ohc_mcp_tool_calls_total",
+		metric.WithDescription("Total number of MCP tool calls"),
+	)
+	if err != nil {
+		log.Printf("Failed to create mcpToolCallsCounter: %v", err)
+	}
 }
 
 // RecordHarnessExecutionDuration records the duration of a harness execution.
 func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) error {
 	if executionDurationHistogram != nil {
 		executionDurationHistogram.Record(ctx, durationSecs)
+	}
+	return nil
+}
+
+// RecordMCPToolCall increments the counter for an MCP tool call.
+func RecordMCPToolCall(ctx context.Context, toolName string) error {
+	if mcpToolCallsCounter != nil {
+		opts := metric.WithAttributes(
+			attribute.String("tool", toolName),
+		)
+		mcpToolCallsCounter.Add(ctx, 1, opts)
 	}
 	return nil
 }
