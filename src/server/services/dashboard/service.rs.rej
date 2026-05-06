@@ -1,0 +1,35 @@
+--- service.rs
++++ service.rs
+@@ -28,6 +28,9 @@ impl DashboardService for MyDashboardService {
+         let db1 = self.db.clone();
+         let db2 = self.db.clone();
+
++        let is_mobile = req.mobile_optimized;
++        let org_id_products = req.organization_id.clone();
++
+         let (agents_res, meetings_res, cost_res, products_res, orders_res) = tokio::join!(
+             tokio::task::spawn_blocking(move || hub1.get_agents()),
+             tokio::task::spawn_blocking(move || hub2.get_meetings()),
+@@ -36,7 +39,10 @@ impl DashboardService for MyDashboardService {
+                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+             }),
+             async {
+-                let org_id = req.organization_id.clone();
++                if is_mobile {
++                    return Ok::<_, String>(vec![]);
++                }
++                let org_id = org_id_products;
+                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
+                 use sqlx::Row;
+                 let mut results = Vec::new();
+@@ -79,7 +85,9 @@ impl DashboardService for MyDashboardService {
+                 Ok::<_, String>(results)
+             },
+             async {
+-                let org_id = req.organization_id.clone();
++                if is_mobile {
++                    return Ok::<_, String>(vec![]);
++                }
+                 // Let's assume order schema exists or fallback to empty for the benchmark
+                 Ok::<_, String>(vec![])
+             }

@@ -4,3 +4,8 @@ pub mod service;
 pub mod tests {
     pub mod service_test;
 }
+
+#[cfg(test)]
+pub mod tests {
+    pub mod service_test;
+}
