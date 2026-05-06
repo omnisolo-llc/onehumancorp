@@ -123,7 +123,7 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "standalone");
         assert!(!config.multi_tenant);
     }
@@ -143,7 +143,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "standalone");
     }
 
@@ -153,7 +153,7 @@ mod tests {
         env.insert("KUBERNETES_SERVICE_HOST".to_string(), "10.0.0.1".to_string());
         env.insert("DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "cloud");
         assert!(config.multi_tenant);
     }
@@ -163,7 +163,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
     }
 
@@ -173,7 +173,7 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         // assert!(config.telemetry_enabled); // Thin client sets headless, but telemetry is not necessarily enabled.
     }
 
@@ -183,7 +183,7 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
         env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
         assert_eq!(config.api_endpoint, "https://api.ohc.io");
         // assert!(config.telemetry_enabled); // Thin client sets headless, but telemetry is not necessarily enabled.
@@ -215,7 +215,7 @@ mod tests {
         env.insert("OHC_MULTITENANT".to_string(), "true".to_string());
         env.insert("DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "postgresql://user:pass@localhost/db");
     }
 
@@ -225,7 +225,7 @@ mod tests {
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "sqlite://local.db");
     }
 
@@ -236,7 +236,7 @@ mod tests {
         env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
         env.insert("DATABASE_URL".to_string(), "sqlite://custom.db".to_string());
 
-        let _config = verify_environment(&env).unwrap();
+        let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "sqlite://custom.db");
     }
 }
