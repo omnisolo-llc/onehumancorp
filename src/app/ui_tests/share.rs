@@ -99,3 +99,12 @@ fn create_verify_share_link() {
     ui.invoke_share_to_whatsapp();
     assert!(*called.borrow());
 }
+
+#[test] fn share_flow_close_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_close(move || { *c.borrow_mut() = true; });
+    ui.invoke_close();
+    assert!(*called.borrow());
+}
